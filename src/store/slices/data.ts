@@ -7,14 +7,11 @@ import { t } from '../../i18n';
 import type { AppSlice } from './types';
 
 export interface DataSlice {
-  rawDataVersion: number;
   clearData: () => Promise<void>;
 }
 
-export const createDataSlice: AppSlice<DataSlice> = (set, get) => {
+export const createDataSlice: AppSlice<DataSlice> = (_set, get) => {
   return {
-    rawDataVersion: 0,
-
     clearData: async () => {
       try {
         // 波形缓冲区按 Protocol 节点分实例 — 逐源清空
@@ -30,7 +27,6 @@ export const createDataSlice: AppSlice<DataSlice> = (set, get) => {
       }
       clearAllRawDataPreviewBuffers();
       waveformWindow.clear();
-      set({ rawDataVersion: Date.now() });
     },
   };
 }

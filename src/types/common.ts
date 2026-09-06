@@ -2,11 +2,6 @@ import type { ReactElement } from 'react';
 
 // ============ 数据帧 ============
 
-export interface DataFrame {
-  timestamp: number;
-  channels: number[];
-}
-
 export interface RawData {
   timestamp: number;
   data: number[];
@@ -361,41 +356,6 @@ export interface Model3DConfig {
 // https://www.musicdsp.org/en/latest/Filters/197-rbj-audio-eq-cookbook.html
 
 // ============ 节点编辑器 ============
-
-/// 节点端口类型
-export type NodePortKind = 'input' | 'output';
-
-/// 节点端口
-export interface NodePort {
-  id: string;
-  kind: NodePortKind;
-  label: string;
-  channel?: number;
-}
-
-/// 节点位置 (兼容旧代码)
-export interface NodePosition {
-  x: number;
-  y: number;
-}
-
-/// 节点连接 (兼容旧代码)
-export interface NodeConnection {
-  id: string;
-  sourceNodeId: string;
-  sourcePortId: string;
-  targetNodeId: string;
-  targetPortId: string;
-}
-
-/// 节点图边 — 与后端 vofa_next_buffer::graph::Edge 对应
-export interface NodeGraphEdge {
-  id: string;
-  source: string;
-  source_handle: string;
-  target: string;
-  target_handle: string;
-}
 
 /// 控件标签页
 export interface ControlTab {

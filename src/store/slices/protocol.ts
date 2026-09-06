@@ -4,8 +4,8 @@ import { nodeError } from '../../lib/tauri/errorGuidance';
 import { t } from '../../i18n';
 import type { ProtocolConfig, ProtocolSchema } from '../../types';
 import type { AppSlice } from './types';
-import { getEffectiveChannels, type ProtocolNodeData } from '../appStoreHelpers';
-import { schemaFromProtocolConfig, schemaPortNames } from '../../lib/utils/protocolSchema';
+import type { ProtocolNodeData } from '../appStoreHelpers';
+import { getEffectiveChannels, schemaFromProtocolConfig, schemaPortNames } from '../../lib/utils/protocolSchema';
 import {
   withHistoryOp,
   beginHistoryOp,
@@ -15,11 +15,6 @@ import {
 
 /** 协议类操作目标 — 行首徽章用画布 Protocol 节点同款 (主题色 Binary) */
 const protocolTarget = (): HistoryTarget => ({ kind: 'node', node: { kind: 'protocol' } });
-
-export const DEFAULT_PROTOCOL: ProtocolConfig = {
-  kind: 'JustFloat',
-  channels: null,
-};
 
 export interface ProtocolSlice {
   /// 自动检测到的通道数 — 按 Protocol 节点 id (仅自动模式有值, 由后端

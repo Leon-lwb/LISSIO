@@ -3,6 +3,7 @@ import type { WidgetConfig } from '../../../types';
 import { useNumericOutput } from '../../../lib/hooks/useNumericPort';
 import { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
+import { selectWidgets } from '../../../store/appStoreHelpers';
 
 interface IFFTWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'IFFT' }>;
@@ -23,7 +24,7 @@ export const IFFTWidget = memo(function IFFTWidget({ widget }: IFFTWidgetProps) 
   const out = useNumericOutput(id, 'out0').latest?.value ?? 0;
   // 上游频域源 (spectrum 输入边指向的 FFT widget id)
   const edges = useAppStore((s) => s.rfEdges);
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const lang = useAppStore((s) => s.lang);
   const sourceEdge = edges.find((e) => e.target === id && e.targetHandle === 'spectrum');
   const sourceWidget = sourceEdge

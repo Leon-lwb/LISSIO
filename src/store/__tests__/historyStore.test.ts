@@ -19,6 +19,7 @@ vi.hoisted(() => {
 });
 
 import { useAppStore } from '../appStore';
+import { selectWidgets } from '../appStoreHelpers';
 import { useHistoryStore } from '../historyStore';
 import { createWidget } from '../../lib/utils/widgetDefaults';
 import type { DataTab } from '../../types';
@@ -32,7 +33,6 @@ function resetStores(): void {
   useAppStore.setState({
     rfNodes: [],
     rfEdges: [],
-    widgets: [],
     inputPreviewValues: {},
     controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
     activeControlTabId: 'default',
@@ -62,7 +62,7 @@ describe('historyStore 撤销/重做核心', () => {
 
     app().addWidget(createWidget('Waveform'), 'default');
 
-    expect(app().widgets).toHaveLength(1);
+    expect(selectWidgets(app())).toHaveLength(1);
     // Waveform 有数据窗口 Tab — addWidget 自动追加
     expect(app().dataTabs.length).toBe(tabsBefore + 1);
 
@@ -79,7 +79,7 @@ describe('historyStore 撤销/重做核心', () => {
     expect(afterUndo.index).toBe(0);
     expect(afterUndo.canUndo).toBe(false);
     expect(afterUndo.canRedo).toBe(true);
-    expect(app().widgets).toHaveLength(0);
+    expect(selectWidgets(app())).toHaveLength(0);
     expect(app().rfNodes).toHaveLength(0);
     expect(app().dataTabs.length).toBe(tabsBefore);
 
@@ -88,14 +88,14 @@ describe('historyStore 撤销/重做核心', () => {
     const afterRedo = useHistoryStore.getState();
     expect(afterRedo.index).toBe(1);
     expect(afterRedo.canRedo).toBe(false);
-    expect(app().widgets).toHaveLength(1);
+    expect(selectWidgets(app())).toHaveLength(1);
     expect(app().dataTabs.length).toBe(tabsBefore + 1);
   });
 
   it('窗口型控件改名时同步数据 Tab 名称且保持 ID 不变', () => {
     const app = () => useAppStore.getState();
     app().addWidget(createWidget('Waveform'), 'default');
-    const widget = app().widgets[0];
+    const widget = selectWidgets(app())[0];
     const tab = app().dataTabs.find((item) => item.widgetId === widget.params.id);
     expect(tab).toBeDefined();
 
@@ -116,8 +116,8 @@ describe('historyStore 撤销/重做核心', () => {
     app().addWidget(createWidget('Knob'), 'default');
     expect(useHistoryStore.getState().entries).toHaveLength(2);
 
-    const id = app().widgets[0].params.id;
-    const w = app().widgets[0];
+    const id = selectWidgets(app())[0].params.id;
+    const w = selectWidgets(app())[0];
     const currentValueOf = (widget: typeof w) =>
       (widget.params as unknown as Record<string, unknown>).value as number;
 
@@ -130,27 +130,27 @@ describe('historyStore 撤销/重做核心', () => {
     expect(hs.entries[2].opKey).toBe('opUpdateWidgetParams');
 
     app().updateWidget(id, {
-      ...(app().widgets[0]),
+      ...(selectWidgets(app())[0]),
       params: { ...w.params, value: 20 },
     } as typeof w);
     // 合并进栈顶而非新增
     hs = useHistoryStore.getState();
     expect(hs.entries).toHaveLength(3);
-    expect(currentValueOf(app().widgets[0])).toBe(20);
+    expect(currentValueOf(selectWidgets(app())[0])).toBe(20);
 
     // 一次 undo 即回滚整个手势到「参数更新前」
     hs.undo();
-    expect(currentValueOf(app().widgets[0])).toBe(currentValueOf(w));
+    expect(currentValueOf(selectWidgets(app())[0])).toBe(currentValueOf(w));
 
     // 对应的一次 redo 回到手势末态
     useHistoryStore.getState().redo();
-    expect(currentValueOf(app().widgets[0])).toBe(20);
+    expect(currentValueOf(selectWidgets(app())[0])).toBe(20);
   });
 
   it('输入预览不改配置或历史，提交只落一次最终值', () => {
     const app = () => useAppStore.getState();
     app().addWidget(createWidget('Slider'), 'default');
-    const slider = app().widgets[0];
+    const slider = selectWidgets(app())[0];
     expect(slider.kind).toBe('Slider');
     if (slider.kind !== 'Slider') return;
     const entriesBefore = useHistoryStore.getState().entries.length;
@@ -158,12 +158,12 @@ describe('historyStore 撤销/重做核心', () => {
     app().previewInputValue(slider.params.id, 61);
     app().previewInputValue(slider.params.id, 62);
     expect(app().inputPreviewValues[slider.params.id]).toBe(62);
-    expect((app().widgets[0] as typeof slider).params.value).toBe(50);
+    expect((selectWidgets(app())[0] as typeof slider).params.value).toBe(50);
     expect(useHistoryStore.getState().entries).toHaveLength(entriesBefore);
 
     app().commitInputValue(slider.params.id, 62);
     expect(app().inputPreviewValues[slider.params.id]).toBeUndefined();
-    expect((app().widgets[0] as typeof slider).params.value).toBe(62);
+    expect((selectWidgets(app())[0] as typeof slider).params.value).toBe(62);
     expect(useHistoryStore.getState().entries).toHaveLength(entriesBefore + 1);
   });
 
@@ -204,7 +204,7 @@ describe('historyStore 撤销/重做核心', () => {
     expect(hs.canUndo).toBe(false);
     expect(hs.canRedo).toBe(false);
     // 文档态不受清空影响
-    expect(app().widgets).toHaveLength(1);
+    expect(selectWidgets(app())).toHaveLength(1);
   });
 
   it('未触及文档切片的变更不产生历史条目 (快照相等跳过)', () => {
@@ -213,7 +213,7 @@ describe('historyStore 撤销/重做核心', () => {
     const lenAfterAdd = useHistoryStore.getState().entries.length;
 
     // 仅打开自定义控件编辑器 (widgetId 已存在) — 只改 customEditorState, 不入历史
-    app().openCustomEditor(app().widgets[0].params.id);
+    app().openCustomEditor(selectWidgets(app())[0].params.id);
     expect(useHistoryStore.getState().entries.length).toBe(lenAfterAdd);
   });
 
@@ -234,7 +234,7 @@ describe('historyStore 撤销/重做核心', () => {
     useHistoryStore.getState().undo();
 
     const after = useAppStore.getState();
-    expect(after.widgets).toHaveLength(0);
+    expect(selectWidgets(after)).toHaveLength(0);
     expect(after.rfNodes).toHaveLength(0);
     expect(after.dataTabs.some((t) => t.id === historyTabId)).toBe(true);
     expect(after.dataTabs.some((t) => t.type === 'can')).toBe(true);
@@ -244,7 +244,7 @@ describe('historyStore 撤销/重做核心', () => {
     // 4) redo 把控件找回来, 独立面板依旧存在
     useHistoryStore.getState().redo();
     const afterRedo = useAppStore.getState();
-    expect(afterRedo.widgets).toHaveLength(1);
+    expect(selectWidgets(afterRedo)).toHaveLength(1);
     expect(afterRedo.dataTabs.some((t) => t.id === historyTabId)).toBe(true);
   });
 });

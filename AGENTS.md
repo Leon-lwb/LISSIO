@@ -38,7 +38,7 @@ Vitest uses jsdom, Testing Library, and shared Tauri mocks from `src/test/setup.
 
 ## Commit & Pull Request Guidelines
 
-Recent history follows Conventional Commit-style subjects such as `fix(rawdata): ...`, `feat(ai): ...`, and `refactor(engine): ...`. Use an imperative, concise subject with an accurate scope. Pull requests should explain the problem and solution, link relevant issues, list verification commands, and include screenshots or recordings for visible UI changes. Before submission, run TypeScript checks and tests plus Rust formatting, Clippy, and workspace tests.
+Recent history follows Conventional Commit-style subjects such as `fix(rawdata): ...`, `feat(ai): ...`, and `refactor(engine): ...`. Use an imperative, concise subject with an accurate scope. Commit messages (subject and body) must be written in English. Pull requests should explain the problem and solution, link relevant issues, list verification commands, and include screenshots or recordings for visible UI changes. Before submission, run TypeScript checks and tests plus Rust formatting, Clippy, and workspace tests.
 
 ## Security & Configuration
 

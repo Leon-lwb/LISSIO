@@ -3,6 +3,7 @@ import type { WidgetConfig, SpectrumOutput } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
 import { getThemeColor } from '../waveform/wavechartFormatters';
+import { selectWidgets } from '../../../store/appStoreHelpers';
 
 interface SpectrumChartProps {
   widget: Extract<WidgetConfig, { kind: 'Spectrum' }>;
@@ -21,7 +22,7 @@ interface SpectrumChartProps {
 export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumChartProps) {
   const { id } = widget.params;
   // 所有 FFT 求解器 (数据源候选)
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const fftWidgets = widgets.filter((w): w is Extract<WidgetConfig, { kind: 'FFT' }> => w.kind === 'FFT');
   const rfEdges = useAppStore((s) => s.rfEdges);
   // 数据源 = 连到本控件 spectrum 输入端口的 FFT 求解器 (节点 id 即 widget id)

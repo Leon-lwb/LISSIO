@@ -38,9 +38,6 @@ import type {
   TransportConfig,
 } from '../types';
 
-// getEffectiveChannels 已移至 lib/utils/protocolSchema (避免循环依赖), 此处 re-export 保持既有导入路径
-export { getEffectiveChannels } from '../lib/utils/protocolSchema';
-
 /// 节点错误通知文案 — 统一入口 (settings 开关在 errorGuidance 内读取)
 
 /// 全局节点 (Transport/Protocol) data 公共字段
@@ -65,21 +62,24 @@ export interface ProtocolNodeData extends GlobalNodeData {
   schema: ProtocolSchema;
 }
 
+/// 串口默认配置 (单一权威 — defaultTransportConfig 与快照回退共用)
+export const DEFAULT_SERIAL: Extract<TransportConfig, { kind: 'Serial' }> = {
+  kind: 'Serial',
+  params: {
+    port_name: '',
+    baud_rate: 115200,
+    data_bits: 8,
+    parity: 'none',
+    stop_bits: 'one',
+    flow_control: 'none',
+  },
+};
+
 /// 各传输类型的默认配置 (与旧 TransportConfigPanel.switchKind 一致)
 export function defaultTransportConfig(kind: TransportConfig['kind']): TransportConfig {
   switch (kind) {
     case 'Serial':
-      return {
-        kind: 'Serial',
-        params: {
-          port_name: '',
-          baud_rate: 115200,
-          data_bits: 8,
-          parity: 'none',
-          stop_bits: 'one',
-          flow_control: 'none',
-        },
-      };
+      return { ...DEFAULT_SERIAL, params: { ...DEFAULT_SERIAL.params } };
     case 'Udp':
       return {
         kind: 'Udp',
@@ -142,6 +142,30 @@ export function createProtocolNode(
 /// 节点是否全局字节平面节点 (Transport/Protocol)
 export function isGlobalNode(n: Node): boolean {
   return n.data?.global === true;
+}
+
+/// widget 配置派生选择器 — rfNodes 是 widget 配置的唯一权威
+/// (画布节点 data.widget 持有配置; 平铺数组已删除, 由本选择器按需派生)。
+/// 缓存做双重引用稳定: rfNodes 引用不变直接复用; rfNodes 变化 (拖动/连线等)
+/// 但全部 widget 配置对象身份未变时也复用旧数组 —
+/// 保证 useAppStore((s) => selectWidgets(s)) 只在某个 widget 配置真正变化时重渲染。
+let selectWidgetsCache: { source: Node[]; widgets: WidgetConfig[] } | null = null;
+export function selectWidgets(state: { rfNodes: Node[] }): WidgetConfig[] {
+  const source = state.rfNodes;
+  if (selectWidgetsCache?.source === source) return selectWidgetsCache.widgets;
+  const widgets: WidgetConfig[] = [];
+  for (const n of source) {
+    if (n.type === 'widget' && n.data?.widget) {
+      widgets.push(n.data.widget as WidgetConfig);
+    }
+  }
+  const prev = selectWidgetsCache?.widgets;
+  if (prev?.length === widgets.length && prev.every((w, i) => w === widgets[i])) {
+    selectWidgetsCache = { source, widgets: prev };
+    return prev;
+  }
+  selectWidgetsCache = { source, widgets };
+  return widgets;
 }
 
 /// 同步指定 tab 的节点图到后端
@@ -456,9 +480,7 @@ export function adoptSourceGraph(event: GraphSourceEventPayload): void {
 
   // 1. widget 配置记录收敛 — 新增 / 更新 / 删除 (记录集为该 tab 权威)
   const nodeUpdates = new Map<string, Node>();
-  const widgetUpdates = new Map<string, WidgetConfig>();
   const addedWidgetNodes: Node[] = [];
-  const addedWidgetConfigs: WidgetConfig[] = [];
   const removedWidgetIds = new Set<string>();
   let widgetSetChanged = false;
 
@@ -486,7 +508,6 @@ export function adoptSourceGraph(event: GraphSourceEventPayload): void {
               : {}),
             data: { ...existing.data, widget },
           });
-          widgetUpdates.set(rec.id, widget);
           widgetSetChanged = true;
         }
       } else {
@@ -498,7 +519,6 @@ export function adoptSourceGraph(event: GraphSourceEventPayload): void {
           ...(pos?.height != null ? { height: pos.height } : {}),
           data: { widget, tabId: event.tab_id },
         });
-        addedWidgetConfigs.push(widget);
         widgetSetChanged = true;
       }
     }
@@ -585,7 +605,7 @@ export function adoptSourceGraph(event: GraphSourceEventPayload): void {
     return;
   }
 
-  // 应用: 节点 = 保留集 ⊕ 更新 ⊕ 新增; widgets 平铺数组与 tab 隶属同步收敛
+  // 应用: 节点 = 保留集 ⊕ 更新 ⊕ 新增 (widget 配置以节点 data.widget 为权威)
   const updateMap = new Map<string, Node>([...nodeUpdates, ...posUpdates]);
   const rfNodes = [
     ...keptNodes.map((n) => updateMap.get(n.id) ?? n),
@@ -593,34 +613,22 @@ export function adoptSourceGraph(event: GraphSourceEventPayload): void {
     ...addedGlobalNodes,
   ];
   const others = oldEdges.filter((e) => !isTabEdge(e));
-  let widgets = state.widgets;
-  if (removedWidgetIds.size) widgets = widgets.filter((w) => !removedWidgetIds.has(w.params.id));
-  if (widgetUpdates.size) {
-    // 平铺数组 upsert: 条目在则更新, 不在 (历史不一致) 则补齐, 与画布保持一致
-    const touched = new Set<string>();
-    widgets = widgets.map((w) => {
-      const nw = widgetUpdates.get(w.params.id);
-      if (!nw) return w;
-      touched.add(w.params.id);
-      return nw;
-    });
-    const missing = [...widgetUpdates].filter(([id]) => !touched.has(id));
-    if (missing.length) widgets = [...widgets, ...missing.map(([, w]) => w)];
-  }
-  if (addedWidgetConfigs.length) widgets = [...widgets, ...addedWidgetConfigs];
   let controlTabs = state.controlTabs;
   if (records) {
-    const liveIds = new Set(widgets.map((w) => w.params.id));
+    const liveIds = new Set(
+      rfNodes.filter((n) => n.type === 'widget').map((n) => n.id)
+    );
     const ordered = records.map((r) => r.id).filter((id) => liveIds.has(id));
     controlTabs = controlTabs.map((t) =>
       t.id === event.tab_id ? { ...t, widgets: ordered } : t
     );
   }
+  const widgets = selectWidgets({ rfNodes });
   const dataTabs = state.dataTabs.map((tab) => {
     const owner = tab.widgetId ? widgets.find((widget) => widget.params.id === tab.widgetId) : undefined;
     return owner ? { ...tab, name: owner.params.label } : tab;
   });
-  useAppStore.setState({ rfNodes, rfEdges: [...others, ...adopted], widgets, controlTabs, dataTabs });
+  useAppStore.setState({ rfNodes, rfEdges: [...others, ...adopted], controlTabs, dataTabs });
   for (const widget of widgets) {
     const value = widgetInputValue(widget);
     if (value !== null) useAppStore.getState().setInputValue(widget.params.id, value);
@@ -776,7 +784,6 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
   // 1. 全部 tab 源图 → widget 节点 + 全局节点 + 边 (先建节点, 再按端点全集过滤边)
   const widgetNodes: Node[] = [];
   const globalNodes = new Map<string, Node>();
-  const widgets: WidgetConfig[] = [];
   for (const g of snap.graphs) {
     for (const def of g.nodes) {
       if (globalNodes.has(def.id)) continue;
@@ -787,7 +794,6 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
     for (const rec of g.widgets) {
       // 未知 kind 落为占位控件 — 画布是后端状态的投影, 不因前端不认识而丢弃
       const widget = widgetOrPlaceholder(rec);
-      widgets.push(widget);
       const pos = snap.positions[rec.id];
       widgetNodes.push({
         id: rec.id,
@@ -837,6 +843,8 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
   ] as DataTab[]) {
     if (!dataTabs.some((t) => t.id === ft.id)) dataTabs.push(ft);
   }
+  const rfNodes = [...globalNodes.values(), ...widgetNodes];
+  const widgets = selectWidgets({ rfNodes });
   for (const tab of dataTabs) {
     if (!tab.widgetId) continue;
     const owner = widgets.find((widget) => widget.params.id === tab.widgetId);
@@ -848,8 +856,7 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
     activeControlTabId: controlTabs[0].id,
     dataTabs,
     activeDataTabId: dataTabs[0]?.id ?? 'compile-results-fixed',
-    widgets,
-    rfNodes: [...globalNodes.values(), ...widgetNodes],
+    rfNodes,
     rfEdges: edges,
     graphVersion: snap.version ?? null,
   });

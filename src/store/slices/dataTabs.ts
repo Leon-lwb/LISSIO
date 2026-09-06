@@ -3,6 +3,7 @@ import type { DataTab, WidgetConfig } from '../../types';
 import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { useAppStore } from '../appStore';
 import { widgetToTab } from '../../lib/utils/widgetTab';
+import { selectWidgets } from '../appStoreHelpers';
 import type { AppSlice } from './types';
 
 export interface DataTabSlice {
@@ -215,13 +216,14 @@ export interface DataPanelEntry {
 }
 
 export function getAvailableDataPanelEntries(
-  state: Pick<AppStore, 'dataTabs' | 'widgets' | 'lang'>,
+  state: Pick<AppStore, 'dataTabs' | 'rfNodes' | 'lang'>,
   actions: Pick<AppStore, 'addCompileErrorsTab' | 'addCompileResultsTab' | 'addCanTab' | 'addLogicTab' | 'addOperationHistoryTab' | 'addNodePropertiesTab' | 'addDataTab' | 'setActiveDataTab' | 'addWidgetTab'>,
 ): DataPanelEntry[] {
-  const widgetKinds = new Set(state.widgets.map((w) => w.kind));
+  const widgets = selectWidgets(state);
+  const widgetKinds = new Set(widgets.map((w) => w.kind));
   // 同一 kind 可有多个 widget (例如多个 Waveform) — 取首个派生 Tab 用作打开目标
   const firstWidgetOf = (kind: WidgetConfig['kind']) =>
-    state.widgets.find((w) => w.kind === kind) ?? null;
+    widgets.find((w) => w.kind === kind) ?? null;
 
   const standalone: DataPanelEntry[] = [
     {
@@ -337,7 +339,7 @@ export function cycleDataPanelTab(type: DataTab['type']): void {
       return;
     }
     // 派生类型: 用首个同类 widget 创建
-    const widget = app.widgets.find((w) => widgetTabTypeOfKind(w.kind) === type);
+    const widget = selectWidgets(app).find((w) => widgetTabTypeOfKind(w.kind) === type);
     if (widget) app.addWidgetTab(widget);
     return;
   }

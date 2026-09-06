@@ -32,23 +32,10 @@ const tauriMock = vi.hoisted(() => {
 
     // ---- @tauri-apps/api/event ----
     listen: vi.fn(() => Promise.resolve(() => undefined)),
-    emit: vi.fn(() => Promise.resolve(undefined)),
-
-    // ---- @tauri-apps/plugin-log ----
-    logTrace: vi.fn(),
-    logDebug: vi.fn(),
-    logInfo: vi.fn(),
-    logWarn: vi.fn(),
-    logError: vi.fn(),
 
     // ---- @tauri-apps/plugin-dialog ----
     dialogSave: vi.fn(() => Promise.resolve(null)),
     dialogOpen: vi.fn(() => Promise.resolve(null)),
-
-    // ---- @tauri-apps/plugin-notification ----
-    isPermissionGranted: vi.fn(() => Promise.resolve(true)),
-    requestPermission: vi.fn(() => Promise.resolve('granted')),
-    sendNotification: vi.fn(),
 
     // ---- @tauri-apps/plugin-fs ----
     readTextFile: vi.fn(() => Promise.resolve('')),
@@ -60,9 +47,6 @@ const tauriMock = vi.hoisted(() => {
     // ---- @tauri-apps/plugin-process ----
     relaunch: vi.fn(() => Promise.resolve(undefined)),
     exit: vi.fn(() => Promise.resolve(undefined)),
-
-    // ---- @tauri-apps/plugin-updater ----
-    check: vi.fn(() => Promise.resolve(null)),
   };
 });
 
@@ -108,13 +92,6 @@ function createChannelStub() {
   };
 }
 
-vi.mock('@tauri-apps/api', () => ({
-  invoke: tauriMock.invoke,
-  listen: tauriMock.listen,
-  emit: tauriMock.emit,
-  Channel: createChannelStub(),
-}));
-
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: tauriMock.invoke,
   Channel: createChannelStub(),
@@ -122,15 +99,6 @@ vi.mock('@tauri-apps/api/core', () => ({
 
 vi.mock('@tauri-apps/api/event', () => ({
   listen: tauriMock.listen,
-  emit: tauriMock.emit,
-}));
-
-vi.mock('@tauri-apps/plugin-log', () => ({
-  trace: tauriMock.logTrace,
-  debug: tauriMock.logDebug,
-  info: tauriMock.logInfo,
-  warn: tauriMock.logWarn,
-  error: tauriMock.logError,
 }));
 
 vi.mock('@tauri-apps/plugin-store', () => {
@@ -172,12 +140,6 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
   message: vi.fn(() => Promise.resolve(undefined)),
 }));
 
-vi.mock('@tauri-apps/plugin-notification', () => ({
-  isPermissionGranted: tauriMock.isPermissionGranted,
-  requestPermission: tauriMock.requestPermission,
-  sendNotification: tauriMock.sendNotification,
-}));
-
 vi.mock('@tauri-apps/plugin-fs', () => ({
   readTextFile: tauriMock.readTextFile,
   writeTextFile: tauriMock.writeTextFile,
@@ -197,10 +159,4 @@ vi.mock('@tauri-apps/plugin-opener', () => ({
 vi.mock('@tauri-apps/plugin-process', () => ({
   relaunch: tauriMock.relaunch,
   exit: tauriMock.exit,
-}));
-
-vi.mock('@tauri-apps/plugin-updater', () => ({
-  check: tauriMock.check,
-  download: vi.fn(() => Promise.resolve(undefined)),
-  install: vi.fn(() => Promise.resolve(undefined)),
 }));

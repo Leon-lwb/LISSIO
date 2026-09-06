@@ -12,10 +12,11 @@ import { t } from '../../i18n';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { TextField } from '../ui/fields';
 import { SizeSection } from '../widgets/shared/SizeSection';
+import { selectWidgets } from '../../store/appStoreHelpers';
 
 export const WidgetProperties = memo(function WidgetProperties({ node }: { node: Node }) {
   const lang = useAppStore((s) => s.lang);
-  const widget = useAppStore((s) => s.widgets.find((item) => item.params.id === node.id));
+  const widget = useAppStore((s) => selectWidgets(s).find((item) => item.params.id === node.id));
   const updateWidget = useAppStore((s) => s.updateWidget);
   if (!widget) return null;
   const update = (next: WidgetConfig) => updateWidget(widget.params.id, next);

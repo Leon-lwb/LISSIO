@@ -18,7 +18,6 @@ import { useAppStore } from '../../../store/appStore';
 describe('WidgetNode title rename', () => {
   beforeEach(() => {
     useAppStore.setState({
-      widgets: [],
       rfNodes: [],
       rfEdges: [],
       dataTabs: [],
@@ -37,7 +36,6 @@ describe('WidgetNode title rename', () => {
       data: { widget, tabId: 'default' },
     };
     useAppStore.setState({
-      widgets: [widget],
       rfNodes: [node],
       dataTabs: [{ id: widget.params.id, widgetId: widget.params.id, type: 'waveform-extra', name: widget.params.label, closable: true }],
     });
@@ -48,7 +46,7 @@ describe('WidgetNode title rename', () => {
     fireEvent.change(input, { target: { value: 'Motor Scope' } });
     fireEvent.keyDown(input, { key: 'Enter' });
 
-    expect(useAppStore.getState().widgets[0].params.label).toBe('Motor Scope');
+    expect(((useAppStore.getState().rfNodes.find((n) => n.id === widget.params.id)?.data as { widget: { params: { label: string } } })).widget.params.label).toBe('Motor Scope');
     expect(useAppStore.getState().dataTabs[0]).toMatchObject({
       id: widget.params.id,
       widgetId: widget.params.id,
@@ -59,7 +57,9 @@ describe('WidgetNode title rename', () => {
   it('keeps editing an empty name until cancelled with Escape', () => {
     const widget = createWidget('Knob');
     const data = { widget, tabId: 'default' };
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({
+      rfNodes: [{ id: widget.params.id, type: 'widget' as const, position: { x: 0, y: 0 }, data }],
+    });
     render(<WidgetNode {...({ id: widget.params.id, data } as unknown as NodeProps)} />);
 
     fireEvent.doubleClick(screen.getByTitle('双击标题栏修改名称'));
@@ -67,7 +67,7 @@ describe('WidgetNode title rename', () => {
     fireEvent.change(input, { target: { value: '' } });
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(useAppStore.getState().widgets[0].params.label).toBe('Knob');
+    expect(useAppStore.getState().rfNodes[0].data?.widget && ((useAppStore.getState().rfNodes[0].data as { widget: { params: { label: string } } }).widget).params.label).toBe('Knob');
 
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(screen.queryByRole('textbox', { name: /控件名称|Widget Name/ })).not.toBeInTheDocument();

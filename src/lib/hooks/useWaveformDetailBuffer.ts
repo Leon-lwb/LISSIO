@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WaveformSeriesSelection } from '../../types';
-import { WaveformWindowCache } from '../buffers/dataBuffer';
+import { WaveformWindowCache, EMPTY_WAVEFORM_CACHE as EMPTY_BUFFER } from '../buffers/dataBuffer';
 import { api } from '../tauri/tauri';
 
 interface WaveformDetailOptions {
@@ -20,8 +20,6 @@ export interface WaveformDetailState {
   snapshotId: string | null;
   snapshotError: string | null;
 }
-
-const EMPTY_BUFFER = new WaveformWindowCache();
 
 function createSourceBuffers(sourceId: string | null) {
   return {

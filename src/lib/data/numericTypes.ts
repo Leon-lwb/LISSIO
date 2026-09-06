@@ -18,7 +18,6 @@ export interface NumericSample {
 export interface NumericPortState {
   readonly source: NumericPortRef | null;
   readonly connected: boolean;
-  readonly legacyBinding: boolean;
   readonly status: PortSampleStatus;
   readonly latest: NumericSample | null;
   readonly history: readonly NumericSample[];

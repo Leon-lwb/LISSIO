@@ -1,6 +1,5 @@
 import { Channel, invoke } from '@tauri-apps/api/core';
 import type {
-  AiAdapterInfo,
   AiChatEvent,
   AiChatSession,
   AiProviderConfig,
@@ -24,8 +23,6 @@ import type {
   RunAction,
   RunSnapshot,
   SendTaskRegistration,
-  TriggerMatchResult,
-  TriggerRule,
   WidgetBinding,
   WaveformWindow,
   WaveformWindowPayload,
@@ -37,7 +34,7 @@ import { normalizeWaveformWindow } from '../buffers/dataBuffer';
 import type { NodeDef, GraphEdge } from '../utils/nodeDef';
 import type { GraphDerivedPayload } from '../../store/slices/derived';
 import { clearRawDataBuffer } from '../buffers/rawDataSubscription';
-import { subscribeDisplaySnapshot } from '../buffers/shardedSubscription';
+import { subscribeDisplay } from '../buffers/displaySubscription';
 import { decodeWaveformWindow } from '../data/waveformProtocol';
 import { perfEvent, tickMetric } from '../utils/perfLog';
 
@@ -106,18 +103,6 @@ export interface WorkspaceSnapshotPayload {
     widgets: WidgetRecordPayload[];
   }[];
   positions: Record<string, PositionPayload>;
-}
-
-/// connect_edge 响应
-export interface ConnectedEdgePayload {
-  edge_id: string;
-}
-
-/// disconnect_edge 响应
-export interface DisconnectedEdgePayload {
-  edge_id: string;
-  source: string;
-  target: string;
 }
 
 /// 关闭 Tauri Channel 的完整流程:
@@ -237,12 +222,6 @@ export const api = {
       data,
     }),
 
-  /// 字节注入 — 从 sourceNodeId 的字节出口沿全局 BytePlan 路由到所有下游
-  /// (FrameDecoder.in 喂入解析 / Protocol.in 喂入引擎 / Transport.tx 真实发送)
-  /// 返回路由命中的下游数量 (0 = 未连线)
-  injectBytes: (sourceNodeId: string, data: number[]) =>
-    invoke<number>('inject_bytes', { sourceNodeId, data }),
-
   /// 命令发送帧字节打包 — 后端 `compute_command_frame_bytes` IPC 单一权威
   /// (预览专用入口; 发送走 sendCommandFrame 统一内核)
   computeFrameBytes: (
@@ -269,12 +248,6 @@ export const api = {
   setWidgetSendTasks: (widgetId: string, tasks: SendTaskRegistration[]) =>
     invoke<number>('set_widget_send_tasks', { widgetId, tasks }),
 
-  /// 自动发送任务状态表 (taskKey → sent/skipped/error)
-  getSendTaskStatus: () =>
-    invoke<Record<string, { sent: number; skipped: number; error: string | null }>>(
-      'get_send_task_status',
-    ),
-
   /// 工作区运行控制 — start (启动/恢复) / pause / stop; 返回切换后快照
   workspaceRun: (action: RunAction) =>
     invoke<RunSnapshot>('workspace_run', { action }),
@@ -285,13 +258,6 @@ export const api = {
   // ===== 协议 (nodeId = 图中 Protocol 节点 id) =====
   setProtocol: (nodeId: string, config: ProtocolConfig) =>
     invoke<void>('set_protocol', { nodeId, config }),
-
-  getProtocol: (nodeId: string) =>
-    invoke<ProtocolConfig>('get_protocol', { nodeId }),
-
-  /// 获取自动检测到的通道数 (仅在自动模式下返回 number, 否则 null)
-  getDetectedChannels: (nodeId: string) =>
-    invoke<number | null>('get_detected_channels', { nodeId }),
 
   // ===== 波形缓冲区 (source = Protocol 节点 id) =====
   /// 订阅波形数据 — 后端 WWB1 二进制快照流 (TypedArray 零拷贝解码)
@@ -341,11 +307,11 @@ export const api = {
     onEvent: (m: SourceMeasurementsPayload) => void,
     intervalMs?: number,
   ) =>
-    subscribeDisplaySnapshot<SourceMeasurementsPayload>(
+    subscribeDisplay<SourceMeasurementsPayload>(
       { kind: 'measurements', source, window_ms: windowMs, derived },
       'measurements',
       onEvent,
-      intervalMs,
+      { intervalMs },
     ),
 
   /// 计算自动设置建议 — 后端周期检测 + 1-2-5 拟合 (阻塞线程执行)。
@@ -425,12 +391,6 @@ export const api = {
 
   clearBuffer: (source: string) => invoke<void>('clear_buffer', { source }),
 
-  setBufferChannels: (source: string, count: number) =>
-    invoke<void>('set_buffer_channels', { source, count }),
-
-  getBufferInfo: (source: string) =>
-    invoke<[number, number]>('get_buffer_info', { source }),
-
   setWaveformBufferCapacity: (source: string, maxPoints: number) =>
     invoke<void>('set_waveform_buffer_capacity', { source, maxPoints }),
 
@@ -488,34 +448,6 @@ export const api = {
   getSourceGraph: (tabId: string) =>
     invoke<GraphSourceEventPayload | null>('get_source_graph', { tabId }),
 
-  /// 连线 — 后端权威入口 (编译校验, 失败返回真实原因且不建边)
-  connectEdge: (params: {
-    source: string;
-    target: string;
-    tabId?: string | null;
-    sourceHandle?: string | null;
-    targetHandle?: string | null;
-  }) =>
-    invoke<ConnectedEdgePayload>('connect_edge', {
-      source: params.source,
-      target: params.target,
-      tabId: params.tabId ?? null,
-      sourceHandle: params.sourceHandle ?? null,
-      targetHandle: params.targetHandle ?? null,
-    }),
-
-  /// 删线 — 按 edgeId 或 source/target 组合 (可只给一端)
-  disconnectEdge: (params: {
-    edgeId?: string | null;
-    source?: string | null;
-    target?: string | null;
-  }) =>
-    invoke<DisconnectedEdgePayload>('disconnect_edge', {
-      edgeId: params.edgeId ?? null,
-      source: params.source ?? null,
-      target: params.target ?? null,
-    }),
-
   /// 移除指定 tab 的节点图 (tab 删除时调用)
   /// 返回 `GraphDerivedPayload` — 删除后剩余全局节点的派生数据 (供前端 derivedPorts 对账)
   removeTabGraph: (tabId: string) =>
@@ -552,7 +484,7 @@ export const api = {
     onEvent: (snap: CanLoadSnapshot) => void,
     options?: { intervalMs?: number; bitrateBps?: number | null },
   ) => {
-    const subscription = subscribeDisplaySnapshot<CanLoadSnapshot>(
+    const subscription = subscribeDisplay<CanLoadSnapshot>(
       {
         kind: 'can_load',
         node_id: nodeId,
@@ -560,7 +492,7 @@ export const api = {
       },
       'can_load',
       onEvent,
-      options?.intervalMs ?? 500,
+      { intervalMs: options?.intervalMs ?? 500 },
     );
     return {
       promise: Promise.resolve(),
@@ -599,35 +531,6 @@ export const api = {
       enableFps,
     }),
 
-  // ===== 触发器匹配 (Trigger 面板) =====
-  /// 在后端按 rules 表对 command 执行匹配, 返回首个命中规则的 outputValue/text;
-  /// 全部未命中则返回 `{ value: defaultMiss, text: defaultMissText, matched: false, outputType: 'miss' }`
-  /// - `numeric`: 用于 range 类型的规则; 传 null 跳过 range 规则
-  /// 顶层参数用 camelCase (Tauri 命令参数约定), 规则字段转换为 snake_case (对齐 Rust serde 命名)
-  matchTriggerCommand: (
-    rules: TriggerRule[],
-    defaultMiss: number,
-    defaultMissText: string,
-    command: string,
-    numeric: number | null,
-  ) =>
-    invoke<TriggerMatchResult>('match_trigger_command', {
-      rules: rules.map((r) => ({
-        id: r.id,
-        pattern: r.pattern,
-        match_type: r.matchType,
-        flags: r.flags ?? null,
-        output_type: r.outputType,
-        output_value: r.outputValue,
-        output_text: r.outputText,
-        enabled: r.enabled,
-      })),
-      defaultMiss,
-      defaultMissText,
-      command,
-      numeric,
-    }),
-
   // ===== 调试 =====
   /// 打开当前 Webview 的开发者工具（检查元素）
   inspectElement: () => invoke<void>('inspect_element'),
@@ -636,12 +539,7 @@ export const api = {
   setPipelineConfig: (config: PipelineConfig) =>
     invoke<void>('set_pipeline_config', { config }),
 
-  getPipelineConfig: () => invoke<PipelineConfig>('get_pipeline_config'),
-
   // ===== AI 对话 + MCP =====
-  /// 支持的 LLM provider 适配器清单 (设置 UI 下拉)
-  aiListProviders: () => invoke<AiAdapterInfo[]>('ai_list_providers'),
-
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。
   /// 会话所有权在后端: text 非空时追加用户条目, regenerate 时截断待重试回合。
   /// useBuiltinTools 启用内置原生工具 (软件自有能力 + 知识库, uiLang 注入系统提示词)
@@ -673,11 +571,6 @@ export const api = {
   /// 取消进行中的对话任务, 返回任务是否存在
   aiChatCancel: (taskId: string) =>
     invoke<boolean>('ai_chat_cancel', { taskId }),
-
-  /// 前端托管工具回执 (toolHost 执行完 ai_tool_invoke 后调用);
-  /// 返回是否存在对应 pending 调用 (超时清理后为 false)
-  aiToolResolve: (callId: string, ok: boolean, result: unknown) =>
-    invoke<boolean>('ai_tool_resolve', { callId, ok, result }),
 
   /// 全部对话会话摘要
   chatListSessions: () => invoke<AiSessionMeta[]>('chat_list_sessions'),
@@ -730,14 +623,6 @@ export const api = {
 
   /// 刷新聚合工具列表 (自动连接已启用未连接的 server) 并更新对话工具缓存
   mcpListTools: () => invoke<McpToolInfo[]>('mcp_list_tools'),
-
-  /// 各 server 的连接状态 [(server_id, connected)]
-  mcpConnectionStates: () =>
-    invoke<[string, boolean][]>('mcp_connection_states'),
-
-  /// 手动调用一个聚合工具 (前缀名)
-  mcpCallTool: (name: string, args: unknown) =>
-    invoke<string>('mcp_call_tool', { name, arguments: args }),
 
   /// 本地 MCP server 状态
   mcpServerStatus: () => invoke<McpServerStatus>('mcp_server_status'),

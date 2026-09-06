@@ -22,8 +22,8 @@ export {
   syncTabGraphToBackend,
   traceProtocolSource,
   downstreamProtocolOf,
-  getEffectiveChannels,
 } from './appStoreHelpers';
+export { getEffectiveChannels } from '../lib/utils/protocolSchema';
 
 export type AppStore = SidebarSlice
   & ConnectionSlice

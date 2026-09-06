@@ -21,13 +21,21 @@ function spyPieChartRender() {
   return vi.spyOn(PieChart as unknown as { type: FunctionComponent }, 'type');
 }
 
+
+/// 控件配置以画布节点 data.widget 为权威 — 测试种子用节点承载配置
+const widgetNodeOf = <T extends { kind: string; params: { id: string } }>(widget: T) => ({
+  id: widget.params.id,
+  type: 'widget' as const,
+  position: { x: 0, y: 0 },
+  data: { widget },
+});
+
 function resetStores() {
   useAppStore.setState({
     lang: 'zh',
     dataTabs: [STABLE_TAB, HEAVY_TAB],
-    widgets: [PIE_WIDGET],
     rfEdges: [],
-    rfNodes: [],
+    rfNodes: [widgetNodeOf(PIE_WIDGET)],
     detectedChannels: {},
   });
   useWaveformScopeStore.setState({ states: { 'default-waveform': createPerWidgetState(4) } });
@@ -110,7 +118,7 @@ describe('DataTabContent sibling-tab isolation', () => {
     expect(spy).toHaveBeenCalledTimes(1);
 
     // 兄弟 heavy 数据变化 (widgets 数组新增无关控件) 同样不级联
-    act(() => useAppStore.setState({ widgets: [PIE_WIDGET, { kind: 'Command', params: { id: 'cmd-1', label: 'Cmd', frames: [{ id: 'f1', label: 'F1', blocks: [], appendNewline: false, sendMode: 'manual', timerMs: 100 }], loopbackEnabled: false, loopbackHistory: [] } }] }));
+    act(() => useAppStore.setState({ rfNodes: [widgetNodeOf(PIE_WIDGET), widgetNodeOf({ kind: 'Command', params: { id: 'cmd-1', label: 'Cmd', frames: [{ id: 'f1', label: 'F1', blocks: [], appendNewline: false, sendMode: 'manual', timerMs: 100 }], loopbackEnabled: false, loopbackHistory: [] } })] }));
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
@@ -123,7 +131,7 @@ describe('DataTabContent sibling-tab isolation', () => {
     // 替换 pie widget 对象 (同 id 新引用) → 分支 props 变化 → 应重渲染
     act(() =>
       useAppStore.setState({
-        widgets: [{ ...PIE_WIDGET, params: { ...PIE_WIDGET.params, label: 'Pie v2' } }],
+        rfNodes: [widgetNodeOf({ ...PIE_WIDGET, params: { ...PIE_WIDGET.params, label: 'Pie v2' } })],
       })
     );
     expect(spy).toHaveBeenCalledTimes(2);

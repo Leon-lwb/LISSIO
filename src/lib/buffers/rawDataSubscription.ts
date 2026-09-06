@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import type { RawDataBatch, RawDataDirection } from '../../types';
-import { subscribeDisplay } from './shardedSubscription';
+import { subscribeDisplay } from './displaySubscription';
 import { tickMetric } from '../utils/perfLog';
 
 export type DirectionFilter = 'all' | RawDataDirection;

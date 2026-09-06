@@ -1,6 +1,6 @@
 import { api } from '../../lib/tauri/tauri';
 import { waveformWindow } from '../../lib/buffers/dataBuffer';
-import { clearRawDataTransportBuffers } from '../../lib/buffers/rawDataTransportBuffer';
+import { clearRawDataTransportBuffers } from '../../lib/buffers/rawDataBuffers';
 import { resetPortSampleStoresForSource } from '../../lib/data/dataClient';
 import { notify } from '../../lib/tauri/notifications';
 import { nodeError } from '../../lib/tauri/errorGuidance';
@@ -8,24 +8,11 @@ import { t } from '../../i18n';
 import { downstreamProtocolOf, type TransportNodeData, type ProtocolNodeData } from '../appStoreHelpers';
 import { schemaFromProtocolConfig } from '../../lib/utils/protocolSchema';
 import { useSettingsStore } from '../settingsStore';
-import type { ConnectionState, PortInfo, ProtocolConfig, TransportConfig, TransportStats, WidgetBinding } from '../../types';
+import type { ConnectionState, PortInfo, ProtocolConfig, TransportStats, WidgetBinding, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
 
-export const DEFAULT_SERIAL: TransportConfig = {
-  kind: 'Serial',
-  params: {
-    port_name: '',
-    baud_rate: 115200,
-    data_bits: 8,
-    parity: 'none',
-    stop_bits: 'one',
-    flow_control: 'none',
-  },
-};
-
-/// 节点统计 — rxDroppedWindow 为本窗口丢弃数 (随 transport:rx 覆盖),
-/// rxDroppedTotal 为累计丢弃数 (前端累加)
-export type NodeStats = TransportStats & { rxDroppedWindow: number; rxDroppedTotal: number };
+/// 节点统计 — rxDroppedWindow 为本窗口丢弃数 (随 transport:rx 覆盖)
+export type NodeStats = TransportStats & { rxDroppedWindow: number };
 
 export const EMPTY_NODE_STATS: NodeStats = {
   rx_bytes: 0,
@@ -34,7 +21,6 @@ export const EMPTY_NODE_STATS: NodeStats = {
   tx_frames: 0,
   rx_dropped: 0,
   rxDroppedWindow: 0,
-  rxDroppedTotal: 0,
 };
 
 /// 节点错误通知文案 — 统一入口 (settings 开关在 errorGuidance 内读取)
@@ -111,7 +97,6 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         set((s) => ({
           connectionStates: { ...s.connectionStates, [nodeId]: 'Connected' as ConnectionState },
           nodeStats: { ...s.nodeStats, [nodeId]: { ...EMPTY_NODE_STATS } },
-          rawDataVersion: Date.now(),
         }));
       } catch (e) {
         const lang = get().lang;
@@ -167,16 +152,24 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
       try {
         const result = await api.sendAndCapture(nodeId, protocolNode, data);
         set((s) => ({
-          widgets: s.widgets.map((w) => {
-            if (w.kind !== 'Command' || !w.params.loopbackEnabled) return w;
+          // widget 配置权威在画布节点 data.widget — 所有开启回环的 Command 控件追加结果
+          rfNodes: s.rfNodes.map((n) => {
+            const w = n.data?.widget as WidgetConfig | undefined;
+            if (w?.kind !== 'Command' || !w.params.loopbackEnabled) return n;
             return {
-              ...w,
-              params: {
-                ...w.params,
-                loopbackHistory: [
-                  ...(w.params.loopbackHistory ?? []),
-                  result,
-                ].slice(-200),
+              ...n,
+              data: {
+                ...n.data,
+                widget: {
+                  ...w,
+                  params: {
+                    ...w.params,
+                    loopbackHistory: [
+                      ...(w.params.loopbackHistory ?? []),
+                      result,
+                    ].slice(-200),
+                  },
+                },
               },
             };
           }),

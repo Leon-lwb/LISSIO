@@ -10,7 +10,7 @@ import { type Node, type Edge } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import { isGlobalNode } from '../../store/appStoreHelpers';
 import { useDockStore } from '../../store/dockStore';
-import { applySnapshot, migrateSnapshotToV3, type AppSnapshot } from '../tauri/appExport';
+import { applySnapshot, type AppSnapshot } from '../tauri/appExport';
 import { rebaseHistory } from '../../store/historyStore';
 import { notify, formatError } from '../tauri/notifications';
 import { t } from '../../i18n';
@@ -28,8 +28,7 @@ function remapRawDataHandle(handle: string | undefined | null, idMap: Map<string
 }
 
 /// 合并模式: 将模板作为新控件标签页追加
-function mergeTemplate(rawSnap: AppSnapshot): void {
-  const snap = migrateSnapshotToV3(rawSnap);
+function mergeTemplate(snap: AppSnapshot): void {
   const app = useAppStore.getState();
   const newTabId = `tpl-${nanoid(6)}`;
 
@@ -37,13 +36,11 @@ function mergeTemplate(rawSnap: AppSnapshot): void {
   const primaryTransport = app.rfNodes.find((n) => n.type === 'transport' && isGlobalNode(n));
   const primaryProtocol = app.rfNodes.find((n) => n.type === 'protocol' && isGlobalNode(n));
 
-  // widget 旧 id → 新 id
+  // widget 旧 id → 新 id (配置权威在画布节点 data.widget, 节点重映射时一并改写)
   const idMap = new Map<string, string>();
-  const widgets = (snap.widgets ?? []).map((w) => {
-    const newId = nanoid(8);
-    idMap.set(w.params.id, newId);
-    return { ...w, params: { ...w.params, id: newId } } as WidgetConfig;
-  });
+  for (const w of snap.widgets ?? []) {
+    idMap.set(w.params.id, nanoid(8));
+  }
 
   // 模板全局节点 id → 现有主节点 id (无主节点时保留模板 id 并导入该节点)
   const globalIdMap = new Map<string, string>();
@@ -105,7 +102,6 @@ function mergeTemplate(rawSnap: AppSnapshot): void {
   }));
 
   useAppStore.setState((s) => ({
-    widgets: [...s.widgets, ...widgets],
     controlTabs: [...s.controlTabs, newControlTab],
     dataTabs: [...s.dataTabs, ...newDataTabs],
     rfNodes: [...s.rfNodes, ...rfNodes],

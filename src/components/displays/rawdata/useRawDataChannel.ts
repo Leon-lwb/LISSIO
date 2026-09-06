@@ -7,6 +7,7 @@ import { useCallback, useMemo } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { classifyRawDataChannel, resolveRawDataChannelKey } from '../../../lib/utils/rawDataChannel';
 import { rawDataPortId } from '../../../lib/utils/nodeDef';
+import { selectWidgets } from '../../../store/appStoreHelpers';
 
 export interface RawDataChannelOption {
   key: string;
@@ -21,7 +22,7 @@ export interface RawDataChannelOption {
 export function useRawDataChannel(widgetId?: string) {
   const rfEdges = useAppStore((s) => s.rfEdges);
   const rfNodes = useAppStore((s) => s.rfNodes);
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const updateWidget = useAppStore((s) => s.updateWidget);
 
   // 通道选择: 该 widget 的入边 (source, sourceHandle) 组合 (去重)

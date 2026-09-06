@@ -22,7 +22,7 @@ import {
 import { useLayoutStore, type SidebarDock } from '../../store/layoutStore';
 import { applyAppearance } from '../../settings/applyTheme';
 import type { AppSettings } from '../../settings/defaults';
-import type { ControlTab, DataTab, ProtocolConfig, TransportConfig, WidgetConfig } from '../../types';
+import type { ControlTab, DataTab, WidgetConfig } from '../../types';
 import { api } from './tauri';
 import { rawDataPortId } from '../utils/nodeDef';
 import { setRawDataPreviewCapacity } from '../buffers/rawDataPreviewRegistry';
@@ -30,11 +30,8 @@ import { canFrameBuffer } from '../buffers/canBuffer';
 import { logicSampleBuffer } from '../buffers/logicBuffer';
 import { notify, formatError } from './notifications';
 import { t } from '../../i18n';
-import { DEFAULT_SERIAL } from '../../store/slices/connection';
-import { DEFAULT_PROTOCOL } from '../../store/slices/protocol';
-import { getEffectiveChannels } from '../../store/appStoreHelpers';
-import { schemaFromProtocolConfig } from '../utils/protocolSchema';
-import { normalizeCommandConfig } from '../utils/commandFrames';
+import { selectWidgets } from '../../store/appStoreHelpers';
+import { WIDGET_DEFAULT_WIDTH } from '../../lib/utils/widgetSize';
 import { getAllRawDataViewPrefs, useRawDataViewStore, type RawDataViewPrefs } from '../buffers/rawDataViewStore';
 
 /// 备份分区 — 拆分备份/模板的最小单元
@@ -55,19 +52,14 @@ export const ALL_BACKUP_SECTIONS: BackupSection[] = [
 ];
 
 /// 备份快照 schema — version 3
-/// 各分区字段均为可选: 缺省 (sections 未提供) = 全量; 拆分备份仅含所选分区字段。
-/// v3: 传输/协议配置从顶层单例字段迁移为全局 Transport/Protocol 节点 (rfNodes 内),
-///     顶层 transport/protocol 字段仅用于读取旧版 (v1/v2) 备份。
+/// 各分区字段均为可选: sections 未提供 = 全量; 拆分备份仅含所选分区字段。
+/// 传输/协议配置存储在全局 Transport/Protocol 节点 (rfNodes) 内。
 export interface AppSnapshot {
-  version: 3 | 2 | 1;
+  version: 3;
   exportedAt: string;
-  /// 该快照包含的分区; 缺省 = 全部 (兼容旧 v1 全量备份)
+  /// 该快照包含的分区; 缺省 = 全部
   sections?: BackupSection[];
   settings?: AppSettings;
-  /// @deprecated v3 起传输/协议配置在全局节点 (rfNodes) 内; 仅旧版备份使用
-  protocol?: ProtocolConfig;
-  /// @deprecated 同上
-  transport?: TransportConfig;
   widgets?: WidgetConfig[];
   controlTabs?: ControlTab[];
   dataTabs?: DataTab[];
@@ -76,7 +68,7 @@ export interface AppSnapshot {
   rfNodes?: Node[];
   rfEdges?: Edge[];
   rawDataViewPrefs?: Record<string, unknown>;
-  /// 窗口组织 (v2 新增)
+  /// 窗口组织
   dockRoot?: DockNode;
   dockCards?: Record<string, DockCard>;
   sidebarDock?: SidebarDock;
@@ -142,7 +134,7 @@ export function collectSnapshot(): AppSnapshot {
     sections: ALL_BACKUP_SECTIONS,
     // 导出剥离 API key — 密钥不入备份文件 (明文扩散面)
     settings: stripApiKey(useSettingsStore.getState().settings),
-    widgets: app.widgets,
+    widgets: selectWidgets(app),
     controlTabs: app.controlTabs,
     dataTabs: app.dataTabs,
     activeDataTabId: app.activeDataTabId,
@@ -200,7 +192,7 @@ export function serializeSnapshot(snap: AppSnapshot): string {
 }
 
 /// 解析备份 JSON 并做最小校验, 非法时抛出带清晰信息的 Error。
-/// v1/v2 备份自动迁移为 v3 (无窗口组织字段 → v2; 单例传输/协议 → 全局节点)。
+/// 仅接受 v3 快照 (v1/v2 备份不再支持 — 请用新版本导出后重新备份)。
 export function parseSnapshot(json: string): AppSnapshot {
   let parsed: unknown;
   try {
@@ -212,153 +204,28 @@ export function parseSnapshot(json: string): AppSnapshot {
   if (!data || typeof data !== 'object') {
     throw new Error('备份文件格式无效');
   }
-  if (data.version !== 1 && data.version !== 2 && data.version !== 3) {
-    throw new Error(`不支持的备份版本: ${String(data.version)}`);
+  // version 取自不受信的 JSON — 以 unknown 读入再比较 (AppSnapshot.version 已收敛为 3)
+  const version = (data as { version?: unknown }).version;
+  if (version === 1 || version === 2) {
+    throw new Error(`备份版本过旧 (v${String(version)} 不再支持): 请用当前版本重新导出备份`);
+  }
+  if (version !== 3) {
+    throw new Error(`不支持的备份版本: ${String(version)}`);
   }
   const hasContent = (
     [
-      'settings', 'protocol', 'transport', 'widgets', 'controlTabs',
+      'settings', 'widgets', 'controlTabs',
       'dataTabs', 'rfNodes', 'rfEdges', 'dockRoot',
     ] as const
   ).some((k) => data[k] != null);
   if (!hasContent) {
     throw new Error('备份文件为空或缺少有效内容');
   }
-  return migrateSnapshotToV3({
-    ...data,
-    exportedAt: data.exportedAt ?? new Date().toISOString(),
-  } as AppSnapshot);
-}
-
-// ==================== v1/v2 → v3 迁移 ====================
-
-/// 迁移后的固定全局节点 id (幂等: 多次迁移结果一致)
-export const MIGRATED_TRANSPORT_ID = 'global-transport';
-export const MIGRATED_PROTOCOL_ID = 'global-protocol';
-
-/// 旧版通道源节点 id 前缀 (v2 及以前每 tab 一个 `__channel_source__-<tabId>`)
-const LEGACY_CHANNEL_SOURCE_PREFIX = '__channel_source__';
-
-/// 将 v1/v2 快照迁移为 v3:
-/// - 顶层 transport/protocol 单例配置 → 一对全局 Transport + Protocol 节点
-/// - 旧通道源节点删除, 其 chN 出边改写为从 Protocol 节点发出
-/// - FrameDecoder 旧字节输入口 loopbackIn → in
-/// - Command 旧版单帧配置 (blocks 在顶层) → frames 多帧结构
-/// - Protocol 节点缺 schema → 按 config 工厂补齐 (协议 schema 化)
-/// - 追加 Transport.rx → Protocol.in 字节边 (两者皆存在且尚无字节边时)
-/// 已是 v3 的快照原样返回 (幂等)
-export function migrateSnapshotToV3(snap: AppSnapshot): AppSnapshot {
-  const hasLegacyChannelSource = (snap.rfNodes ?? []).some((n) => n.type === 'channelSource');
-  const hasLegacySingletons = snap.transport != null || snap.protocol != null;
-  const hasLegacyLoopbackIn = (snap.rfEdges ?? []).some((e) => e.targetHandle === 'loopbackIn');
-  // protocol 节点缺 schema (schema 化前的 v3 快照)
-  const hasProtocolMissingSchema = (snap.rfNodes ?? []).some(
-    (n) => n.data?.global === true && n.type === 'protocol' && n.data.schema == null
-  );
-  const isLegacyCommand = (w: WidgetConfig | undefined): boolean =>
-    w?.kind === 'Command' && !Array.isArray((w.params as { frames?: unknown }).frames);
-  const hasLegacyCommand =
-    (snap.widgets ?? []).some(isLegacyCommand) ||
-    (snap.rfNodes ?? []).some((n) => isLegacyCommand(n.data?.widget as WidgetConfig | undefined));
-  if (snap.version === 3 && !hasLegacyChannelSource && !hasLegacySingletons && !hasLegacyLoopbackIn && !hasLegacyCommand && !hasProtocolMissingSchema) {
-    return { ...snap, version: 3 };
-  }
-
-  const rfNodes: Node[] = [];
-  let transportId: string | null = null;
-  let protocolId: string | null = null;
-
-  // 已存在的全局节点优先保留 (幂等)
-  for (const n of snap.rfNodes ?? []) {
-    if (n.type === 'channelSource') continue; // 删除通道源节点
-    if (n.data?.global === true && n.type === 'transport' && !transportId) transportId = n.id;
-    if (n.data?.global === true && n.type === 'protocol') {
-      protocolId ??= n.id;
-      // 缺 schema → 按 config 工厂补齐 (幂等: 已有 schema 原样保留)
-      if (n.data.schema == null) {
-        const config = n.data.config as ProtocolConfig;
-        rfNodes.push({ ...n, data: { ...n.data, schema: schemaFromProtocolConfig(config) } });
-        continue;
-      }
-    }
-    // Command 旧版单帧配置 → frames (节点内嵌 widget 与 widgets 数组需同步归一化)
-    const w = n.data?.widget as WidgetConfig | undefined;
-    if (isLegacyCommand(w) && w?.kind === 'Command') {
-      rfNodes.push({ ...n, data: { ...n.data, widget: { kind: 'Command', params: normalizeCommandConfig(w.params) } } });
-      continue;
-    }
-    rfNodes.push(n);
-  }
-
-  // 单例配置 → 全局节点
-  if (!transportId) {
-    transportId = MIGRATED_TRANSPORT_ID;
-    rfNodes.unshift({
-      id: transportId,
-      type: 'transport',
-      position: { x: 40, y: 40 },
-      data: { global: true, config: snap.transport ?? DEFAULT_SERIAL, label: 'Transport' },
-      selected: false,
-    });
-  }
-  if (!protocolId) {
-    protocolId = MIGRATED_PROTOCOL_ID;
-    const config = snap.protocol ?? DEFAULT_PROTOCOL;
-    rfNodes.splice(rfNodes.length > 0 ? 1 : 0, 0, {
-      id: protocolId,
-      type: 'protocol',
-      position: { x: 300, y: 40 },
-      data: {
-        global: true,
-        config,
-        convertTo: null,
-        channels: getEffectiveChannels(config, null),
-        schema: schemaFromProtocolConfig(config),
-        label: 'Protocol',
-      },
-      selected: false,
-    } as Node);
-  }
-
-  // 边改写: 通道源 chN 出边 → Protocol 节点; loopbackIn → in
-  const rfEdges: Edge[] = [];
-  let hasTransportToProtocolByteEdge = false;
-  for (const e of snap.rfEdges ?? []) {
-    let source = e.source;
-    let target = e.target;
-    let targetHandle = e.targetHandle;
-    if (source.startsWith(LEGACY_CHANNEL_SOURCE_PREFIX)) source = protocolId;
-    if (target.startsWith(LEGACY_CHANNEL_SOURCE_PREFIX)) target = protocolId;
-    if (targetHandle === 'loopbackIn') targetHandle = 'in';
-    // 两端都指向已删除通道源以外的不存在节点时丢弃 (防御)
-    if (source === target && source === protocolId && !e.sourceHandle?.startsWith('ch')) continue;
-    if (source === transportId && e.sourceHandle === 'rx' && target === protocolId && targetHandle === 'in') {
-      hasTransportToProtocolByteEdge = true;
-    }
-    rfEdges.push({ ...e, source, target, targetHandle });
-  }
-  if (!hasTransportToProtocolByteEdge) {
-    rfEdges.unshift({
-      id: 'migrated-transport-protocol',
-      source: transportId,
-      sourceHandle: 'rx',
-      target: protocolId,
-      targetHandle: 'in',
-    });
-  }
-
-  const { transport: _t, protocol: _p, ...rest } = snap;
-  // widgets 数组内的 Command 旧版单帧配置 → frames
-  const widgets = snap.widgets?.map((w) =>
-    isLegacyCommand(w) && w.kind === 'Command'
-      ? { kind: 'Command' as const, params: normalizeCommandConfig(w.params) }
-      : w
-  );
-  return { ...rest, version: 3, rfNodes, rfEdges, widgets };
+  return { ...data, exportedAt: data.exportedAt ?? new Date().toISOString() } as AppSnapshot;
 }
 
 /// 检测快照实际包含哪些分区 (供拆分备份导入时的勾选预填), 按 ALL_BACKUP_SECTIONS 顺序返回
-/// v3: transportProtocol 分区内容 = rfNodes 中的全局 Transport/Protocol 节点
+/// transportProtocol 分区内容 = rfNodes 中的全局 Transport/Protocol 节点
 export function detectPresentSections(snap: AppSnapshot): BackupSection[] {
   const globalNodes = (snap.rfNodes ?? []).filter((n) => n.data?.global === true);
   const globalIds = new Set(globalNodes.map((n) => n.id));
@@ -371,7 +238,7 @@ export function detectPresentSections(snap: AppSnapshot): BackupSection[] {
     switch (s) {
       case 'settings': return snap.settings != null;
       case 'transportProtocol':
-        return snap.protocol != null || snap.transport != null || globalNodes.length > 0;
+        return globalNodes.length > 0;
       case 'widgetsTabs': return snap.widgets != null || snap.controlTabs != null || snap.dataTabs != null;
       case 'nodeGraph': return widgetNodes.length > 0 || nonGlobalEdges.length > 0 || (snap.rfNodes != null && globalNodes.length === 0);
       case 'windowLayout': return snap.dockRoot != null || snap.dockCards != null;
@@ -449,28 +316,26 @@ function resolveSections(
 }
 
 /// 将快照按分区应用到所有 store (恢复 / 模板应用)
-/// 传入前请先经 parseSnapshot / migrateSnapshotToV3 迁移为 v3
 export async function applySnapshot(
   snap: AppSnapshot,
   opts?: { sections?: BackupSection[] }
 ): Promise<void> {
-  const migrated = migrateSnapshotToV3(snap);
-  const want = new Set(resolveSections(migrated, opts));
+  const want = new Set(resolveSections(snap, opts));
   // 应用前存在的 controlTabs — 应用后消失的 tab 需清理其后端残留图
   const prevTabIds = useAppStore.getState().controlTabs.map((t) => t.id);
 
   // 1. 设置
-  if (want.has('settings') && migrated.settings) {
-    await applySettings(migrated.settings);
+  if (want.has('settings') && snap.settings) {
+    await applySettings(snap.settings);
   }
 
   // 2. 传输 + 协议 (v3: 全局节点; 未同时应用 nodeGraph 时按 id 合并进现有图)
-  const applyNodeGraph = want.has('nodeGraph') && migrated.rfNodes != null;
-  if (want.has('transportProtocol') && !applyNodeGraph && migrated.rfNodes) {
-    const globalNodes = migrated.rfNodes.filter((n) => n.data?.global === true);
+  const applyNodeGraph = want.has('nodeGraph') && snap.rfNodes != null;
+  if (want.has('transportProtocol') && !applyNodeGraph && snap.rfNodes) {
+    const globalNodes = snap.rfNodes.filter((n) => n.data?.global === true);
     if (globalNodes.length > 0) {
       const globalIds = new Set(globalNodes.map((n) => n.id));
-      const byteEdges = (migrated.rfEdges ?? []).filter(
+      const byteEdges = (snap.rfEdges ?? []).filter(
         (e) => globalIds.has(e.source) && globalIds.has(e.target)
       );
       useAppStore.setState((s) => ({
@@ -489,9 +354,8 @@ export async function applySnapshot(
   // 3. 控件 + 标签页 + 活动页 + RawData 视图偏好
   if (want.has('widgetsTabs')) {
     const patch: Record<string, unknown> = {};
-    if (migrated.widgets) patch.widgets = migrated.widgets;
-    if (migrated.controlTabs) patch.controlTabs = migrated.controlTabs;
-    if (migrated.dataTabs) {
+    if (snap.controlTabs) patch.controlTabs = snap.controlTabs;
+    if (snap.dataTabs) {
       // 兜底注入 fixed compile-errors / compile-results Tab
       // 老快照 (或外部导入的快照) 可能不包含; 缺一补一, 已存在则跳过
       const fixedTabs: DataTab[] = [
@@ -500,58 +364,79 @@ export async function applySnapshot(
         // 旧快照无属性面板 tab — 兜底补入 (默认布局卡片按 id 承载它)
         { id: 'node-properties-fixed', type: 'node-properties', name: 'Properties', closable: true },
       ];
-      const have = new Set(migrated.dataTabs.map((t) => t.id));
-      const mergedDataTabs = [...migrated.dataTabs];
+      const have = new Set(snap.dataTabs.map((t) => t.id));
+      const mergedDataTabs = [...snap.dataTabs];
       for (const ft of fixedTabs) {
         if (!have.has(ft.id)) mergedDataTabs.push(ft);
       }
       patch.dataTabs = mergedDataTabs;
     }
-    if (migrated.activeDataTabId != null) {
-      patch.activeDataTabId = migrated.activeDataTabId;
+    if (snap.activeDataTabId != null) {
+      patch.activeDataTabId = snap.activeDataTabId;
     } else {
       // 快照未指定活动数据 Tab → 兜底到 compile-results-fixed (须存在)
       const ids = (patch.dataTabs as DataTab[] | undefined)?.map((t) => t.id) ?? [];
       if (ids.includes('compile-results-fixed')) patch.activeDataTabId = 'compile-results-fixed';
     }
-    if (migrated.activeControlTabId != null) patch.activeControlTabId = migrated.activeControlTabId;
+    if (snap.activeControlTabId != null) patch.activeControlTabId = snap.activeControlTabId;
     useAppStore.setState(patch);
-    if (migrated.rawDataViewPrefs) {
+    // widget 配置权威在画布节点 data.widget — 导入的控件若尚无节点 (未同时
+    // 应用 nodeGraph 的拆分备份), 按控件 tab 隶属补建占位节点保持配置可达
+    if (snap.widgets) {
+      const state = useAppStore.getState();
+      const tabOfWidget = new Map<string, string>();
+      for (const t of state.controlTabs) {
+        for (const id of t.widgets) if (!tabOfWidget.has(id)) tabOfWidget.set(id, t.id);
+      }
+      const missing = snap.widgets
+        .filter((w) => !state.rfNodes.some((n) => n.id === w.params.id))
+        .map((w) => ({
+          id: w.params.id,
+          type: 'widget' as const,
+          position: { x: 240, y: 80 },
+          width: WIDGET_DEFAULT_WIDTH,
+          data: { widget: w, tabId: tabOfWidget.get(w.params.id) ?? state.activeControlTabId },
+        }));
+      if (missing.length) {
+        useAppStore.setState((s) => ({ rfNodes: [...s.rfNodes, ...missing] }));
+      }
+    }
+    if (snap.rawDataViewPrefs) {
       useRawDataViewStore.setState({
-        prefsByWidget: migrated.rawDataViewPrefs as Record<string, RawDataViewPrefs>,
+        prefsByWidget: snap.rawDataViewPrefs as Record<string, RawDataViewPrefs>,
       });
     }
   }
 
   // 4. 节点图 (含全局 Transport/Protocol 节点)
-  if (applyNodeGraph && migrated.rfNodes && migrated.rfEdges) {
+  if (applyNodeGraph && snap.rfNodes && snap.rfEdges) {
     // 迁移旧版快照: 连到 RawData 的边可能还带着回退端口 'data' 作为 targetHandle,
     // 而 RawData 的端口是动态派生的 (`src:<source>:<handle>`) — 不归一化会导致
     // React Flow 找不到 handle (warning #008), 边无法渲染
     const rawDataNodeIds = new Set(
-      migrated.rfNodes
+      snap.rfNodes
         .filter((n) => (n.data?.widget as WidgetConfig | undefined)?.kind === 'RawData')
         .map((n) => n.id)
     );
-    const rfEdges = migrated.rfEdges.map((e) =>
+    const rfEdges = snap.rfEdges.map((e) =>
       rawDataNodeIds.has(e.target) && !e.targetHandle?.startsWith('src:')
         ? { ...e, targetHandle: rawDataPortId(e.source, e.sourceHandle) }
         : e
     );
-    useAppStore.setState({ rfNodes: migrated.rfNodes, rfEdges });
+    useAppStore.setState({ rfNodes: snap.rfNodes, rfEdges });
   }
 
   // 5. 窗口组织
-  if (want.has('windowLayout') && migrated.dockRoot && migrated.dockCards) {
+  if (want.has('windowLayout') && snap.dockRoot && snap.dockCards) {
     // 净化属性专属卡 — 旧备份可能在右侧属性卡混装其他数据 tab
     // (旧版 reconcile 的安置缺陷), 导入时统一逐出/拆出
-    const cleanDock = ensurePropertiesExclusiveCard(migrated.dockRoot, migrated.dockCards);
+    const cleanDock = ensurePropertiesExclusiveCard(snap.dockRoot, snap.dockCards);
     useDockStore.setState({
       root: cleanDock.root,
       cards: cleanDock.cards,
       focusedCardId: null,
     });
-    if (migrated.sidebarDock) useLayoutStore.setState({ sidebarDock: migrated.sidebarDock });
+    if (snap.sidebarDock) useLayoutStore.setState({ sidebarDock: snap.sidebarDock });
   }
 
   // 6. 重新同步后端节点图 (节点图或标签页变化后)

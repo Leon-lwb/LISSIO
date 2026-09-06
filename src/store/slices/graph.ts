@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import { api } from '../../lib/tauri/tauri';
-import { setInputValue as apiSetInputValue, submitCustomOutput as apiSubmitCustomOutput, submitCustomTextOutput as apiSubmitCustomTextOutput } from '../../lib/buffers/graphSubscription';
+import { setInputValue as apiSetInputValue, submitCustomOutput as apiSubmitCustomOutput } from '../../lib/buffers/graphSubscription';
 import {
   createTransportNode,
   createProtocolNode,
@@ -47,7 +47,6 @@ export interface GraphSlice {
   removeTabGraph: (tabId: string) => void;
   setInputValue: (widgetId: string, value: number) => void;
   submitCustomOutput: (widgetId: string, outputs: Record<string, number>) => void;
-  submitCustomTextOutput: (widgetId: string, outputs: Record<string, string>) => void;
   /// 添加全局节点 (Transport/Protocol) — 渲染在所有 tab 画布上
   addTransportNode: (kind: TransportConfig['kind'], position?: { x: number; y: number }) => void;
   addProtocolNode: (config?: ProtocolConfig, position?: { x: number; y: number }) => void;
@@ -132,10 +131,6 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
 
     submitCustomOutput: (widgetId, outputs) => {
       void apiSubmitCustomOutput(widgetId, outputs);
-    },
-
-    submitCustomTextOutput: (widgetId, outputs) => {
-      void apiSubmitCustomTextOutput(widgetId, outputs);
     },
 
     addTransportNode: (kind, position) =>

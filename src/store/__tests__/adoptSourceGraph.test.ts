@@ -19,6 +19,7 @@ vi.hoisted(() => {
 
 import { tauriMock } from '../../test/setup';
 import { useAppStore } from '../appStore';
+import { selectWidgets } from '../appStoreHelpers';
 import { adoptSourceGraph, syncTabGraphToBackend } from '../appStoreHelpers';
 import type { GraphSourceEventPayload } from '../../lib/tauri/tauri';
 import type { Node, Edge } from '@xyflow/react';
@@ -199,7 +200,9 @@ describe('adoptSourceGraph (widget 配置记录收敛 — 配置模型后端权�
       positions: { 'w-remote': { x: 11, y: 22 } },
     });
 
-    const { rfNodes, widgets } = useAppStore.getState();
+    const state1 = useAppStore.getState();
+    const { rfNodes } = state1;
+    const widgets = selectWidgets(state1);
     const added = rfNodes.find((n) => n.id === 'w-remote');
     expect(added?.type).toBe('widget');
     expect(added?.position).toEqual({ x: 11, y: 22 });
@@ -208,7 +211,7 @@ describe('adoptSourceGraph (widget 配置记录收敛 — 配置模型后端权�
     expect(widgets.some((w) => w.params.id === 'w-remote')).toBe(true);
   });
 
-  it('已有 widget 参数变化时更新节点与 widgets 数组; 参数未变时不触碰', () => {
+  it('已有 widget 参数变化时更新节点配置; 参数未变时不触碰', () => {
     const changed = useAppStore.getState();
     adoptSourceGraph({
       ...SOURCE_EVENT,
@@ -224,7 +227,7 @@ describe('adoptSourceGraph (widget 配置记录收敛 — 配置模型后端权�
     const node = after.rfNodes.find((n) => n.id === 'w-gauge');
     // 旧顶层 min/max 记录经 normalize 迁移为 range 量程对象
     expect(((node?.data as unknown as { widget: { params: { range: { max: number } } } }).widget.params.range)?.max).toBe(200);
-    const flat = after.widgets.find((w) => w.params.id === 'w-gauge');
+    const flat = selectWidgets(after).find((w) => w.params.id === 'w-gauge');
     expect(((flat?.params as unknown as { range: { max: number } }).range)?.max).toBe(200);
     void changed;
   });
@@ -236,7 +239,9 @@ describe('adoptSourceGraph (widget 配置记录收敛 — 配置模型后端权�
       widgets: [], // 空 = 该 tab 无 widget
     });
 
-    const { rfNodes, rfEdges, widgets, controlTabs } = useAppStore.getState();
+    const state2 = useAppStore.getState();
+    const { rfNodes, rfEdges, controlTabs } = state2;
+    const widgets = selectWidgets(state2);
     expect(rfNodes.some((n) => n.id === 'w-gauge')).toBe(false);
     expect(rfEdges.some((e) => e.id === 'e-val')).toBe(false);
     expect(widgets.some((w) => w.params.id === 'w-gauge')).toBe(false);
@@ -273,7 +278,7 @@ describe('adoptSourceGraph (widget 配置记录收敛 — 配置模型后端权�
     // 边逐字保留 — 前端不删除后端认可的连线
     expect(useAppStore.getState().rfEdges.some((e) => e.id === 'e-ghost')).toBe(true);
     // 占位控件记录随 widgets 数组收敛, 再次同步时按原样回传
-    expect(useAppStore.getState().widgets.some((w) => w.params.id === 'w-ghost')).toBe(true);
+    expect(selectWidgets(useAppStore.getState()).some((w) => w.params.id === 'w-ghost')).toBe(true);
   });
 
   it('事件位置表驱动已有节点位置跟随', () => {

@@ -15,6 +15,7 @@ import { DockDragGhost } from './components/ui/DockDragGhost';
 import { SuspenseFallback } from './components/ui/SuspenseFallback';
 import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
+import { selectWidgets } from './store/appStoreHelpers';
 import { useHistoryStore } from './store/historyStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
@@ -161,7 +162,7 @@ function App() {
   useEffect(() => {
     if (!workspaceReady || workspaceRestored) return;
     const st = useAppStore.getState();
-    if (st.widgets.length === 0 && !st.dataTabs.some((t) => t.type === 'raw')) {
+    if (selectWidgets(st).length === 0 && !st.dataTabs.some((t) => t.type === 'raw')) {
       const rawWidget = createWidget('RawData');
       st.addWidget(rawWidget, 'default', { x: 560, y: 120 });
       // 空图时再给出 设备→协议解析→RawData 初始连线, 新用户开箱即有完整数据通路

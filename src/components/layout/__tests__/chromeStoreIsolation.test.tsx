@@ -26,7 +26,7 @@ vi.hoisted(() => {
   g.localStorage = localStorageMock;
 });
 
-/// 验证 chrome 组件的 store 订阅粒度: 更新 data slice (rawDataVersion)
+/// 验证 chrome 组件的 store 订阅粒度: 更新数据面状态 (spectrumResults)
 /// 不得重渲染只订阅其他 slice 的组件。
 /// React 19 的 memo 返回含 `.type` (真正渲染函数) 的对象 — spy `.type`
 /// 即可精确统计 memo 组件内部的实际渲染次数。
@@ -55,13 +55,11 @@ function spyMemoRender(component: { type: FunctionComponent }) {
 const INITIAL_CONTROL_TABS = useAppStore.getState().controlTabs;
 const INITIAL_CARDS = useDockStore.getState().cards;
 const INITIAL_LANG = useAppStore.getState().lang;
-const INITIAL_RAW_VERSION = useAppStore.getState().rawDataVersion;
+const INITIAL_SPECTRUM_RESULTS = useAppStore.getState().spectrumResults;
 
 describe('chrome store subscription granularity', () => {
-  let version = 0;
   const bumpDataVersion = () => {
-    version += 1;
-    act(() => useAppStore.setState({ rawDataVersion: version }));
+    act(() => useAppStore.setState({ spectrumResults: { probe: { frequencies: [], values: [] } } }));
   };
 
   afterEach(() => {
@@ -70,7 +68,7 @@ describe('chrome store subscription granularity', () => {
       useAppStore.setState({
         controlTabs: INITIAL_CONTROL_TABS,
         lang: INITIAL_LANG,
-        rawDataVersion: INITIAL_RAW_VERSION,
+        spectrumResults: INITIAL_SPECTRUM_RESULTS,
       });
       useDockStore.setState({ cards: INITIAL_CARDS });
     });
@@ -120,7 +118,7 @@ describe('chrome store subscription granularity', () => {
           nodeStats: {
             'transport-1': {
               rx_bytes: 12345, tx_bytes: 0, rx_frames: 0, tx_frames: 0,
-              rx_dropped: 0, rxDroppedWindow: 0, rxDroppedTotal: 0,
+              rx_dropped: 0, rxDroppedWindow: 0,
             },
           },
         })

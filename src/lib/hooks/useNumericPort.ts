@@ -32,7 +32,6 @@ const EMPTY_STORE: PortSampleStore = {
 interface ResolvedNumericPort {
   ref: NumericPortRef | null;
   connected: boolean;
-  legacyBinding: boolean;
 }
 
 /** 纯函数端口解析器；示波器和普通显示节点共享同一 edge 语义。 */
@@ -51,7 +50,6 @@ export function resolveNumericInputRef(
     return {
       ref: numericPortRef(edge.source, edge.sourceHandle ?? 'value'),
       connected: true,
-      legacyBinding: false,
     };
   }
   if (legacyChannel !== null) {
@@ -62,11 +60,10 @@ export function resolveNumericInputRef(
       return {
         ref: numericPortRef(primary.id, `ch${legacyChannel}`),
         connected: false,
-        legacyBinding: true,
       };
     }
   }
-  return { ref: null, connected: false, legacyBinding: false };
+  return { ref: null, connected: false };
 }
 
 function stateFromSnapshot(
@@ -76,7 +73,6 @@ function stateFromSnapshot(
   return {
     source: resolved.ref,
     connected: resolved.connected,
-    legacyBinding: resolved.legacyBinding,
     status: snapshot.status,
     latest: snapshot.rows[snapshot.rows.length - 1] ?? null,
     history: snapshot.rows,
@@ -108,7 +104,6 @@ export function useNumericPort(ref: NumericPortRef | null): NumericPortState {
   const resolved: ResolvedNumericPort = {
     ref,
     connected: ref !== null,
-    legacyBinding: false,
   };
   return useResolvedPort(resolved);
 }
@@ -148,7 +143,6 @@ export function useNumericOutput(nodeId: string, outputHandle: string): NumericP
     () => ({
       ref: numericPortRef(nodeId, outputHandle),
       connected: true,
-      legacyBinding: false,
     }),
     [nodeId, outputHandle],
   );

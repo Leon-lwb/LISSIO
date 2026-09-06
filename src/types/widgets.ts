@@ -231,14 +231,6 @@ export interface TriggerRule {
   enabled: boolean;
 }
 
-/// 触发器匹配结果 — 与后端 TriggerMatchResult 对齐
-export interface TriggerMatchResult {
-  value: number;
-  matched: boolean;
-  text: string;
-  outputType: 'number' | 'string' | 'miss';
-}
-
 /// 触发器控件 — 命令字符串 → 输出通道数据
 ///
 /// 模式 (manual / auto) 与 FrameDecoder 同构:

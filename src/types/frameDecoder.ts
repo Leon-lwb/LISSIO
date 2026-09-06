@@ -215,13 +215,6 @@ export interface FrameDecoderManualResult {
 
 // ============ 命令发送控件 ============
 
-/// 输入格式
-/// - hex:         HEX 字节流, 空格分隔 (如 "AA 01 02 BB")
-/// - ascii:       ASCII 文本 + 转义字符 (\n \t \r \xHH)
-/// - template:    模板字符串 (${VAR} 变量插值)
-/// - structured:  结构化字段定义 (按字节序打包)
-export type CommandFormat = 'hex' | 'ascii' | 'template' | 'structured';
-
 /// 校验算法类型 (与 lib/checksum.ts 对应)
 export type ChecksumType =
   | 'none'

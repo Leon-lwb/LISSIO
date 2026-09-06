@@ -3,6 +3,7 @@ import { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
 import type { WidgetConfig } from '../../../types';
 import { resolveRawDataStatusTransport } from '../../../lib/utils/rawDataChannel';
+import { selectWidgets } from '../../../store/appStoreHelpers';
 
 /// RawData 卡片的源连接状态提示 — 生效输入端口的 Transport 未连接时灰字提示,
 /// Error 红字 (无法正确使用); Connected 不显示 (绿点噪音)。
@@ -10,11 +11,11 @@ import { resolveRawDataStatusTransport } from '../../../lib/utils/rawDataChannel
 const RawDataConnHint = memo(function RawDataConnHint({ nodeId }: { nodeId: string }) {
   const lang = useAppStore((s) => s.lang);
   const selectedInput = useAppStore((s) => {
-    const w = s.widgets.find((w) => w.kind === 'RawData' && w.params.id === nodeId);
+    const w = selectWidgets(s).find((w) => w.kind === 'RawData' && w.params.id === nodeId);
     return w?.kind === 'RawData' ? w.params.selectedInput : undefined;
   });
   const rfNodes = useAppStore((s) => s.rfNodes);
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const rfEdges = useAppStore((s) => s.rfEdges);
   const transportId = resolveRawDataStatusTransport(nodeId, selectedInput, rfEdges, rfNodes, widgets);
   const connState = useAppStore((s) =>

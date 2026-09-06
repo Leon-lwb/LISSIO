@@ -1,6 +1,5 @@
 # 侧边栏
 portConfig: 串口配置
-deviceConfig: 设备配置
 dataInterface: 数据接口
 protocolEngine: 协议引擎
 protocolCustom: 自定义块
@@ -10,10 +9,6 @@ protocolDerivedPorts: 派生端口
 protocolCustomDesc: 自定义帧块解析, 端口由 field/bitfield/csv 块派生, 可任意命名。
 transportType: 数据接口
 widgetPalette: 控件面板
-aiAssistant: AI 助手
-backToDataInput: 返回数据输入
-nextDevice: "下一步: 设备配置"
-nextWidgets: "下一步: 控件面板"
 
 # 连接
 connect: 连接
@@ -33,7 +28,6 @@ stopBits: 停止位
 flowControl: 流控
 refresh: 刷新
 refreshPorts: 刷新端口
-driverInfo: 驱动信息
 
 # 协议
 justfloat: JustFloat
@@ -113,8 +107,6 @@ formatRgb565: RGB565
 formatGray8: GRAY8
 mathOp: 运算
 mathInputs: 输入数
-textDisplayFontSize: 字号
-textDisplayMonospace: 等宽字体
 displayRange: 显示量程
 rangeWindow: 自适应窗口 (秒)
 majorTicks: 主刻度数
@@ -122,7 +114,6 @@ tickPrecision: 刻度精度
 precisionAuto: 自动
 captureRange: 捕获当前量程
 autoRangeLive: 当前自动量程
-autoRangeEmpty: 等待样本
 orientation: 方向
 orientationHorizontal: 横向
 orientationVertical: 纵向
@@ -165,7 +156,6 @@ gridView: 网格
 lineView: 行
 hexView: HEX
 asciiView: ASCII
-rawDataGlobal: 全局
 rawDataChannel: 通道
 send: 发送
 clear: 清空
@@ -231,30 +221,15 @@ aiSendBlocked: 无法发送 —
 aiOpenSettings: 打开设置
 
 # 控件区
-controlArea: 控件区
-displayArea: 显示区
 noWidgets: 暂无控件, 从左侧面板添加
-layoutAuto: 自动排版
-layoutGrid: 网格排版
 
 # 跳转按钮
-nextProtocol: "下一步: 协议引擎"
-nextPort: "下一步: 串口配置"
-goToProtocol: 前往协议引擎
-goToPort: 前往串口配置
 
 # 轴设置
-axisSettings: 坐标轴设置
-xAxis: X 轴
-yAxis: Y 轴
 autoRange: 自动范围
-manualRange: 手动范围
 gridVisible: 显示网格
-channelVisible: 通道可见
-noSignal: 暂无信号
 
 # 原始数据扩展
-rawBuffer: Raw
 copySelected: 复制选中
 copySelection: 复制选中数据
 exportSelection: 导出选中数据
@@ -283,31 +258,18 @@ rawDataSearchPlaceholder: 搜索...
 displayOptions: 显示选项
 
 # 节点编辑器
-addInputModule: 添加输入模块
-addOutputModule: 添加输出模块
-addDrawModule: 添加绘制模块
 newTab: 新建标签页
 tabName: 标签页
-deleteTab: 删除标签页
-inputModule: 输入模块
-outputModule: 输出模块
-drawModule: 绘制模块
-nodeConnect: 连接
-nodeDisconnect: 断开连接
 noConnection: 无连接
 channelSource: 通道源
-connectToWaveform: 连接到波形图
 dragWidgetHint: 从左侧拖拽控件到此处
 emptyWaveform: 波形图为空, 请连接输入通道
 
 # 底部面板
-bottomPanel: 底部面板
 aiChat: AI 对话
 
 # 右键菜单
 contextMenuCopy: 复制
-contextMenuPaste: 粘贴
-contextMenuSelectAll: 全选
 contextMenuDelete: 删除
 contextMenuRename: 重命名
 contextMenuDuplicate: 复制
@@ -321,14 +283,9 @@ resetZoom: 重置缩放
 
 # 波形时间轴
 timeWindow: 时间窗口
-zoomIn: 放大
-zoomOut: 缩小
 scrollLeft: 左移
-scrollRight: 右移
-timeRange: 时间范围
 startTime: 起始
 endTime: 终止
-currentTime: 当前
 
 # 示波器
 run: 运行
@@ -339,7 +296,6 @@ timeBase: 时基
 hPosition: 水平位置
 cursors: 游标
 measure: 测量
-oscilloscopeSettings: 示波器设置
 coupling: 耦合
 couplingDC: DC 直流
 couplingAC: AC 交流
@@ -392,7 +348,6 @@ notifClearBufferFailed: 清空数据失败
 notifNodeGraphSyncFailed: 节点图同步失败
 notifTransportHotUpdateFailed: 连接热更新失败
 notifReconnect: 重新连接
-notifPollChannelsFailed: 通道检测轮询失败
 notifRetry: 重试
 notifDismiss: 关闭
 notifDismissAll: 关闭全部
@@ -425,7 +380,6 @@ settingsData: 数据缓存
 settingsSerial: 串口默认值
 settingsNotifications: 通知
 settingsPerformance: 性能
-settingsAbout: 关于
 backupCategory: 备份
 exportConfig: 导出配置
 importConfig: 导入配置
@@ -529,7 +483,6 @@ settingDebugDesc: 开启后在右键菜单中显示检查元素等调试功能
 # 设置项 - Appearance
 settingTheme: 主题
 settingThemeDesc: 应用配色方案
-settingThemeEdit: 编辑主题
 colorTheme: 颜色主题
 cssTheme: CSS样式主题
 
@@ -644,12 +597,6 @@ settingMaxFeedWorkers: 自动并发 Worker 上限
 settingMaxFeedWorkersDesc: 后端根据积压自动扩缩容，实际 worker 数不超过 CPU 数和此安全上限
 settingEvalWorkers: 图评估并发数
 settingEvalWorkersDesc: 数值平面按图内独立路径并行评估，1 为串行；多路径大流量时调大可加速
-settingFeedParallelUnit: 并行分发单元
-settingFeedParallelUnitDesc: 每次分发给并行 worker 的消息批大小
-settingMinWorkerBytesKb: Worker 最小数据量 (KB)
-settingMinWorkerBytesKbDesc: 低于该数据量时不拆分给多个 worker, 避免调度开销
-settingCoalesceMaxMsgs: 合批最大消息数
-settingCoalesceMaxMsgsDesc: 单次合批推送允许的最大消息条数
 settingCoalesceMaxBytesKb: 数据管道内存预算 (MB)
 settingCoalesceMaxBytesKbDesc: 所有后端 Topic 历史和排队数据使用的安全内存上限
 settingMaxStreamShards: 预览帧率上限
@@ -687,7 +634,6 @@ settingAiOrcaFreeModels: 免费模型:获取 API Key 即可访问
 
 # About 弹窗
 about: 关于
-aboutTitle: 关于 VOFA-Next
 aboutVersion: 版本
 aboutAuthor: 作者
 aboutLicense: 许可证
@@ -721,7 +667,6 @@ menuZoomOut: 缩小
 menuZoomReset: 实际大小
 menuMinimize: 最小化
 menuMaximize: 最大化
-menuRestore: 还原
 menuCloseWindow: 关闭窗口
 menuQuit: 退出
 menuDocs: 文档
@@ -742,7 +687,6 @@ customSettings: 设置项
 customSettingsValues: 设置值
 customSave: 保存
 customCancel: 取消
-customEditorError: 代码错误
 
 # 控件分类 Tab
 catConnections: "连接设备"
@@ -751,16 +695,8 @@ catSending: "发送"
 catSignalProcessing: "信号处理"
 catTextProcessing: "文本处理"
 catDisplayInteraction: "显示与交互"
-catInput: 数据
 catDisplay: 显示
-catMath: 算术
 catCustom: 自定义
-catString: 字符串
-catInputHelp: 数据类控件用于设置参数或发送命令, 可连线到 Command 的 value 端口做模板插值
-catDisplayHelp: 显示控件用于实时展示通道数据, 拖入后从通道源连线接入
-catMathHelp: 算术控件对多通道做四则运算或数学函数, 可级联组合
-catCustomHelp: 自定义 JS 控件, 点击打开编辑器编写自己的逻辑
-catStringHelp: 字符串控件对字符串做转换或查询; len/find/contains 输出数值, 其余输出字符串
 
 # 算术控件
 mathAdd: 加法
@@ -821,9 +757,7 @@ strParse: 解析数值
 strParseDesc: 从文本扫描首个数字 (十进制 / 0x 十六进制), 未命中返回 0
 strEncodeHex: HEX 编码
 strEncodeHexDesc: UTF-8 字节的大写 HEX 文本
-strTmpl: 模板
 textOut: 文本下发
-textOutDesc: 把图内文本写回目标传输口 (动态发送回传, 限速)
 textOutTarget: 目标传输
 textOutNoTarget: 请选择目标传输
 textOutNewline: 换行后缀
@@ -876,7 +810,6 @@ windowBlackman: 布莱克曼
 domainTime: 时域
 domainFreq: 频域
 domainString: 字符串
-domainMismatchTitle: 域不匹配
 domainMismatchMsg: 不同域的端口不能直连 (时域 / 频域 / 字节域 / 字符串域两两互斥)
 connectionRejectedTitle: 无法连接
 
@@ -902,10 +835,6 @@ model3dModelLoadError: 模型加载失败
 
 # 命令发送控件
 command: 命令发送
-cmdFormatHex: HEX
-cmdFormatAscii: ASCII
-cmdFormatTemplate: 模板
-cmdFormatStructured: 结构化
 cmdSettings: 设置
 # 数据块类型
 cmdBlockConstHex: 常量HEX
@@ -936,9 +865,6 @@ cmdChecksumCRC32: CRC32
 cmdChecksumLRC: LRC
 cmdChecksumCustom: 自定义
 cmdChecksumPosition: 校验位置
-cmdChecksumPos_append: 末尾
-cmdChecksumPos_prepend: 开头
-cmdChecksumPos_none: 不附加
 cmdCustomScript: 自定义脚本
 cmdCustomWarn: 自定义脚本使用 new Function 求值, 仅限本地使用, 请勿粘贴不可信代码
 cmdAppendNewline: 追加换行
@@ -948,10 +874,6 @@ cmdLabel: 标签
 cmdPreview: 预览
 cmdPreviewEmpty: 输入内容后显示预览
 cmdSend: 发送
-cmdErrorEmpty: 无可发送数据
-cmdAddField: 添加字段
-cmdAvailableVars: 可用变量
-cmdNoVars: 暂无变量 (添加 Knob/Slider 等输入控件后可用)
 cmdLastSent: 最近发送
 
 # 自定义控件帮助说明
@@ -1008,19 +930,11 @@ helpSecurityPostMessage: 与父应用通过 postMessage 通信, 仅支持 ctx �
 helpSecurityError: 代码异常会被捕获并显示在编辑器错误区, 不会崩溃主应用
 
 # 使用引导
-onboardingTitle: 欢迎使用引导
-onboardingStep: 步骤
-onboardingNext: 下一步
-onboardingPrev: 上一步
-onboardingSkip: 跳过
-onboardingFinish: 完成
 helpCenterTitle: 帮助中心
 helpCenterOpen: 打开帮助中心
 dismissTip: 关闭提示
-canHintTitle: CAN 帧分析需要 CAN 协议
 canHintMessage: 当前协议引擎不是 CAN 协议。请先在“协议引擎”中选择 Slcan 或 CandleLight，并连接支持 CAN 的硬件。
 canHintAction: 打开协议引擎
-logicHintTitle: 逻辑分析仪需要 LogicDecode 协议
 logicHintMessage: 当前协议引擎不是 LogicDecode。请先在“协议引擎”中切换到 LogicDecode，以采集并解码数字信号。
 logicHintAction: 打开协议引擎
 
@@ -1175,7 +1089,6 @@ addCanTab: 添加 CAN 帧 Tab
 slcan: Slcan
 candleLight: CandleLight
 canBitrate: CAN 波特率
-serialPort: 串口路径
 candleDevice: USB 设备
 noCandleDevices: 未发现设备
 # Compile Errors Panel
@@ -1184,13 +1097,8 @@ compileErrors: 编译错误面板
 noCompileErrors: 当前没有编译错误
 flyToNode: 定位节点
 addCompileErrorsTab: 添加编译错误 Tab
-tabRepaired: 此 Tab 已修复, 但面板保留历史记录
 compileErrorNodes: "{{count}} 个节点"
 compileErrorTabs: "{{count}} 个 Tab"
-compileErrorValueCycle: 值信号环路
-compileErrorByteCycle: 字节信号环路
-compileErrorDomainMismatch: 信号域不匹配
-compileErrorNodeNotFound: 未找到节点
 slcanDesc: 通过 slcan ASCII 协议与 CANable 设备通信 (串口转 CAN)
 candleLightDesc: 通过 candleLight 二进制协议与 CANable 设备通信 (原生 USB)
 
@@ -1200,10 +1108,6 @@ colEdgeClass: 边分类
 colSourceDomain: 源端口域
 colTargetDomain: 目标端口域
 colDualRole: 双角色
-toggleEdgeClass: 显示边分类
-toggleSourceDomain: 显示源端口域
-toggleTargetDomain: 显示目标端口域
-toggleDualRole: 显示双角色
 dualRoleMarker: 双角色
 modalAddEdge: 添加连接
 modalModifyEdge: 编辑连接
@@ -1220,7 +1124,6 @@ menuPanelOpenCompileErrors: 打开编译错误
 menuPanelOpenCompileResults: 打开编译结果
 menuPanelOpenCan: 打开 CAN 帧
 menuPanelOpenLogic: 打开逻辑分析仪
-panelOpenSection: 打开数据面板
 panelOpenNoWidget: "画布无对应控件"
 dataPanelsStandaloneTitle: 独立面板
 dataPanelsDerivedTitle: 派生面板
@@ -1375,12 +1278,9 @@ triggerFlagsHint: 如 i (忽略大小写) / im / ims
 triggerEnabled: 启用
 triggerRulesCount: 条规则
 triggerRulesEmpty: 暂无规则, 点击下方按钮添加
-triggerAddRule: 添加规则
 triggerManualInput: 手动输入命令
 triggerAutoInput: 自动触发
-triggerShortcutHint: 按 Ctrl/Cmd + Enter 立即触发
 triggerCmdPlaceholder: "输入待匹配命令, 例如: GET_TEMP"
-triggerFire: 触发 (Fire)
 triggerPort: 上游 trigger
 triggerCommand: 当前命令
 triggerMatchResult: 匹配结果
@@ -1453,9 +1353,7 @@ spiMode: SPI 模式
 parityNone: 无
 parityEven: 偶校验
 parityOdd: 奇校验
-stopBits0_5: 0.5
 stopBits1: 1
-stopBits1_5: 1.5
 stopBits2: 2
 
 # TableView
@@ -1467,12 +1365,9 @@ tableViewEmpty: 等待数据...
 tableViewRows: 行
 tableViewLoopbackRows: 回环
 tableViewLabel: 表格
-tableViewDesc: 以表格形式展示上游节点的输出值
-closeTableViewTab: 关闭表格
 
 # Loopback
 cmdLoopback: 回环模式
-cmdLoopbackDesc: 发送后捕获协议引擎解析结果
 
 # 发送模式 (与回环无关)
 cmdSendMode: 发送模式

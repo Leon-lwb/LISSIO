@@ -68,10 +68,10 @@ export interface TrackOptions {
 }
 
 /// 文档域快照 — 撤销范围内全部 appStore 切片的整存整取
+/// (widget 配置以 rfNodes 节点 data.widget 为权威, 不单列)
 export interface DocSnapshot {
   rfNodes: Node[];
   rfEdges: Edge[];
-  widgets: WidgetConfig[];
   controlTabs: ControlTab[];
   activeControlTabId: string;
   dataTabs: DataTab[];
@@ -129,7 +129,6 @@ function captureDoc(): DocRecord {
   const raw: DocSnapshot = {
     rfNodes: s.rfNodes,
     rfEdges: s.rfEdges,
-    widgets: s.widgets,
     controlTabs: s.controlTabs,
     activeControlTabId: s.activeControlTabId,
     dataTabs: s.dataTabs,
@@ -142,7 +141,6 @@ function snapshotsEqual(a: DocRefs, b: DocRefs): boolean {
   return (
     a.rfNodes === b.rfNodes &&
     a.rfEdges === b.rfEdges &&
-    a.widgets === b.widgets &&
     a.controlTabs === b.controlTabs &&
     a.activeControlTabId === b.activeControlTabId &&
     a.dataTabs === b.dataTabs &&
@@ -237,7 +235,6 @@ function restoreSnapshot(snapshot: DocSnapshot): void {
     useAppStore.setState({
       rfNodes: deepClone(snapshot.rfNodes),
       rfEdges: deepClone(snapshot.rfEdges),
-      widgets: deepClone(snapshot.widgets),
       controlTabs: deepClone(snapshot.controlTabs),
       activeControlTabId: snapshot.activeControlTabId,
       dataTabs: deepClone(restoredTabs),

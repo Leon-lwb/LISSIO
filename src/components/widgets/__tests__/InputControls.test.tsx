@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useAppStore } from '../../../store/appStore';
+import { selectWidgets } from '../../../store/appStoreHelpers';
 import { createWidget, widgetInputValue } from '../../../lib/utils/widgetDefaults';
 import { Knob } from '../knob/KnobWidget';
 import { Slider } from '../slider/SliderWidget';
@@ -11,34 +12,43 @@ import { sendBindingValue } from '../shared/binding';
 
 
 beforeEach(() => {
-  useAppStore.setState({ widgets: [], rfNodes: [], rfEdges: [], inputPreviewValues: {} });
+  useAppStore.setState({ rfNodes: [], rfEdges: [], inputPreviewValues: {} });
   Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value: vi.fn() });
   Object.defineProperty(HTMLElement.prototype, 'hasPointerCapture', { configurable: true, value: vi.fn(() => true) });
   Object.defineProperty(HTMLElement.prototype, 'releasePointerCapture', { configurable: true, value: vi.fn() });
+});
+
+
+/// 控件配置以画布节点 data.widget 为权威 — 测试种子用节点承载配置
+const widgetNodeOf = (widget: { kind: string; params: { id: string } }) => ({
+  id: widget.params.id,
+  type: 'widget' as const,
+  position: { x: 0, y: 0 },
+  data: { widget },
 });
 
 describe('numeric input controls', () => {
   it('previews slider changes without persisting, then commits on release', () => {
     const widget = createWidget('Slider');
     if (widget.kind !== 'Slider') throw new Error('expected Slider');
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Slider widget={widget} />);
 
     const range = screen.getByRole('slider');
     expect(range).toHaveClass('nodrag', 'nowheel');
     fireEvent.change(range, { target: { value: '75' } });
     expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBe(75);
-    expect((useAppStore.getState().widgets[0] as typeof widget).params.value).toBe(50);
+    expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(50);
 
     fireEvent.pointerUp(range);
     expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBeUndefined();
-    expect((useAppStore.getState().widgets[0] as typeof widget).params.value).toBe(75);
+    expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(75);
   });
 
   it('supports relative pointer dragging on the knob', () => {
     const widget = createWidget('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Knob widget={widget} />);
     const knob = screen.getByRole('slider');
 
@@ -47,7 +57,7 @@ describe('numeric input controls', () => {
     const preview = useAppStore.getState().inputPreviewValues[widget.params.id];
     expect(preview).toBeGreaterThan(50);
     fireEvent.pointerUp(knob, { pointerId: 1, clientY: 40 });
-    expect((useAppStore.getState().widgets[0] as typeof widget).params.value).toBe(preview);
+    expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(preview);
   });
 
   it('commits manual input once on Enter and keeps invalid drafts visible', () => {
@@ -76,7 +86,7 @@ describe('numeric input controls', () => {
   it('rotates during number-stepper changes and commits once on release', () => {
     const widget = createWidget('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Knob widget={widget} />);
     const knob = screen.getByRole('slider');
     const input = screen.getByRole('spinbutton');
@@ -85,11 +95,11 @@ describe('numeric input controls', () => {
     fireEvent.change(input, { target: { value: '51' } });
     expect(knob).toHaveAttribute('aria-valuenow', '51');
     expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBe(51);
-    expect((useAppStore.getState().widgets[0] as typeof widget).params.value).toBe(50);
+    expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(50);
 
     fireEvent.pointerUp(input);
     expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBeUndefined();
-    expect((useAppStore.getState().widgets[0] as typeof widget).params.value).toBe(51);
+    expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(51);
   });
 });
 
@@ -97,10 +107,10 @@ describe('choice input controls', () => {
   it('persists radio selection by stable option id', () => {
     const widget = createWidget('Radio');
     if (widget.kind !== 'Radio') throw new Error('expected Radio');
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Radio widget={widget} />);
     fireEvent.click(screen.getByLabelText('B'));
-    const stored = useAppStore.getState().widgets[0];
+    const stored = selectWidgets(useAppStore.getState())[0];
     expect(stored.kind).toBe('Radio');
     if (stored.kind !== 'Radio') return;
     expect(stored.params.selectedId).toBe(widget.params.options[1].id);
@@ -110,12 +120,12 @@ describe('choice input controls', () => {
   it('renders a true multi-select and sums selected values', () => {
     const widget = createWidget('Checkbox');
     if (widget.kind !== 'Checkbox') throw new Error('expected Checkbox');
-    useAppStore.setState({ widgets: [widget] });
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     const view = render(<Checkbox widget={widget} />);
     fireEvent.click(screen.getByLabelText('A'));
-    view.rerender(<Checkbox widget={useAppStore.getState().widgets[0] as typeof widget} />);
+    view.rerender(<Checkbox widget={selectWidgets(useAppStore.getState())[0] as typeof widget} />);
     fireEvent.click(screen.getByLabelText('B'));
-    const stored = useAppStore.getState().widgets[0];
+    const stored = selectWidgets(useAppStore.getState())[0];
     expect(stored.kind).toBe('Checkbox');
     if (stored.kind !== 'Checkbox') return;
     expect(stored.params.selectedIds).toEqual(widget.params.options.map((option) => option.id));

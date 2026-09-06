@@ -19,22 +19,6 @@ export function usePrimaryTransportConfig(): TransportConfig | null {
   });
 }
 
-/// 第一个全局 Transport 节点 id (无则 null)
-export function usePrimaryTransportNodeId(): string | null {
-  return useAppStore((s) => {
-    const n = s.rfNodes.find((x) => x.type === 'transport' && isGlobalNode(x));
-    return n?.id ?? null;
-  });
-}
-
-/// 第一个全局 Protocol 节点 id (无则 null)
-export function usePrimaryProtocolNodeId(): string | null {
-  return useAppStore((s) => {
-    const n = s.rfNodes.find((x) => x.type === 'protocol' && isGlobalNode(x));
-    return n?.id ?? null;
-  });
-}
-
 /// 第一个 CAN 能力 Transport 节点 id (Slcan/CandleLight 优先, 否则第一个 Transport, 无则 null)
 /// 供 CAN 负载/比特率命令的 nodeId 参数使用
 export function usePrimaryCanTransportNodeId(): string | null {

@@ -1,6 +1,5 @@
 # Sidebar
 portConfig: Port Config
-deviceConfig: Device Config
 dataInterface: Transport
 protocolEngine: Protocol Engine
 protocolCustom: Custom Blocks
@@ -10,10 +9,6 @@ protocolDerivedPorts: Derived Ports
 protocolCustomDesc: User-defined frame blocks. Ports are derived from field/bitfield/csv blocks and can be named freely.
 transportType: Transport
 widgetPalette: Widgets
-aiAssistant: AI Assistant
-backToDataInput: Back to Data Input
-nextDevice: "Next: Device Config"
-nextWidgets: "Next: Widgets"
 
 # Connection
 connect: Connect
@@ -33,7 +28,6 @@ stopBits: Stop Bits
 flowControl: Flow Control
 refresh: Refresh
 refreshPorts: Refresh Ports
-driverInfo: Driver Info
 
 # Protocol
 justfloat: JustFloat
@@ -126,7 +120,6 @@ tickPrecision: Tick Precision
 precisionAuto: Auto
 captureRange: Capture Current Range
 autoRangeLive: Current Auto Range
-autoRangeEmpty: Waiting for samples
 orientation: Orientation
 orientationHorizontal: Horizontal
 orientationVertical: Vertical
@@ -148,8 +141,6 @@ formatRgb565: RGB565
 formatGray8: GRAY8
 mathOp: Operation
 mathInputs: Inputs
-textDisplayFontSize: Font Size
-textDisplayMonospace: Monospace
 invalidRange: Minimum must be less than maximum
 invalidStep: Step must be greater than 0
 invalidValue: Enter a valid number
@@ -165,7 +156,6 @@ gridView: Grid
 lineView: Line
 hexView: HEX
 asciiView: ASCII
-rawDataGlobal: Global
 rawDataChannel: Channel
 send: Send
 clear: Clear
@@ -231,30 +221,15 @@ aiSendBlocked: Cannot send —
 aiOpenSettings: Open Settings
 
 # Control Area
-controlArea: Controls
-displayArea: Display
 noWidgets: No widgets. Add from the left panel.
-layoutAuto: Auto Layout
-layoutGrid: Grid Layout
 
 # Navigation
-nextProtocol: "Next: Protocol Engine"
-nextPort: "Next: Port Config"
-goToProtocol: Go to Protocol Engine
-goToPort: Go to Port Config
 
 # Axis Settings
-axisSettings: Axis Settings
-xAxis: X Axis
-yAxis: Y Axis
 autoRange: Auto Range
-manualRange: Manual Range
 gridVisible: Show Grid
-channelVisible: Channel Visible
-noSignal: No Signal
 
 # Raw Data Extension
-rawBuffer: Raw
 copySelected: Copy Selected
 copySelection: Copy Selection
 exportSelection: Export Selection
@@ -283,31 +258,18 @@ rawDataSearchPlaceholder: Search...
 displayOptions: Display
 
 # Node Editor
-addInputModule: Add Input
-addOutputModule: Add Output
-addDrawModule: Add Draw
 newTab: New Tab
 tabName: Tab
-deleteTab: Delete Tab
-inputModule: Input
-outputModule: Output
-drawModule: Draw
-nodeConnect: Connect
-nodeDisconnect: Disconnect
 noConnection: No Connection
 channelSource: Channel Source
-connectToWaveform: Connect to Waveform
 dragWidgetHint: Drag widgets here from the left panel
 emptyWaveform: Waveform is empty. Connect an input channel.
 
 # Bottom Panel
-bottomPanel: Bottom Panel
 aiChat: AI Chat
 
 # Context Menu
 contextMenuCopy: Copy
-contextMenuPaste: Paste
-contextMenuSelectAll: Select All
 contextMenuDelete: Delete
 contextMenuRename: Rename
 contextMenuDuplicate: Duplicate
@@ -321,14 +283,9 @@ resetZoom: Reset Zoom
 
 # Waveform Timeline
 timeWindow: Time Window
-zoomIn: Zoom In
-zoomOut: Zoom Out
 scrollLeft: Scroll Left
-scrollRight: Scroll Right
-timeRange: Time Range
 startTime: Start
 endTime: End
-currentTime: Current
 
 # Oscilloscope
 run: Run
@@ -339,7 +296,6 @@ timeBase: Time Base
 hPosition: H.Position
 cursors: Cursors
 measure: Measure
-oscilloscopeSettings: Oscilloscope Settings
 coupling: Coupling
 couplingDC: DC (Direct)
 couplingAC: AC (Alternating)
@@ -392,7 +348,6 @@ notifClearBufferFailed: Clear buffer failed
 notifNodeGraphSyncFailed: Node graph sync failed
 notifTransportHotUpdateFailed: Connection hot-update failed
 notifReconnect: Reconnect
-notifPollChannelsFailed: Channel detection polling failed
 notifRetry: Retry
 notifDismiss: Dismiss
 notifDismissAll: Dismiss All
@@ -425,7 +380,6 @@ settingsData: Data Cache
 settingsSerial: Serial Defaults
 settingsNotifications: Notifications
 settingsPerformance: Performance
-settingsAbout: About
 backupCategory: Backup
 exportConfig: Export Config
 importConfig: Import Config
@@ -529,7 +483,6 @@ settingDebugDesc: Show debug features such as Inspect Element in context menus
 # Setting items - Appearance
 settingTheme: Theme
 settingThemeDesc: Application color scheme
-settingThemeEdit: Edit Theme
 colorTheme: Color Theme
 cssTheme: CSS Style Theme
 
@@ -644,12 +597,6 @@ settingMaxFeedWorkers: Auto Worker Limit
 settingMaxFeedWorkersDesc: Backend workers scale with backlog and never exceed CPU count or this safety limit
 settingEvalWorkers: Graph Eval Workers
 settingEvalWorkersDesc: Evaluate independent graph paths in parallel; 1 = serial, raise for multi-path high-rate graphs
-settingFeedParallelUnit: Feed Parallel Unit
-settingFeedParallelUnitDesc: Message batch size dispatched to parallel workers each time
-settingMinWorkerBytesKb: Min Worker Bytes (KB)
-settingMinWorkerBytesKbDesc: Below this size data is not split across workers, avoiding scheduling overhead
-settingCoalesceMaxMsgs: Coalesce Max Messages
-settingCoalesceMaxMsgsDesc: Maximum messages allowed in a single coalesced push
 settingCoalesceMaxBytesKb: Pipeline Memory Budget (MB)
 settingCoalesceMaxBytesKbDesc: Safety memory budget for backend topic history and queued data
 settingMaxStreamShards: Preview FPS Limit
@@ -687,7 +634,6 @@ settingAiOrcaFreeModels: "Free models: available once you have an API key"
 
 # About dialog
 about: About
-aboutTitle: About VOFA-Next
 aboutVersion: Version
 aboutAuthor: Author
 aboutLicense: License
@@ -721,7 +667,6 @@ menuZoomOut: Zoom Out
 menuZoomReset: Actual Size
 menuMinimize: Minimize
 menuMaximize: Maximize
-menuRestore: Restore
 menuCloseWindow: Close Window
 menuQuit: Quit
 menuDocs: Documentation
@@ -742,7 +687,6 @@ customSettings: Settings
 customSettingsValues: Setting Values
 customSave: Save
 customCancel: Cancel
-customEditorError: Code Error
 
 # Widget Category Tabs
 catConnections: "Connections"
@@ -751,16 +695,8 @@ catSending: "Sending"
 catSignalProcessing: "Signal processing"
 catTextProcessing: "Text processing"
 catDisplayInteraction: "Display & interaction"
-catInput: Data
 catDisplay: Display
-catMath: Math
 catCustom: Custom
-catString: String
-catInputHelp: Data widgets set parameters or send commands; connect to Command's value port for template interpolation
-catDisplayHelp: Display widgets show real-time channel data; connect from channel source after dropping
-catMathHelp: Math widgets perform arithmetic or math functions on multiple channels, can be chained
-catCustomHelp: Custom JS widgets; click to open the editor and write your own logic
-catStringHelp: String widgets transform or inspect strings; len/find/contains output numbers, the rest output strings
 
 # Math Widgets
 mathAdd: Add
@@ -821,9 +757,7 @@ strParse: Parse Number
 strParseDesc: Scan first number from text (decimal / 0x hex), miss returns 0
 strEncodeHex: Encode HEX
 strEncodeHexDesc: Uppercase HEX of UTF-8 bytes
-strTmpl: Template
 textOut: Text Out
-textOutDesc: Send graph text back to a transport (dynamic send, rate-limited)
 textOutTarget: Target transport
 textOutNoTarget: Select target transport
 textOutNewline: Newline suffix
@@ -876,7 +810,6 @@ windowBlackman: Blackman
 domainTime: Time
 domainFreq: Freq
 domainString: String
-domainMismatchTitle: Domain mismatch
 domainMismatchMsg: Ports of different domains cannot be connected (time / freq / bytes / string are mutually exclusive)
 connectionRejectedTitle: Cannot connect
 
@@ -902,10 +835,6 @@ model3dModelLoadError: Failed to load model
 
 # Command Sender widget
 command: Command
-cmdFormatHex: HEX
-cmdFormatAscii: ASCII
-cmdFormatTemplate: Template
-cmdFormatStructured: Structured
 cmdSettings: Settings
 # Data block types
 cmdBlockConstHex: Const HEX
@@ -936,9 +865,6 @@ cmdChecksumCRC32: CRC32
 cmdChecksumLRC: LRC
 cmdChecksumCustom: Custom
 cmdChecksumPosition: Position
-cmdChecksumPos_append: Append
-cmdChecksumPos_prepend: Prepend
-cmdChecksumPos_none: None
 cmdCustomScript: Custom Script
 cmdCustomWarn: Custom scripts are evaluated via new Function. Local use only — do not paste untrusted code.
 cmdAppendNewline: Append Newline
@@ -948,10 +874,6 @@ cmdLabel: Label
 cmdPreview: Preview
 cmdPreviewEmpty: Enter content to see preview
 cmdSend: Send
-cmdErrorEmpty: No data to send
-cmdAddField: Add Field
-cmdAvailableVars: Available Vars
-cmdNoVars: No variables (add Knob/Slider etc. to enable)
 cmdLastSent: Last Sent
 
 # Custom Widget Help
@@ -1008,19 +930,11 @@ helpSecurityPostMessage: Communicates with parent via postMessage, only ctx APIs
 helpSecurityError: Code exceptions are caught and shown in the editor error area, won't crash the main app
 
 # Onboarding
-onboardingTitle: Welcome
-onboardingStep: Step
-onboardingNext: Next
-onboardingPrev: Previous
-onboardingSkip: Skip
-onboardingFinish: Finish
 helpCenterTitle: Help Center
 helpCenterOpen: Open Help Center
 dismissTip: Dismiss tip
-canHintTitle: CAN frame analysis requires a CAN protocol
 canHintMessage: The current protocol engine is not a CAN protocol. Please select Slcan or CandleLight in Protocol Engine and connect CAN-capable hardware.
 canHintAction: Open Protocol Engine
-logicHintTitle: Logic analyzer requires LogicDecode protocol
 logicHintMessage: The current protocol engine is not LogicDecode. Please switch to LogicDecode in Protocol Engine to capture and decode digital signals.
 logicHintAction: Open Protocol Engine
 
@@ -1175,7 +1089,6 @@ addCanTab: Add CAN Frame Tab
 slcan: Slcan
 candleLight: CandleLight
 canBitrate: CAN Bitrate
-serialPort: Serial Port
 candleDevice: USB Device
 noCandleDevices: No devices found
 # Compile Errors Panel
@@ -1184,13 +1097,8 @@ compileErrors: Compile Errors Panel
 noCompileErrors: No compile errors
 flyToNode: Fly to node
 addCompileErrorsTab: Add Compile Errors Tab
-tabRepaired: This tab was repaired, history kept until closed
 compileErrorNodes: "{{count}} node(s)"
 compileErrorTabs: "{{count}} tab(s)"
-compileErrorValueCycle: Value Cycle
-compileErrorByteCycle: Byte Cycle
-compileErrorDomainMismatch: Domain Mismatch
-compileErrorNodeNotFound: Node Not Found
 slcanDesc: Communicate with CANable devices via slcan ASCII protocol (serial-to-CAN)
 
 # Compile Results Panel
@@ -1199,10 +1107,6 @@ colEdgeClass: Edge Class
 colSourceDomain: Source Domain
 colTargetDomain: Target Domain
 colDualRole: Dual Role
-toggleEdgeClass: Show edge class
-toggleSourceDomain: Show source domain
-toggleTargetDomain: Show target domain
-toggleDualRole: Show dual role
 dualRoleMarker: DUAL
 modalAddEdge: Add Connection
 modalModifyEdge: Edit Connection
@@ -1219,7 +1123,6 @@ menuPanelOpenCompileErrors: Open Compile Errors
 menuPanelOpenCompileResults: Open Compile Results
 menuPanelOpenCan: Open CAN Frames
 menuPanelOpenLogic: Open Logic Analyzer
-panelOpenSection: Open Data Panel
 panelOpenNoWidget: "no widget on canvas"
 dataPanelsStandaloneTitle: Standalone
 dataPanelsDerivedTitle: By Widget
@@ -1378,12 +1281,9 @@ triggerFlagsHint: e.g. i (case-insensitive) / im / ims
 triggerEnabled: Enabled
 triggerRulesCount: rules
 triggerRulesEmpty: No rules yet, click below to add
-triggerAddRule: Add rule
 triggerManualInput: Manual command input
 triggerAutoInput: Auto trigger
-triggerShortcutHint: Press Ctrl/Cmd + Enter to fire
 triggerCmdPlaceholder: "Type a command, e.g. GET_TEMP"
-triggerFire: Fire
 triggerPort: Upstream trigger
 triggerCommand: Current command
 triggerMatchResult: Match result
@@ -1453,9 +1353,7 @@ spiMode: SPI Mode
 parityNone: None
 parityEven: Even
 parityOdd: Odd
-stopBits0_5: 0.5
 stopBits1: 1
-stopBits1_5: 1.5
 stopBits2: 2
 
 # TableView
@@ -1467,12 +1365,9 @@ tableViewEmpty: Waiting for data...
 tableViewRows: rows
 tableViewLoopbackRows: loopback
 tableViewLabel: Table
-tableViewDesc: Display upstream node outputs in table form
-closeTableViewTab: Close Table
 
 # Loopback
 cmdLoopback: Loopback
-cmdLoopbackDesc: Capture protocol parsed results after sending
 
 # Send mode (independent of loopback)
 cmdSendMode: Send mode

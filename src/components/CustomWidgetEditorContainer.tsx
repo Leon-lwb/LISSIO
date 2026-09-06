@@ -1,12 +1,13 @@
 import { useAppStore } from '../store/appStore';
 import { CustomWidgetEditor } from './CustomWidgetEditor';
 import type { WidgetConfig } from '../types';
+import { selectWidgets } from '../store/appStoreHelpers';
 
 /// CustomWidgetEditor 容器组件
 /// 单独订阅 customEditorState / widgets, 避免 App 因 widget 列表变化而重渲染
 export function CustomWidgetEditorContainer() {
   const customEditorState = useAppStore((s) => s.customEditorState);
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const updateWidget = useAppStore((s) => s.updateWidget);
   const closeCustomEditor = useAppStore((s) => s.closeCustomEditor);
 

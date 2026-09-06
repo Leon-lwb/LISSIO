@@ -19,6 +19,7 @@ vi.hoisted(() => {
 
 import { tauriMock } from '../../test/setup';
 import { useAppStore } from '../appStore';
+import { selectWidgets } from '../appStoreHelpers';
 import {
   hydrateWorkspaceFromBackend,
   syncWorkspaceMeta,
@@ -101,7 +102,6 @@ describe('hydrateWorkspaceFromBackend (启动水合)', () => {
         { id: 'compile-results-fixed', type: 'compile-results', name: 'Compile Results', closable: false },
       ],
       activeDataTabId: 'compile-results-fixed',
-      widgets: [],
       rfNodes: [],
       rfEdges: [],
       graphVersion: null,
@@ -132,7 +132,7 @@ describe('hydrateWorkspaceFromBackend (启动水合)', () => {
     expect(s.rfEdges).toEqual([
       { id: 'e1', source: 'transport-1', sourceHandle: 'rx', target: 'w-gauge', targetHandle: 'value' },
     ]);
-    expect(s.widgets.map((w) => w.params.id)).toEqual(['w-gauge', 'w-ghost']);
+    expect(selectWidgets(s).map((w) => w.params.id)).toEqual(['w-gauge', 'w-ghost']);
   });
 
   it('数据面板水合 + fixed 两页兜底注入; 未知 kind 剔除', async () => {
@@ -150,7 +150,7 @@ describe('hydrateWorkspaceFromBackend (启动水合)', () => {
     // 未知 kind 的 widget 落为占位控件 (投影语义: 后端是存储权威, 不丢弃)
     const ghost = s.rfNodes.find((n) => n.id === 'w-ghost');
     expect((ghost?.data as { widget: { kind: string } }).widget.kind).toBe('FutureWidget');
-    expect(s.widgets.some((w) => w.params.id === 'w-ghost')).toBe(true);
+    expect(selectWidgets(s).some((w) => w.params.id === 'w-ghost')).toBe(true);
   });
 
   it('位置表携带的显式尺寸水合到节点; 无尺寸记录时宽度落默认值', async () => {

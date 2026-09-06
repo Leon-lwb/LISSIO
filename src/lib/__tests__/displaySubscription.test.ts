@@ -1,6 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { tauriMock } from '../../test/setup';
-import { subscribeDisplay } from '../buffers/shardedSubscription';
+import { subscribeDisplay } from '../buffers/displaySubscription';
 import type { Mock } from 'vitest';
 
 interface Batch { seq: number; tag: string }

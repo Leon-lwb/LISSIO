@@ -8,6 +8,7 @@ import { WIDGET_DEFAULT_WIDTH } from '../../lib/utils/widgetSize';
 import { withHistoryOp, widgetKindLabelKey } from '../historyStore';
 import type { HistoryTarget } from '../historyStore';
 import type { AppStore } from '../appStore';
+import { selectWidgets } from '../appStoreHelpers';
 
 /** 控件类操作的目标语义 (行首徽章按画布同款分类色渲染) */
 const widgetTarget = (kind: WidgetConfig['kind']): HistoryTarget => ({
@@ -20,7 +21,6 @@ const widgetTarget = (kind: WidgetConfig['kind']): HistoryTarget => ({
 /// - Model3D: 旧版缺 modelSource 字段 → builtin-cube fallback
 /// 其余控件原样返回
 export interface WidgetSlice {
-  widgets: WidgetConfig[];
   inputPreviewValues: Record<string, number>;
   customEditorState: { open: boolean; widgetId: string | null };
   openCustomEditor: (widgetId?: string) => void;
@@ -34,7 +34,6 @@ export interface WidgetSlice {
 
 export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
   return {
-    widgets: [],
     inputPreviewValues: {},
     customEditorState: { open: false, widgetId: null },
 
@@ -53,7 +52,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
               data: { widget, tabId },
             };
             return {
-              widgets: [...s.widgets, widget],
               rfNodes: [...s.rfNodes, newNode],
               controlTabs: s.controlTabs.map((t) =>
                 t.id === tabId ? { ...t, widgets: [...t.widgets, widget.params.id] } : t
@@ -86,7 +84,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
               data: { widget, tabId },
             };
             const newState: Partial<AppStore> = {
-              widgets: [...s.widgets, widget],
               rfNodes: [...s.rfNodes, newNode],
             };
             // 有窗口的控件: 自动创建数据窗口 Tab (关闭窗口不会删除节点, 可双击节点重开)
@@ -107,7 +104,7 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
       ),
 
     removeWidget: (id) => {
-      const widget = get().widgets.find((w: WidgetConfig) => w.params.id === id);
+      const widget = selectWidgets(get()).find((w: WidgetConfig) => w.params.id === id);
       const affectedTabs = new Set<string>();
       const node = get().rfNodes.find((n) => n.id === id);
       if (node?.data?.tabId) affectedTabs.add(node.data.tabId as string);
@@ -120,7 +117,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
         () => {
           set((s) => {
             const newState: Partial<AppStore> = {
-              widgets: s.widgets.filter((w: WidgetConfig) => w.params.id !== id),
               inputPreviewValues: Object.fromEntries(
                 Object.entries(s.inputPreviewValues).filter(([key]) => key !== id)
               ),
@@ -163,7 +159,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
           const node = get().rfNodes.find((n) => n.id === id);
           const tabId = node?.data?.tabId as string | undefined;
           set((s) => ({
-            widgets: s.widgets.map((w: WidgetConfig) => (w.params.id === id ? widget : w)),
             rfNodes: s.rfNodes.map((n) =>
               n.id === id ? { ...n, data: { ...n.data, widget } } : n
             ),
@@ -189,7 +184,7 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
 
     commitInputValue: (id, value) => {
       if (!Number.isFinite(value)) return;
-      const widget = get().widgets.find((item) => item.params.id === id);
+      const widget = selectWidgets(get()).find((item) => item.params.id === id);
       set((s) => ({
         inputPreviewValues: Object.fromEntries(
           Object.entries(s.inputPreviewValues).filter(([key]) => key !== id)

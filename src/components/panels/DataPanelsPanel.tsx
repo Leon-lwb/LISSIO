@@ -59,8 +59,8 @@ const PANEL_ICONS: Record<DataPanelEntry['type'], LucideIcon> = {
 
 export function DataPanelsPanel() {
   const lang = useAppStore((s) => s.lang);
-  const widgets = useAppStore((s) => s.widgets);
   const dataTabs = useAppStore((s) => s.dataTabs);
+  const rfNodes = useAppStore((s) => s.rfNodes);
   const addCompileErrorsTab = useAppStore((s) => s.addCompileErrorsTab);
   const addCompileResultsTab = useAppStore((s) => s.addCompileResultsTab);
   const addCanTab = useAppStore((s) => s.addCanTab);
@@ -70,7 +70,7 @@ export function DataPanelsPanel() {
   const addWidgetTab = useAppStore((s) => s.addWidgetTab);
 
   const panelEntries = getAvailableDataPanelEntries(
-    { dataTabs, widgets, lang },
+    { dataTabs, rfNodes, lang },
     {
       addCompileErrorsTab,
       addCompileResultsTab,

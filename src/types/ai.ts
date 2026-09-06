@@ -1,25 +1,6 @@
 //! AI 功能类型 — 与后端 `ai_provider` / `ai_chat` / `mcp_client` 的 serde
 //! 结构严格对应 (snake_case 字段逐一对应, 勿改名)。
 
-/// 对话消息角色。
-export type AiChatRole = 'system' | 'user' | 'assistant' | 'tool';
-
-/// 工具调用描述 (assistant 消息携带)。
-export interface AiToolCall {
-  id: string;
-  name: string;
-  arguments: unknown;
-}
-
-/// 对话消息 (发送完整历史给后端)。
-export interface AiChatMessage {
-  role: AiChatRole;
-  content: string;
-  tool_calls?: AiToolCall[];
-  tool_call_id?: string;
-  name?: string;
-}
-
 /// LLM provider 配置 (随请求传递, 后端不持久化密钥)。
 export interface AiProviderConfig {
   adapter: string;
@@ -28,13 +9,6 @@ export interface AiProviderConfig {
   model: string;
   temperature?: number | null;
   max_tokens?: number | null;
-}
-
-/// provider 适配器元数据 (设置 UI 下拉)。
-export interface AiAdapterInfo {
-  id: string;
-  label: string;
-  default_base_url: string;
 }
 
 /// 对话过程事件 (后端 Channel 推送, tag = "type")。
@@ -53,14 +27,6 @@ export type AiChatEvent =
       /** 结构化字段 (adapter / model / rounds 等, 供本地化插值) */
       data?: Record<string, string>;
     };
-
-/** 命令级错误 — 后端 AppError 的 IPC 序列化形态 */
-export interface AiIpcError {
-  kind: string;
-  message: string;
-  source?: { message: string };
-  data?: Record<string, string>;
-}
 
 /// 外部 MCP server 传输方式。
 export type McpTransport =

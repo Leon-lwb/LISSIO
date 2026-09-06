@@ -6,8 +6,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { getPortSampleStore } from '../../../lib/data/dataClient';
 import { RawDataBuffer } from '../../../lib/buffers/dataBuffer';
-import { acquireRawDataNode, releaseRawDataNode } from '../../../lib/buffers/rawDataNodeBuffer';
-import { acquireRawDataTransport, releaseRawDataTransport } from '../../../lib/buffers/rawDataTransportBuffer';
+import {
+  acquireRawDataNode,
+  releaseRawDataNode,
+  acquireRawDataTransport,
+  releaseRawDataTransport,
+} from '../../../lib/buffers/rawDataBuffers';
 import { useAppStore } from '../../../store/appStore';
 import type { RawDataFilterOptions } from '../../../lib/buffers/rawDataSubscription';
 

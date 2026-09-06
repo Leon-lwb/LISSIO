@@ -28,6 +28,7 @@ import { useWaveformSourceBuffer } from '../../lib/hooks/useWaveformSourceBuffer
 import { useWaveformMeasurements } from '../../lib/hooks/useWaveformMeasurements';
 import { setWaveformOverviewActive } from '../../lib/buffers/sourceManagers';
 import { traceProtocolSource } from '../../store/appStoreHelpers';
+import { selectWidgets } from '../../store/appStoreHelpers';
 
 // 重型 3D 控件 (Three.js) — 懒加载, 首次切到 model3d Tab 时才拉取
 const Model3DWidget = lazy(() => import('../widgets/model3d/Model3DWidget.lazy'));
@@ -239,7 +240,7 @@ const nodePropertiesTabContent = (
 export const DataTabContent = memo(function DataTabContent({ tabId }: { tabId: string }) {
   const lang = useAppStore((s) => s.lang);
   const dataTabs = useAppStore((s) => s.dataTabs);
-  const widgets = useAppStore((s) => s.widgets);
+  const widgets = useAppStore((s) => selectWidgets(s));
   const rfEdges = useAppStore((s) => s.rfEdges);
   const rfNodes = useAppStore((s) => s.rfNodes);
   // 主 Protocol 节点 (第一个) 的配置与检测通道数 — 固定波形 Tab 的通道数依据
@@ -254,7 +255,7 @@ export const DataTabContent = memo(function DataTabContent({ tabId }: { tabId: s
   const detectedChannels = useAppStore((s) =>
     primaryProtocolId ? (s.detectedChannels[primaryProtocolId] ?? null) : null
   );
-  // 不订阅 rawDataVersion: channel_count 仅在协议/检测变化时改变
+  // channel_count 仅在协议/检测变化时改变, 窗口缓存直读即可
   const winChannelCount = waveformWindow.get().channel_count;
 
   const tab = dataTabs.find((t) => t.id === tabId);

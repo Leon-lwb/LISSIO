@@ -4,15 +4,12 @@
 //! - sourceId === 主波形源: 返回全局单例 waveformWindow (固定 Tab / 通道回退共用)
 //! - 其他: 从注册表按引用计数 acquire/release (每源一个订阅)
 import { useEffect, useState } from 'react';
-import { waveformWindow, WaveformWindowCache } from '../buffers/dataBuffer';
+import { waveformWindow, EMPTY_WAVEFORM_CACHE as EMPTY_BUFFER, type WaveformWindowCache } from '../buffers/dataBuffer';
 import {
   acquireWaveformBuffer,
   releaseWaveformBuffer,
   getPrimaryWaveformSource,
 } from '../buffers/sourceManagers';
-
-/// 共享空缓冲 — 无数据源时的占位 (永不订阅)
-const EMPTY_BUFFER = new WaveformWindowCache();
 
 export function useWaveformSourceBuffer(sourceId: string | null): WaveformWindowCache {
   const [resolved, setResolved] = useState<{

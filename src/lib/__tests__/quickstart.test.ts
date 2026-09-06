@@ -20,6 +20,7 @@ vi.hoisted(() => {
 import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate } from '../quickstart/applyTemplate';
 import { useAppStore } from '../../store/appStore';
+import { selectWidgets } from '../../store/appStoreHelpers';
 
 describe('快速开始模板', () => {
   it('包含数学 / 滤波器 / 频谱分析 / CAN / 串口 / 演示', () => {
@@ -117,13 +118,13 @@ describe('快速开始模板', () => {
     expect(frames!.length).toBeGreaterThanOrEqual(2);
   });
 
-  it('模板快照过迁移后幂等 (schema 已带, 不再补齐)', async () => {
-    const { migrateSnapshotToV3 } = await import('../tauri/appExport');
+  it('模板快照为 v3 且自带 schema / 多帧结构', () => {
     for (const tpl of QUICK_START_TEMPLATES) {
       const snap = tpl.build();
-      const once = migrateSnapshotToV3(snap);
-      const twice = migrateSnapshotToV3(once);
-      expect(JSON.stringify(twice)).toBe(JSON.stringify(once));
+      expect(snap.version).toBe(3);
+      // protocol 节点必须自带 schema (v3 起不再有补齐迁移)
+      const protocol = snap.rfNodes?.find((n) => n.type === 'protocol');
+      expect(protocol?.data && (protocol.data as { schema?: unknown }).schema != null).toBe(true);
     }
   });
 });
@@ -132,7 +133,6 @@ describe('applyTemplate 合并模式', () => {
   beforeEach(() => {
     // 复位到默认基线 (无全局节点)
     useAppStore.setState({
-      widgets: [],
       controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
       dataTabs: [{ id: 'waveform-fixed', type: 'waveform', name: 'Waveform', closable: false }],
       activeControlTabId: 'default',
@@ -155,7 +155,7 @@ describe('applyTemplate 合并模式', () => {
     // 模板 widget id 不应与现有 id 冲突
     const templateIds = new Set((snap.widgets ?? []).map((w) => w.params.id));
     for (const id of templateIds) {
-      expect(after.widgets.some((w) => w.params.id === id)).toBe(false);
+      expect(selectWidgets(after).some((w) => w.params.id === id)).toBe(false);
     }
     // 新控件节点均归入新标签页; 全局节点导入一份 (基线无主节点)
     const newNodes = after.rfNodes.filter((n) => n.data?.tabId === newTab!.id);
@@ -170,7 +170,7 @@ describe('applyTemplate 合并模式', () => {
 
     const after = useAppStore.getState();
     expect(after.controlTabs.length).toBe(1);
-    const widgets = after.widgets;
+    const widgets = selectWidgets(after);
     expect(widgets.length).toBe((snap.widgets ?? []).length);
     // 替换后 rfNodes 与快照一致 (含全局 Transport/Protocol 节点)
     expect(after.rfNodes.length).toBe((snap.rfNodes ?? []).length);

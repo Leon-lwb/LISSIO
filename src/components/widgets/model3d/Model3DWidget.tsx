@@ -161,55 +161,12 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
     });
   };
 
-  // [TEMP-DISABLED] 以下三个 handler 暂时禁用, 恢复自定义模型导入时取消注释
-  //
-  //   // 通过 Tauri 原生对话框选择 .glb / .gltf 文件 — 路径持久化到 widget 配置
-  //   const handlePickModel = async () => {
-  //     try {
-  //       const selected = await open({
-  //         multiple: false,
-  //         directory: false,
-  //         filters: [{ name: '3D Model', extensions: ['glb', 'gltf'] }],
-  //       });
-  //       if (typeof selected !== 'string') return;
-  //       const name = selected.split(/[/\\]/).pop() ?? 'model.glb';
-  //       setLoadError(false); // 切换路径时清掉旧错误
-  //       updateWidget(id, {
-  //         kind: 'Model3D',
-  //         params: {
-  //           ...widget.params,
-  //           modelSource: { kind: 'custom', path: selected, name },
-  //         },
-  //       });
-  //     } catch (err) {
-  //       // eslint-disable-next-line no-console
-  //       console.warn('[Model3D] open dialog failed:', err);
-  //     }
-  //   };
-  //
-  //   // 清除自定义模型回到内置立方体
-  //   const handleResetModel = () => {
-  //     setLoadError(false);
-  //     updateWidget(id, {
-  //       kind: 'Model3D',
-  //       params: { ...widget.params, modelSource: { kind: 'builtin-cube' } },
-  //     });
-  //   };
-  //
-  //   // 加载失败回调: 切换 effectiveSource 回 builtin-cube
-  //   const handleLoadError = () => {
-  //     setLoadError(true);
-  //   };
-
   const modeLabel =
     mode === 'trajectory-attitude'
       ? t(lang, 'model3dTrajectoryAttitude')
       : mode === 'attitude'
         ? t(lang, 'model3dAttitude')
         : t(lang, 'model3dTrajectory');
-  // [TEMP-DISABLED] 自定义模型导入已禁用 — modelLabel 不再需要, 恢复时取消下方 UI 注释
-  //   const modelLabel =
-  //     effectiveSource.kind === 'custom' ? effectiveSource.name : t(lang, 'model3dModelBuiltin');
 
   return (
     <div className="group widget-card-acrylic flex-1 min-w-0 min-h-0 flex relative overflow-hidden">

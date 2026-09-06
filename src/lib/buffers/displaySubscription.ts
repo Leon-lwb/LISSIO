@@ -3,8 +3,6 @@ import { closeTauriChannel } from '../tauri/tauri';
 import { tickMetric, perfEvent } from '../utils/perfLog';
 
 export type DisplayKind =
-  | 'graph_outputs'
-  | 'custom_inputs'
   | 'string_outputs'
   | 'spectrum'
   | 'measurements'
@@ -20,36 +18,14 @@ export interface DisplayEvent<T> {
   payload: T;
 }
 
-export function subscribeDisplaySnapshot<T>(
-  request: Record<string, unknown>,
-  expectedKind: DisplayKind,
-  sink: (value: T) => void,
-  intervalMs?: number,
-): { cancel: () => void } {
-  const channel = new Channel<DisplayEvent<T>>();
-  channel.onmessage = (event) => {
-    if (event.kind === expectedKind) sink(event.payload);
-  };
-  void invoke('subscribe_data', {
-    request,
-    onEvent: channel,
-    intervalMs,
-    maxItems: null,
-  });
-  return {
-    cancel: () =>
-      void closeTauriChannel(channel, 'unsubscribe_data', channel.id),
-  };
-}
-
-/// 统一单通道订阅。后端 Actor 保证事件顺序，前端不再创建分片或重排批次。
+/// 显示数据统一订阅入口 — 每个逻辑订阅一个 Tauri Channel。
+/// 后端 Actor 保证事件顺序, 推送按 intervalMs 节流; kind 不符的消息视为契约破坏并报错。
 export function subscribeDisplay<T>(
   request: Record<string, unknown>,
   expectedKind: DisplayKind,
-  sink: (batch: T) => void,
+  sink: (value: T) => void,
   options?: { intervalMs?: number; maxItems?: number },
 ): { cancel: () => void } {
-  const channels: Channel<DisplayEvent<T>>[] = [];
   let cancelled = false;
 
   // 调试: 统计该订阅的消息速率 (payload 字节由各订阅包装补充)
@@ -65,18 +41,18 @@ export function subscribeDisplay<T>(
   };
   perfEvent(`subscribe display:${expectedKind}`);
 
+  const channel = new Channel<DisplayEvent<T>>();
+  channel.onmessage = countedSink;
+
   void (async () => {
     try {
-      const first = new Channel<DisplayEvent<T>>();
-      first.onmessage = countedSink;
-      channels.push(first);
       await invoke('subscribe_data', {
         request,
-        onEvent: first,
+        onEvent: channel,
         ...options,
       });
       if (cancelled) {
-        void closeTauriChannel(first, 'unsubscribe_data', first.id);
+        void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
       }
     } catch (e) {
       console.error(`显示订阅失败 (${expectedKind}):`, e);
@@ -86,9 +62,7 @@ export function subscribeDisplay<T>(
   return {
     cancel: () => {
       cancelled = true;
-      perfEvent(`cancel display:${expectedKind} (${channels.length} channels)`);
-      for (const ch of channels)
-        void closeTauriChannel(ch, 'unsubscribe_data', ch.id);
+      void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
     },
   };
 }

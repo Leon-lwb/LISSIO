@@ -1,5 +1,4 @@
 import type {
-  DataFrame,
   RawDataBatch,
   RawDataDirection,
   WaveformWindow,
@@ -25,12 +24,6 @@ export interface RawDataLineView {
   timestamp: number;
   direction: RawDataDirection;
   bytes: Uint8Array;
-}
-
-/// 原始数据快照 (兼容旧接口, 当前主要由虚拟列表直接按行读取)
-export interface RawDataSnapshot {
-  lines: RawDataLineView[];
-  totalBytes: number;
 }
 
 let nextWaveformCacheVersion = 1;
@@ -146,6 +139,9 @@ function emptyWaveformWindow(): WaveformWindow {
 
 /// 全局波形窗口缓存
 export const waveformWindow = new WaveformWindowCache();
+
+/// 共享空波形缓存 — 无数据源时的占位 (各 hook 共用同一实例, 永不写入)
+export const EMPTY_WAVEFORM_CACHE = new WaveformWindowCache();
 
 /// 分片元数据 — 用于把字节偏移映射到时间戳与方向
 export interface ChunkEntry {
@@ -303,16 +299,6 @@ export class RawDataBuffer {
       direction: this.getDirectionForOffset(lineStart),
       bytes,
     };
-  }
-
-  /// 获取所有行 (仅用于导出/复制, 不建议在渲染循环中使用)
-  getAllLines(): RawDataLineView[] {
-    const count = this.lineCount;
-    const lines: RawDataLineView[] = [];
-    for (let i = 0; i < count; i++) {
-      lines.push(this.getLine(i));
-    }
-    return lines;
   }
 
   /// 复制绝对偏移 [startOffset, endOffset) 区间的环形字节 (定位方式与 getLine 一致)
@@ -513,11 +499,6 @@ export class RawDataBuffer {
     return () => this.statsListeners.delete(fn);
   }
 
-  /// 立即触发一次通知 (兼容旧代码入口, 实际已被 RAF 节流替代)
-  notify() {
-    this.scheduleNotify();
-  }
-
   /// RAF 节流: 同一帧内多次 push 合并为一次通知
   private scheduleNotify() {
     if (this.rafScheduled) return;
@@ -540,6 +521,3 @@ export class RawDataBuffer {
 }
 
 export const rawDataBuffer = new RawDataBuffer();
-
-/// 兼容旧代码的导出 (DataFrame 类型仍需要)
-export type { DataFrame };

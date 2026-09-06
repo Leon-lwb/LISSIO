@@ -15,8 +15,11 @@ import {
 } from '../../lib/buffers/sourceManagers';
 import { isGlobalNode, adoptSourceGraph, isSyncInFlight, hydrateWorkspaceFromBackend, syncWorkspaceMeta } from '../appStoreHelpers';
 import { useAppStore } from '../appStore';
-import type { GraphSourceEventPayload } from '../../lib/tauri/tauri';
-import type { ConnectionState, TransportStats } from '../../types';
+import type {
+  GraphSourceEventPayload,
+  TransportStateEvent,
+  TransportRxEvent,
+} from '../../lib/tauri/tauri';
 import { EMPTY_NODE_STATS } from './connection';
 import type { AppSlice } from './types';
 import type { GraphStateSlice } from './graphState';
@@ -59,26 +62,6 @@ function makeRafCoalescer<T>(apply: (value: T) => void): RafCoalescer<T> {
       pending = null;
     },
   };
-}
-
-/// transport:state payload 兼容解析 — 契约为 { node_id, state };
-/// 后端过渡期可能仍发裸 ConnectionState (无节点信息, 忽略并告警)
-function parseStateEvent(payload: unknown): { nodeId: string; state: ConnectionState } | null {
-  if (payload && typeof payload === 'object' && 'node_id' in payload) {
-    const p = payload as { node_id: string; state: ConnectionState };
-    return { nodeId: p.node_id, state: p.state };
-  }
-  console.warn('[events] transport:state payload 缺少 node_id (后端契约未更新?):', payload);
-  return null;
-}
-
-function parseRxEvent(payload: unknown): { nodeId: string; stats: TransportStats } | null {
-  if (payload && typeof payload === 'object' && 'node_id' in payload) {
-    const p = payload as { node_id: string; stats: TransportStats };
-    return { nodeId: p.node_id, stats: p.stats };
-  }
-  console.warn('[events] transport:rx payload 缺少 node_id (后端契约未更新?):', payload);
-  return null;
 }
 
 /// protocol:channels-detected payload 兼容解析 — 契约为 { node_id, channels };
@@ -170,31 +153,27 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
       unlistenFns.forEach((fn) => fn());
       unlistenFns = [];
 
-      const unlistenState = await listen<unknown>('transport:state', (event) => {
-        const parsed = parseStateEvent(event.payload);
-        if (!parsed) return;
+      const unlistenState = await listen<TransportStateEvent>('transport:state', (event) => {
+        const { node_id, state } = event.payload;
         set((s) => ({
-          connectionStates: { ...s.connectionStates, [parsed.nodeId]: parsed.state },
+          connectionStates: { ...s.connectionStates, [node_id]: state },
         }));
       });
 
-      const unlistenStats = await listen<unknown>('transport:rx', (event) => {
-        const parsed = parseRxEvent(event.payload);
-        if (!parsed) return;
-        const st = parsed.stats;
+      const unlistenStats = await listen<TransportRxEvent>('transport:rx', (event) => {
+        const { node_id, stats } = event.payload;
         set((s) => {
-          const prev = s.nodeStats[parsed.nodeId] ?? EMPTY_NODE_STATS;
+          const prev = s.nodeStats[node_id] ?? EMPTY_NODE_STATS;
           return {
             nodeStats: {
               ...s.nodeStats,
-              [parsed.nodeId]: {
-                rx_bytes: prev.rx_bytes + st.rx_bytes,
-                tx_bytes: prev.tx_bytes + st.tx_bytes,
-                rx_frames: prev.rx_frames + st.rx_frames,
-                tx_frames: prev.tx_frames + st.tx_frames,
-                rx_dropped: st.rx_dropped,
-                rxDroppedWindow: st.rx_dropped,
-                rxDroppedTotal: prev.rxDroppedTotal + st.rx_dropped,
+              [node_id]: {
+                rx_bytes: prev.rx_bytes + stats.rx_bytes,
+                tx_bytes: prev.tx_bytes + stats.tx_bytes,
+                rx_frames: prev.rx_frames + stats.rx_frames,
+                tx_frames: prev.tx_frames + stats.tx_frames,
+                rx_dropped: stats.rx_dropped,
+                rxDroppedWindow: stats.rx_dropped,
               },
             },
           };
