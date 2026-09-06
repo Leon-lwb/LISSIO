@@ -13,7 +13,12 @@ import type { Node, Edge } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import { rebaseHistory } from '../../store/historyStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { useDockStore, type DockNode, type DockCard } from '../../store/dockStore';
+import {
+  useDockStore,
+  ensurePropertiesExclusiveCard,
+  type DockNode,
+  type DockCard,
+} from '../../store/dockStore';
 import { useLayoutStore, type SidebarDock } from '../../store/layoutStore';
 import { applyAppearance } from '../../settings/applyTheme';
 import type { AppSettings } from '../../settings/defaults';
@@ -538,9 +543,12 @@ export async function applySnapshot(
 
   // 5. 窗口组织
   if (want.has('windowLayout') && migrated.dockRoot && migrated.dockCards) {
+    // 净化属性专属卡 — 旧备份可能在右侧属性卡混装其他数据 tab
+    // (旧版 reconcile 的安置缺陷), 导入时统一逐出/拆出
+    const cleanDock = ensurePropertiesExclusiveCard(migrated.dockRoot, migrated.dockCards);
     useDockStore.setState({
-      root: migrated.dockRoot,
-      cards: migrated.dockCards,
+      root: cleanDock.root,
+      cards: cleanDock.cards,
       focusedCardId: null,
     });
     if (migrated.sidebarDock) useLayoutStore.setState({ sidebarDock: migrated.sidebarDock });

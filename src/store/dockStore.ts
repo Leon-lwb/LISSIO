@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useAppStore } from './appStore';
+import { NODE_PROPERTIES_TAB_ID } from '../types';
 
 /// 卡片四向吸附边
 export type SnapEdge = 'top' | 'bottom' | 'left' | 'right';
@@ -240,11 +241,18 @@ function insertRightOfCard(node: DockNode, targetCardId: string, newLeaf: DockNo
   return { ...node, children };
 }
 
+/// 属性专属卡判定 — 首个 tab 即属性面板的 data 卡 (含被追加混入其他 tab 的:
+/// 旧版 reconcile 追加污染时 prop 仍在首位)。reconcile 安置新 tab 时跳过此类卡;
+/// prop 被手动合入普通数据卡时位于末位, 不受影响。
+function isPropertiesCard(c: DockCard): boolean {
+  return c.kind === 'data' && c.tabIds.length > 0 && c.tabIds[0] === NODE_PROPERTIES_TAB_ID;
+}
+
 const defaultCards: Record<string, DockCard> = {
   'control-main': { id: 'control-main', kind: 'control', tabIds: [], activeTabId: null },
-  // data-main 预置两个 fixed tab — reconcile 会裁剪空数据卡 (有同 kind 兄弟时),
-  // 且「无家可归 tab 安置进第一张该 kind 卡片 (插入序)」, 空卡会让布局塌陷,
-  // 属性专属卡 (properties-main) 也不应收容其他数据 tab
+  // data-main 预置两个 fixed tab — reconcile 会裁剪空数据卡 (有同 kind 兄弟时,
+  // 空卡会让布局塌陷); 安置无家可归 tab 时跳过属性专属卡 (isPropertiesCard),
+  // properties-main 只承载属性面板
   'data-main': {
     id: 'data-main',
     kind: 'data',
@@ -280,6 +288,73 @@ const defaultRoot: DockNode = {
   ],
   sizes: [55, 45],
 };
+
+/// 属性卡净化 — 供 persist v3 迁移与备份导入复用, 保证属性 tab 独占画布右侧小卡:
+/// - prop 为卡内首位且同卡混有其他 tab (旧版 reconcile 把新 tab 塞进属性卡的污染)
+///   → 其他 tab 逐出到另一张 data 卡 (无则新建底部卡), prop 独占原卡
+/// - prop 混在其他数据卡内 (非首位, 用户手动合并) → prop 拆出为画布右侧专属
+///   小卡 (insertRightOfCard), 原卡不动; 无画布卡时兜底 col split [70, 30]
+/// - prop 已独占一卡 / 未被任何卡安置 → 原样返回 (同一引用)
+export function ensurePropertiesExclusiveCard(
+  root: DockNode,
+  cards: Record<string, DockCard>
+): { root: DockNode; cards: Record<string, DockCard> } {
+  const host = Object.values(cards).find(
+    (c) => c.kind === 'data' && c.tabIds.includes(NODE_PROPERTIES_TAB_ID)
+  );
+  if (!host) return { root, cards };
+
+  if (host.tabIds[0] === NODE_PROPERTIES_TAB_ID) {
+    if (host.tabIds.length === 1) return { root, cards };
+    // 逐出混入的 tab → 另一张非属性 data 卡 / 新建底部卡
+    const strays = host.tabIds.slice(1);
+    const nextCards: Record<string, DockCard> = {
+      ...cards,
+      [host.id]: { ...host, tabIds: [NODE_PROPERTIES_TAB_ID], activeTabId: NODE_PROPERTIES_TAB_ID },
+    };
+    let target = Object.values(nextCards).find(
+      (c) => c.kind === 'data' && c.id !== host.id && !isPropertiesCard(c)
+    );
+    if (!target) {
+      const id = nextId('card');
+      target = { id, kind: 'data', tabIds: [], activeTabId: null };
+      nextCards[id] = target;
+      const node: DockNode = { id: nextId('node'), type: 'card', cardId: id };
+      root = { id: nextId('split'), type: 'split', dir: 'col', children: [root, node], sizes: [70, 30] };
+    }
+    nextCards[target.id] = {
+      ...target,
+      tabIds: [...target.tabIds, ...strays],
+      activeTabId: strays[strays.length - 1],
+    };
+    return { root, cards: nextCards };
+  }
+
+  // prop 混在数据卡非首位 → 拆出为画布右侧专属小卡, 原卡保留其余 tab
+  const kept = host.tabIds.filter((id) => id !== NODE_PROPERTIES_TAB_ID);
+  const nextCards: Record<string, DockCard> = {
+    ...cards,
+    [host.id]: {
+      ...host,
+      tabIds: kept,
+      activeTabId: host.activeTabId === NODE_PROPERTIES_TAB_ID ? (kept[0] ?? null) : host.activeTabId,
+    },
+  };
+  const controlCard = Object.values(nextCards).find((c) => c.kind === 'control');
+  const cardId = nextId('card');
+  const leaf: DockNode = { id: nextId('node'), type: 'card', cardId };
+  let nextRoot = controlCard ? insertRightOfCard(root, controlCard.id, leaf) : root;
+  if (nextRoot === root) {
+    nextRoot = { id: nextId('split'), type: 'split', dir: 'col', children: [root, leaf], sizes: [70, 30] };
+  }
+  nextCards[cardId] = {
+    id: cardId,
+    kind: 'data',
+    tabIds: [NODE_PROPERTIES_TAB_ID],
+    activeTabId: NODE_PROPERTIES_TAB_ID,
+  };
+  return { root: nextRoot, cards: nextCards };
+}
 
 /// 从拖拽状态构建结果: 摘出 Tab 生成新卡片 / 摘除整卡, 返回新的 root+cards+待插入节点
 function extractDraggedNode(state: Pick<DockState, 'root' | 'cards' | 'draggingTab' | 'draggingCardId'>): {
@@ -481,18 +556,44 @@ export const useDockStore = create<DockState>()(
             }
           }
 
-          // 3. 安置新增 Tab → 焦点卡片 / 该 kind 首张卡片 / 新建卡片
+          // 3. 安置新增 Tab
           const housed = new Set(
             Object.values(cards)
               .filter((c) => c.kind === kind)
               .flatMap((c) => c.tabIds)
           );
-          const missing = existingTabIds.filter((id) => !housed.has(id));
+          let missing = existingTabIds.filter((id) => !housed.has(id));
+
+          // 3a. 属性面板专属归宿 — 无归属时在画布卡右侧拆专属小卡 (与 dockPropertiesTab
+          // 同款), 不落入其他数据卡; 无画布卡拆分失败时留给 3b 兜底
+          if (kind === 'data' && missing.includes(NODE_PROPERTIES_TAB_ID)) {
+            const controlCard = Object.values(cards).find((c) => c.kind === 'control');
+            if (controlCard) {
+              const cardId = nextId('card');
+              const leaf: DockNode = { id: nextId('node'), type: 'card', cardId };
+              const nextRoot = insertRightOfCard(root, controlCard.id, leaf);
+              if (nextRoot !== root) {
+                root = nextRoot;
+                cards[cardId] = {
+                  id: cardId,
+                  kind: 'data',
+                  tabIds: [NODE_PROPERTIES_TAB_ID],
+                  activeTabId: NODE_PROPERTIES_TAB_ID,
+                };
+                changed = true;
+                missing = missing.filter((id) => id !== NODE_PROPERTIES_TAB_ID);
+              }
+            }
+          }
+
+          // 3b. 其余新增 Tab → 焦点卡片 / 该 kind 首张卡片 / 新建卡片
+          //     属性专属卡不作安置目标 (焦点与兜底皆跳过)
           if (missing.length > 0) {
             changed = true;
             let target =
-              Object.values(cards).find((c) => c.kind === kind && c.id === state.focusedCardId) ??
-              Object.values(cards).find((c) => c.kind === kind);
+              Object.values(cards).find(
+                (c) => c.kind === kind && c.id === state.focusedCardId && !isPropertiesCard(c)
+              ) ?? Object.values(cards).find((c) => c.kind === kind && !isPropertiesCard(c));
             if (!target) {
               const id = nextId('card');
               target = { id, kind, tabIds: [], activeTabId: null };
@@ -506,6 +607,20 @@ export const useDockStore = create<DockState>()(
               tabIds: [...cur.tabIds, ...missing],
               activeTabId: missing[missing.length - 1],
             };
+          }
+
+          // 4. 再裁剪一次空卡 — 3a 拆出新卡后, 遗留的空属性卡已出现同 kind 兄弟
+          if (changed) {
+            for (const card of Object.values(cards)) {
+              if (card.kind !== kind || card.tabIds.length > 0) continue;
+              const hasSibling = Object.values(cards).some((c) => c.kind === kind && c.id !== card.id);
+              if (!hasSibling) continue;
+              const nextRoot = removeCardNode(root, card.id);
+              if (nextRoot) {
+                root = nextRoot;
+                delete cards[card.id];
+              }
+            }
           }
 
           if (!changed) return state;
@@ -536,10 +651,12 @@ export const useDockStore = create<DockState>()(
     }),
     {
       name: 'vofa-dock',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ root: s.root, cards: s.cards, focusedCardId: s.focusedCardId }),
       // v1 → v2: 二叉 split {a, b, ratio} → N 叉 {children, sizes}
+      // v2 → v3: 净化属性专属卡 — 旧版 reconcile 会把新 tab 塞进属性卡, 迁移
+      // 一次性逐出/拆出, 保证「画布右侧小卡只放属性面板」
       migrate: (persisted: unknown, version: number) => {
         const state = persisted as { root?: unknown; cards?: unknown; focusedCardId?: string | null };
         if (version < 2 && isLegacyDockNode(state.root)) {
@@ -554,6 +671,14 @@ export const useDockStore = create<DockState>()(
                   sizes: [n.ratio ?? 50, 100 - (n.ratio ?? 50)],
                 };
           state.root = conv(state.root);
+        }
+        if (version < 3 && state.root && state.cards) {
+          const clean = ensurePropertiesExclusiveCard(
+            state.root as DockNode,
+            state.cards as Record<string, DockCard>
+          );
+          state.root = clean.root;
+          state.cards = clean.cards;
         }
         return state;
       },
