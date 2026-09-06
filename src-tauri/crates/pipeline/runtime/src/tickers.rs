@@ -129,7 +129,7 @@ fn _force_import(_: StreamGroupState) {}
 ///
 /// 输出快照只含 f32 数值平面输出 (Channel/Math/Input 等), 与前端端口样本源一致。
 pub fn resolve_widget_inputs(
-    source_graphs: &crate::SourceGraphs,
+    source_graphs: &crate::source_graph::SourceGraphs,
     output_values: &engine::ValuesMap,
     widget_id: &str,
 ) -> HashMap<String, f64> {
@@ -161,7 +161,7 @@ pub fn resolve_widget_inputs(
 pub async fn send_scheduler_ticker(
     app: tauri::AppHandle,
     plane: data_plane::DataPlaneState,
-    source_graphs: crate::SourceGraphs,
+    source_graphs: crate::source_graph::SourceGraphs,
 ) {
     use data_plane::execution::SendMode;
     use schema_engine::command_frame::compute_frame_bytes;
@@ -398,10 +398,10 @@ mod tests {
     #[test]
     #[allow(clippy::float_cmp)] // f32→f64 精确表示的整/半值, 无舍入
     fn widget_inputs_resolve_from_source_graph_edges() {
-        let graphs: crate::SourceGraphs =
+        let graphs: crate::source_graph::SourceGraphs =
             std::sync::Arc::new(parking_lot::Mutex::new(HashMap::from([(
                 "tab1".to_string(),
-                crate::TabSourceGraph {
+                crate::source_graph::TabSourceGraph {
                     edges: vec![
                         edge("e1", "src1", "ch0", "cmd1", "in1"),
                         edge("e2", "src2", "value", "cmd1", "in2"),

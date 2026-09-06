@@ -15,8 +15,8 @@ use std::sync::atomic::Ordering;
 use tauri::State;
 
 use app_state::AppState;
+use app_state::NodeDef;
 use buffer_graph::Edge;
-use kind::NodeDef;
 use vofa_core::Result;
 
 use graph_ops::apply_tab_graph_parts;

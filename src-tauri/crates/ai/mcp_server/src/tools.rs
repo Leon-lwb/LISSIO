@@ -160,7 +160,7 @@ pub async fn update_graph(
 ) -> Result<Value, String> {
     #![allow(clippy::implicit_hasher)] // serde_json::Value 反序列化约定 std hasher, 仅内部工具入口
 
-    let nodes: Vec<kind::NodeDef> = nodes
+    let nodes: Vec<runtime::NodeDef> = nodes
         .into_iter()
         .map(serde_json::from_value)
         .collect::<std::result::Result<_, _>>()
@@ -300,7 +300,7 @@ pub async fn send_can_frame(
                 .find_map(|r| {
                     matches!(
                         nodes.get(&r.target).map(|n| &n.kind),
-                        Some(kind::NodeKind::Protocol { .. })
+                        Some(runtime::NodeKind::Protocol { .. })
                     )
                     .then(|| r.target.clone())
                 })
@@ -376,7 +376,7 @@ pub fn get_raw_data(tb: &Toolbox, source: &str, max_bytes: u32) -> Value {
 
 /// 列出可用串口 (名称/类型/USB 信息)。
 pub fn list_serial_ports() -> Result<Value, String> {
-    let ports = serial::serial::list_ports().map_err(|e| e.to_string())?;
+    let ports = runtime::TransportManager::list_ports().map_err(|e| e.to_string())?;
     serde_json::to_value(&ports).map_err(|e| e.to_string())
 }
 

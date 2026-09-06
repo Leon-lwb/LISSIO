@@ -2,11 +2,11 @@
 
 use std::time::Duration;
 
-use app_state::AppState;
+use crate::AppState;
 use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::{display_rate, send_json};
-use crate::DisplayEvent;
+use crate::display::DisplayEvent;
 use buffer_databuffer::DerivedSeriesSelector;
 
 pub(super) fn spawn_measurement_stream(
@@ -41,7 +41,7 @@ pub(super) fn spawn_measurement_stream(
                     last_version = version;
                     seq = seq.wrapping_add(1);
                     let measurement = tokio::task::block_in_place(|| {
-                        app_state::compute_source_measurements(
+                        crate::compute_source_measurements(
                             &buffer,
                             &source,
                             window_ms,

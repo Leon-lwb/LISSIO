@@ -3,6 +3,7 @@ name = "chat"
 description = "VOFA-NEXT AI 对话编排 — 多轮工具调用循环 / 流式事件分发 / 任务取消"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
@@ -13,7 +14,7 @@ session = { workspace = true }
 mcp_client = { workspace = true }
 async-trait = { workspace = true }
 futures = { workspace = true }
-parking_lot = "0.12"
+parking_lot = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

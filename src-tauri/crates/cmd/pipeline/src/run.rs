@@ -5,13 +5,13 @@
 
 use std::collections::HashMap;
 
+use app_state::apply_run_action;
 use app_state::AppState;
-use data_plane::execution::{RunSnapshot, SendMode, SendStatus, SendTask};
-use data_plane::run_control::apply_run_action;
-use data_plane::{RunAction, RunState};
+use app_state::CommandFrameDto;
+use app_state::{RunAction, RunState};
+use app_state::{RunSnapshot, SendMode, SendStatus, SendTask};
 use error::ConfigError;
 use notify_events::emit_workspace_run;
-use schema_engine::command_frame::CommandFrameDto;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 use vofa_core::{Error, Result};

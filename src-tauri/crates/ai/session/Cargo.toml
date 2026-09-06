@@ -3,6 +3,7 @@ name = "session"
 description = "VOFA-NEXT AI 会话持久化 — 多会话存储 / 视图条目 DTO / LLM 历史派生"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
@@ -11,7 +12,7 @@ workspace = true
 provider = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-parking_lot = "0.12"
+parking_lot = { workspace = true }
 log = { workspace = true }
 error = { workspace = true }
 vofa_core = { workspace = true }

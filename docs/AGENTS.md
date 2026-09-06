@@ -29,6 +29,13 @@ cargo fmt --check
 pnpm tauri dev
 ```
 
+```bash
+# 分层与依赖审查门禁 (CI 硬门槛)
+pnpm check:layers       # crate 分层: 每层只调前一层 + L0 基座豁免 + 组合根豁免 + 命名规则
+pnpm check:deps         # 第三方依赖版本统一 (workspace.dependencies 唯一登记)
+cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / 依赖来源
+```
+
 ## 目录速查
 
 - `src/components/` — UI(controls / displays / layout / nodes / panels / onboarding)
@@ -55,8 +62,9 @@ vibe coding 提速的是写代码,不是验证。提 PR 前必须亲自跑通以
 2. `pnpm test` 通过;新增功能 / 修复 bug 必须附带或更新对应测试
 3. `cd src-tauri && cargo test --workspace` 通过
 4. `cd src-tauri && cargo clippy --workspace --all-targets` 无新增警告
-5. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,两侧一起改并核对字段名逐一对应
-6. 涉及 UI 的改动,`pnpm tauri dev` 实际点开验证过,而不是"理论上没问题"
+5. `pnpm check:layers` 与 `pnpm check:deps` 通过 — 新 crate 不得直连 L1 crate(L1 类型经 `pipeline/runtime` 门面), 新第三方依赖必须先登记根 `[workspace.dependencies]`; 涉及依赖变更时 `cargo deny check` 无新增告警
+6. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,两侧一起改并核对字段名逐一对应
+7. 涉及 UI 的改动,`pnpm tauri dev` 实际点开验证过,而不是"理论上没问题"
 
 ## 责任条款
 

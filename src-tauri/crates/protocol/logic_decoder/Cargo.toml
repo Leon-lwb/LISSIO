@@ -3,6 +3,7 @@ name = "logic_decoder"
 description = "VOFA-NEXT 逻辑分析仪解码引擎 — UART/I2C/SPI"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

@@ -1,8 +1,8 @@
 //! `graph_ops` — 图提交核心 (无 Tauri IPC)
 //!
 //! 层级: L3 app (应用核心)。被 L4 命令层 [`graph`] 与 MCP 工具 [`mcp_server`]
-//! 共用同一条提交路径; 允许依赖 foundation / protocol / transport / node /
-//! pipeline 各层与同层的 `app_state`, 禁止依赖任何 `cmd_*` 命令 crate。
+//! 共用同一条提交路径; 只依赖 L2 (pipeline: data_plane/dispatcher/runtime) 与
+//! L0 基座, L1 类型经 runtime 门面转发; 禁止依赖任何 `cmd_*` 命令 crate。
 //!
 //! 职责:
 //! - [`apply::apply_tab_graph_parts`] — tab 图整体编译提交 (乐观并发检查 →

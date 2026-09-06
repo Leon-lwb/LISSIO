@@ -1,38 +1,14 @@
 [package]
 name = "display"
-description = "VOFA-NEXT 统一显示数据订阅入口"
+description = "VOFA-NEXT 统一显示数据订阅入口 (L4 IPC 薄壳, 编排在 app_state::display)"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
 app_state = { workspace = true }
-buffer_databuffer = { workspace = true }
-buffer_raw = { workspace = true }
-can_types = { workspace = true }
-dsp_fft = { workspace = true }
-logic_types = { workspace = true }
-data_plane = { workspace = true }
-data_bus = { workspace = true }
-dispatcher = { workspace = true }
-stream = { workspace = true }
-subscription = { workspace = true }
-gpu_core = { workspace = true }
 vofa_core = { workspace = true }
-parking_lot = "0.12"
-serde = { workspace = true }
-serde_json = { workspace = true }
-tauri = { version = "2", features = [] }
-tokio = { workspace = true }
-log = { workspace = true }
-
-[dev-dependencies]
-serde_json = { workspace = true }
-engine = { workspace = true }
-criterion = { workspace = true }
-
-[[bench]]
-name = "waveform_wire"
-harness = false
+tauri = { workspace = true }

@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use app_state::AppState;
+use crate::AppState;
 use data_bus::{SampleBatch, TopicKey};
 use tauri::ipc::{Channel, InvokeResponseBody};
 

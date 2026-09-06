@@ -10,8 +10,8 @@
 //! 先 sync 存活 tab (全局节点重新托管到存活 tab 名下), 再 remove 被删 tab。
 
 use app_state::AppState;
+use app_state::{NodeDef, NodeKind};
 use graph_ops::{apply_remove_tab_graph, apply_tab_graph};
-use kind::{NodeDef, NodeKind};
 use schema_types::ProtocolConfig;
 use std::collections::HashMap;
 use vofa_core::config::{TestDataConfig, TransportConfig};

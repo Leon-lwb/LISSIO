@@ -2,6 +2,7 @@
 name = "automotive_isotp"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
@@ -17,4 +18,4 @@ thiserror = { workspace = true }
 error = { workspace = true }
 
 [dev-dependencies]
-async-trait = "0.1"
+async-trait = { workspace = true }

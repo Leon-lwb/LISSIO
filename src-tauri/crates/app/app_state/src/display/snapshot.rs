@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use app_state::AppState;
+use crate::AppState;
 use data_plane::{CustomInputBatch, GraphEvalState};
 use tauri::ipc::{Channel, InvokeResponseBody};
 
-use crate::{DisplayEvent, DisplayRequest};
+use super::protocol::{DisplayEvent, DisplayRequest};
 
 /// 收集 Custom 节点输入快照。
 ///

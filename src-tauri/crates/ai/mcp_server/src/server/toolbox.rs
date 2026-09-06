@@ -13,13 +13,13 @@ pub const MCP_ENDPOINT_PATH: &str = "/mcp";
 #[derive(Clone)]
 pub struct Toolbox {
     /// 传输注册表 (与 `AppState::transport` 同一实例)。
-    pub transport: Arc<tokio::sync::Mutex<transport_core::TransportManager>>,
+    pub transport: Arc<tokio::sync::Mutex<runtime::TransportManager>>,
     /// 数据平面 (字节路由 / 缓冲 / 输出快照)。
     pub data_plane: data_plane::DataPlaneState,
     /// 控件输入值表。
     pub input_values: Arc<parking_lot::RwLock<HashMap<String, f32>>>,
     /// tab 图表 (节点图提交)。
-    pub graphs: Arc<parking_lot::Mutex<HashMap<String, engine::CompiledGraph>>>,
+    pub graphs: Arc<parking_lot::Mutex<HashMap<String, runtime::CompiledGraph>>>,
     /// 图版本号 (节点图提交)。
     pub graphs_version: Arc<AtomicU64>,
     /// 源图存储 (连线拓扑权威 — connect_edge/disconnect_edge op 与 graph:source 事件)。

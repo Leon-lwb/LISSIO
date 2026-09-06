@@ -3,6 +3,7 @@ name = "net"
 description = "VOFA-NEXT TCP/UDP 网络传输 — TCP client/server + UDP socket"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

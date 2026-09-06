@@ -3,6 +3,7 @@ name = "kind"
 description = "VOFA-NEXT 节点种类系统 — NodeKind + NodeDef + PortDomain + MathOp + DecoderBlockDef re-export"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

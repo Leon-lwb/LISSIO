@@ -3,6 +3,7 @@ name = "can_load"
 description = "VOFA-NEXT CAN 负载统计 Tauri 命令 (can_load.rs): 滑动窗口采样 / 订阅 / CSV 导出"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
@@ -10,7 +11,7 @@ workspace = true
 [dependencies]
 app_state = { workspace = true }
 log = { workspace = true }
-tauri = { version = "2", features = [] }
+tauri = { workspace = true }
 tokio = { workspace = true }
 vofa_core = { workspace = true }
 can_types = { workspace = true }

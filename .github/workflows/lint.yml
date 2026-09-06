@@ -47,7 +47,7 @@ jobs:
         run: pnpm typecheck
 
   crate-layers:
-    name: Crate layering
+    name: Crate layering + dependency hygiene
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -74,6 +74,33 @@ jobs:
 
       - name: Check crate layering rules
         run: pnpm check:layers
+
+      - name: Check dependency version unification
+        run: pnpm check:deps
+
+  cargo-deny:
+    name: Cargo deny (advisories/licenses/bans/sources)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: src-tauri
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (cargo subcommand dispatch)
+        uses: dtolnay/rust-toolchain@stable
+
+      # 钉住与本地一致的 cargo-deny 版本, 避免配置键漂移
+      - name: Install cargo-deny (pinned)
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
+
+      - name: Run cargo deny check
+        run: cargo deny check
 
   rust:
     name: Rust fmt + clippy + test

@@ -397,7 +397,7 @@ pub async fn send_command_frame(
         return Ok(no_targets("命令发送器未连线字节出口 (loopbackOut)"));
     }
 
-    let mut cache = data_plane::DecoderFeedCache::new();
+    let mut cache = app_state::DecoderFeedCache::new();
     // boundary 读锁内复查运行态: 与切换互斥 — 校验通过后切换必须等发送完成,
     // 旧 epoch 字节不会跨切换发出
     let summary = {
@@ -407,11 +407,11 @@ pub async fn send_command_frame(
                 "工作区未运行: 手动发送要求运行态, 请先启动工作区",
             ));
         }
-        data_plane::byte_router::route_bytes(&plane, None, &widget_id, &bytes, 0, &mut cache, None)
+        app_state::byte_router::route_bytes(&plane, None, &widget_id, &bytes, 0, &mut cache, None)
             .await
     };
     if summary.decoders_fed {
-        data_plane::frame_dispatch::refresh_snapshot(&plane);
+        app_state::frame_dispatch::refresh_snapshot(&plane);
     }
 
     let error = if summary.tx_errors > 0 {

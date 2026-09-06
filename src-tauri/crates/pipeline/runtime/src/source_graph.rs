@@ -1,18 +1,32 @@
-//! 源图存储 — 连线拓扑 + widget 配置模型的后端权威 (仅存类型, op 逻辑在
-//! `graph::source_graph`)
+//! 源图数据模型 — 连线拓扑 + widget 配置记录的后端权威存储类型 (仅存类型,
+//! op 逻辑在 `graph::source_graph` / `graph_ops`)
 //!
 //! 前端整图提交 (`update_tab_graph`) 与后端拓扑 op (`connect_edge` / `disconnect_edge`)
 //! 共同维护:apply 编译成功后写入, 编译失败不落盘 (旧图保留)。
-//! widget 配置记录 ([`crate::WidgetRecord`]) 与画布位置 (workspace 模块) 随同一
+//! widget 配置记录 ([`WidgetRecord`]) 与画布位置 (app_state workspace 模块) 随同一
 //! 提交路径更新;端口提示 [`SourceNodeHint`] 随 sync 附带, 供后端 op 解析
 //! 默认 handle 与 RawData `src:` 端口改写 (后端无法枚举 Sink 端口)。
+//!
+//! 层级: L2 pipeline (runtime) — 被发送调度 ticker 与 L3 应用核心共用。
 
-use crate::workspace::WidgetRecord;
 use buffer_graph::Edge;
 use kind::NodeDef;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
+
+/// widget 配置记录 — 前端 `WidgetConfig` 的后端透传存储。
+///
+/// `id` 与节点 id 相同 (widget 即图节点);`params` 为该控件完整参数对象
+/// (含 `id` 字段),后端不解释、原样回传。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WidgetRecord {
+    pub id: String,
+    pub kind: String,
+    #[serde(default)]
+    pub params: Value,
+}
 
 /// 节点端口提示 — 前端 sync 时按节点 id 附带
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]

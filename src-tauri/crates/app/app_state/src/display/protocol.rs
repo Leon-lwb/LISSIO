@@ -94,7 +94,7 @@ pub enum DisplayEvent {
     CustomInputs(CustomInputBatch),
     StringOutputs(StringOutputSnapshot),
     Spectrum(HashMap<String, SpectrumResult>),
-    Measurements(app_state::SourceMeasurements),
+    Measurements(crate::SourceMeasurements),
     RawData(RawDataBatch),
     CanFrames(CanFrameBatch),
     LogicSamples(LogicSampleBatch),

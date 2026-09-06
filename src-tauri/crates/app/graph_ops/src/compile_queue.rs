@@ -12,8 +12,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use buffer_graph::Edge;
-use kind::NodeDef;
 use parking_lot::Mutex as PMutex;
+use runtime::NodeDef;
 use serde::Serialize;
 
 /// 编译状态

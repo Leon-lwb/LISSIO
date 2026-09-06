@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use app_state::{AppState, SourceNodeHint};
 use buffer_graph::Edge;
-use kind::{NodeDef, NodeKind};
+use runtime::{NodeDef, NodeKind};
 
 use crate::{apply_connect_edge, apply_disconnect_edge, apply_remove_tab_graph, apply_tab_graph};
 
@@ -119,7 +119,7 @@ fn math_node(id: &str, tab_id: &str) -> NodeDef {
         id: id.into(),
         tab_id: tab_id.into(),
         kind: NodeKind::Math {
-            op: kind::MathOp::Add,
+            op: runtime::MathOp::Add,
             input_count: 1,
         },
     }

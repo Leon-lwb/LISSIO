@@ -3,6 +3,7 @@ name = "error"
 description = "VOFA-NEXT 统一错误抽象 — Error trait + 强类型错误类型 + AppError 顶级枚举"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

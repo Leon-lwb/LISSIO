@@ -1,7 +1,7 @@
 //! 显示订阅命令测试 — display_rate 语义 + data_bus 端到端
 
 use super::*;
-use app_state::AppState;
+use crate::AppState;
 use data_bus::{SampleStatus, TopicKey};
 use std::time::Duration;
 use vofa_core::DataFrame;

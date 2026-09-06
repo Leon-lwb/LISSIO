@@ -13,7 +13,7 @@ use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
 use graph_ops::{compute_derived, inject_protocol_sources};
-use kind::{MathOp, NodeDef};
+use runtime::{MathOp, NodeDef};
 use testkit::{edge, make_input, make_math, make_protocol, make_protocol_source};
 
 /// N 个 widget 节点 (Input/Math 交替)

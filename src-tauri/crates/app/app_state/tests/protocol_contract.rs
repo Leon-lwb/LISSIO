@@ -1,5 +1,5 @@
+use app_state::display::{DisplayEvent, DisplayRequest, RawDataOrigin};
 use data_plane::GraphOutputSnapshot;
-use display::{DisplayEvent, DisplayRequest, RawDataOrigin};
 
 #[test]
 fn request_is_a_tagged_exhaustive_union() {
@@ -43,7 +43,7 @@ fn event_serialization_matches_typescript_discriminant() {
     let mut snapshot = GraphOutputSnapshot {
         tick: 7,
         graphs_version: 3,
-        values: engine::ValuesMap::default(),
+        values: runtime::ValuesMap::default(),
     };
     snapshot
         .values

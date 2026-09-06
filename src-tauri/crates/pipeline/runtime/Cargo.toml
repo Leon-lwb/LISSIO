@@ -1,0 +1,40 @@
+[package]
+name = "runtime"
+description = "L2 管线运行时门面 — 发送 ticker / 源图数据模型 / 协议引擎工厂 / L1 类型统一转发"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# L1 严格相邻 — 节点图引擎/类型/传输/协议/触发器
+engine = { workspace = true }
+kind = { workspace = true }
+trigger = { workspace = true }
+transport_core = { workspace = true }
+can_bridge = { workspace = true }
+frame_decoder = { workspace = true }
+schema_engine = { workspace = true }
+protocol_engine = { workspace = true }
+protocol_float = { workspace = true }
+protocol_can_bridge = { workspace = true }
+logic_decoder = { workspace = true }
+# L2 同层 — 数据平面与流框架
+data_plane = { workspace = true }
+stream = { workspace = true }
+dsp_fft = { workspace = true }
+# L0 基座
+buffer_graph = { workspace = true }
+logic_types = { workspace = true }
+schema_types = { workspace = true }
+vofa_core = { workspace = true }
+# runtime
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+tauri = { workspace = true }

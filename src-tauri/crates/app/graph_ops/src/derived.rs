@@ -4,13 +4,13 @@
 //! 随 `update_tab_graph` Tauri 命令返回并经 `graph:derived` 事件差分推送。
 //! 前端 `derivedPorts` store 据此渲染 React Flow handle 与节点摘要。
 
-use kind::{protocol_source_port_names, NodeDef, NodeKind, PortDomain};
+use runtime::{protocol_source_port_names, NodeDef, NodeKind, PortDomain};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::Serialize;
 
 /// 端口域 wire 序列化形态 — 与前端 `domain: 'F32' | 'Bytes' | 'String'` 对齐
 ///
-/// `kind::PortDomain` 是无 serde 派生的轻量枚举;为 IPC 契约在 derived 模块内
+/// `runtime::PortDomain` 是无 serde 派生的轻量枚举;为 IPC 契约在 derived 模块内
 /// 独立序列化,避免反向修改 kind 的公共 API。
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
@@ -194,7 +194,7 @@ fn protocol_channels_from_config(config: &ProtocolConfig) -> usize {
     }
 }
 
-/// 按 NodeKind 枚举其标准输出端口 (与 [`kind::port_domain`] 镜像)
+/// 按 NodeKind 枚举其标准输出端口 (与 [`runtime::port_domain`] 镜像)
 ///
 /// 端口域由 [`DerivedPortDomain`] 决定;与 [`port_domain`] 单一事实源同步 (手工镜像以
 /// 避免双向依赖 `port_domain` 的 is_output 反向枚举)。
@@ -348,7 +348,7 @@ mod tests {
             id: "m1".into(),
             tab_id: "tab1".into(),
             kind: NodeKind::Math {
-                op: kind::MathOp::Add,
+                op: runtime::MathOp::Add,
                 input_count: 3,
             },
         };

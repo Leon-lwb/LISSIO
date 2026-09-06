@@ -1,4 +1,4 @@
-use protocol_engine::{detect_format, parse_ascii, parse_hex, InputFormat};
+use app_state::{detect_format, parse_ascii, parse_hex, InputFormat};
 use vofa_core::Result;
 
 /// 帧解码器手动测试结果 (与前端 FrameDecoderManualResult 对应)
@@ -23,7 +23,7 @@ pub struct FrameDecoderManualResult {
 #[allow(clippy::fn_params_excessive_bools)]
 #[tauri::command]
 pub async fn parse_frame_decoder_input(
-    blocks: Vec<kind::DecoderBlockDef>,
+    blocks: Vec<app_state::DecoderBlockDef>,
     input: String,
     format: InputFormat,
     enable_valid: bool,
@@ -31,7 +31,7 @@ pub async fn parse_frame_decoder_input(
     enable_last_timestamp: bool,
     enable_fps: bool,
 ) -> Result<FrameDecoderManualResult> {
-    use frame_decoder::FrameParser;
+    use app_state::FrameParser;
 
     // 1. 解析输入字符串为字节
     let actual_format = match format {
@@ -87,7 +87,7 @@ pub async fn parse_frame_decoder_input(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kind::{DecoderBlockDef, FieldType};
+    use app_state::{DecoderBlockDef, FieldType};
 
     /// 最小帧: Header("AA") + Field(uint8, "value") → 帧 [0xAA, 0x2A] 输出 value=42
     fn blocks() -> Vec<DecoderBlockDef> {

@@ -3,6 +3,7 @@ name = "vofa-next"
 version = "0.1.2"
 description = "Modern serial port assistant with VOFA protocol support"
 authors = ["peng"]
+license = "MIT"
 edition = "2021"
 
 [lib]
@@ -62,6 +63,7 @@ members = [
   # L2 pipeline — 数据平面（字节路由/数值求值/流框架/调度）
   "crates/pipeline/data_bus",
   "crates/pipeline/data_plane",
+  "crates/pipeline/runtime",
   "crates/pipeline/stream",
   "crates/pipeline/dispatcher",
   # L3 app — 应用核心（全局状态/图提交核心/原生菜单/更新流）
@@ -90,6 +92,7 @@ members = [
 [workspace.package]
 edition = "2021"
 version = "0.1.2"
+license = "MIT"
 
 [workspace.lints.clippy]
 # 最严格 clippy 配置 — 所有规则组 deny
@@ -198,6 +201,28 @@ pollster = "1"
 # (SimdUnifiedOps, wide 后端, AVX2/NEON 运行时分发); std 必须显式开启
 # (0.6.5 打包缺陷: 关闭 default 后大量模块未按 no_std 门控)
 scirs2-core = { version = "0.6.5", default-features = false, features = ["std", "simd"] }
+# Tauri 桌面框架与官方插件 — 版本唯一登记点, 成员一律 `workspace = true` 继承;
+# tauri features 取根与成员的历史并集 (features 在依赖图上做并集, 与原各处分散声明等价)
+tauri = { version = "2", features = ["devtools", "macos-private-api"] }
+tauri-build = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-log = "2"
+tauri-plugin-notification = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-store = "2"
+tauri-plugin-updater = "2"
+window-vibrancy = "0.6"
+semver = "1"
+# 硬件/平台访问
+serialport = "4"
+nusb = "0.2"
+windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices_DeviceAndDriverInstallation", "Win32_System_Registry"] }
+# FFT (dsp_fft)
+rustfft = "6"
+realfft = "3"
+bytemuck = { version = "1", features = ["derive"] }
 # ---- workspace 内部 crate (按层分组, 路径 = crates/<层>/<crate>) ----
 # L0 foundation
 gpu_core = { path = "crates/foundation/gpu_core" }
@@ -244,6 +269,7 @@ trigger = { path = "crates/node/trigger" }
 # L2 pipeline
 data_plane = { path = "crates/pipeline/data_plane" }
 data_bus = { path = "crates/pipeline/data_bus" }
+runtime = { path = "crates/pipeline/runtime" }
 dispatcher = { path = "crates/pipeline/dispatcher" }
 stream = { path = "crates/pipeline/stream" }
 # L3 app
@@ -270,7 +296,7 @@ rawdata = { path = "crates/cmd/rawdata" }
 libautomotive = "0.1"
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { workspace = true }
 
 [dependencies]
 data_plane = { workspace = true }
@@ -290,23 +316,23 @@ display = { workspace = true }
 graph = { workspace = true }
 pipeline = { workspace = true }
 rawdata = { workspace = true }
-tauri = { version = "2", features = ["devtools", "macos-private-api"] }
-tauri-plugin-opener = "2"
+tauri = { workspace = true }
+tauri-plugin-opener = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 parking_lot = { workspace = true }
-tauri-plugin-log = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-notification = "2"
-tauri-plugin-store = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-process = "2"
-semver = "1"
-reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
-window-vibrancy = "0.6"
+tauri-plugin-log = { workspace = true }
+tauri-plugin-dialog = { workspace = true }
+tauri-plugin-fs = { workspace = true }
+tauri-plugin-notification = { workspace = true }
+tauri-plugin-store = { workspace = true }
+tauri-plugin-process = { workspace = true }
+semver = { workspace = true }
+reqwest = { workspace = true }
+window-vibrancy = { workspace = true }
 
+# tauri-plugin-updater 仅桌面端支持, target 门控声明 (不在上方通用段重复登记)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
-tauri-plugin-updater = "2"
+tauri-plugin-updater = { workspace = true }

@@ -2,6 +2,7 @@
 name = "automotive_can"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
@@ -14,6 +15,6 @@ protocol_engine = { workspace = true }
 protocol_can_bridge = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
-async-trait = "0.1"
-parking_lot = "0.12"
+async-trait = { workspace = true }
+parking_lot = { workspace = true }
 error = { workspace = true }

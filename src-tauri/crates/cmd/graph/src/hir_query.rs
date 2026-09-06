@@ -9,8 +9,8 @@
 //! - `hir_query` 暴露"全图 HIR 视图" (节点 + 边 + 端口域 + 边分类), 走 `get_graph_hir` 命令拉取
 //!   两者各司其职, 无重复字段, 也不互相替代.
 
-use engine::{CompiledGraph, EdgeClass, HirNode, TypedGraph};
-use kind::{port_domain, NodeDef, PortDomain};
+use app_state::{port_domain, NodeDef, PortDomain};
+use app_state::{CompiledGraph, EdgeClass, HirNode, TypedGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde::Serialize;
 use tauri::State;
@@ -39,7 +39,7 @@ impl From<PortDomain> for PortDomainView {
     }
 }
 
-/// 边分类 wire 形态 — mirror `engine::hir::EdgeClass`
+/// 边分类 wire 形态 — mirror `app_state::hir::EdgeClass`
 /// (`tag = "kind"` + `snake_case` 变体名, 与前端 `kind` 字段对齐)
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -151,11 +151,11 @@ pub fn extract_hir(tab_id: &str, graph: Option<&CompiledGraph>) -> GraphHir {
     }
 }
 
-/// 端口域解析 (mirror `engine::hir::domain_of`):
+/// 端口域解析 (mirror `app_state::hir::domain_of`):
 /// 优先查 byte_def (handle 命名两平面正交, 字节判定优先); 否则回落 value_def;
 /// 占位节点 (无双双角色定义) 按 F32 处理.
 ///
-/// 与 `engine::hir::domain_of` 行为一致; 该函数暂未 pub,
+/// 与 `app_state::hir::domain_of` 行为一致; 该函数暂未 pub,
 /// `hir_query` 在 graph crate 内独立维护一份以避免反向修改 `engine`
 /// 公共 API.
 fn port_domain_of_node(node: &HirNode, handle: &str, is_output: bool) -> PortDomain {
@@ -189,14 +189,14 @@ pub async fn get_graph_hir(state: State<'_, AppState>, tab_id: String) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kind::{NodeDef, NodeKind};
+    use app_state::{NodeDef, NodeKind};
 
     fn math_def(id: &str, tab_id: &str) -> NodeDef {
         NodeDef {
             id: id.into(),
             tab_id: tab_id.into(),
             kind: NodeKind::Math {
-                op: kind::MathOp::Add,
+                op: app_state::MathOp::Add,
                 input_count: 1,
             },
         }
@@ -289,7 +289,7 @@ mod tests {
             NodeDef {
                 id: "pt".into(),
                 tab_id: "t1".into(),
-                kind: kind::NodeKind::ProtocolSource {
+                kind: app_state::NodeKind::ProtocolSource {
                     node_id: "pt".into(),
                     channels: 1,
                     port_names: None,

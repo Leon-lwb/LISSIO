@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use app_state::AppState;
+use crate::AppState;
 use buffer_raw::DirectionFilter;
 use data_bus::{RuntimeHealth, TopicKey};
 use dispatcher::filtered_sources::{
@@ -16,8 +16,8 @@ use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::State;
 use vofa_core::Result;
 
-use crate::snapshot::spawn_snapshot;
-use crate::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
+use super::protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
+use super::snapshot::spawn_snapshot;
 
 mod binary;
 mod envelope_stream;
@@ -160,7 +160,6 @@ async fn spawn_can_load(
 }
 
 /// 统一显示订阅。每个逻辑订阅只使用一个 Tauri Channel。
-#[tauri::command]
 pub async fn subscribe_data(
     state: State<'_, AppState>,
     request: DisplayRequest,
@@ -239,7 +238,7 @@ pub async fn subscribe_data(
                 max_items,
                 "波形",
                 |batch| {
-                    InvokeResponseBody::Raw(crate::waveform_binary::encode_waveform_window(&batch))
+                    InvokeResponseBody::Raw(super::waveform_binary::encode_waveform_window(&batch))
                 },
             );
         }
@@ -359,14 +358,12 @@ pub async fn subscribe_data(
     })
 }
 
-#[tauri::command]
 pub async fn unsubscribe_data(state: State<'_, AppState>, channel_id: u32) -> Result<()> {
     subscription::cancel_subscription(&state.subscriptions, channel_id);
     Ok(())
 }
 
 /// 前端消费反馈。目前以运行时 Topic 保存控制状态。
-#[tauri::command]
 pub fn ack_data(
     state: State<'_, AppState>,
     subscription_id: u32,
@@ -383,7 +380,6 @@ pub fn ack_data(
     Ok(())
 }
 
-#[tauri::command]
 pub fn get_data_health(state: State<'_, AppState>) -> Result<RuntimeHealth> {
     Ok(state.data_plane.eval.data_bus.health())
 }

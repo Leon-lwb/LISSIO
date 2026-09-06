@@ -9,14 +9,14 @@ use data_plane::{
     build_graph_eval_state, GraphEvalState, StreamGroupState, DEFAULT_CAN_BUFFER_CAPACITY,
     DEFAULT_CAN_LOAD_STATS_WINDOW, DEFAULT_DECODED_BUFFER_CAPACITY, DEFAULT_LOGIC_BUFFER_CAPACITY,
 };
-use engine::{CompiledGraph, SourceFramesMap, SourceTextsMap};
-use kind::NodeKind;
 use logic_types::{DecodedBuffer, LogicBuffer};
 use parking_lot::{Mutex, RwLock};
+use runtime::NodeKind;
+use runtime::TransportManager;
+use runtime::{CompiledGraph, SourceFramesMap, SourceTextsMap};
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use transport_core::TransportManager;
 use vofa_core::PipelineConfig;
 
 /// Stop 模式下冻结的原始波形缓存。
@@ -108,7 +108,7 @@ impl AppState {
         let output_snapshot = Arc::new(Mutex::new(data_plane::GraphOutputSnapshot {
             tick: 0,
             graphs_version: 0,
-            values: engine::ValuesMap::default(),
+            values: runtime::ValuesMap::default(),
         }));
         let filter_states = Arc::new(Mutex::new(HashMap::new()));
         let decoder_states = Arc::new(Mutex::new(HashMap::new()));
@@ -226,7 +226,7 @@ impl Default for AppState {
 mod tests {
     use super::{AppState, WaveformSnapshot};
     use buffer_databuffer::DataBuffer;
-    use kind::{NodeDef, NodeKind};
+    use runtime::{NodeDef, NodeKind};
     use schema_types::ProtocolConfig;
     use std::sync::Arc;
 

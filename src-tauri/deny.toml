@@ -1,0 +1,67 @@
+# cargo-deny 依赖审查配置 — 与 .github/workflows/lint.yml 的 cargo-deny job 配套。
+# 本地运行: cargo deny check (advisories licenses bans sources 全检)
+# 规则说明:
+#   - advisories: RustSec 公告 deny;存量不可修复项逐条 ignore 并注明理由与复查期限
+#   - licenses: allow 名单按 Cargo.lock 实际分布生成(SPDX OR 表达式按任意一侧满足即通过)
+#   - bans: 重复版本 warn 不阻断(多版本多来自三方传递依赖,clippy 已 allow
+#     multiple_crate_versions);skip 清单收录已知重复,新增重复时 warn 列表会变长,人工复查
+#   - sources: 仅允许 crates.io,未知 registry/git 来源告警
+
+[advisories]
+version = 2
+yanked = "deny"
+# 存量 unmaintained 传递依赖 — 均无已知漏洞, 本仓库无法修复, 逐条注明理由;
+# 复查约定: 每次 Tauri/大版本依赖升级后过一遍 cargo deny check advisories
+ignore = [
+  # gtk3-rs 全家桶 (10 条): Tauri Linux 端经 webkit2gtk 依赖 gtk3, 生态现状,
+  # 修复路径 = Tauri 官方迁移 gtk4, 到时删除本条
+  { id = "RUSTSEC-2024-0411", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0412", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0413", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0414", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0415", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0416", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0417", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0418", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0419", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  { id = "RUSTSEC-2024-0420", reason = "gtk3-rs unmaintained, Tauri Linux 传递依赖, 等 Tauri 迁移 gtk4" },
+  # paste / proc-macro-error: 过程宏辅助库, 经三方宏依赖引入, 无可控替代点
+  { id = "RUSTSEC-2024-0436", reason = "paste unmaintained, 三方传递依赖, 无已知漏洞" },
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error unmaintained, 三方传递依赖, 无已知漏洞" },
+  # rust-unic 家族: 无上游维护, 三方传递依赖 (经 tauri-utils → urlpattern), 无已知漏洞
+  { id = "RUSTSEC-2025-0081", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
+  { id = "RUSTSEC-2025-0075", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
+  { id = "RUSTSEC-2025-0080", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
+  { id = "RUSTSEC-2025-0100", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
+  { id = "RUSTSEC-2025-0098", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
+]
+
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Zlib",
+  "Unlicense",
+  "CC0-1.0",
+  "MIT-0",
+  "0BSD",
+  "MPL-2.0",
+  "CDLA-Permissive-2.0",
+]
+
+[bans]
+multiple-versions = "warn"
+# 本仓库版本策略使用宽松 semver 要求 ("1"/"2"), 不视为违规
+wildcards = "allow"
+skip = []
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

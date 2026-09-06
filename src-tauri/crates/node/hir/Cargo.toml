@@ -3,6 +3,7 @@ name = "hir"
 description = "节点图编译前端 — TypedGraph 类型化图: id interning + 双角色节点 + 端口域解析 + 边分类"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

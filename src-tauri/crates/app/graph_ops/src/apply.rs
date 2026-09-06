@@ -11,10 +11,10 @@ use buffer_graph::Edge;
 use data_plane::data_plane::frame_dispatch;
 use data_plane::decoder_feed::sync_decoders_now;
 use data_plane::DataPlaneState;
-use engine::BytePlan;
 use error::ConfigError;
-use kind::NodeDef;
 use notify_events::emit_graph_derived;
+use runtime::BytePlan;
+use runtime::NodeDef;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
@@ -32,9 +32,9 @@ use crate::{
 /// 简单合并策略: 全局节点表按 id 覆盖合并 (任何 tab 提交后重建全局平面);
 /// 孤儿节点 (图删除后残留) 的运行时资源由 `DataPlaneState::reconcile` 清理。
 fn rebuild_byte_plan(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, engine::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, runtime::CompiledGraph>>>,
     candidate: &std::collections::HashMap<String, NodeDef>,
-    new_tab: Option<(&str, &engine::CompiledGraph)>,
+    new_tab: Option<(&str, &runtime::CompiledGraph)>,
 ) -> Result<BytePlan> {
     let mut byte_edges: Vec<Edge> = Vec::new();
     {
@@ -50,7 +50,7 @@ fn rebuild_byte_plan(
         byte_edges.extend(g.byte_edges());
     }
     // 合并后的全局表先建 HIR (边分类应与各 tab 编译期一致), 再投影字节平面
-    let typed = engine::TypedGraph::build(candidate.values().cloned(), byte_edges)
+    let typed = runtime::TypedGraph::build(candidate.values().cloned(), byte_edges)
         .map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))?;
     BytePlan::build(&typed).map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))
 }
@@ -113,7 +113,7 @@ pub async fn apply_tab_graph(
 #[allow(clippy::implicit_hasher)]
 #[allow(clippy::too_many_arguments)]
 pub async fn apply_tab_graph_parts(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, engine::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, runtime::CompiledGraph>>>,
     graphs_version: &Arc<std::sync::atomic::AtomicU64>,
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
@@ -143,7 +143,7 @@ pub async fn apply_tab_graph_parts(
     // 2. 本 tab 数值图编译 — 失败时构造 `CompileReport` 并 emit `graph:compile` 事件,
     //    真实编译错误原样返回 (占位假错误会吞掉域不匹配等可用原因)
     let compiled =
-        match engine::CompiledGraph::compile(tab_id.clone(), compile_nodes, edges.clone()) {
+        match runtime::CompiledGraph::compile(tab_id.clone(), compile_nodes, edges.clone()) {
             Ok(g) => g,
             Err(e) => {
                 let report = error::CompileReport::new(e.clone());
@@ -168,7 +168,7 @@ pub async fn apply_tab_graph_parts(
     let mut candidate = data_plane.global_nodes.lock().clone();
     candidate.retain(|_, n| n.tab_id != tab_id);
     for n in &nodes {
-        if matches!(n.kind, kind::NodeKind::ProtocolSource { .. }) {
+        if matches!(n.kind, runtime::NodeKind::ProtocolSource { .. }) {
             continue;
         }
         candidate.insert(n.id.clone(), n.clone());

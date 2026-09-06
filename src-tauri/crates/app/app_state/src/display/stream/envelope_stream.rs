@@ -3,7 +3,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use app_state::AppState;
+use crate::AppState;
 use buffer_databuffer::DataBuffer;
 use gpu_core::{envelope_minmax_cpu, GpuContext};
 use parking_lot::Mutex;

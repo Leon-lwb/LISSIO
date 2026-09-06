@@ -10,9 +10,9 @@
 //! 前端水合时 (未知 kind 剔除) — 避免在后端复刻 28 类控件的 schema。
 
 use buffer_graph::Edge;
-use kind::NodeDef;
+use runtime::NodeDef;
+use runtime::WidgetRecord;
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -45,18 +45,6 @@ impl Position {
             height: None,
         }
     }
-}
-
-/// widget 配置记录 — 前端 `WidgetConfig` 的后端透传存储。
-///
-/// `id` 与节点 id 相同 (widget 即图节点);`params` 为该控件完整参数对象
-/// (含 `id` 字段),后端不解释、原样回传。
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WidgetRecord {
-    pub id: String,
-    pub kind: String,
-    #[serde(default)]
-    pub params: Value,
 }
 
 /// 控件 tab 元数据 — 名称与 widget 顺序 (配置本体在各 tab 源图的 `widgets`)。

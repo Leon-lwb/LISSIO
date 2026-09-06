@@ -1,7 +1,7 @@
 //! 真实 WWB1 编码与 JSON 快照编码的 CPU/载荷基准，不包含 IPC 传输。
+use app_state::encode_waveform_window;
 use buffer_databuffer::DataBuffer;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use display::encode_waveform_window;
 use std::{hint::black_box, path::Path, time::Duration};
 
 fn bench_wire(c: &mut Criterion) {

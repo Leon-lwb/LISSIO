@@ -1,47 +1,52 @@
 [package]
 name = "app_state"
-description = "VOFA-NEXT 应用全局状态 (AppState + GraphEvalState 重导出 + 推送 ticker) — Tauri-managed state + 后台循环"
+description = "VOFA-NEXT 应用核心 (L3): 全局状态容器 + 显示订阅服务 + 传输/协议操作 + 工作区持久化"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
-# GraphEvalState + StreamGroupState + 4 个 snapshot 类型定义在 data_plane
+# L2 严格相邻 — 数据平面 / 数据总线 / 流框架 / 调度 / 运行时门面
+# (GraphEvalState + StreamGroupState + 4 个 snapshot 类型定义在 data_plane;
+#  AdaptiveRate 由 stream 提供; sync_spectrum_analyzers / sync_ifft_buffers 由
+#  dispatcher 提供; L1 类型统一经 runtime 门面转发)
 data_plane = { workspace = true }
 data_bus = { workspace = true }
-# Ticker 内的 AdaptiveRate 由 stream 提供
 stream = { workspace = true }
-# 频谱/Ifft 同步 sync_spectrum_analyzers / sync_ifft_buffers 由 dispatcher 提供
 dispatcher = { workspace = true }
+runtime = { workspace = true }
 
+# L0 基座
 vofa_core = { workspace = true }
 can_types = { workspace = true }
 logic_types = { workspace = true }
 buffer_databuffer = { workspace = true }
 buffer_graph = { workspace = true }
 buffer_raw = { workspace = true }
-engine = { workspace = true }
-kind = { workspace = true }
-schema_engine = { workspace = true }
+gpu_core = { workspace = true }
 dsp_filter = { workspace = true }
 dsp_fft = { workspace = true }
 dsp_measure = { workspace = true }
 dsp_window = { workspace = true }
-transport_core = { workspace = true }
 subscription = { workspace = true }
+notify_events = { workspace = true }
+schema_types = { workspace = true }
+error = { workspace = true }
 
 # runtime
-parking_lot = "0.12"
+parking_lot = { workspace = true }
 rustc-hash = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
-tauri = { version = "2", features = [] }
-
+tauri = { workspace = true }
 [dev-dependencies]
-vofa_core = { workspace = true }
-protocol_engine = { workspace = true }
-schema_types = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "waveform_wire"
+harness = false

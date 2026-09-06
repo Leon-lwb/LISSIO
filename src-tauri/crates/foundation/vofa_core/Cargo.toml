@@ -3,6 +3,7 @@ name = "vofa_core"
 description = "VOFA-NEXT 基础类型 — 错误、帧、配置"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
 
 [lints]
 workspace = true

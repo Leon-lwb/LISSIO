@@ -9,7 +9,7 @@
 //! 推导 (后端单一权威)。
 
 use buffer_graph::Edge;
-use kind::{protocol_source_port_names, NodeDef, NodeKind};
+use runtime::{protocol_source_port_names, NodeDef, NodeKind};
 use schema_types::ProtocolConfig;
 use std::collections::HashSet;
 
@@ -102,7 +102,7 @@ fn channels_from_config(config: &ProtocolConfig) -> usize {
 mod tests {
     use super::*;
     use buffer_graph::Edge;
-    use kind::NodeKind;
+    use runtime::NodeKind;
     use schema_types::{DecoderBlockDef, FieldType, SchemaPreset};
     use vofa_core::config::TransportConfig;
 

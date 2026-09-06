@@ -1,7 +1,7 @@
 //! 自动流水线安全上限配置。
 
 use app_state::AppState;
-use data_bus::RuntimeLimits;
+use app_state::RuntimeLimits;
 use tauri::State;
 use vofa_core::{PipelineConfig, Result};
 

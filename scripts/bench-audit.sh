@@ -28,13 +28,13 @@ audit_run() {
   fi
 }
 cd "$audit_root/src-tauri"
-cargo bench -p buffer_databuffer -p data_plane -p display -p gpu_core \
+cargo bench -p buffer_databuffer -p data_plane -p app_state -p gpu_core \
   -p buffer_graph -p engine -p eval -p trigger -p frame_decoder -p graph_ops --no-run 2>&1 | tee "$audit_out/build.log"
 for audit_spec in \
   'buffer_databuffer waveform_pyramid_bench' \
   'data_plane ingest_bench' \
   'data_plane eval_bench' \
-  'display waveform_wire' \
+  'app_state waveform_wire' \
   'gpu_core envelope_bench' \
   'buffer_graph node_graph_bench' \
   'engine compile_bench' \

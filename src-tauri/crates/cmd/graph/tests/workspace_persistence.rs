@@ -9,10 +9,10 @@
 use std::collections::HashMap;
 
 use app_state::{collect_workspace_file, save_workspace, AppState, Position, WidgetRecord};
+use app_state::{NodeDef, NodeKind};
 use buffer_graph::Edge;
 use graph::restore_workspace;
 use graph_ops::{apply_connect_edge, apply_remove_tab_graph, apply_tab_graph};
-use kind::{NodeDef, NodeKind};
 
 fn sink_node(id: &str, tab_id: &str) -> NodeDef {
     NodeDef {
@@ -27,7 +27,7 @@ fn math_node(id: &str, tab_id: &str) -> NodeDef {
         id: id.into(),
         tab_id: tab_id.into(),
         kind: NodeKind::Math {
-            op: kind::MathOp::Add,
+            op: app_state::MathOp::Add,
             input_count: 1,
         },
     }
