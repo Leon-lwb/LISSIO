@@ -1,7 +1,9 @@
 //! 共享 Suspense 加载占位 — React.lazy 懒加载模块加载期间的统一视觉
 //!
-//! - 默认: 填满父容器 (数据 Tab 切换等场景), 复用 module-card + animate-spin
+//! - 默认: 填满父容器 (数据 Tab 切换等场景), 复用 Lissio 利萨茹加载标记
 //! - overlay: 弹窗场景, 使用全屏遮罩 (fixed inset-0 + bg-bg-overlay), 与现有弹窗遮罩一致
+import { LissajousMark } from '../brand/LissajousMark';
+
 interface SuspenseFallbackProps {
   /** 作为弹窗加载占位时使用全屏遮罩 */
   overlay?: boolean;
@@ -9,8 +11,8 @@ interface SuspenseFallbackProps {
 
 export function SuspenseFallback({ overlay = false }: SuspenseFallbackProps) {
   const spinner = (
-    <div className="flex items-center justify-center">
-      <div className="h-4 w-4 rounded-full border-2 border-border border-t-accent animate-spin" />
+    <div className="flex items-center justify-center" role="status" aria-label="Loading">
+      <LissajousMark size={overlay ? 52 : 30} />
     </div>
   );
 

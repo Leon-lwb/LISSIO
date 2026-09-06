@@ -6,6 +6,7 @@ import { getName, getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
+import { LissajousMark } from './brand/LissajousMark';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -19,12 +20,12 @@ const APP_DOCS = 'https://github.com/Horldsence/vofa-NEXT#readme';
 
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const lang = useAppStore((s) => s.lang);
-  const [appName, setAppName] = useState('VOFA-Next');
+  const [appName, setAppName] = useState('Lissio');
   const [appVersion, setAppVersion] = useState('0.0.0');
 
   useEffect(() => {
     if (!isOpen) return;
-    void getName().then(setAppName).catch(() => setAppName('VOFA-Next'));
+    void getName().then(setAppName).catch(() => setAppName('Lissio'));
     void getVersion().then(setAppVersion).catch(() => setAppVersion('0.0.0'));
   }, [isOpen]);
 
@@ -61,7 +62,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         </button>
 
         <div className="flex items-center justify-center mb-1">
-          <img src="/icon.png" alt="logo" width={72} height={72} />
+          <LissajousMark size={72} animated={false} label="Lissio" />
         </div>
 
         <h2 className="text-xl font-semibold text-text-bright m-0">{appName}</h2>

@@ -347,3 +347,19 @@ fn test_str_f32_output_edge_is_f32_plane() {
     assert!(g.compiled().slot_of("len1", "result").is_some());
     assert!(g.compiled().str_slot_of("len1", "result").is_none());
 }
+
+#[test]
+fn test_text_display_accepts_string_domain_edge() {
+    // 回归: TextDisplay 的 "text" 输入口属字符串平面 —
+    // TextInput.str / Trigger.text 等字符串源可连 (此前编译为 Sink 误判 F32 → DomainMismatch)
+    let nodes = vec![
+        make_text_input("tin", "t1", "hello"),
+        make_text_display("td", "t1"),
+    ];
+    let edges = vec![edge("e1", "tin", "str", "td", "text")];
+    let g = CompiledGraph::compile("t1".into(), nodes, edges).unwrap();
+    assert_eq!(g.string_edges().count(), 1);
+    assert_eq!(g.string_edges().next().unwrap().id, "e1");
+    // 纯展示节点无求值臂, 不进 eval_order (同 Sink)
+    assert!(!g.eval_order.iter().any(|n| n == "td"));
+}

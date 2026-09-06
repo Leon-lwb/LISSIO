@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "vofa-next",
+  "productName": "Lissio",
   "version": "0.1.2",
   "identifier": "top.pengheng.vofa-next",
   "build": {
@@ -13,7 +13,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "VOFA-Next 串口助手",
+        "title": "Lissio",
         "width": 1280,
         "height": 800,
         "minWidth": 900,
@@ -24,7 +24,7 @@
       },
       {
         "label": "splashscreen",
-        "title": "VOFA-Next",
+        "title": "Lissio",
         "width": 480,
         "height": 220,
         "resizable": false,

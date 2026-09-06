@@ -21,20 +21,20 @@ pub(super) fn lower_str(
     let mut str_defaults = Vec::new();
     let mut num_inputs = Vec::new();
     let mut num_defaults = Vec::new();
-    for (name, domain) in op.input_ports() {
-        match domain {
+    for spec in op.input_ports() {
+        match spec.domain {
             PortDomain::String => {
-                str_inputs.push(ctx.str_in(&node.id, name));
+                str_inputs.push(ctx.str_in(&node.id, spec.handle));
                 // 内联回退文本: 仅 FORMAT 的 fmt 端口取模板参数, 其余为空串
-                str_defaults.push(if op.uses_inline_text_default(name) {
+                str_defaults.push(if op.uses_inline_text_default(spec.handle) {
                     tmpl.to_string()
                 } else {
                     String::new()
                 });
             }
             PortDomain::F32 => {
-                num_inputs.push(ctx.f32_in(&node.id, name));
-                num_defaults.push(str_num_default(num, name));
+                num_inputs.push(ctx.f32_in(&node.id, spec.handle));
+                num_defaults.push(str_num_default(num, spec.handle));
             }
             PortDomain::Bytes | PortDomain::Spectrum => {}
         }

@@ -37,9 +37,9 @@
   --color-bg-panel-header: #21262f;
   --color-bg-input: #262b36;
   --color-bg-hover: #272c37;
-  --color-bg-active: #34435c;
-  --color-bg-button: #3b6fd0;
-  --color-bg-button-hover: #4a7ee0;
+  --color-bg-active: #273968;
+  --color-bg-button: #315cff;
+  --color-bg-button-hover: #4770ff;
   --color-bg-statusbar: #1a1e25;
   --color-bg-danger: #5a2626;
   --color-bg-danger-hover: #6e2d2d;
@@ -63,7 +63,9 @@
   --color-text-inverse: #ffffff;
 
   /* ---------- 强调与语义色 ---------- */
-  --color-accent: #4c8dff;
+  --color-accent: #315cff;
+  --color-brand-signal: #45e6c3;
+  --color-brand-lime: #c8ff4d;
   --color-green: #89d185;
   --color-red: #f48771;
   --color-yellow: #e2c08d;
@@ -191,4 +193,3 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-

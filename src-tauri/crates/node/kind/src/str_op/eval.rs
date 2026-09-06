@@ -316,7 +316,7 @@ mod tests {
     // PARSE 结果均为小整数/精确表示的 f32, assert_eq! 严格比较是有意为之
     #![allow(clippy::float_cmp)]
 
-    use crate::ports::PortDomain;
+    use crate::ports::{PortDomain, PortSpec};
     use crate::str_op::{StrOp, StrResult};
 
     fn text(r: StrResult) -> String {
@@ -404,20 +404,23 @@ mod tests {
         assert_eq!(
             StrOp::Format.input_ports(),
             &[
-                ("fmt", PortDomain::String),
-                ("in0", PortDomain::F32),
-                ("in1", PortDomain::F32),
-                ("in2", PortDomain::F32),
-                ("in3", PortDomain::F32)
+                PortSpec::new("fmt", PortDomain::String),
+                PortSpec::new("in0", PortDomain::F32),
+                PortSpec::new("in1", PortDomain::F32),
+                PortSpec::new("in2", PortDomain::F32),
+                PortSpec::new("in3", PortDomain::F32)
             ]
         );
         assert_eq!(
             StrOp::Parse.input_ports(),
-            &[("str", PortDomain::String), ("pos", PortDomain::F32)]
+            &[
+                PortSpec::new("str", PortDomain::String),
+                PortSpec::new("pos", PortDomain::F32)
+            ]
         );
         assert_eq!(
             StrOp::EncodeHex.input_ports(),
-            &[("str", PortDomain::String)]
+            &[PortSpec::new("str", PortDomain::String)]
         );
         assert_eq!(StrOp::Format.output_domain(), PortDomain::String);
         assert_eq!(StrOp::Parse.output_domain(), PortDomain::F32);

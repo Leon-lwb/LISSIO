@@ -25,8 +25,8 @@ pub use engine::{
 };
 pub use frame_decoder::FrameParser;
 pub use kind::{
-    port_domain, protocol_source_port_names, DecoderBlockDef, FieldType, MathOp, NodeDef, NodeKind,
-    PortDomain,
+    port_domain, port_table, protocol_source_port_names, DecoderBlockDef, FieldType, MathOp,
+    NodeDef, NodeKind, PortDomain, PortSpec, PortTable,
 };
 pub use protocol_engine::{detect_format, parse_ascii, parse_hex, InputFormat, ProtocolEngine};
 pub use schema_engine::command_frame::{compute_frame_bytes, CommandFrameDto};

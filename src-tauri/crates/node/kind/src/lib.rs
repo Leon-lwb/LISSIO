@@ -5,7 +5,8 @@
 //! 模块（按职责拆分，原 505 行的 `kind.rs` 现拆为四层）：
 //! - [`NodeKind`][] 节点种类枚举（`kind.rs`）
 //! - [`NodeDef`][] 节点定义（`spec.rs`）
-//! - [`PortDomain`][crate::ports::PortDomain] / 端口 handle 常量（`ports.rs`）
+//! - [`PortDomain`][crate::ports::PortDomain] / 强类型端口表
+//!   ([`PortSpec`][]/[`PortTable`][]) + 端口 handle 常量（`ports.rs`）
 //! - [`MathOp`][] / [`StrOp`][] / [`StrNumParams`][] / [`StrResult`][]（`math_op.rs` / `str_op`）
 //! - [`DecoderBlockDef`][] FrameDecoder 块定义 re-export（`decoder_block.rs`）
 //!
@@ -26,9 +27,9 @@ pub use decoder_block::{
 pub use kind::{is_protocol_source, is_raw_data_handle, NewlineMode, NodeKind};
 pub use math_op::MathOp;
 pub use ports::{
-    port_domain, PortDomain, FRAME_DECODER_IN_HANDLE, LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE,
-    PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE, RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE,
-    TRANSPORT_TX_HANDLE,
+    port_domain, port_table, PortDomain, PortSpec, PortTable, FRAME_DECODER_IN_HANDLE,
+    LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
+    RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
 };
 pub use spec::{protocol_source_port_names, NodeDef};
 pub use str_op::{str_num_default, StrNumParams, StrOp, StrResult};

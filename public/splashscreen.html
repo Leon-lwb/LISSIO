@@ -3,123 +3,141 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VOFA-Next</title>
+    <title>Lissio</title>
     <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+      :root {
+        color-scheme: dark;
+        --phase-blue: #315cff;
+        --signal-cyan: #45e6c3;
+        --signal-lime: #c8ff4d;
       }
-      html,
-      body {
+      * { box-sizing: border-box; }
+      html, body {
+        width: 100%;
         height: 100%;
+        margin: 0;
         overflow: hidden;
         user-select: none;
         -webkit-user-select: none;
         background: transparent;
       }
+      body {
+        display: grid;
+        place-items: center;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+      }
       .card {
-        display: flex;
+        display: grid;
+        grid-template-columns: 118px 1fr;
         align-items: center;
-        gap: 32px;
+        gap: 28px;
         width: 100%;
         height: 100%;
-        padding: 0 44px;
-        border-radius: 18px;
+        padding: 0 42px;
         overflow: hidden;
-        background: linear-gradient(160deg, #14161c 0%, #0b0c10 100%);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-        color: #e6e8ee;
-        font-family:
-          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
-          'Microsoft YaHei', sans-serif;
-      }
-      .logo {
-        width: 112px;
-        height: 112px;
-        flex-shrink: 0;
         border-radius: 24px;
-        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        background:
+          radial-gradient(circle at 15% 25%, rgba(49, 92, 255, 0.18), transparent 42%),
+          linear-gradient(145deg, #111622 0%, #080a10 72%);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.075);
+        color: #f7f9ff;
       }
-      .info {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        min-width: 0;
-        flex: 1;
+      .mark {
+        width: 118px;
+        height: 118px;
+        overflow: visible;
+        filter: drop-shadow(0 0 18px rgba(49, 92, 255, 0.32));
+        animation: breathe 2.7s ease-in-out infinite;
       }
-      .name {
-        font-size: 24px;
-        font-weight: 600;
-        letter-spacing: 0.08em;
+      .mark path {
+        fill: none;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        vector-effect: non-scaling-stroke;
       }
-      .subtitle {
-        font-size: 12px;
-        color: #8a8f9e;
-        letter-spacing: 0.2em;
+      .track { stroke: var(--phase-blue); stroke-width: 2.4; opacity: 0.18; }
+      .trail {
+        stroke: url(#brand-gradient);
+        stroke-width: 4.4;
+        stroke-dasharray: 24 76;
+        stroke-dashoffset: 100;
+        animation: trace 6s linear infinite;
       }
-      .progress {
-        height: 3px;
-        margin-top: 14px;
-        border-radius: 2px;
-        background: rgba(255, 255, 255, 0.08);
-        overflow: hidden;
+      .head {
+        stroke: var(--signal-lime);
+        stroke-width: 6;
+        stroke-dasharray: 1.5 98.5;
+        stroke-dashoffset: 100;
+        animation: trace 6s linear infinite;
       }
-      .progress::after {
-        content: '';
-        display: block;
-        width: 40%;
-        height: 100%;
-        border-radius: 2px;
-        background: #4f8cff;
-        animation: slide 1.2s ease-in-out infinite;
-      }
-      @keyframes slide {
-        0% {
-          transform: translateX(-100%);
-        }
-        100% {
-          transform: translateX(250%);
-        }
-      }
-      .status {
-        font-size: 12px;
-        color: #8a8f9e;
-      }
-      .status::after {
-        content: '…';
-        display: inline-block;
-        width: 1.2em;
-        text-align: left;
-        animation: dots 1.5s steps(4) infinite;
-        overflow: hidden;
-        vertical-align: bottom;
-      }
+      .info { display: grid; gap: 7px; min-width: 0; }
+      .name { font-size: 32px; font-weight: 700; letter-spacing: -0.025em; }
+      .subtitle { font-size: 15px; color: rgba(247, 249, 255, 0.78); letter-spacing: 0.01em; }
+      .status { margin-top: 11px; font-size: 11px; color: rgba(247, 249, 255, 0.46); }
+      .status::after { content: ''; animation: dots 1.5s steps(4, end) infinite; }
+      @keyframes trace { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+      @keyframes breathe { 0%, 100% { opacity: 0.84; } 50% { opacity: 1; } }
       @keyframes dots {
-        0% {
-          content: '';
-        }
-        25% {
-          content: '.';
-        }
-        50% {
-          content: '..';
-        }
-        75% {
-          content: '...';
-        }
+        0% { content: ''; }
+        25% { content: '.'; }
+        50% { content: '..'; }
+        75%, 100% { content: '...'; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .mark, .mark path, .status::after { animation: none !important; }
+        .trail { stroke-dasharray: none; stroke-dashoffset: 0; }
+        .head { display: none; }
+        .status::after { content: '...'; }
       }
     </style>
   </head>
   <body>
-    <div class="card">
-      <img class="logo" src="/icon.png" alt="VOFA-Next" />
-      <div class="info">
-        <div class="name">VOFA-Next</div>
-        <div class="subtitle">串口助手</div>
-        <div class="progress"></div>
-        <div class="status">正在初始化</div>
-      </div>
-    </div>
+    <main class="card">
+      <svg class="mark" viewBox="0 0 100 100" aria-hidden="true">
+        <defs>
+          <linearGradient id="brand-gradient" x1="18" y1="18" x2="82" y2="82" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#315cff" />
+            <stop offset="0.58" stop-color="#45e6c3" />
+            <stop offset="1" stop-color="#c8ff4d" />
+          </linearGradient>
+        </defs>
+        <g>
+          <path class="track" data-lissio-path pathLength="100" />
+          <path class="trail" data-lissio-path pathLength="100" />
+          <path class="head" data-lissio-path pathLength="100" />
+        </g>
+      </svg>
+      <section class="info">
+        <div class="name">Lissio</div>
+        <div class="subtitle">让每一次信号，都清晰可见。</div>
+        <div class="status">正在准备工作台</div>
+      </section>
+    </main>
+    <script>
+      const paths = document.querySelectorAll('[data-lissio-path]');
+      const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const startedAt = performance.now();
+
+      function buildPath(detailScale, steps = 360) {
+        const amp = 24 + Math.min(1, Math.max(0, detailScale)) * 6;
+        const points = [];
+        for (let index = 0; index <= steps; index += 1) {
+          const t = (index / steps) * Math.PI * 2;
+          const x = 50 + Math.sin(3 * t + Math.PI / 2) * amp;
+          const y = 50 + Math.sin(4 * t) * amp * 0.92;
+          points.push(`${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`);
+        }
+        return points.join(' ');
+      }
+
+      function draw(now) {
+        const phase = (Math.sin(((now - startedAt) / 5400) * Math.PI * 2 + 0.55) + 1) / 2;
+        const detailScale = reducedMotion ? 0.76 : 0.52 + phase * 0.48;
+        const path = buildPath(detailScale);
+        paths.forEach((node) => node.setAttribute('d', path));
+        if (!reducedMotion) requestAnimationFrame(draw);
+      }
+      requestAnimationFrame(draw);
+    </script>
   </body>
 </html>

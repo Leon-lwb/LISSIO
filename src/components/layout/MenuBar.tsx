@@ -107,7 +107,7 @@ function buildMenus(lang: Lang, historyFlags: { canUndo: boolean; canRedo: boole
   return [
     {
       id: 'app',
-      label: 'VOFA-Next',
+      label: 'Lissio',
       entries: [
         { kind: 'item', id: 'about', label: L('menuAbout'), onClick: () => settings().openAbout() },
         { kind: 'item', id: 'settings', label: L('menuSettings'), shortcut: 'Ctrl+,', onClick: () => settings().open() },

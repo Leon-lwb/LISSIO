@@ -206,7 +206,7 @@ aiErrKeyring: Failed to access the system keychain
 aiErrKeyringAccessDenied: System keychain access was denied
 keychainPermissionTitle: System Keychain Access Required
 keychainPermissionDescription: The previous keychain access request was not authorized, so saved AI provider keys are currently unavailable.
-keychainPermissionPurpose: VOFA-NEXT stores AI provider API keys securely in the system keychain. Keys are never written to the settings file.
+keychainPermissionPurpose: Lissio stores AI provider API keys securely in the system keychain. Keys are never written to the settings file.
 keychainPermissionImpact: Denying access only affects reading and saving AI keys. Serial ports, charts, and other features are unaffected.
 keychainPermissionRetryHint: Click “Request Again” to show the macOS authorization prompt again.
 keychainPermissionDontRemind: Don’t remind me again
@@ -639,7 +639,7 @@ aboutAuthor: Author
 aboutLicense: License
 aboutGithub: GitHub Repository
 aboutDocs: Documentation
-aboutDescription: Modern serial assistant with VOFA+ protocol and oscilloscope-style waveform display
+aboutDescription: See every signal. Understand what matters. Act with confidence.
 aboutClose: Close
 
 # Menu event labels

@@ -51,6 +51,7 @@ export type NodeKind =
   | { kind: 'ProtocolSource'; params: { node_id: string; channels: number; port_names?: string[] | null } }
   | { kind: 'Input' }
   | { kind: 'TextInput'; params: { text: string } }
+  | { kind: 'TextDisplay' }
   | { kind: 'Math'; params: { op: MathOp; input_count: number } }
   | { kind: 'Str'; params: { op: StrOp; num: { pos: number; len: number; size: number }; tmpl?: string } }
   | { kind: 'TextOut'; params: { target_transport: string; newline: 'none' | 'lf' | 'crlf' | 'cr'; min_interval_ms: number } }
@@ -92,6 +93,7 @@ export interface NodeDef {
 ///
 /// - Knob/Slider/Button/Radio/Checkbox → Input
 /// - TextInput → TextInput { text } (文本输入源, 输出端口 str 写字符串平面)
+/// - TextDisplay → TextDisplay (文本显示, 输入端口 text 读字符串平面)
 /// - Math → Math { op, input_count }
 /// - Str → Str { op, num: { pos, len, size } } (num = 数值端口未连接时的内联回退值)
 /// - Custom → Custom { inputs, outputs } (从代码解析)
@@ -113,6 +115,11 @@ export function widgetToNodeKind(widget: WidgetConfig): NodeKind {
     case 'TextInput':
       // 文本输入源: 参数 text 经 update_tab_graph 同步, 后端每帧写入字符串平面 str 口
       return { kind: 'TextInput', params: { text: widget.params.text } };
+
+    case 'TextDisplay':
+      // 文本显示: 纯展示消费端 (无求值), "text" 输入口属字符串平面 —
+      // TextInput.str / Trigger.text 等字符串源可连 (后端 NodeKind::TextDisplay)
+      return { kind: 'TextDisplay' };
 
     case 'Math': {
       const isUnary = isUnaryMathOp(widget.params.op);

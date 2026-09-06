@@ -20,7 +20,10 @@ impl NodeArm for StrArm {
             return;
         };
         let ports = op.input_ports();
-        let n_str = ports.iter().filter(|p| p.1 == PortDomain::String).count();
+        let n_str = ports
+            .iter()
+            .filter(|p| p.domain == PortDomain::String)
+            .count();
         let n_num = ports.len() - n_str;
         let mut stack_str: [&str; 2] = ["", ""];
         let mut heap_str;
@@ -39,17 +42,17 @@ impl NodeArm for StrArm {
             &mut heap_num
         };
         let (mut si, mut ni) = (0, 0);
-        for (name, domain) in ports {
-            match domain {
+        for spec in ports {
+            match spec.domain {
                 PortDomain::String => {
                     // 已连接走上游快照; 未连接走内联回退文本 (仅 fmt ← tmpl)
                     let linked = graph
                         .string_input_index
                         .get(node_id)
-                        .is_some_and(|p| p.contains_key(*name));
+                        .is_some_and(|p| p.contains_key(spec.handle));
                     str_inputs[si] = if linked {
-                        graph.resolve_str_input(node_id, name, ctx.out_str)
-                    } else if uses_str_inline_text(*op, name) {
+                        graph.resolve_str_input(node_id, spec.handle, ctx.out_str)
+                    } else if uses_str_inline_text(*op, spec.handle) {
                         tmpl.as_str()
                     } else {
                         ""
@@ -60,11 +63,11 @@ impl NodeArm for StrArm {
                     num_inputs[ni] = if graph
                         .input_index
                         .get(node_id)
-                        .is_some_and(|p| p.contains_key(*name))
+                        .is_some_and(|p| p.contains_key(spec.handle))
                     {
-                        graph.resolve_input(node_id, name, ctx.out)
+                        graph.resolve_input(node_id, spec.handle, ctx.out)
                     } else {
-                        str_num_default(num, name)
+                        str_num_default(num, spec.handle)
                     };
                     ni += 1;
                 }

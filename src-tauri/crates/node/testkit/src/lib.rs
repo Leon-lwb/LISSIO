@@ -104,6 +104,15 @@ pub fn make_sink(id: &str, tab_id: &str) -> NodeDef {
     }
 }
 
+/// TextDisplay 节点 (字符串平面展示消费端, 输入口 "text")
+pub fn make_text_display(id: &str, tab_id: &str) -> NodeDef {
+    NodeDef {
+        id: id.to_string(),
+        tab_id: tab_id.to_string(),
+        kind: NodeKind::TextDisplay,
+    }
+}
+
 pub fn make_custom(id: &str, tab_id: &str, inputs: Vec<&str>, outputs: Vec<&str>) -> NodeDef {
     NodeDef {
         id: id.to_string(),

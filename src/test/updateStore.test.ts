@@ -38,7 +38,7 @@ const appApiMock = vi.hoisted(() => ({
 
 vi.mock('@tauri-apps/api/app', () => ({
   getVersion: appApiMock.getVersion,
-  getName: vi.fn(() => Promise.resolve('VOFA-Next')),
+  getName: vi.fn(() => Promise.resolve('Lissio')),
 }));
 
 /// 模拟后端 emit 事件

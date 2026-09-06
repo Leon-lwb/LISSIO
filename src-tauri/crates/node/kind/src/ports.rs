@@ -1,6 +1,8 @@
-//! 端口 handle 常量 + 端口域（`PortDomain`）+ `port_domain` 查询函数.
+//! 端口 handle 常量 + 强类型端口表（`PortSpec`/`PortTable`）+ `port_domain` 查询.
 //!
-//! 端口命名与域分类在图编译期使用，是边分类（`engine::EdgeClass`）的依据。
+//! 端口命名与域分类是图编译期边分类（`engine::EdgeClass`）的依据。
+//! 域知识以类型化端口表声明（每个 `NodeKind` 一份静态表，单一事实源），
+//! `port_domain` 只是表查找 + 动态端口回落，不再按 handle 字面量逐个匹配。
 
 use crate::kind::NodeKind;
 
@@ -40,64 +42,152 @@ pub enum PortDomain {
     Spectrum,
 }
 
-/// 查询节点某个端口的域
-///
-/// 端口域表：
-/// - Transport: 输出 "rx" = Bytes，输入 "tx" = Bytes
-/// - Protocol: 输入 "in" = Bytes，输出 "out" = Bytes
-///   （chN 帧通道不经 Protocol 本体暴露，数值平面用 ProtocolSource）
-/// - FrameDecoder: 输入 "in" 与旧名 "loopbackIn" = Bytes，其余输出 = F32
-/// - Sink/Custom: 输出 "loopbackOut" = Bytes（CommandSender 命令字节出口）
-/// - TextOut: 输入 "text" = String（动态发送回传, 目标 Transport 发送）
-/// - ProtocolSource: 输出 "str"（RawData 原始字节文本）= String；
-///   其余输出（"ch0".."chN" 或 port_names 命名端口）= F32；其余节点按现有语义全 F32
-pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain {
-    match kind {
-        NodeKind::Fft { .. } if is_output && handle == "spectrum" => PortDomain::Spectrum,
-        NodeKind::Ifft | NodeKind::Sink if !is_output && handle == "spectrum" => {
-            PortDomain::Spectrum
-        }
-        NodeKind::Transport { .. } => match (is_output, handle) {
-            (true, TRANSPORT_RX_HANDLE) | (false, TRANSPORT_TX_HANDLE) => PortDomain::Bytes,
-            _ => PortDomain::F32,
-        },
-        NodeKind::Protocol { .. } => match (is_output, handle) {
-            (true, PROTOCOL_OUT_HANDLE) | (false, PROTOCOL_IN_HANDLE) => PortDomain::Bytes,
-            _ => PortDomain::F32,
-        },
-        NodeKind::FrameDecoder { .. }
-            if !is_output
-                && (handle == FRAME_DECODER_IN_HANDLE || handle == LOOPBACK_IN_HANDLE) =>
-        {
-            PortDomain::Bytes
-        }
-        NodeKind::Sink | NodeKind::Custom { .. } if is_output && handle == LOOPBACK_OUT_HANDLE => {
-            PortDomain::Bytes
-        }
-        NodeKind::Trigger { .. } if is_output && handle == "text" => PortDomain::String,
-        NodeKind::TextInput { .. } if is_output && handle == "str" => PortDomain::String,
-        // TextOut 的 "text" 输入口 (动态发送回传的字符串消费端)
-        NodeKind::TextOut { .. } if !is_output && handle == "text" => PortDomain::String,
-        // ProtocolSource 的 "str" 端口（RawData 原始字节 UTF-8 文本）属字符串平面
-        NodeKind::ProtocolSource { .. } if is_output && handle == "str" => PortDomain::String,
-        NodeKind::Str { op, .. } => {
-            if is_output {
-                // 输出端口统一命名 "result"，域由 op 决定；未知端口回退 F32
-                if handle == "result" {
-                    op.output_domain()
-                } else {
-                    PortDomain::F32
-                }
-            } else {
-                // 输入端口委托给 StrOp 端口表（单一事实源）；未知端口回退 F32
-                op.input_ports()
-                    .iter()
-                    .find(|(name, _)| *name == handle)
-                    .map_or(PortDomain::F32, |(_, domain)| *domain)
-            }
-        }
-        _ => PortDomain::F32,
+// ============ 强类型端口表 ============
+
+/// 端口描述 — handle 名 + 域（端口表的条目）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PortSpec {
+    pub handle: &'static str,
+    pub domain: PortDomain,
+}
+
+impl PortSpec {
+    pub const fn new(handle: &'static str, domain: PortDomain) -> Self {
+        Self { handle, domain }
     }
+}
+
+/// 节点固定端口表 — 输入/输出口的强类型声明（单一事实源）
+///
+/// 动态端口不入表，由 [`port_domain`] 统一回落 F32：
+/// - Math "in0..N"（input_count）、ProtocolSource "ch0..N"（channels/port_names）
+/// - Command var_ref、Custom 用户代码定义端口、FrameDecoder blocks 派生输出口
+/// - RawData "src:…" 关联通道（编译期按 [`RAW_DATA_PORT_PREFIX`] 特判放行）
+#[derive(Debug, Clone, Copy)]
+pub struct PortTable {
+    pub inputs: &'static [PortSpec],
+    pub outputs: &'static [PortSpec],
+}
+
+const NO_PORTS: &[PortSpec] = &[];
+const RESULT_F32: &[PortSpec] = &[PortSpec::new("result", PortDomain::F32)];
+const RESULT_STRING: &[PortSpec] = &[PortSpec::new("result", PortDomain::String)];
+
+const TRANSPORT_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new(TRANSPORT_TX_HANDLE, PortDomain::Bytes)],
+    outputs: &[PortSpec::new(TRANSPORT_RX_HANDLE, PortDomain::Bytes)],
+};
+const PROTOCOL_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new(PROTOCOL_IN_HANDLE, PortDomain::Bytes)],
+    outputs: &[PortSpec::new(PROTOCOL_OUT_HANDLE, PortDomain::Bytes)],
+};
+/// ProtocolSource 数值帧口 "ch0..N" 动态派生不入表（回落 F32）；"str"（RawData
+/// 原始字节 UTF-8 文本）属字符串平面
+const PROTOCOL_SOURCE_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS,
+    outputs: &[PortSpec::new("str", PortDomain::String)],
+};
+const INPUT_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS,
+    outputs: &[PortSpec::new("value", PortDomain::F32)],
+};
+const MATH_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS, // "in0..N" 动态（input_count），回落 F32
+    outputs: RESULT_F32,
+};
+const FILTER_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("in0", PortDomain::F32)],
+    outputs: RESULT_F32,
+};
+const FFT_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("in0", PortDomain::F32)],
+    outputs: &[PortSpec::new("spectrum", PortDomain::Spectrum)],
+};
+const IFFT_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("spectrum", PortDomain::Spectrum)],
+    outputs: &[PortSpec::new("out0", PortDomain::F32)],
+};
+/// FrameDecoder 输出口由 blocks 派生（回落 F32）；字节输入口固定
+const FRAME_DECODER_PORTS: PortTable = PortTable {
+    inputs: &[
+        PortSpec::new(FRAME_DECODER_IN_HANDLE, PortDomain::Bytes),
+        PortSpec::new(LOOPBACK_IN_HANDLE, PortDomain::Bytes),
+    ],
+    outputs: NO_PORTS,
+};
+/// Sink 展示控件：Spectrum 控件经 "spectrum" 口消费频谱平面；Command 另有
+/// "loopbackOut" 字节命令出口；其余数值口（value/CH0../seg0../var_ref）回落 F32
+const SINK_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("spectrum", PortDomain::Spectrum)],
+    outputs: &[PortSpec::new(LOOPBACK_OUT_HANDLE, PortDomain::Bytes)],
+};
+/// Custom 用户代码端口不入表（回落 F32），仅 Command 语义的 loopbackOut 字节出口
+const CUSTOM_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS,
+    outputs: &[PortSpec::new(LOOPBACK_OUT_HANDLE, PortDomain::Bytes)],
+};
+const TRIGGER_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS, // "trigger" 输入口回落 F32
+    outputs: &[
+        PortSpec::new("value", PortDomain::F32),
+        PortSpec::new("matched", PortDomain::F32),
+        PortSpec::new("text", PortDomain::String),
+    ],
+};
+const TEXT_INPUT_PORTS: PortTable = PortTable {
+    inputs: NO_PORTS,
+    outputs: &[PortSpec::new("str", PortDomain::String)],
+};
+/// TextOut 输入口（动态发送回传的字符串消费端）
+const TEXT_OUT_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("text", PortDomain::String)],
+    outputs: NO_PORTS,
+};
+/// TextDisplay 输入口 — 字符串平面展示消费端（纯展示，无输出口）
+const TEXT_DISPLAY_PORTS: PortTable = PortTable {
+    inputs: &[PortSpec::new("text", PortDomain::String)],
+    outputs: NO_PORTS,
+};
+
+/// 节点固定端口表 — 域分类与端口枚举（`graph_ops::derived`）共用本表
+pub const fn port_table(kind: &NodeKind) -> PortTable {
+    match kind {
+        NodeKind::Transport { .. } => TRANSPORT_PORTS,
+        NodeKind::Protocol { .. } => PROTOCOL_PORTS,
+        NodeKind::ProtocolSource { .. } => PROTOCOL_SOURCE_PORTS,
+        NodeKind::Input => INPUT_PORTS,
+        NodeKind::Math { .. } => MATH_PORTS,
+        NodeKind::Str { op, .. } => PortTable {
+            inputs: op.input_ports(),
+            outputs: match op.output_domain() {
+                PortDomain::F32 => RESULT_F32,
+                PortDomain::String => RESULT_STRING,
+                // StrOp 输出域仅 F32/String（见 output_domain_for）
+                PortDomain::Bytes | PortDomain::Spectrum => RESULT_F32,
+            },
+        },
+        NodeKind::Custom { .. } => CUSTOM_PORTS,
+        NodeKind::Filter { .. } => FILTER_PORTS,
+        NodeKind::Fft { .. } => FFT_PORTS,
+        NodeKind::Ifft => IFFT_PORTS,
+        NodeKind::FrameDecoder { .. } => FRAME_DECODER_PORTS,
+        NodeKind::Sink => SINK_PORTS,
+        NodeKind::Trigger { .. } => TRIGGER_PORTS,
+        NodeKind::TextInput { .. } => TEXT_INPUT_PORTS,
+        NodeKind::TextOut { .. } => TEXT_OUT_PORTS,
+        NodeKind::TextDisplay => TEXT_DISPLAY_PORTS,
+    }
+}
+
+/// 查询节点某个端口的域 — 端口表查找；表外动态端口回落 F32
+/// （方向仅用于区分输入/输出子表；动态端口清单见 [`PortTable`] 文档）
+pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain {
+    let table = port_table(kind);
+    let ports = if is_output { table.outputs } else { table.inputs };
+    ports
+        .iter()
+        .find(|p| p.handle == handle)
+        .map_or(PortDomain::F32, |p| p.domain)
 }
 
 #[cfg(test)]
@@ -218,6 +308,14 @@ mod tests {
     }
 
     #[test]
+    fn sink_spectrum_input_is_spectrum_domain() {
+        // Spectrum 控件 (编译为 Sink) 经 "spectrum" 口消费频谱平面
+        let k = sink();
+        assert_eq!(port_domain(&k, "spectrum", false), PortDomain::Spectrum);
+        assert_eq!(port_domain(&k, "spectrum", true), PortDomain::F32);
+    }
+
+    #[test]
     fn protocol_source_str_handle_is_string_domain() {
         let k = source();
         assert_eq!(port_domain(&k, "ch0", true), PortDomain::F32);
@@ -257,5 +355,57 @@ mod tests {
         assert_eq!(port_domain(&k, "str", true), PortDomain::String);
         assert_eq!(port_domain(&k, "str", false), PortDomain::F32);
         assert_eq!(port_domain(&k, "value", true), PortDomain::F32);
+    }
+
+    #[test]
+    fn text_display_text_input_is_string_domain() {
+        // 回归: TextDisplay 的 "text" 输入口属字符串平面 —
+        // TextInput.str / Trigger.text / ProtocolSource.str 可连
+        let k = NodeKind::TextDisplay;
+        assert_eq!(port_domain(&k, "text", false), PortDomain::String);
+        assert_eq!(port_domain(&k, "text", true), PortDomain::F32);
+        assert_eq!(port_domain(&k, "value", false), PortDomain::F32);
+    }
+
+    #[test]
+    fn port_tables_expose_typed_specs() {
+        // 端口表即单一事实源 — 抽查静态表形状与 port_domain 一致
+        let trigger = NodeKind::Trigger {
+            mode: "manual".into(),
+            edge: "level".into(),
+            default_miss: 0.0,
+            default_miss_text: String::new(),
+            command: String::new(),
+            rules: vec![],
+        };
+        assert_eq!(
+            port_table(&trigger).outputs,
+            &[
+                PortSpec::new("value", PortDomain::F32),
+                PortSpec::new("matched", PortDomain::F32),
+                PortSpec::new("text", PortDomain::String),
+            ]
+        );
+        assert_eq!(
+            port_table(&NodeKind::TextDisplay).inputs,
+            &[PortSpec::new("text", PortDomain::String)]
+        );
+        assert_eq!(
+            port_table(&NodeKind::TextDisplay).outputs,
+            &[],
+        );
+        assert_eq!(
+            port_table(&NodeKind::Str {
+                op: StrOp::Mid,
+                num: StrNumParams::default(),
+                tmpl: String::new(),
+            })
+            .inputs,
+            &[
+                PortSpec::new("str", PortDomain::String),
+                PortSpec::new("pos", PortDomain::F32),
+                PortSpec::new("len", PortDomain::F32),
+            ]
+        );
     }
 }

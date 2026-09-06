@@ -206,7 +206,7 @@ aiErrKeyring: 系统钥匙串访问失败
 aiErrKeyringAccessDenied: 系统钥匙串访问授权被拒绝
 keychainPermissionTitle: 需要访问系统钥匙串
 keychainPermissionDescription: 上次请求访问系统钥匙串时未获得授权，已保存的 AI 服务商密钥暂时无法读取。
-keychainPermissionPurpose: VOFA-NEXT 使用系统钥匙串安全保存 AI 服务商 API Key，密钥不会写入设置文件。
+keychainPermissionPurpose: Lissio 使用系统钥匙串安全保存 AI 服务商 API Key，密钥不会写入设置文件。
 keychainPermissionImpact: 拒绝访问只会影响 AI 密钥的读取和保存；串口、图表及其他功能不受影响。
 keychainPermissionRetryHint: 点击“再次请求”后，macOS 将重新显示系统授权窗口。
 keychainPermissionDontRemind: 不再提醒
@@ -639,7 +639,7 @@ aboutAuthor: 作者
 aboutLicense: 许可证
 aboutGithub: GitHub 仓库
 aboutDocs: 文档
-aboutDescription: 现代化串口助手, 支持 VOFA+ 协议与示波器风格波形显示
+aboutDescription: 让设备发出的每一个信号, 都更容易看见、理解和行动。
 aboutClose: 关闭
 
 # 菜单事件提示

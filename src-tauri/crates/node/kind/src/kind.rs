@@ -130,6 +130,11 @@ pub enum NodeKind {
         #[serde(default = "default_textout_interval")]
         min_interval_ms: u32,
     },
+    /// 文本显示节点（TextDisplay）— 字符串平面展示消费端
+    ///
+    /// 输入端口固定 "text"（String 域），纯展示不参与求值（同 Sink）;
+    /// 前端经 `subscribe_string_outputs` ticker 读取上游字符串输出渲染。
+    TextDisplay,
 }
 
 /// 文本下发换行模式 — 发送时附加到文本末尾

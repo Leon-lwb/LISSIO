@@ -36,7 +36,7 @@ pub struct ValueMir {
 }
 
 /// 节点是否有值平面输出 — 无输出者不进 eval_order:
-/// - Sink: 纯消费, 无输出
+/// - Sink/TextDisplay: 纯消费, 无输出 (TextDisplay 为字符串平面展示消费端)
 /// - Fft: 块运算, 无输出端口, 由独立 30 FPS ticker 触发 FFT
 /// - Transport/Protocol: 字节平面节点 (其定义只落在 byte_def, 此处天然不含)
 /// - 占位节点 (边端点缺失) 无定义, 不参与求值
@@ -44,9 +44,12 @@ pub struct ValueMir {
 /// TextOut 参与求值序 (其 "text" 槽位透传 op 依赖拓扑序先上游后本节点),
 /// 但它没有输出端口 — 下游不可能引用, 进序仅保证自身求值, 与消费端语义一致。
 fn has_value_output(w: &HirNode) -> bool {
-    w.value_def
-        .as_ref()
-        .is_some_and(|d| !matches!(d.kind, NodeKind::Sink | NodeKind::Fft { .. }))
+    w.value_def.as_ref().is_some_and(|d| {
+        !matches!(
+            d.kind,
+            NodeKind::Sink | NodeKind::TextDisplay | NodeKind::Fft { .. }
+        )
+    })
 }
 
 /// 平面投影 — 按节点/边谓词抽取子图 (节点权重 = 原图 NodeIndex, 供结果映射回原图)

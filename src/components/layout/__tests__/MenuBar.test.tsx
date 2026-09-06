@@ -52,7 +52,7 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
 
   it('渲染五组菜单标题 (App/File/Edit/View/Window/Help)', () => {
     render(<MenuBar />);
-    expect(screen.getByRole('button', { name: 'VOFA-Next' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lissio' })).toBeInTheDocument();
     for (const label of ['File', 'Edit', 'View', 'Window', 'Help']) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
     }

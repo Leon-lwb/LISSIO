@@ -66,7 +66,9 @@ pub fn lower_node(node: &NodeDef, ctx: &mut LowerCtx) {
             ctx,
         ),
         NodeKind::TextInput { text } => lower_text_input(node, text, ctx),
+        // 纯展示/字节平面节点无槽位 lowering (TextDisplay 为字符串平面展示消费端)
         NodeKind::Sink
+        | NodeKind::TextDisplay
         | NodeKind::Fft { .. }
         | NodeKind::Transport { .. }
         | NodeKind::Protocol { .. } => {}

@@ -25,7 +25,7 @@ mod input_ports;
 
 use serde::{Deserialize, Serialize};
 
-use crate::ports::PortDomain;
+use crate::ports::{PortDomain, PortSpec};
 
 pub use input_ports::{input_ports_for, output_domain_for};
 
@@ -98,7 +98,7 @@ pub fn str_num_default(num: &StrNumParams, port: &str) -> f32 {
 
 impl StrOp {
     /// 输入端口表（按固定顺序 — 求值的 `str_inputs` / `num_inputs` 依此取参）
-    pub const fn input_ports(&self) -> &'static [(&'static str, PortDomain)] {
+    pub const fn input_ports(&self) -> &'static [PortSpec] {
         input_ports_for(*self)
     }
 
@@ -290,22 +290,25 @@ mod tests {
 
     #[test]
     fn port_tables_match_constants() {
-        assert_eq!(StrOp::Len.input_ports(), &[("str", PortDomain::String)]);
+        assert_eq!(
+            StrOp::Len.input_ports(),
+            &[PortSpec::new("str", PortDomain::String)]
+        );
         assert_eq!(
             StrOp::Mid.input_ports(),
             &[
-                ("str", PortDomain::String),
-                ("pos", PortDomain::F32),
-                ("len", PortDomain::F32)
+                PortSpec::new("str", PortDomain::String),
+                PortSpec::new("pos", PortDomain::F32),
+                PortSpec::new("len", PortDomain::F32)
             ]
         );
         assert_eq!(
             StrOp::Replace.input_ports(),
             &[
-                ("str1", PortDomain::String),
-                ("str2", PortDomain::String),
-                ("pos", PortDomain::F32),
-                ("len", PortDomain::F32)
+                PortSpec::new("str1", PortDomain::String),
+                PortSpec::new("str2", PortDomain::String),
+                PortSpec::new("pos", PortDomain::F32),
+                PortSpec::new("len", PortDomain::F32)
             ]
         );
         assert_eq!(StrOp::Len.output_domain(), PortDomain::F32);

@@ -4,7 +4,7 @@
 //! 随 `update_tab_graph` Tauri 命令返回并经 `graph:derived` 事件差分推送。
 //! 前端 `derivedPorts` store 据此渲染 React Flow handle 与节点摘要。
 
-use runtime::{protocol_source_port_names, NodeDef, NodeKind, PortDomain};
+use runtime::{port_table, protocol_source_port_names, NodeDef, NodeKind, PortDomain};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::Serialize;
 
@@ -69,7 +69,8 @@ pub struct GraphDerived {
 ///   `protocol_source_port_names(channels)` (preset, RawData → 单 `str` 字符串域) 决定;
 ///   `effective_channels` = 手动配置值或回退默认
 /// - widget 节点 (Input/Math/Str/Custom/Filter/Fft/Ifft/FrameDecoder/Trigger/
-///   TextInput/Sink/ProtocolSource): 由 [`kind_output_ports`] 按 [`PortDomain`] 表枚举
+///   TextInput/Sink/TextDisplay/TextOut/ProtocolSource): 由 [`kind_output_ports`]
+///   按 [`runtime::port_table`] 枚举 (固定端口种类), 动态端口种类返回空
 /// - Transport 节点:不参与数值平面图渲染,跳过 (字节平面节点由 `BytePlan` 路由)
 pub fn compute_derived(nodes: &[NodeDef]) -> Vec<NodeDerived> {
     nodes
@@ -194,35 +195,24 @@ fn protocol_channels_from_config(config: &ProtocolConfig) -> usize {
     }
 }
 
-/// 按 NodeKind 枚举其标准输出端口 (与 [`runtime::port_domain`] 镜像)
+/// 按 NodeKind 枚举其标准输出端口 — 直接派生自 [`runtime::port_table`]
+/// (端口域单一事实源, 不再手工镜像 `port_domain`)
 ///
-/// 端口域由 [`DerivedPortDomain`] 决定;与 [`port_domain`] 单一事实源同步 (手工镜像以
-/// 避免双向依赖 `port_domain` 的 is_output 反向枚举)。
+/// - Custom: 用户代码定义端口 (NodeDef 携带), 全 F32
+/// - FrameDecoder/Filter: 输出端口由 blocks / 前端 widget spec 决定, 不在此枚举
+/// - 其余固定端口种类由端口表输出子表给出 (TextOut/TextDisplay 自然为空)
 fn kind_output_ports(kind: &NodeKind) -> Vec<NodeDerivedPort> {
     match kind {
-        NodeKind::Input => vec![port("value", DerivedPortDomain::F32)],
-        NodeKind::Math { .. } => vec![port("result", DerivedPortDomain::F32)],
-        NodeKind::Str { op, .. } => vec![port("result", op.output_domain().into())],
-        NodeKind::TextInput { .. } => vec![port("str", DerivedPortDomain::String)],
-        NodeKind::Fft { .. } => {
-            vec![port("spectrum", DerivedPortDomain::Spectrum)]
-        }
-        NodeKind::Ifft => vec![port("out0", DerivedPortDomain::F32)],
-        NodeKind::FrameDecoder { .. } => {
-            // FrameDecoder 输出端口由 blocks 决定, 不在 NodeDef 中携带 (前端 widget spec)
-            Vec::new()
-        }
-        NodeKind::Trigger { .. } => vec![
-            port("value", DerivedPortDomain::F32),
-            port("matched", DerivedPortDomain::F32),
-            port("text", DerivedPortDomain::String),
-        ],
         NodeKind::Custom { outputs, .. } => outputs
             .iter()
             .map(|n| port(n.as_str(), DerivedPortDomain::F32))
             .collect(),
-        // Sink / Filter / Transport: 前端 widget spec 派生, 非图编译推导
-        _ => Vec::new(),
+        NodeKind::FrameDecoder { .. } | NodeKind::Filter { .. } => Vec::new(),
+        _ => port_table(kind)
+            .outputs
+            .iter()
+            .map(|p| port(p.handle, p.domain.into()))
+            .collect(),
     }
 }
 

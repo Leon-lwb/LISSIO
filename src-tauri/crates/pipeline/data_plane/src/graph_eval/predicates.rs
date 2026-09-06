@@ -48,14 +48,16 @@ pub fn records_waveform_history(graph: &CompiledGraph, edge: &Edge) -> bool {
 
 /// 指定来源是否存在必须逐帧执行的数值图。
 ///
-/// 仅 `ProtocolSource → Sink` 的图只需要批尾最新值；原始 ch<n> 波形历史已经
+/// 仅 `ProtocolSource → Sink/TextDisplay` 的图只需要批尾最新值；原始 ch<n> 波形历史已经
 /// 在记录平面完整入库。将这类常见纯波形/仪表图压缩为每批一次求值，避免为了
 /// 刷新 latest-value 快照重复遍历几十万帧。
 pub fn graph_requires_full_batch(graph: &CompiledGraph) -> bool {
-    graph
-        .value_nodes()
-        .any(|node| !matches!(node.kind, NodeKind::ProtocolSource { .. } | NodeKind::Sink))
-        || graph
-            .edges()
-            .any(|edge| records_waveform_history(graph, &edge))
+    graph.value_nodes().any(|node| {
+        !matches!(
+            node.kind,
+            NodeKind::ProtocolSource { .. } | NodeKind::Sink | NodeKind::TextDisplay
+        )
+    }) || graph
+        .edges()
+        .any(|edge| records_waveform_history(graph, &edge))
 }
