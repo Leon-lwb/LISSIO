@@ -126,7 +126,7 @@ mod tests {
     use kind::MathOp;
 
     #[test]
-    fn 独立链切分为不同单元_供给不参与合并() {
+    fn independent_chains_split_into_distinct_units_supplies_do_not_merge() {
         // ps1 → m1 → m2; ps1 → m3 (ps1 供给喂两条独立链, 不合并 m1/m3)
         // input1 → m1 (m1/m3 仍独立 — input1 是供给)
         let g = TypedGraph::build(
@@ -160,7 +160,7 @@ mod tests {
     }
 
     #[test]
-    fn 无计算节点_整图为prelude() {
+    fn graph_without_compute_nodes_is_entirely_prelude() {
         let g = TypedGraph::build(vec![make_input("input1", "t1")], vec![]).unwrap();
         let mir = plane::value_plane(&g).unwrap();
         let unit_of = partition(&g, &mir);

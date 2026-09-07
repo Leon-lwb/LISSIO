@@ -3,6 +3,20 @@
 version = 4
 
 [[package]]
+name = "acquisition"
+version = "0.1.2"
+dependencies = [
+ "async-trait",
+ "flow",
+ "parking_lot",
+ "points",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1022,6 +1036,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "crc"
+version = "3.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eb8a2a1cd12ab0d987a5d5e825195d372001a4094a0376319d5a0ad71c1ba0d"
+dependencies = [
+ "crc-catalog",
+]
+
+[[package]]
+name = "crc-catalog"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
+
+[[package]]
 name = "crc32fast"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1224,6 +1253,7 @@ dependencies = [
 name = "data-model"
 version = "0.1.2"
 dependencies = [
+ "can",
  "error",
  "serde",
  "serde_json",
@@ -1756,6 +1786,15 @@ dependencies = [
  "crc32fast",
  "miniz_oxide 0.9.1",
  "zlib-rs",
+]
+
+[[package]]
+name = "flow"
+version = "0.1.2"
+dependencies = [
+ "bytes",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3191,6 +3230,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 name = "lissio"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "app",
  "async-trait",
  "buffer_graph",
@@ -3211,6 +3251,7 @@ dependencies = [
  "mcp-client",
  "mcp-server",
  "menu_shell",
+ "modbus-adapter",
  "network",
  "parking_lot",
  "petgraph",
@@ -3507,6 +3548,21 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "modbus-adapter"
+version = "0.1.2"
+dependencies = [
+ "acquisition",
+ "async-trait",
+ "flow",
+ "points",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-modbus",
 ]
 
 [[package]]
@@ -4210,6 +4266,7 @@ dependencies = [
  "eval",
  "events",
  "filter",
+ "flow",
  "frame-decoder",
  "graph",
  "graph-testkit",
@@ -4330,6 +4387,15 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide 0.8.9",
+]
+
+[[package]]
+name = "points"
+version = "0.1.2"
+dependencies = [
+ "flow",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -6519,6 +6585,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-modbus"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95d06136e737e962c71d922a09148f5a264f6609a021fdf031ad16ffd172c818"
+dependencies = [
+ "async-trait",
+ "byteorder",
+ "bytes",
+ "crc",
+ "futures-core",
+ "futures-util",
+ "log",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "tokio-rustls"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6762,6 +6846,7 @@ dependencies = [
  "can",
  "data-model",
  "error",
+ "flow",
  "log",
  "logic",
  "parking_lot",

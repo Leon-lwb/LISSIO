@@ -9,6 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+flow = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
 schema_types = { workspace = true }

@@ -10,7 +10,7 @@
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![GPL v2 License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
@@ -401,7 +401,7 @@ cd src-tauri && cargo test
 
 ## 开源协议
 
-本项目基于 MIT 协议开源，详情请参阅 [LICENSE](./LICENSE)。
+本项目仅基于 GNU GPL v2 协议开源，详情请参阅 [LICENSE](./LICENSE)。
 
 ## 鸣谢
 

@@ -1,0 +1,21 @@
+[package]
+name = "flow"
+description = "Typed flow delivery envelopes, byte boundaries, epochs, sequences, and gaps"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+bytes = { workspace = true }
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[package.metadata.lissio]
+domain = "shared"
+layer = 0
+responsibility = "Typed flow envelopes, source identity, epochs, sequences, time, direction, gaps, and byte boundaries"

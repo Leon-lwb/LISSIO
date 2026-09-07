@@ -33,6 +33,7 @@ logic_decoder = { workspace = true }
 schema = { workspace = true }
 schema_types = { workspace = true }
 transport = { workspace = true }
+flow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

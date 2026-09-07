@@ -10,7 +10,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 [![Forks][forks-shield]][forks-url]
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![GPL v2 License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
@@ -406,7 +406,7 @@ This project is managed with Git. Available releases can be found on the [Releas
 
 ## License
 
-This project is licensed under the MIT License — see [LICENSE](./LICENSE) for details.
+This project is licensed under GNU GPL v2 only — see [LICENSE](./LICENSE) for details.
 
 ## Acknowledgements
 

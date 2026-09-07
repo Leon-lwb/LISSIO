@@ -7,7 +7,7 @@ use std::time::Duration;
 use can::{CanBuffer, CanDirection, CanFrame};
 use parking_lot::Mutex;
 use raw_data::{RawDataCollector, RawDataDirection};
-use stream::evaluator::AdaptiveRate;
+use stream::AdaptiveRate;
 use stream::{
     bounded_drain_size, join_or_create_group, leave_group, CanStreamSource, RawDataSource,
     StreamSource, WaveformSource,

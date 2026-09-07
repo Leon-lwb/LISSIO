@@ -7,3 +7,8 @@ crate's `[package.metadata.lissio]` entry and checked by
 
 Do not add layer directories or facade crates. A crate may directly depend on
 any allowed lower layer.
+
+The unified acquisition plane is split by ownership: `shared/flow` owns generic
+delivery envelopes and byte boundaries, `protocol/points` owns rich point
+semantics, `protocol/acquisition` owns source lifecycle and typed lanes, and
+`transport/modbus-adapter` contains the optional Modbus TCP client SDK adapter.

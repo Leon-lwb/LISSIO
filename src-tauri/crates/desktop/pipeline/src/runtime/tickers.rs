@@ -425,10 +425,10 @@ mod tests {
     #[test]
     #[allow(clippy::float_cmp)] // f32→f64 精确表示的整/半值, 无舍入
     fn widget_inputs_resolve_from_source_graph_edges() {
-        let graphs: crate::source_graph::SourceGraphs =
+        let graphs: crate::runtime::source_graph::SourceGraphs =
             std::sync::Arc::new(parking_lot::Mutex::new(HashMap::from([(
                 "tab1".to_string(),
-                crate::source_graph::TabSourceGraph {
+                crate::runtime::source_graph::TabSourceGraph {
                     edges: vec![
                         edge("e1", "src1", "ch0", "cmd1", "in1"),
                         edge("e2", "src2", "value", "cmd1", "in2"),

@@ -13,6 +13,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 error = { workspace = true }
 
+[dev-dependencies]
+can = { workspace = true }
+
 [package.metadata.lissio]
 domain = "shared"
 layer = 0

@@ -142,7 +142,7 @@ impl DataPlaneState {
     pub async fn attach(&self, app: AppHandle, node_id: &str) {
         self.ensure_eval_worker();
         self.detach(node_id);
-        let rx = self.transport.lock().await.subscribe(node_id);
+        let rx = self.transport.lock().await.subscribe_flow(node_id);
         let Some(rx) = rx else {
             log::warn!("读任务挂载失败: 传输节点未打开: {node_id}");
             return;

@@ -3,7 +3,7 @@ name = "lissio"
 version = "0.1.2"
 description = "Modern serial port assistant with VOFA protocol support"
 authors = ["peng"]
-license = "MIT"
+license = "GPL-2.0-only"
 edition = "2021"
 
 [package.metadata.lissio]
@@ -15,6 +15,10 @@ responsibility = "Tauri IPC, platform adapters, dependency injection, and applic
 name = "lissio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+default = ["modbus-tcp"]
+modbus-tcp = ["dep:modbus-adapter"]
+
 [profile.release]
 debug = true
 
@@ -24,6 +28,8 @@ debug = true
 members = [
   # L0 foundation — 错误/类型/缓冲/DSP 原语/自包含基础设施，禁止依赖任何上层
   "crates/shared/error",
+  "crates/shared/flow",
+  "crates/protocol/points",
   "crates/vehicle/can",
   "crates/shared/data-model",
   "crates/protocol/logic",
@@ -49,6 +55,8 @@ members = [
   "crates/transport/network",
   "crates/transport/can-transport",
   "crates/transport/transport",
+  "crates/protocol/acquisition",
+  "crates/transport/modbus-adapter",
   "crates/transport/automotive",
   "crates/transport/automotive_isotp",
   "crates/transport/automotive_diag",
@@ -84,7 +92,7 @@ members = [
 [workspace.package]
 edition = "2021"
 version = "0.1.2"
-license = "MIT"
+license = "GPL-2.0-only"
 
 [workspace.lints.clippy]
 # 最严格 clippy 配置 — 所有规则组 deny
@@ -175,8 +183,10 @@ security-framework = "3"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
 futures = "0.3"
 async-trait = "0.1"
+bytes = { version = "1", features = ["serde"] }
 base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
+tokio-modbus = { version = "0.17", default-features = false, features = ["tcp"] }
 log = "0.4"
 thiserror = "1"
 regex = "1"
@@ -223,6 +233,9 @@ buffer_graph = { path = "crates/graph/buffer_graph" }
 raw-data = { path = "crates/signal/raw-data" }
 data_model = { package = "data-model", path = "crates/shared/data-model" }
 error = { path = "crates/shared/error" }
+flow = { path = "crates/shared/flow" }
+points = { path = "crates/protocol/points" }
+acquisition = { path = "crates/protocol/acquisition" }
 can = { path = "crates/vehicle/can" }
 logic = { path = "crates/protocol/logic" }
 diagnostic = { path = "crates/vehicle/diagnostic" }
@@ -246,6 +259,7 @@ serial = { path = "crates/transport/serial" }
 automotive_isotp = { path = "crates/transport/automotive_isotp" }
 automotive_diag = { path = "crates/transport/automotive_diag" }
 automotive = { path = "crates/transport/automotive" }
+modbus-adapter = { path = "crates/transport/modbus-adapter" }
 # L1 node
 graph = { package = "graph", path = "crates/graph/graph" }
 eval = { path = "crates/graph/eval" }
@@ -279,6 +293,7 @@ libautomotive = "0.1"
 tauri-build = { workspace = true }
 
 [dependencies]
+acquisition = { workspace = true }
 async-trait = { workspace = true }
 buffer_graph = { workspace = true }
 bus = { workspace = true }
@@ -304,6 +319,7 @@ app = { workspace = true }
 transport = { workspace = true }
 serial = { workspace = true }
 network = { workspace = true }
+modbus-adapter = { workspace = true, optional = true }
 can_transport = { workspace = true }
 subscription = { workspace = true }
 menu_shell = { workspace = true }

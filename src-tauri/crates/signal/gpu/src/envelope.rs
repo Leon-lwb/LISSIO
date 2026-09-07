@@ -341,7 +341,7 @@ mod tests {
 
     /// 列映射: 单调不减、范围合法、0.5 偏移近似等宽
     #[test]
-    fn 列映射单调且合法() {
+    fn column_mapping_is_monotonic_and_valid() {
         for (n, columns) in [
             (1000usize, 64usize),
             (17, 64),
@@ -364,7 +364,7 @@ mod tests {
     /// CPU 参考: 空输入 / 全 NaN / 列数大于样本数
     #[test]
     #[allow(clippy::float_cmp)] // 断言精确值 (手算常量, 非运算结果)
-    fn cpu参考边界() {
+    fn cpu_reference_edge_cases() {
         let e = envelope_minmax_cpu(&[], 4);
         assert!(e.min.iter().all(|v| *v == f32::INFINITY));
         assert!(e.count.iter().all(|&c| c == 0));
@@ -381,7 +381,7 @@ mod tests {
     /// CPU 参考: 手工可验小案例 (4 点 → 2 列, 精确列归属)
     #[test]
     #[allow(clippy::float_cmp)] // 断言精确值 (手算常量, 非运算结果)
-    fn cpu参考手算() {
+    fn cpu_reference_hand_computed() {
         // n=4, columns=2: scale = 0.5; col(i) = floor((i+0.5)/2)
         // i=0 → floor(0.25)=0; i=1 → floor(0.75)=0; i=2 → floor(1.25)=1; i=3 → floor(1.75)=1
         let e = envelope_minmax_cpu(&[5.0, 1.0, 7.0, 3.0], 2);
@@ -392,7 +392,7 @@ mod tests {
 
     /// 有序键: 编解码往返 + 全域单调 (±0 / ±inf 边界)
     #[test]
-    fn 有序键编解码单调() {
+    fn ordered_key_roundtrip_and_monotonic() {
         // 往返: 覆盖正/负/次正规/极值 (NaN 除外 — 调用侧排除; -0 由归一排除)
         for &bits in &[
             0x0000_0000u32, // +0

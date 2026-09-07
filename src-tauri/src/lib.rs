@@ -35,6 +35,13 @@ fn transport_manager() -> transport::TransportManager {
     ])
 }
 
+fn acquisition_registry() -> acquisition::SourceRegistry {
+    let registry = acquisition::SourceRegistry::default();
+    #[cfg(feature = "modbus-tcp")]
+    registry.register(std::sync::Arc::new(modbus_adapter::ModbusFactory::default()));
+    registry
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -62,6 +69,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::with_transport_manager(transport_manager()))
+        .manage(acquisition_registry())
         .manage(PendingUpdate(Default::default()))
         .setup(|app| {
             // 构建原生菜单栏。

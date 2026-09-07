@@ -53,6 +53,9 @@ allow = [
   "0BSD",
   "MPL-2.0",
   "CDLA-Permissive-2.0",
+  # 本仓库自身以 GPL-2.0-only 分发 (workspace 全体成员), GPL 兼容依赖
+  # 与项目永久开源政策一致, 一并放行
+  "GPL-2.0-only",
 ]
 
 [bans]

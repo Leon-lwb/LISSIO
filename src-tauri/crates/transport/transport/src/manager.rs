@@ -1,5 +1,6 @@
 use data_model::{ConnectionState, Error, Result, TestDataConfig, TransportConfig, TransportStats};
 use error::{PortNotFoundError, TransportError};
+use flow::SourceId;
 use schema_types::TestDataLink;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -16,6 +17,7 @@ use crate::handle::{LiveNodeHandle, TransportHandle};
 pub struct TransportManager {
     handles: HashMap<String, TransportHandle>,
     backends: Vec<Arc<dyn TransportBackend>>,
+    epochs: HashMap<String, u64>,
 }
 
 impl TransportManager {
@@ -23,6 +25,7 @@ impl TransportManager {
         Self {
             handles: HashMap::new(),
             backends: vec![Arc::new(crate::test_data::TestDataBackend)],
+            epochs: HashMap::new(),
         }
     }
 
@@ -67,9 +70,14 @@ impl TransportManager {
         let backend_name = backend.name();
         let connection = backend.open(config.clone(), link).await?;
 
+        let epoch = self
+            .epochs
+            .entry(node_id.to_string())
+            .and_modify(|value| *value = value.saturating_add(1))
+            .or_insert(1);
         self.handles.insert(
             node_id.to_string(),
-            TransportHandle::new(connection, config.clone()),
+            TransportHandle::new(connection, config.clone(), *epoch),
         );
 
         log::info!("连接已建立: 节点 {node_id} -> {config:?} ({backend_name})");
@@ -92,6 +100,15 @@ impl TransportManager {
         self.handles
             .get(node_id)
             .map(super::handle::TransportHandle::subscribe)
+    }
+
+    /// Subscribe through the typed compatibility plane while legacy backends
+    /// continue to publish their existing byte broadcasts.
+    pub fn subscribe_flow(&self, node_id: &str) -> Option<crate::LegacyFlowReceiver> {
+        let source_id = SourceId::new(node_id).ok()?;
+        self.handles
+            .get(node_id)
+            .map(|handle| handle.subscribe_flow(source_id))
     }
 
     /// 获取指定节点的连接状态 (未知 id 返回 None)

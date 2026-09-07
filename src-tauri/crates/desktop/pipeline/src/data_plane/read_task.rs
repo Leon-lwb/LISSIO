@@ -6,13 +6,13 @@
 
 use bus::{AdaptiveController, RuntimeLimits};
 use data_model::{ConnectionState, TransportStats};
+use flow::{Boundary, Framing};
 use kind::NodeKind;
 use raw_data::RawDataDirection;
 use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 use tauri::AppHandle;
-use tokio::sync::broadcast;
 
 use super::{byte_router, frame_dispatch, DataPlaneState, STATS_THROTTLE_MS};
 use crate::feed_parallel::FEED_PARALLEL_UNIT;
@@ -37,6 +37,51 @@ pub(super) fn mark_downstream_disconnected(plane: &DataPlaneState, transport_id:
                     .set_source_status(&route.target, bus::SampleStatus::Disconnected);
             }
             pending.push_back(route.target.clone());
+        }
+    }
+}
+
+/// A byte gap invalidates every stateful parser downstream of this source.
+/// Rebuilding from the already-committed node configuration prevents a frame
+/// from being assembled across missing bytes while preserving the BytePlan.
+fn reset_downstream_parsers(plane: &DataPlaneState, transport_id: &str) {
+    let targets = {
+        let plan = plane.byte_plan.lock();
+        let mut pending = VecDeque::from([transport_id.to_string()]);
+        let mut visited = HashSet::new();
+        let mut targets = Vec::new();
+        while let Some(source) = pending.pop_front() {
+            if !visited.insert(source.clone()) {
+                continue;
+            }
+            for route in plan.routes_for(&source) {
+                targets.push(route.target.clone());
+                pending.push_back(route.target.clone());
+            }
+        }
+        targets
+    };
+    let nodes = plane.global_nodes.lock();
+    for target in targets {
+        match nodes.get(&target).map(|node| &node.kind) {
+            Some(NodeKind::Protocol {
+                config,
+                convert_to,
+                schema,
+            }) => {
+                // 先在语句内结束 protocol_states 守卫, 再取节点内部锁,
+                // 避免外层 map 守卫横跨内部状态写入的整个临界区
+                let state = plane.protocol_states.lock().get(&target).cloned();
+                if let Some(state) = state {
+                    *state.lock() =
+                        super::ProtocolNodeState::new(config, convert_to.as_ref(), schema.as_ref());
+                }
+            }
+            Some(NodeKind::FrameDecoder { .. }) => {
+                plane.eval.decoder_states.lock().remove(&target);
+                plane.eval.decoder_raw_collectors.lock().remove(&target);
+            }
+            _ => {}
         }
     }
 }
@@ -101,10 +146,8 @@ pub(super) async fn read_task(
     app: AppHandle,
     plane: DataPlaneState,
     node_id: String,
-    mut rx: broadcast::Receiver<Vec<u8>>,
+    mut rx: transport::LegacyFlowReceiver,
 ) {
-    use tokio::sync::broadcast::error::{RecvError, TryRecvError};
-
     log::debug!("数据读任务已启动: {node_id}");
     let mut dec_cache = crate::decoder_feed::DecoderFeedCache::new();
     let mut last_stats = Instant::now();
@@ -117,16 +160,22 @@ pub(super) async fn read_task(
     // 启动时取一次轻量句柄: 每批的运行态配置 (采样时钟) / rx 统计上报
     // 都免 manager 全局锁 (逐批锁会与 open/close/其他传输串行化)
     let live = plane.transport.lock().await.live_handle(&node_id);
+    let mut pending = None;
 
     loop {
-        let first = match rx.recv().await {
-            Ok(d) => d,
-            Err(RecvError::Closed) => break,
-            Err(RecvError::Lagged(n)) => {
-                record_lagged(&plane, &node_id, live.as_ref(), n);
-                continue;
+        let first = if let Some(envelope) = pending.take() {
+            envelope
+        } else {
+            match rx.recv().await {
+                Ok(envelope) => envelope,
+                Err(transport::FlowRecvError::Closed) => break,
             }
         };
+
+        if let Some(gap) = &first.gap_before {
+            record_lagged(&plane, &node_id, live.as_ref(), gap.missing_sequences());
+            reset_downstream_parsers(&plane, &node_id);
+        }
 
         // 自适应合批: try_recv 排空积压并拼接 (协议按字节流解析, 拼接语义安全;
         // 负载越高单批越大, 天然背压自适应)。上限取字节目标与"样本时长 50ms"
@@ -143,24 +192,33 @@ pub(super) async fn read_task(
                 });
             bytes_target.min(nominal_bound)
         };
-        let mut data = first;
+        let can_coalesce = first.payload.framing == Framing::Stream
+            && matches!(
+                first.payload.boundary,
+                Boundary::Complete | Boundary::Continue | Boundary::End
+            );
+        let mut data = first.payload.bytes.to_vec();
         let mut coalesced = 1usize;
-        let mut lagged_after_batch = 0_u64;
-        while coalesced < 1024 && data.len() < coalesce_cap {
+        while can_coalesce && coalesced < 1024 && data.len() < coalesce_cap {
             match rx.try_recv() {
-                Ok(mut next) => {
-                    data.append(&mut next);
+                Ok(next)
+                    if next.gap_before.is_none()
+                        && next.payload.framing == Framing::Stream
+                        && matches!(
+                            next.payload.boundary,
+                            Boundary::Complete | Boundary::Continue | Boundary::End
+                        ) =>
+                {
+                    data.extend_from_slice(&next.payload.bytes);
                     coalesced += 1;
                 }
-                Err(TryRecvError::Lagged(n)) => {
-                    // 缺口位于已经收集的 data 之后：先截断当前批次并解析左侧，
-                    // 再推进时钟。继续拼接会把缺口错误放到批首，还会跨丢失字节
-                    // 拼接协议帧。
-                    plane.metrics.lagged.fetch_add(n, Ordering::Relaxed);
-                    lagged_after_batch = lagged_after_batch.saturating_add(n);
+                Ok(next) => {
+                    pending = Some(next);
                     break;
                 }
-                Err(_) => break,
+                Err(transport::FlowTryRecvError::Empty | transport::FlowTryRecvError::Closed) => {
+                    break
+                }
             }
         }
         plane.metrics.rx_msgs.fetch_add(
@@ -211,9 +269,6 @@ pub(super) async fn read_task(
             )
             .await
         };
-        if lagged_after_batch > 0 {
-            note_test_data_gap(&plane, &node_id, live.as_ref(), lagged_after_batch);
-        }
         let service_time = t_feed.elapsed();
         let cfg = *plane.pipeline_config.read();
         let queued = rx.len();

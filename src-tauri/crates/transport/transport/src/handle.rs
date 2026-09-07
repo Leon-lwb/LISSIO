@@ -1,5 +1,6 @@
 use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
 use error::TransportError;
+use flow::{Framing, SourceId};
 use schema_types::TestDataLink;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
@@ -20,6 +21,7 @@ pub struct TransportHandle {
     /// 恢复逐样本时间戳，不能只保留打开连接时的旧值。
     /// Arc 包装以便 [`LiveNodeHandle`] 免 manager 全局锁共享读取。
     config: Arc<parking_lot::RwLock<TransportConfig>>,
+    connection_epoch: u64,
 }
 
 /// 读任务持有的轻量节点句柄 — 拿一次后免 manager 全局锁做每批查询
@@ -55,7 +57,11 @@ impl LiveNodeHandle {
 }
 
 impl TransportHandle {
-    pub fn new(connection: TransportConnection, config: TransportConfig) -> Self {
+    pub fn new(
+        connection: TransportConnection,
+        config: TransportConfig,
+        connection_epoch: u64,
+    ) -> Self {
         Self {
             write_tx: connection.write_tx,
             data_tx: connection.data_tx,
@@ -63,6 +69,7 @@ impl TransportHandle {
             state: parking_lot::Mutex::new(ConnectionState::Connected),
             stats: Arc::new(parking_lot::Mutex::new(TransportStats::default())),
             config: Arc::new(parking_lot::RwLock::new(config)),
+            connection_epoch,
         }
     }
 
@@ -96,6 +103,19 @@ impl TransportHandle {
     /// 订阅接收数据
     pub fn subscribe(&self) -> broadcast::Receiver<Vec<u8>> {
         self.data_tx.subscribe()
+    }
+
+    pub fn subscribe_flow(&self, source_id: SourceId) -> crate::LegacyFlowReceiver {
+        let framing = match &*self.config.read() {
+            TransportConfig::Udp(_) => Framing::Datagram,
+            _ => Framing::Stream,
+        };
+        crate::LegacyFlowReceiver::new(
+            source_id,
+            self.connection_epoch,
+            framing,
+            self.data_tx.subscribe(),
+        )
     }
 
     /// 获取连接状态

@@ -1,0 +1,209 @@
+use crate::planner::PlanError;
+use points::PointId;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ModbusArea {
+    Coils,
+    DiscreteInputs,
+    InputRegisters,
+    HoldingRegisters,
+}
+
+impl ModbusArea {
+    pub const fn is_bits(self) -> bool {
+        matches!(self, Self::Coils | Self::DiscreteInputs)
+    }
+
+    pub const fn writable(self) -> bool {
+        matches!(self, Self::Coils | Self::HoldingRegisters)
+    }
+
+    pub const fn max_read_quantity(self) -> u16 {
+        if self.is_bits() {
+            2_000
+        } else {
+            125
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ModbusDataType {
+    Bool,
+    U16,
+    I16,
+    U32,
+    I32,
+    U64,
+    I64,
+    F32,
+    F64,
+}
+
+impl ModbusDataType {
+    pub const fn register_count(self) -> u16 {
+        match self {
+            Self::Bool | Self::U16 | Self::I16 => 1,
+            Self::U32 | Self::I32 | Self::F32 => 2,
+            Self::U64 | Self::I64 | Self::F64 => 4,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum ByteOrder {
+    #[default]
+    Big,
+    Little,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum WordOrder {
+    #[default]
+    Big,
+    Little,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModbusPoint {
+    pub id: PointId,
+    pub area: ModbusArea,
+    pub address: u16,
+    pub data_type: ModbusDataType,
+    #[serde(default)]
+    pub byte_order: ByteOrder,
+    #[serde(default)]
+    pub word_order: WordOrder,
+    #[serde(default = "default_scale")]
+    pub scale: f64,
+    #[serde(default)]
+    pub offset: f64,
+    #[serde(default = "default_poll_period_ms")]
+    pub poll_period_ms: u64,
+}
+
+const fn default_scale() -> f64 {
+    1.0
+}
+const fn default_poll_period_ms() -> u64 {
+    1_000
+}
+
+impl ModbusPoint {
+    pub const fn quantity(&self) -> u16 {
+        if self.area.is_bits() {
+            1
+        } else {
+            self.data_type.register_count()
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReconnectConfig {
+    #[serde(default = "default_reconnect_attempts")]
+    pub max_attempts: u32,
+    #[serde(default = "default_reconnect_delay_ms")]
+    pub initial_delay_ms: u64,
+    #[serde(default = "default_reconnect_max_delay_ms")]
+    pub max_delay_ms: u64,
+}
+
+const fn default_reconnect_attempts() -> u32 {
+    3
+}
+const fn default_reconnect_delay_ms() -> u64 {
+    100
+}
+const fn default_reconnect_max_delay_ms() -> u64 {
+    2_000
+}
+
+impl Default for ReconnectConfig {
+    fn default() -> Self {
+        Self {
+            max_attempts: default_reconnect_attempts(),
+            initial_delay_ms: default_reconnect_delay_ms(),
+            max_delay_ms: default_reconnect_max_delay_ms(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModbusConfig {
+    pub host: String,
+    #[serde(default = "default_port")]
+    pub port: u16,
+    #[serde(default = "default_unit")]
+    pub unit_id: u8,
+    #[serde(default = "default_timeout_ms")]
+    pub timeout_ms: u64,
+    #[serde(default)]
+    pub reconnect: ReconnectConfig,
+    pub points: Vec<ModbusPoint>,
+}
+
+const fn default_port() -> u16 {
+    502
+}
+const fn default_unit() -> u8 {
+    1
+}
+const fn default_timeout_ms() -> u64 {
+    2_000
+}
+
+impl ModbusConfig {
+    pub fn validate(&self) -> Result<(), PlanError> {
+        if self.host.trim().is_empty() {
+            return Err(PlanError::InvalidConfig("host must not be empty".into()));
+        }
+        if self.port == 0 || self.timeout_ms == 0 {
+            return Err(PlanError::InvalidConfig(
+                "port and timeout must be non-zero".into(),
+            ));
+        }
+        if self.reconnect.initial_delay_ms > self.reconnect.max_delay_ms {
+            return Err(PlanError::InvalidConfig(
+                "initial reconnect delay exceeds maximum".into(),
+            ));
+        }
+        let mut ids = HashSet::new();
+        for point in &self.points {
+            if point.id.0.trim().is_empty() || !ids.insert(point.id.clone()) {
+                return Err(PlanError::InvalidConfig(format!(
+                    "empty or duplicate point id: {}",
+                    point.id.0
+                )));
+            }
+            if point.poll_period_ms == 0 || !point.scale.is_finite() || !point.offset.is_finite() {
+                return Err(PlanError::InvalidConfig(format!(
+                    "invalid timing or scale for {}",
+                    point.id.0
+                )));
+            }
+            if point.area.is_bits() && point.data_type != ModbusDataType::Bool {
+                return Err(PlanError::InvalidConfig(format!(
+                    "bit area point {} must be bool",
+                    point.id.0
+                )));
+            }
+            point
+                .address
+                .checked_add(point.quantity().saturating_sub(1))
+                .ok_or_else(|| {
+                    PlanError::InvalidConfig(format!("address range overflows for {}", point.id.0))
+                })?;
+        }
+        Ok(())
+    }
+}

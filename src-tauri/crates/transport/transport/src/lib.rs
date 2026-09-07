@@ -12,7 +12,10 @@ mod handle;
 pub mod manager;
 pub mod test_data;
 
-pub use backend::{ConnectionControl, TransportBackend, TransportConnection};
+pub use backend::{
+    ConnectionControl, FlowRecvError, FlowTryRecvError, LegacyFlowReceiver, TransportBackend,
+    TransportConnection,
+};
 pub use can_backend::CanBackend;
 pub use handle::LiveNodeHandle;
 pub use manager::TransportManager;

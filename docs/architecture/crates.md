@@ -45,12 +45,12 @@ allowed when they also satisfy the layer rule.
 
 | Domain | Crates |
 |---|---|
-| shared | `data-model`, `config` |
+| shared | `data-model`, `config`, `flow` |
 | signal | `waveform`, `raw-data`, `filter`, `spectrum`, `measurement`, `gpu` |
 | vehicle | `can`, `diagnostic` |
-| protocol | `logic`, `protocol`, `schema`, `frame-decoder` |
+| protocol | `logic`, `protocol`, `schema`, `frame-decoder`, `points`, `acquisition` |
 | graph | `trigger`, `graph`, `graph-testkit` |
-| transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive` |
+| transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `modbus-adapter` |
 | data | `bus` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |
