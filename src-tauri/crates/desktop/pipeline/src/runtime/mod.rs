@@ -9,7 +9,6 @@ pub use tickers::{
     textout_sender_ticker,
 };
 
-pub use can_transport::candle;
 pub use frame_decoder::FrameParser;
 pub use graph::{
     BytePlan, CompiledGraph, EdgeClass, HirNode, SourceFramesMap, SourceTextsMap, TypedGraph,

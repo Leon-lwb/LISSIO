@@ -1,8 +1,7 @@
-use data_model::{Result, SlcanConfig, INGEST_CHANNEL_CAPACITY};
+use data_model::{Result, SlcanConfig};
 use error::TransportError;
-use serialport::{self, DataBits, FlowControl, Parity, StopBits};
-use std::io::{Read, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
+use serial::serial::{SerialLifecycle, SerialSettings};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
@@ -19,75 +18,44 @@ pub fn spawn(
     broadcast::Sender<Vec<u8>>,
     Arc<AtomicBool>,
 )> {
-    let mut port = serialport::new(&config.port_name, config.baud_rate)
-        .data_bits(DataBits::Eight)
-        .parity(Parity::None)
-        .stop_bits(StopBits::One)
-        .flow_control(FlowControl::None)
-        .timeout(Duration::from_millis(50))
-        .open()
-        .map_err(|e| TransportError::SlcanOpen {
-            port: config.port_name.clone(),
-            source: e.into(),
-        })?;
+    let settings = SerialSettings {
+        port_name: config.port_name,
+        baud_rate: config.baud_rate,
+        data_bits: 8,
+        parity: data_model::Parity::None,
+        stop_bits: data_model::StopBits::One,
+        flow_control: data_model::FlowControl::None,
+        open_error: slcan_open_error,
+    };
+    serial::serial::spawn_with_lifecycle(
+        settings,
+        Arc::new(SlcanLifecycle {
+            bitrate_command: config.can_bitrate.slcan_cmd(),
+        }),
+    )
+}
 
-    // 发送 slcan 初始化命令: 设置波特率 + 打开 CAN
-    let bitrate_cmd = format!("{}\r", config.can_bitrate.slcan_cmd());
-    port.write_all(bitrate_cmd.as_bytes())
-        .map_err(TransportError::SlcanBitrate)?;
-    std::thread::sleep(Duration::from_millis(50));
-    port.write_all(b"O\r")
-        .map_err(|e| TransportError::SlcanOpen {
-            port: config.port_name.clone(),
-            source: e,
-        })?;
-    std::thread::sleep(Duration::from_millis(50));
+struct SlcanLifecycle {
+    bitrate_command: &'static str,
+}
 
-    let mut write_port = port
-        .try_clone()
-        .map_err(|e| TransportError::SerialClone(e.into()))?;
+impl SerialLifecycle for SlcanLifecycle {
+    fn on_open(&self, port: &mut dyn serial::serialport::SerialPort) -> Result<()> {
+        let bitrate = format!("{}\r", self.bitrate_command);
+        port.write_all(bitrate.as_bytes())
+            .map_err(TransportError::SlcanBitrate)?;
+        std::thread::sleep(Duration::from_millis(50));
+        port.write_all(b"O\r")
+            .map_err(TransportError::SlcanBitrate)?;
+        std::thread::sleep(Duration::from_millis(50));
+        Ok(())
+    }
 
-    let (data_tx, _) = broadcast::channel(INGEST_CHANNEL_CAPACITY);
-    let (write_tx, mut write_rx) = mpsc::channel::<Vec<u8>>(64);
-    let cancel = Arc::new(AtomicBool::new(false));
-
-    // 读线程 — 透传原始字节给协议层解析
-    let data_tx_read = data_tx.clone();
-    let cancel_read = cancel.clone();
-    std::thread::spawn(move || {
-        let mut buf = vec![0u8; 65536].into_boxed_slice();
-        while !cancel_read.load(Ordering::Relaxed) {
-            match port.read(&mut buf[..]) {
-                Ok(0) => break,
-                Ok(n) => {
-                    let _ = data_tx_read.send(buf[..n].to_vec());
-                }
-                Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {}
-                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}
-                Err(_) => break,
-            }
-        }
-        // 关闭 CAN
+    fn on_close(&self, port: &mut dyn serial::serialport::SerialPort) {
         let _ = port.write_all(b"C\r");
-        log::debug!("slcan 读线程退出");
-    });
+    }
+}
 
-    // 写线程
-    let cancel_write = cancel.clone();
-    std::thread::spawn(move || {
-        while !cancel_write.load(Ordering::Relaxed) {
-            match write_rx.blocking_recv() {
-                Some(data) => {
-                    if let Err(e) = write_port.write_all(&data) {
-                        log::error!("slcan 写入失败: {e}");
-                        break;
-                    }
-                }
-                None => break,
-            }
-        }
-        log::debug!("slcan 写线程退出");
-    });
-
-    Ok((write_tx, data_tx, cancel))
+const fn slcan_open_error(port: String, source: std::io::Error) -> TransportError {
+    TransportError::SlcanOpen { port, source }
 }

@@ -6,6 +6,9 @@ use crate::Error;
 
 #[derive(Debug, Error)]
 pub enum TransportError {
+    #[error("未注册可处理 '{kind}' 的传输后端")]
+    BackendNotRegistered { kind: String },
+
     #[error("列举串口失败: {0}")]
     SerialEnumeration(#[source] std::io::Error),
 

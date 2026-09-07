@@ -1,6 +1,6 @@
 //! 传输/协议命令壳 — 命令体在 [`app::transport_ops`] / [`app::protocol_ops`] (L3)
 
-use app::{AppState, TransportManager};
+use app::AppState;
 use can::{CanFrame, CanFrameBatch, CandleDeviceInfo};
 use data_model::{PortInfo, Result, TestDataConfig, TransportConfig, WidgetBinding};
 use schema_types::{ProtocolConfig, ProtocolSchema};
@@ -9,7 +9,7 @@ use tauri::{AppHandle, State};
 /// 列出所有可用串口
 #[tauri::command]
 pub async fn list_ports() -> Result<Vec<PortInfo>> {
-    TransportManager::list_ports()
+    serial::serial::list_ports()
 }
 
 /// 打开传输连接 (node_id = 图中 Transport 节点 id)
@@ -164,5 +164,5 @@ pub async fn send_and_capture(
 /// 列出所有 candleLight 设备
 #[tauri::command]
 pub async fn list_candle_devices() -> Result<Vec<CandleDeviceInfo>> {
-    app::candle::list_devices()
+    can_transport::candle::list_devices()
 }

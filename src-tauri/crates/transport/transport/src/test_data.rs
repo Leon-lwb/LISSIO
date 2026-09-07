@@ -12,6 +12,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch};
 
+use crate::{ConnectionControl, TransportBackend, TransportConnection};
+use async_trait::async_trait;
+
 /// TestData 每条广播消息覆盖的目标采样时长。数据平面使用同一换算规则把
 /// `broadcast::Lagged(消息数)` 还原成丢失帧数 (经 [`samples_per_message`] 折算)。
 const MESSAGE_SAMPLE_SECONDS: f64 = 0.005;
@@ -29,6 +32,65 @@ pub fn samples_per_message(sample_rate: f32) -> u64 {
 pub struct TestDataRuntime {
     pub config: TestDataConfig,
     pub link: TestDataLink,
+}
+
+struct TestDataControl {
+    cancel: Arc<AtomicBool>,
+    runtime: watch::Sender<TestDataRuntime>,
+}
+
+impl ConnectionControl for TestDataControl {
+    fn close(&self) {
+        self.cancel.store(true, Ordering::Relaxed);
+    }
+
+    fn update_link(
+        &self,
+        link: TestDataLink,
+        config: Option<TestDataConfig>,
+    ) -> data_model::Result<Option<data_model::TransportConfig>> {
+        let config = config.unwrap_or_else(|| self.runtime.borrow().config.clone());
+        self.runtime
+            .send(TestDataRuntime {
+                config: config.clone(),
+                link,
+            })
+            .map_err(|_| {
+                error::TransportError::LinkUpdate(std::io::Error::other("channel closed"))
+            })?;
+        Ok(Some(data_model::TransportConfig::TestData(config)))
+    }
+}
+
+/// Built-in synthetic source backend. It uses the same extension contract as
+/// hardware adapters so manager behavior can be tested without a device.
+pub struct TestDataBackend;
+
+#[async_trait]
+impl TransportBackend for TestDataBackend {
+    fn name(&self) -> &'static str {
+        "test-data"
+    }
+
+    fn accepts(&self, config: &data_model::TransportConfig) -> bool {
+        matches!(config, data_model::TransportConfig::TestData(_))
+    }
+
+    async fn open(
+        &self,
+        config: data_model::TransportConfig,
+        link: TestDataLink,
+    ) -> data_model::Result<TransportConnection> {
+        let data_model::TransportConfig::TestData(config) = config else {
+            unreachable!("backend selection must call accepts before open")
+        };
+        let (write_tx, data_tx, cancel, runtime) = spawn(config, link)?;
+        Ok(TransportConnection::new(
+            write_tx,
+            data_tx,
+            Arc::new(TestDataControl { cancel, runtime }),
+        ))
+    }
 }
 
 /// 启动测试数据生成器

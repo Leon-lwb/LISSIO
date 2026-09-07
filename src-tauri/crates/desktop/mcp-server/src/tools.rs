@@ -376,7 +376,7 @@ pub fn get_raw_data(tb: &Toolbox, source: &str, max_bytes: u32) -> Value {
 
 /// 列出可用串口 (名称/类型/USB 信息)。
 pub fn list_serial_ports() -> Result<Value, String> {
-    let ports = pipeline::TransportManager::list_ports().map_err(|e| e.to_string())?;
+    let ports = serial::serial::list_ports().map_err(|e| e.to_string())?;
     serde_json::to_value(&ports).map_err(|e| e.to_string())
 }
 

@@ -46,12 +46,11 @@ pub use pipeline::{SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord};
 
 // ---- L1 类型统一转发 (来自 L2 runtime 门面) ----
 pub use pipeline::{
-    candle, command_frame, compute_frame_bytes, create_engine, detect_format, frame_checksum,
-    frame_field, parse_ascii, parse_hex, port_domain, protocol_source_port_names, BytePlan,
-    CommandFrameDto, CompiledGraph, DecoderBlockDef, EdgeClass, FieldType, FrameParser, HirNode,
-    InputFormat, MathOp, NodeDef, NodeKind, PortDomain, ProtocolEngine, SourceFramesMap,
-    SourceTextsMap, TransportManager, TriggerMatchResult, TriggerMatcher, TriggerRuleDef,
-    TypedGraph, ValuesMap,
+    command_frame, compute_frame_bytes, create_engine, detect_format, frame_checksum, frame_field,
+    parse_ascii, parse_hex, port_domain, protocol_source_port_names, BytePlan, CommandFrameDto,
+    CompiledGraph, DecoderBlockDef, EdgeClass, FieldType, FrameParser, HirNode, InputFormat,
+    MathOp, NodeDef, NodeKind, PortDomain, ProtocolEngine, SourceFramesMap, SourceTextsMap,
+    TransportManager, TriggerMatchResult, TriggerMatcher, TriggerRuleDef, TypedGraph, ValuesMap,
 };
 pub use pipeline::{
     resolve_widget_inputs, send_scheduler_ticker, spectrum_ticker, text_output_ticker,

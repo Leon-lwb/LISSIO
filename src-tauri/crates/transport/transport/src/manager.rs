@@ -1,11 +1,11 @@
-use data_model::{
-    ConnectionState, Error, PortInfo, Result, TestDataConfig, TransportConfig, TransportStats,
-};
-use error::PortNotFoundError;
+use data_model::{ConnectionState, Error, Result, TestDataConfig, TransportConfig, TransportStats};
+use error::{PortNotFoundError, TransportError};
 use schema_types::TestDataLink;
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::broadcast;
 
+use crate::backend::TransportBackend;
 use crate::handle::{LiveNodeHandle, TransportHandle};
 
 /// 传输管理器 — 按节点 ID 的多实例注册表
@@ -15,18 +15,28 @@ use crate::handle::{LiveNodeHandle, TransportHandle};
 /// 不影响其他节点。
 pub struct TransportManager {
     handles: HashMap<String, TransportHandle>,
+    backends: Vec<Arc<dyn TransportBackend>>,
 }
 
 impl TransportManager {
     pub fn new() -> Self {
         Self {
             handles: HashMap::new(),
+            backends: vec![Arc::new(crate::test_data::TestDataBackend)],
         }
     }
 
-    /// 列出所有可用串口
-    pub fn list_ports() -> Result<Vec<PortInfo>> {
-        serial::serial::list_ports()
+    /// Construct a manager with the built-in test source plus application
+    /// supplied device/network adapters.
+    pub fn with_backends(backends: impl IntoIterator<Item = Arc<dyn TransportBackend>>) -> Self {
+        let mut manager = Self::new();
+        manager.backends.extend(backends);
+        manager
+    }
+
+    /// Register an adapter without changing manager dispatch code.
+    pub fn register_backend(&mut self, backend: Arc<dyn TransportBackend>) {
+        self.backends.push(backend);
     }
 
     /// 打开连接 (node_id 标识图中的一个传输节点)
@@ -46,45 +56,23 @@ impl TransportManager {
         // 同 id 重复 open: 先关闭旧连接 (Drop 会置 cancel 标志)
         self.handles.remove(node_id);
 
-        let (write_tx, data_tx, cancel, test_data_runtime) = match &config {
-            TransportConfig::Serial(c) => {
-                let (w, d, c) = serial::serial::spawn(c.clone())?;
-                (w, d, c, None)
-            }
-            TransportConfig::Udp(c) => {
-                let (w, d, c) = network::udp::spawn(c.clone()).await?;
-                (w, d, c, None)
-            }
-            TransportConfig::TcpClient(c) => {
-                let (w, d, c) = network::tcp::spawn_client(c.clone()).await?;
-                (w, d, c, None)
-            }
-            TransportConfig::TcpServer(c) => {
-                let (w, d, c) = network::tcp::spawn_server(c.clone()).await?;
-                (w, d, c, None)
-            }
-            TransportConfig::TestData(c) => {
-                // 连接即生成: 生成器随 open 立即产出字节流, 随 close 生灭
-                let (write_tx, data_tx, cancel, runtime) =
-                    crate::test_data::spawn(c.clone(), link)?;
-                (write_tx, data_tx, cancel, Some(runtime))
-            }
-            TransportConfig::Slcan(c) => {
-                let (w, d, c) = can_transport::slcan::spawn(c.clone())?;
-                (w, d, c, None)
-            }
-            TransportConfig::CandleLight(c) => {
-                let (w, d, c) = can_transport::candle::spawn(c.clone()).await?;
-                (w, d, c, None)
-            }
-        };
+        let backend = self
+            .backends
+            .iter()
+            .find(|backend| backend.accepts(&config))
+            .cloned()
+            .ok_or_else(|| TransportError::BackendNotRegistered {
+                kind: config_kind(&config).to_string(),
+            })?;
+        let backend_name = backend.name();
+        let connection = backend.open(config.clone(), link).await?;
 
         self.handles.insert(
             node_id.to_string(),
-            TransportHandle::new(write_tx, data_tx, cancel, test_data_runtime, config.clone()),
+            TransportHandle::new(connection, config.clone()),
         );
 
-        log::info!("连接已建立: 节点 {node_id} -> {config:?}");
+        log::info!("连接已建立: 节点 {node_id} -> {config:?} ({backend_name})");
         Ok(())
     }
 
@@ -156,6 +144,18 @@ impl TransportManager {
                 port: node_id.to_string(),
             })
         })
+    }
+}
+
+const fn config_kind(config: &TransportConfig) -> &'static str {
+    match config {
+        TransportConfig::Serial(_) => "serial",
+        TransportConfig::Udp(_) => "udp",
+        TransportConfig::TcpClient(_) => "tcp-client",
+        TransportConfig::TcpServer(_) => "tcp-server",
+        TransportConfig::TestData(_) => "test-data",
+        TransportConfig::Slcan(_) => "slcan",
+        TransportConfig::CandleLight(_) => "candle-light",
     }
 }
 

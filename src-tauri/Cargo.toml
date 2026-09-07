@@ -301,6 +301,10 @@ security-framework = { workspace = true }
 stream = { workspace = true }
 events = { workspace = true }
 app = { workspace = true }
+transport = { workspace = true }
+serial = { workspace = true }
+network = { workspace = true }
+can_transport = { workspace = true }
 subscription = { workspace = true }
 menu_shell = { workspace = true }
 update_flow = { workspace = true }

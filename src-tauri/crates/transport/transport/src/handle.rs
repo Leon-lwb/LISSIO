@@ -1,11 +1,10 @@
 use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
 use error::TransportError;
 use schema_types::TestDataLink;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc, watch};
+use tokio::sync::{broadcast, mpsc};
 
-use crate::test_data::TestDataRuntime;
+use crate::{ConnectionControl, TransportConnection};
 
 /// 单连接句柄 — 一个传输节点实例的全部运行时状态 (crate 内部细节, 经 manager 编排)
 ///
@@ -14,11 +13,9 @@ use crate::test_data::TestDataRuntime;
 pub struct TransportHandle {
     write_tx: mpsc::Sender<Vec<u8>>,
     data_tx: broadcast::Sender<Vec<u8>>,
-    cancel: Arc<AtomicBool>,
+    control: Arc<dyn ConnectionControl>,
     state: parking_lot::Mutex<ConnectionState>,
     stats: Arc<parking_lot::Mutex<TransportStats>>,
-    /// 测试数据链路配置热更新通道 (仅 TestData 有效)
-    test_data_runtime: Option<watch::Sender<TestDataRuntime>>,
     /// 本连接当前实际使用的配置。TestData 热更新采样率时同步更新，供数据平面
     /// 恢复逐样本时间戳，不能只保留打开连接时的旧值。
     /// Arc 包装以便 [`LiveNodeHandle`] 免 manager 全局锁共享读取。
@@ -58,20 +55,13 @@ impl LiveNodeHandle {
 }
 
 impl TransportHandle {
-    pub fn new(
-        write_tx: mpsc::Sender<Vec<u8>>,
-        data_tx: broadcast::Sender<Vec<u8>>,
-        cancel: Arc<AtomicBool>,
-        test_data_runtime: Option<watch::Sender<TestDataRuntime>>,
-        config: TransportConfig,
-    ) -> Self {
+    pub fn new(connection: TransportConnection, config: TransportConfig) -> Self {
         Self {
-            write_tx,
-            data_tx,
-            cancel,
+            write_tx: connection.write_tx,
+            data_tx: connection.data_tx,
+            control: connection.control,
             state: parking_lot::Mutex::new(ConnectionState::Connected),
             stats: Arc::new(parking_lot::Mutex::new(TransportStats::default())),
-            test_data_runtime,
             config: Arc::new(parking_lot::RwLock::new(config)),
         }
     }
@@ -128,14 +118,8 @@ impl TransportHandle {
     /// 当前仅 TestData 生成器消费链路配置; 其他传输类型的字节收发与协议无关,
     /// 静默接受 (返回 false 表示未应用)。
     pub fn update_link(&self, link: TestDataLink, config: Option<TestDataConfig>) -> Result<bool> {
-        if let Some(tx) = &self.test_data_runtime {
-            let config = config.unwrap_or_else(|| tx.borrow().config.clone());
-            tx.send(TestDataRuntime {
-                config: config.clone(),
-                link,
-            })
-            .map_err(|_| TransportError::LinkUpdate(std::io::Error::other("channel closed")))?;
-            *self.config.write() = TransportConfig::TestData(config);
+        if let Some(config) = self.control.update_link(link, config)? {
+            *self.config.write() = config;
             return Ok(true);
         }
         Ok(false)
@@ -145,6 +129,6 @@ impl TransportHandle {
 impl Drop for TransportHandle {
     fn drop(&mut self) {
         // 句柄被移除 (close / 重复 open 替换) 时确保后台任务收到取消信号
-        self.cancel.store(true, Ordering::Relaxed);
+        self.control.close();
     }
 }

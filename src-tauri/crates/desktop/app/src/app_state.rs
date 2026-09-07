@@ -92,7 +92,12 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        let transport = Arc::new(tokio::sync::Mutex::new(TransportManager::new()));
+        Self::with_transport_manager(TransportManager::new())
+    }
+
+    /// Construct application state with adapters assembled by the composition root.
+    pub fn with_transport_manager(transport_manager: TransportManager) -> Self {
+        let transport = Arc::new(tokio::sync::Mutex::new(transport_manager));
         let graphs = Arc::new(Mutex::new(HashMap::new()));
         let graphs_version = Arc::new(AtomicU64::new(0));
         let source_graphs: crate::SourceGraphs = Arc::new(Mutex::new(HashMap::new()));

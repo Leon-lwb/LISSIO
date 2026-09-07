@@ -350,3 +350,17 @@ fn _ensure_broadcast_imported() -> broadcast::Receiver<Vec<u8>> {
     let (tx, _) = broadcast::channel::<Vec<u8>>(1);
     tx.subscribe()
 }
+
+#[tokio::test]
+async fn unregistered_device_backend_is_reported_without_manager_dispatch_changes() {
+    let mut manager = TransportManager::new();
+    let error = manager
+        .open(
+            "uart",
+            TransportConfig::Serial(data_model::SerialConfig::default()),
+            TestDataLink::new(ProtocolConfig::RawData),
+        )
+        .await
+        .expect_err("device adapters are injected by the composition root");
+    assert!(error.to_string().contains("serial"));
+}

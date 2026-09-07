@@ -14,6 +14,9 @@ tokio = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 error = { workspace = true }
+transport = { workspace = true }
+schema_types = { workspace = true }
+async-trait = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 4

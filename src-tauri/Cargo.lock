@@ -667,14 +667,17 @@ dependencies = [
 name = "can-transport"
 version = "0.1.2"
 dependencies = [
+ "async-trait",
  "can",
  "data-model",
  "error",
  "log",
  "nusb",
- "serialport",
+ "schema_types",
+ "serial",
  "thiserror 1.0.69",
  "tokio",
+ "transport",
 ]
 
 [[package]]
@@ -3193,6 +3196,7 @@ dependencies = [
  "buffer_graph",
  "bus",
  "can",
+ "can-transport",
  "chat",
  "chat-session",
  "data-model",
@@ -3207,6 +3211,7 @@ dependencies = [
  "mcp-client",
  "mcp-server",
  "menu_shell",
+ "network",
  "parking_lot",
  "petgraph",
  "pipeline",
@@ -3216,6 +3221,7 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
+ "serial",
  "stream",
  "subscription",
  "tauri",
@@ -3229,6 +3235,7 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "tokio",
+ "transport",
  "update_flow",
  "waveform",
  "window-vibrancy",
@@ -3404,6 +3411,7 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
+ "serial",
  "tauri",
  "tokio",
  "waveform",
@@ -3606,11 +3614,14 @@ dependencies = [
 name = "network"
 version = "0.1.2"
 dependencies = [
+ "async-trait",
  "data-model",
  "error",
  "log",
+ "schema_types",
  "thiserror 1.0.69",
  "tokio",
+ "transport",
 ]
 
 [[package]]
@@ -4194,7 +4205,6 @@ dependencies = [
  "buffer_graph",
  "bus",
  "can",
- "can-transport",
  "criterion",
  "data-model",
  "eval",
@@ -5445,12 +5455,15 @@ dependencies = [
 name = "serial"
 version = "0.1.2"
 dependencies = [
+ "async-trait",
  "data-model",
  "error",
  "log",
+ "schema_types",
  "serialport",
  "thiserror 1.0.69",
  "tokio",
+ "transport",
  "windows-sys 0.52.0",
 ]
 
@@ -6747,17 +6760,12 @@ version = "0.1.2"
 dependencies = [
  "async-trait",
  "can",
- "can-transport",
  "data-model",
  "error",
  "log",
  "logic",
- "network",
  "parking_lot",
  "schema_types",
- "serde",
- "serial",
- "thiserror 1.0.69",
  "tokio",
 ]
 

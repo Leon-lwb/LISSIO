@@ -26,6 +26,15 @@ pub use update_flow::*;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
+fn transport_manager() -> transport::TransportManager {
+    transport::TransportManager::with_backends([
+        std::sync::Arc::new(serial::SerialBackend)
+            as std::sync::Arc<dyn transport::TransportBackend>,
+        std::sync::Arc::new(network::NetworkBackend),
+        std::sync::Arc::new(can_transport::CanTransportBackend),
+    ])
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -52,7 +61,7 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState::new())
+        .manage(AppState::with_transport_manager(transport_manager()))
         .manage(PendingUpdate(Default::default()))
         .setup(|app| {
             // 构建原生菜单栏。

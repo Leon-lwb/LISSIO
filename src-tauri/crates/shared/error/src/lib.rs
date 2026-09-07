@@ -237,6 +237,9 @@ impl AppError {
                     ("details", details.clone()),
                 ])
             }
+            Self::Transport(TransportError::BackendNotRegistered { kind }) => {
+                std::collections::BTreeMap::from([("kind", kind.clone())])
+            }
             Self::Config(
                 ConfigError::NodeNotFound { node_id }
                 | ConfigError::ProtocolNodeNotFound { node_id }

@@ -7,6 +7,35 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 
+/// Device-neutral serial settings shared by UART and serial-hosted protocols.
+pub struct SerialSettings {
+    pub port_name: String,
+    pub baud_rate: u32,
+    pub data_bits: u8,
+    pub parity: data_model::Parity,
+    pub stop_bits: data_model::StopBits,
+    pub flow_control: data_model::FlowControl,
+    pub open_error: fn(String, std::io::Error) -> TransportError,
+}
+
+/// Protocol-specific serial lifecycle. Framing remains in the protocol crate;
+/// this hook is only for device session setup/teardown commands.
+pub trait SerialLifecycle: Send + Sync + 'static {
+    fn on_open(&self, _port: &mut dyn serialport::SerialPort) -> Result<()> {
+        Ok(())
+    }
+
+    fn on_close(&self, _port: &mut dyn serialport::SerialPort) {}
+}
+
+struct PlainSerial;
+
+impl SerialLifecycle for PlainSerial {}
+
+const fn serial_open_error(port: String, source: std::io::Error) -> TransportError {
+    TransportError::SerialOpen { port, source }
+}
+
 #[cfg(windows)]
 use crate::windows_ports::port_descriptions;
 
@@ -64,33 +93,56 @@ pub fn spawn(
     broadcast::Sender<Vec<u8>>,
     Arc<AtomicBool>,
 )> {
-    let mut port = serialport::new(&config.port_name, config.baud_rate)
-        .data_bits(match config.data_bits {
+    spawn_with_lifecycle(
+        SerialSettings {
+            port_name: config.port_name,
+            baud_rate: config.baud_rate,
+            data_bits: config.data_bits,
+            parity: config.parity,
+            stop_bits: config.stop_bits,
+            flow_control: config.flow_control,
+            open_error: serial_open_error,
+        },
+        Arc::new(PlainSerial),
+    )
+}
+
+/// Start a serial device with an injected session lifecycle.
+#[allow(clippy::type_complexity)]
+pub fn spawn_with_lifecycle(
+    settings: SerialSettings,
+    lifecycle: Arc<dyn SerialLifecycle>,
+) -> Result<(
+    mpsc::Sender<Vec<u8>>,
+    broadcast::Sender<Vec<u8>>,
+    Arc<AtomicBool>,
+)> {
+    let mut port = serialport::new(&settings.port_name, settings.baud_rate)
+        .data_bits(match settings.data_bits {
             5 => DataBits::Five,
             6 => DataBits::Six,
             7 => DataBits::Seven,
             _ => DataBits::Eight,
         })
-        .parity(match config.parity {
+        .parity(match settings.parity {
             data_model::Parity::Odd => Parity::Odd,
             data_model::Parity::Even => Parity::Even,
             data_model::Parity::None => Parity::None,
         })
-        .stop_bits(match config.stop_bits {
+        .stop_bits(match settings.stop_bits {
             data_model::StopBits::Two => StopBits::Two,
             data_model::StopBits::One => StopBits::One,
         })
-        .flow_control(match config.flow_control {
+        .flow_control(match settings.flow_control {
             data_model::FlowControl::Software => FlowControl::Software,
             data_model::FlowControl::Hardware => FlowControl::Hardware,
             data_model::FlowControl::None => FlowControl::None,
         })
         .timeout(Duration::from_millis(50))
         .open()
-        .map_err(|e| TransportError::SerialOpen {
-            port: config.port_name.clone(),
-            source: e.into(),
-        })?;
+        .map_err(|error| (settings.open_error)(settings.port_name.clone(), error.into()))?;
+
+    lifecycle.on_open(port.as_mut())?;
 
     let mut write_port = port
         .try_clone()
@@ -103,6 +155,7 @@ pub fn spawn(
     // 读线程
     let data_tx_read = data_tx.clone();
     let cancel_read = cancel.clone();
+    let read_lifecycle = lifecycle;
     std::thread::spawn(move || {
         let mut buf = vec![0u8; 65536].into_boxed_slice();
         while !cancel_read.load(Ordering::Relaxed) {
@@ -116,6 +169,7 @@ pub fn spawn(
                 Err(_) => break,
             }
         }
+        read_lifecycle.on_close(port.as_mut());
         log::debug!("串口读线程退出");
     });
 

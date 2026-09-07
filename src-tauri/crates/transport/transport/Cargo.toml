@@ -1,6 +1,6 @@
 [package]
 name = "transport"
-description = "Lissio 传输编排层 — TransportHandle + TransportManager + CanBackend trait + 测试数据生成"
+description = "Lissio 传输编排层 — 后端扩展契约、连接生命周期与测试数据生成"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,19 +11,17 @@ workspace = true
 [dependencies]
 data_model = { workspace = true }
 can = { workspace = true }
-logic = { workspace = true }
 schema_types = { workspace = true }
-serial = { workspace = true }
-network = { workspace = true }
-can_transport = { workspace = true }
-serde = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
-thiserror = { workspace = true }
 error = { workspace = true }
 parking_lot = { workspace = true }
 async-trait = { workspace = true }
+
+[dev-dependencies]
+logic = { workspace = true }
+
 [package.metadata.lissio]
 domain = "transport"
-layer = 4
-responsibility = "Lissio 传输编排层 — TransportHandle + TransportManager + CanBackend trait + 测试数据生成"
+layer = 2
+responsibility = "Transport backend ports, connection lifecycle, registry, and synthetic test source"
