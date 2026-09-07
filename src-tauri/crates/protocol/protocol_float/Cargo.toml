@@ -1,6 +1,6 @@
 [package]
 name = "protocol_float"
-description = "VOFA-NEXT 浮点协议引擎 — JustFloat + FireWater"
+description = "Lissio 浮点协议引擎 — JustFloat + FireWater"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,5 +9,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-vofa_core = { workspace = true }
-protocol_engine = { workspace = true }
+data_model = { workspace = true }
+protocol = { workspace = true }
+[package.metadata.lissio]
+domain = "protocol"
+layer = 1
+responsibility = "Lissio 浮点协议引擎 — JustFloat + FireWater"

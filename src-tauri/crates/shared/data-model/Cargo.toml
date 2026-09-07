@@ -1,0 +1,19 @@
+[package]
+name = "data-model"
+description = "Lissio 基础类型 — 错误、帧、配置"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+error = { workspace = true }
+
+[package.metadata.lissio]
+domain = "shared"
+layer = 0
+responsibility = "Lissio 基础类型 — 错误、帧、配置"

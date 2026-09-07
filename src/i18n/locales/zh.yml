@@ -944,7 +944,7 @@ tourNext: 下一步
 tourPrev: 上一步
 tourSkip: 跳过
 tourFinish: 完成
-tourWelcomeTitle: 欢迎使用 Vofa Next
+tourWelcomeTitle: 欢迎使用 Lissio
 tourWelcomeContent: 三分钟跑通核心工作流。高亮区是当前讲解对象，<strong>带勾选框的步骤需要动手完成</strong>；右上角 × 随时退出。
 tourQuickStartTitle: 快速开始 · 模板起步
 tourQuickStartContent: 左侧活动栏的<strong>火箭图标</strong>打开此面板——7 个模板一键生成画布与连线，应用后默认落在<strong>编译结果</strong>页核对。

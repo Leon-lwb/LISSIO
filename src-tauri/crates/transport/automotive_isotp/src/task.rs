@@ -1,12 +1,12 @@
 //! ISO-TP 后台任务主循环
 
-use can_types::CanFrame;
+use can::CanFrame;
 use diagnostic::IsoTpConfig;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
-use transport_core::CanBackend;
+use transport::CanBackend;
 
 use crate::constants::{DEFAULT_N_AR_MS, DEFAULT_N_AS_MS, DEFAULT_N_BS_MS, DEFAULT_N_CR_MS};
 use crate::rx::handle_received_frame;

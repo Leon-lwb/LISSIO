@@ -1,0 +1,23 @@
+[package]
+name = "can-transport"
+description = "Lissio CAN 桥接传输 — Slcan (ASCII over serial) + CandleLight (原生 USB bulk)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+data_model = { workspace = true }
+can = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+error = { workspace = true }
+nusb = { workspace = true }
+serialport = { workspace = true }
+[package.metadata.lissio]
+domain = "transport"
+layer = 4
+responsibility = "Lissio CAN 桥接传输 — Slcan (ASCII over serial) + CandleLight (原生 USB bulk)"

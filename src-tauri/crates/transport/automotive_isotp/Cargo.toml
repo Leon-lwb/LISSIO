@@ -8,10 +8,10 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-vofa_core = { workspace = true }
-can_types = { workspace = true }
+data_model = { workspace = true }
+can = { workspace = true }
 diagnostic = { workspace = true }
-transport_core = { workspace = true }
+transport = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
@@ -19,3 +19,7 @@ error = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
+[package.metadata.lissio]
+domain = "transport"
+layer = 4
+responsibility = "Focused crate responsibility"

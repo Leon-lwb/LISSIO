@@ -1,5 +1,5 @@
-use protocol_engine::{split_at_boundaries, FeedOutput, ProtocolEngine};
-use vofa_core::DataFrame;
+use data_model::DataFrame;
+use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
 
 /// JustFloat 协议引擎
 ///
@@ -50,7 +50,7 @@ impl ProtocolEngine for JustFloatEngine {
         let mut start = 0usize;
         // 批内所有帧共享一个时间戳 (每次 feed 只读一次时钟, 避免每帧系统调用);
         // 入波形缓冲前由管线按批线性摊开 (process_source_batch)
-        let ts = vofa_core::now_us();
+        let ts = data_model::now_us();
 
         // 单次遍历: 从上次位置继续找帧尾 (原实现每帧从头扫描 + drain, O(n²),
         // 高码率合批后是 feed 段的主要开销)

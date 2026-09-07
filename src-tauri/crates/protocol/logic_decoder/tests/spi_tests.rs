@@ -1,7 +1,7 @@
 //! 集成测试: SPI 解码
 
+use logic::{DecodedEvent, LogicDecoderConfig, LogicSample};
 use logic_decoder::LogicDecoderEngine;
-use logic_types::{DecodedEvent, LogicDecoderConfig, LogicSample};
 
 fn to_samples(data: &[u8]) -> Vec<LogicSample> {
     data.iter()

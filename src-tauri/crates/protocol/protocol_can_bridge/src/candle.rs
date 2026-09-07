@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use can_types::CanFrame;
-use protocol_engine::{split_at_boundaries, FeedOutput, ProtocolEngine};
+use can::CanFrame;
+use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
 
 /// candleLight (GSUSB) 二进制帧大小 (字节)
 pub const CAND_FRAME_SIZE: usize = 24;
@@ -71,9 +71,9 @@ impl ProtocolEngine for CandleEngine {
             let id = can_id_raw & CAND_ID_MASK;
             let data_bytes = pkt[16..16 + dlc as usize].to_vec();
             let direction = if cmd_id == CAND_CMD_TX {
-                can_types::CanDirection::Tx
+                can::CanDirection::Tx
             } else {
-                can_types::CanDirection::Rx
+                can::CanDirection::Rx
             };
             frames.push(CanFrame {
                 timestamp: Self::now_us(),
@@ -124,7 +124,7 @@ impl ProtocolEngine for CandleEngine {
         "CandleLight"
     }
 
-    fn encode_frame(&mut self, _frame: &vofa_core::DataFrame) -> Vec<u8> {
+    fn encode_frame(&mut self, _frame: &data_model::DataFrame) -> Vec<u8> {
         // CAN 协议无法从 DataFrame 重编码 (需走 encode_can), 语义不符
         Vec::new()
     }

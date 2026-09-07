@@ -1,7 +1,7 @@
 //! 集成测试: I2C 解码
 
+use logic::{DecodedEvent, I2cEvent, LogicDecoderConfig, LogicSample};
 use logic_decoder::LogicDecoderEngine;
-use logic_types::{DecodedEvent, I2cEvent, LogicDecoderConfig, LogicSample};
 
 const fn i2c_bit(sda: bool, scl: bool) -> u8 {
     let mut v = 0u8;

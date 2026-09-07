@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       build_run_id:
-        description: 'Build workflow run ID (留空则自动使用最近一次成功的构建)'
+        description: 'Build workflow run ID (留空则自动使用当前提交对应的成功构建)'
         required: false
         type: string
       prerelease:
@@ -43,9 +43,10 @@ jobs:
             RUN_ID="${{ inputs.build_run_id }}"
             echo "使用手动指定的 Build run ID: $RUN_ID"
           else
-            echo "未指定 build_run_id，查找最近一次成功的构建..."
+            echo "未指定 build_run_id，查找当前提交对应的最近一次成功构建..."
             RUN_ID=$(gh run list \
               --workflow=build.yml \
+              --commit "${{ github.sha }}" \
               --status=success \
               --limit=1 \
               --json databaseId \
@@ -54,8 +55,18 @@ jobs:
               echo "::error::未找到成功的 Build workflow run。请先手动触发 Build 工作流，或手动指定 build_run_id。"
               exit 1
             fi
-            echo "自动找到 Build run ID: $RUN_ID"
+            echo "自动找到当前提交的 Build run ID: $RUN_ID"
           fi
+          RUN_JSON=$(gh run view "$RUN_ID" --json workflowName,conclusion,headSha)
+          WORKFLOW=$(jq -r '.workflowName' <<< "$RUN_JSON")
+          HEAD_SHA=$(jq -r '.headSha' <<< "$RUN_JSON")
+          CONCLUSION=$(jq -r '.conclusion' <<< "$RUN_JSON")
+          if [ "$WORKFLOW" != "Build" ] || [ "$CONCLUSION" != "success" ] || [ "$HEAD_SHA" != "${{ github.sha }}" ]; then
+            echo "::error::Build run $RUN_ID 不属于当前发布提交或未成功。"
+            echo "workflow=$WORKFLOW conclusion=$CONCLUSION head_sha=$HEAD_SHA expected_sha=${{ github.sha }}"
+            exit 1
+          fi
+          echo "已验证 Build #$RUN_ID 对应当前提交 $HEAD_SHA"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifacts
@@ -168,7 +179,7 @@ jobs:
           > 共包含 ${{ steps.assets.outputs.count }} 个文件，来自 Build #${{ steps.resolve-run.outputs.run_id }}
           NOTES
 
-          ARGS=(--title "$TAG" --notes-file /tmp/release-notes.md --target main)
+          ARGS=(--title "$TAG" --notes-file /tmp/release-notes.md --target "${{ github.sha }}")
           if [ "${{ inputs.prerelease }}" = "true" ]; then
             ARGS+=(--prerelease)
           fi
@@ -199,7 +210,7 @@ jobs:
             gh release create beta --prerelease \
               --title "Beta 更新通道" \
               --notes "此 release 仅用于托管 beta 通道的更新清单 (beta-latest.json), 由 CI 自动维护, 请勿删除或标记为 latest。" \
-              --target main
+              --target "${{ github.sha }}"
           fi
           gh release upload beta beta-latest.json --clobber
           echo "✅ beta 通道 manifest 已更新到 v${{ inputs.version }}"

@@ -1,0 +1,29 @@
+[package]
+name = "schema"
+description = "Lissio Schema 协议引擎 — 自定义帧 schema 流式解析/编码"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+data_model = { workspace = true }
+can = { workspace = true }
+logic = { workspace = true }
+schema_types = { workspace = true }
+protocol = { workspace = true }
+logic_decoder = { workspace = true }
+protocol_can_bridge = { workspace = true }
+protocol_float = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[package.metadata.lissio]
+domain = "protocol"
+layer = 1
+responsibility = "Lissio Schema 协议引擎 — 自定义帧 schema 流式解析/编码"

@@ -1,0 +1,18 @@
+[package]
+name = "filter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+[package.metadata.lissio]
+domain = "signal"
+layer = 1
+responsibility = "Focused crate responsibility"

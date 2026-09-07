@@ -1,5 +1,5 @@
-use protocol_engine::{split_at_boundaries, FeedOutput, ProtocolEngine};
-use vofa_core::DataFrame;
+use data_model::DataFrame;
+use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
 
 /// FireWater 协议引擎
 ///
@@ -40,7 +40,7 @@ impl ProtocolEngine for FireWaterEngine {
         let mut frames = Vec::new();
         let mut start = 0usize;
         // 批内所有帧共享一个时间戳 (每次 feed 只读一次时钟, 避免每帧系统调用)
-        let ts = vofa_core::now_us();
+        let ts = data_model::now_us();
 
         // 单次遍历按行切分 (原实现每行 drain 一次, O(n²))
         while let Some(rel) = self.buf.as_bytes()[start..]

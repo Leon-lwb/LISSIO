@@ -1,11 +1,11 @@
 //! ISO-TP 集成测试 — PCI 常量验证 + Session API smoke + Handle clone
 
-use can_types::{CanDirection, CanFrame};
+use can::{CanDirection, CanFrame};
+use data_model::Result;
 use diagnostic::{IsoTpAddressMode, IsoTpConfig};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use transport_core::CanBackend;
-use vofa_core::Result;
+use transport::CanBackend;
 
 use automotive_isotp::IsoTpSession;
 
@@ -15,7 +15,7 @@ struct DummyBackend {
 }
 
 #[async_trait::async_trait]
-impl transport_core::CanBackend for DummyBackend {
+impl transport::CanBackend for DummyBackend {
     async fn send_frame(&self, _frame: &CanFrame) -> Result<()> {
         Ok(())
     }
@@ -75,7 +75,7 @@ fn flow_status_constants() {
 #[tokio::test]
 async fn handle_clone_is_cheap() {
     let (rx, _) = broadcast::channel::<CanFrame>(16);
-    let backend: Arc<dyn transport_core::CanBackend> = Arc::new(DummyBackend { rx });
+    let backend: Arc<dyn transport::CanBackend> = Arc::new(DummyBackend { rx });
     let session = IsoTpSession::new(backend, dummy_cfg());
     let h1 = session.handle();
     let h2 = h1.clone();
@@ -87,7 +87,7 @@ async fn handle_clone_is_cheap() {
 #[tokio::test]
 async fn session_can_be_constructed_and_dropped() {
     let (rx, _) = broadcast::channel::<CanFrame>(16);
-    let backend: Arc<dyn transport_core::CanBackend> = Arc::new(DummyBackend { rx });
+    let backend: Arc<dyn transport::CanBackend> = Arc::new(DummyBackend { rx });
     let session = IsoTpSession::new(backend, dummy_cfg());
     drop(session.handle());
     session.shutdown().await;

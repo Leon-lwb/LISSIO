@@ -1,47 +1,51 @@
-# Repository Guidelines
+# Lissio repository guide
 
-## Project Structure & Module Organization
+## Read before editing
 
-VOFA-NEXT is a Tauri 2 desktop application. The React/TypeScript frontend lives in `src/`: UI code is under `components/`, Zustand state under `store/`, shared code under `lib/`, translations under `i18n/locales/`, and test setup under `test/`. Frontend tests are colocated in `__tests__/`. Static files belong in `public/`; documentation lives in `docs/`.
+Before changing Rust code, read `docs/architecture/crates.md` and run
+`pnpm architecture`. Use its direct and reverse dependency columns to find the
+type owner and affected crates.
 
-The Rust Cargo workspace is rooted at `src-tauri/`. The binary at `src-tauri/src/` is a pure composition root (plugin wiring + command registration only). Focused packages live in `src-tauri/crates/<layer>/<crate-name>/` under an enforced layering: `foundation`(L0, cross-cutting base tier callable from anywhere) → `protocol`/`transport`/`node`(L1) → `pipeline`(L2) → `app`/`ai`(L3) → `cmd`(L4) → binary (composition root, exempt). Each chain layer may only call the **previous** layer (plus the L0 base tier; same-layer allowed); L1 types are referenced through the L2 `runtime` facade crate, so upper layers never depend on L1 crates directly. `cmd/*` is never depended on by non-cmd crates. Crate names express function, not layer — no layer-prefix duplication (`crates/cmd/graph`, not `cmd_graph`). See `docs/architecture/crate-layers.md` for the authoritative layer table and the new-crate checklist; `pnpm check:layers` (layering), `pnpm check:deps` (third-party dependency unification) and `cargo deny check` (advisories/licenses/bans/sources) verify the rules mechanically. Integration tests live in each crate's `tests/`.
+## Layout
 
-## Build, Test, and Development Commands
+Lissio is a Tauri 2 application. React/TypeScript lives in `src/`; Rust is in
+`src-tauri/`. Rust members use `src-tauri/crates/<domain>/<crate>`. The domain
+directory is visual organization only; `[package.metadata.lissio]` records both
+domain and dependency layer. The root `lissio` package is the sole composition
+root and owns Tauri IPC modules under `src-tauri/src/commands/`.
 
-- `pnpm install` installs locked frontend and Tauri tooling dependencies.
-- `pnpm dev` starts the Vite frontend only.
-- `pnpm tauri dev` runs the complete desktop application locally.
-- `pnpm typecheck` performs strict TypeScript checking.
-- `pnpm lint` runs ESLint over the workspace (flat config, see `eslint.config.js`).
-- `pnpm lint:fix` runs ESLint with `--fix` to auto-apply safe fixes.
-- `pnpm lint:ci` runs ESLint with `--max-warnings 0`; reserved for the day the lint baseline hits zero.
-- `pnpm test` runs the Vitest suite once; `pnpm test:watch` supports iteration.
-- `pnpm build` type-checks and produces the frontend bundle.
-- `pnpm check:layers` validates the Rust crate layering rules — strict adjacent-layer calls with the L0 base-tier exemption and the binary composition-root exemption (see `docs/architecture/crate-layers.md`).
-- `pnpm check:deps` validates third-party dependency version unification (all member crates inherit from the root `[workspace.dependencies]`).
-- `cd src-tauri && cargo deny check` reviews RustSec advisories, licenses, duplicate versions, and dependency sources (config in `src-tauri/deny.toml`).
-- `cd src-tauri && cargo test --workspace` runs all Rust tests.
-- `cd src-tauri && cargo clippy --workspace --all-targets` enforces backend lint policy.
-- `cd src-tauri && cargo fmt --check` verifies Rust formatting.
+## Dependency decisions
 
-## Lint Baseline
+- A crate has one clear reason to change. Keep phases of one capability as
+  private modules; `graph::compiler::{hir, plane, lower}` is the model.
+- Create a crate only for an independent capability, dependency-inversion port,
+  heavy optional adapter, or cross-crate test support.
+- Dependencies may go to the same or any lower layer and must follow the domain
+  DAG in `docs/architecture/crates.md`. Never add an adjacent-layer facade.
+- L0-L3 cannot depend on Tauri, Keychain, `genai`, `rmcp`, `serialport`, `nusb`,
+  or `wgpu`. Define a port below and inject its L4 implementation in `lissio`.
+- Depend directly on the crate that defines a type. No facade-only crate,
+  cross-crate glob re-export, repeated DTO, or public mutable lock.
+- `graph-testkit` is dev-dependency only.
+- Names describe responsibility. Do not use `lissio-*`, `vofa-*`, layer
+  prefixes, or standalone `core`, `runtime`, `types`, or `common`.
+- A new crate requires metadata, documentation, architecture tests, and a root
+  workspace dependency entry inherited by consumers.
 
-ESLint was introduced with the strict `recommended-type-checked` + `stylistic-type-checked` presets from `typescript-eslint`, plus the React / React Hooks / React Refresh / JSX a11y plugin stacks. The current **baseline** (informational only, does not block PRs) is **1459 lint issues + 17 typecheck errors**, mostly from pre-existing `any` usage that fans out into `no-unsafe-*` warnings, plus a handful of test stubs and a few `@ts-ignore` / `@ts-expect-error` cases. The `.github/workflows/lint.yml` job runs `pnpm lint` and `pnpm typecheck` with `continue-on-error: true`; once the baseline is cleared, remove the `continue-on-error` flags and switch to `pnpm lint:ci` so CI becomes a real gate.
+## Commands
 
-## Coding Style & Naming Conventions
+- `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory
+- `pnpm check:architecture` — layout, metadata, DAG, layer, adapter, and testkit rules
+- `pnpm check:deps` — centralized third-party dependency versions
+- `cd src-tauri && cargo fmt --check`
+- `cd src-tauri && cargo clippy --workspace --all-targets`
+- `cd src-tauri && cargo test --workspace`
+- `cd src-tauri && cargo deny check`
+- `pnpm typecheck && pnpm test && pnpm build`
 
-Use two-space indentation and single-quoted imports in TypeScript. Use `PascalCase` for components and types, `camelCase` for functions and stores, and `useXxx` for hooks. Keep TypeScript strict and remove unused symbols. Rust follows `rustfmt`, `snake_case` modules/functions, and `PascalCase` types. The workspace denies Clippy `all`, `pedantic`, `nursery`, and `cargo` warnings; address warnings instead of casually suppressing them.
+Rust production files are limited to 500 lines; split implementation modules
+without changing the stable crate API. Preserve serialization, command, event,
+and persisted-file compatibility. Keep TypeScript strict, use two-space
+indentation and single-quoted imports, and colocate Vitest tests.
 
-Rust production source files are capped at **500 lines** (integration tests under `tests/`, benches, and `#[cfg(test)]` test-module files like `*_tests.rs` are exempt). When a file outgrows the limit, split it into submodules behind a `mod.rs` that re-exports the existing API; the CI `rust` job enforces this with a file-size guard (see `docs/architecture/crate-layers.md`).
-
-## Testing Guidelines
-
-Vitest uses jsdom, Testing Library, and shared Tauri mocks from `src/test/setup.ts`. Name frontend tests `*.test.ts` or `*.test.tsx` and colocate them near the feature. Name Rust integration tests descriptively under `<crate>/tests/`. Add or update regression tests for behavioral changes; no fixed coverage threshold is configured.
-
-## Commit & Pull Request Guidelines
-
-Recent history follows Conventional Commit-style subjects such as `fix(rawdata): ...`, `feat(ai): ...`, and `refactor(engine): ...`. Use an imperative, concise subject with an accurate scope. Commit messages (subject and body) must be written in English. Pull requests should explain the problem and solution, link relevant issues, list verification commands, and include screenshots or recordings for visible UI changes. Before submission, run TypeScript checks and tests plus Rust formatting, Clippy, and workspace tests.
-
-## Security & Configuration
-
-Never commit API keys, device credentials, or generated local state. AI provider keys belong in the operating system keychain. Avoid committing build outputs such as `dist/` and `src-tauri/target/`.
+Never commit secrets or generated `dist/`, `target/`, or local application state.

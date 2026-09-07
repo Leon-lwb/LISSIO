@@ -5,16 +5,16 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use async_trait::async_trait;
+use data_model::Result;
 use error::{AiError, Error as _};
 use futures::{Stream, StreamExt};
-use parking_lot::Mutex;
-use provider::{
+use llm::{
     chat_turn_stream, validate_config, AiProviderConfig, ChatMessageDto, ChatRoleDto,
     ChatTurnOutcome, ProviderEvent, ToolCallDto, ToolSpecDto,
 };
+use parking_lot::Mutex;
 use serde_json::Value;
 use tokio::sync::watch;
-use vofa_core::Result;
 
 use crate::events::AiChatEvent;
 use crate::events::EventSink;
@@ -142,8 +142,8 @@ fn tool_message(call: &ToolCallDto, content: String) -> ChatMessageDto {
     }
 }
 
-/// `vofa_core::Error` → 终止事件 — kind 与结构化字段随事件下发, 供前端本地化。
-fn error_event(e: &vofa_core::Error) -> AiChatEvent {
+/// `data_model::Error` → 终止事件 — kind 与结构化字段随事件下发, 供前端本地化。
+fn error_event(e: &data_model::Error) -> AiChatEvent {
     AiChatEvent::Error {
         message: e.to_string(),
         kind: e.kind().to_string(),

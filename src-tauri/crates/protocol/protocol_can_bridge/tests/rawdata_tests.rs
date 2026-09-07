@@ -1,8 +1,8 @@
 //! RawData 协议引擎集成测试 — 透传语义
 
+use data_model::DataFrame;
+use protocol::ProtocolEngine;
 use protocol_can_bridge::RawDataEngine;
-use protocol_engine::ProtocolEngine;
-use vofa_core::DataFrame;
 
 #[test]
 fn test_feed_returns_empty_feed_output() {

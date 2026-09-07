@@ -1,0 +1,55 @@
+[package]
+name = "app"
+description = "Lissio 应用核心 (L3): 全局状态容器 + 显示订阅服务 + 传输/协议操作 + 工作区持久化"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# L2 严格相邻 — 数据平面 / 数据总线 / 流框架 / 调度 / 运行时门面
+# (GraphEvalState + StreamGroupState + 4 个 snapshot 类型定义在 pipeline;
+#  AdaptiveRate 由 stream 提供; sync_spectrum_analyzers / sync_ifft_buffers 由
+#  evaluator 提供; L1 类型统一经 runtime 门面转发)
+pipeline = { workspace = true }
+bus = { workspace = true }
+stream = { workspace = true }
+evaluator = { workspace = true }
+
+# L0 基座
+data_model = { workspace = true }
+can = { workspace = true }
+logic = { workspace = true }
+waveform = { workspace = true }
+buffer_graph = { workspace = true }
+raw-data = { workspace = true }
+gpu = { workspace = true }
+filter = { workspace = true }
+spectrum = { workspace = true }
+measurement = { workspace = true }
+subscription = { workspace = true }
+events = { workspace = true }
+schema_types = { workspace = true }
+error = { workspace = true }
+
+# runtime
+parking_lot = { workspace = true }
+rustc-hash = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+tauri = { workspace = true }
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "waveform_wire"
+harness = false
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 5
+responsibility = "Lissio 应用核心 (L3): 全局状态容器 + 显示订阅服务 + 传输/协议操作 + 工作区持久化"

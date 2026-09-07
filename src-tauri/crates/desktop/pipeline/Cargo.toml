@@ -1,0 +1,67 @@
+[package]
+name = "pipeline"
+description = "Lissio 数据平面 (字节路由 + 数值平面评估 + 每源数据缓冲 + 解析引擎状态) — 两平面节点图重构核心"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+data_model = { workspace = true }
+can = { workspace = true }
+logic = { workspace = true }
+waveform = { workspace = true }
+buffer_graph = { workspace = true }
+raw-data = { workspace = true }
+graph = { workspace = true }
+eval = { workspace = true }
+lower = { workspace = true }
+scirs2-core = { workspace = true }
+rustc-hash = { workspace = true }
+kind = { workspace = true }
+trigger = { workspace = true }
+frame-decoder = { workspace = true }
+filter = { workspace = true }
+spectrum = { workspace = true }
+protocol = { workspace = true }
+bus = { workspace = true }
+protocol_float = { workspace = true }
+protocol_can_bridge = { workspace = true }
+logic_decoder = { workspace = true }
+schema = { workspace = true }
+schema_types = { workspace = true }
+transport = { workspace = true }
+can_transport = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+tauri = { workspace = true }
+# 数据平面读任务调前端事件契约 (events.rs 迁出后从 events 取)
+events = { workspace = true }
+
+[dev-dependencies]
+# pipeline/{frame_dispatch, reconcile} 的 #[cfg(test)] 模块用 AppState 构造测试
+app = { workspace = true }
+graph_testkit = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "eval_bench"
+harness = false
+
+[[bench]]
+name = "ingest_bench"
+harness = false
+
+[[bench]]
+name = "pipeline_soak"
+harness = false
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 5
+responsibility = "Lissio 数据平面 (字节路由 + 数值平面评估 + 每源数据缓冲 + 解析引擎状态) — 两平面节点图重构核心"

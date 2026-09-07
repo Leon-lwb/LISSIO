@@ -1,0 +1,36 @@
+[package]
+name = "eval"
+description = "节点图槽位运行时 — CompiledEval 逐帧评估 (快路径零字符串哈希) + ValuesMap 快照物化"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+rustc-hash = { workspace = true }
+data_model = { workspace = true }
+spectrum = { workspace = true }
+filter = { workspace = true }
+kind = { workspace = true }
+frame-decoder = { workspace = true }
+lower = { workspace = true }
+trigger = { workspace = true }
+
+[dev-dependencies]
+# bench fixture 构造: HIR/值平面编译出 SlotPlan (graph_testkit 提供节点/边工厂)
+buffer_graph = { workspace = true }
+hir = { workspace = true }
+plane = { workspace = true }
+graph_testkit = { workspace = true }
+criterion = { workspace = true }
+
+[[bench]]
+name = "eval_run_bench"
+harness = false
+
+[package.metadata.lissio]
+domain = "graph"
+layer = 1
+responsibility = "节点图槽位运行时 — CompiledEval 逐帧评估 (快路径零字符串哈希) + ValuesMap 快照物化"

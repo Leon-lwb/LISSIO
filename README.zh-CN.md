@@ -1,4 +1,4 @@
-# VOFA-NEXT
+# Lissio
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
@@ -16,20 +16,20 @@
 <br />
 
 <p align="center">
-  <a href="https://github.com/horldsence/vofa-next">
+  <a href="https://github.com/horldsence/lissio">
     <img src="icon.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">VOFA-NEXT</h3>
+  <h3 align="center">Lissio</h3>
   <p align="center">
     现代化串口调试工具，支持波形显示、节点编辑器、多协议解析、CAN 诊断与逻辑分析。
     <br />
-    <a href="https://github.com/horldsence/vofa-next"><strong>查看项目仓库 »</strong></a>
+    <a href="https://github.com/horldsence/lissio"><strong>查看项目仓库 »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/horldsence/vofa-next/issues">报告 Bug</a>
+    <a href="https://github.com/horldsence/lissio/issues">报告 Bug</a>
     ·
-    <a href="https://github.com/horldsence/vofa-next/issues">提出新特性</a>
+    <a href="https://github.com/horldsence/lissio/issues">提出新特性</a>
   </p>
 </p>
 
@@ -55,7 +55,7 @@
 
 ## 项目简介
 
-VOFA-NEXT 是一款面向嵌入式调试场景的桌面串口助手。前端基于 React 19 + TypeScript + Vite，后端由 Rust + Tauri 2 提供高性能传输层 I/O、协议解析、节点图 DAG 引擎、DSP（FIR/IIR 滤波、FFT 频谱）以及汽车诊断协议（ISO-TP / UDS / OBD-II / J1939）。
+Lissio 是一款面向嵌入式调试场景的桌面串口助手。前端基于 React 19 + TypeScript + Vite，后端由 Rust + Tauri 2 提供高性能传输层 I/O、协议解析、节点图 DAG 引擎、DSP（FIR/IIR 滤波、FFT 频谱）以及汽车诊断协议（ISO-TP / UDS / OBD-II / J1939）。
 
 应用支持 7 种传输方式、7 种协议引擎、基于 React Flow 的节点编辑器数据流编排、示波器式波形显示、CAN 帧 / 负载分析、逻辑分析仪（UART/I2C/SPI 解码），以及运行在沙箱 iframe 中的自定义 JS 控件系统。
 
@@ -144,7 +144,7 @@ VOFA-NEXT 是一款面向嵌入式调试场景的桌面串口助手。前端基�
 - **流式 AI 对话** —— 可停靠对话面板(默认右侧,拖动标题栏可重新停靠到左侧 / 底部或浮动为小窗,布局持久化),支持 **Markdown 渲染**(表格、代码高亮、代码块 / 消息一键复制)与多会话管理(新建 / 重命名 / 删除,历史由 Rust 后端持久化,重启不丢)。
 - **26+ LLM 服务商** —— OpenAI / Anthropic / Gemini / DeepSeek / 通义 / Kimi / GLM / Ollama / OpenRouter 等,并以 [**OrcaRouter**](https://orcarouter.ai) 为重点推荐的默认适配器(一把 Key 调用全厂商模型,[通过推广链接注册获取 API Key](https://www.orcarouter.ai/ref/ref_1f7582998bdadbe7e0f3)即可支持本项目)。
 - **工具调用(MCP 客户端)** —— 对话中模型可调用外部 MCP server(stdio / HTTP)提供的工具,单次调用全程可追踪。
-- **MCP 服务(入站)** —— 本应用把自身能力(串口发送、波形读取、节点图编辑…)暴露为 MCP 工具(`http://127.0.0.1:{port}/mcp`),Claude Desktop 等外部 AI 客户端可直接操控 VOFA-NEXT。
+- **MCP 服务(入站)** —— 本应用把自身能力(串口发送、波形读取、节点图编辑…)暴露为 MCP 工具(`http://127.0.0.1:{port}/mcp`),Claude Desktop 等外部 AI 客户端可直接操控 Lissio。
 
 ## 使用指引
 
@@ -240,7 +240,7 @@ VOFA-NEXT 是一款面向嵌入式调试场景的桌面串口助手。前端基�
 ## 目录结构
 
 ```
-vofa-next/
+lissio/
 ├── scripts/                       # 构建脚本
 │   └── build.sh
 ├── src/                           # 前端源码
@@ -321,8 +321,8 @@ vofa-next/
 1. 克隆仓库
 
 ```sh
-git clone https://github.com/horldsence/vofa-next.git
-cd vofa-next
+git clone https://github.com/horldsence/lissio.git
+cd lissio
 ```
 
 2. 安装前端依赖
@@ -397,7 +397,7 @@ cd src-tauri && cargo test
 
 ## 版本控制
 
-本项目使用 Git 进行版本管理。你可以在 [Releases](https://github.com/horldsence/vofa-next/releases) 页面查看可用版本。
+本项目使用 Git 进行版本管理。你可以在 [Releases](https://github.com/horldsence/lissio/releases) 页面查看可用版本。
 
 ## 开源协议
 
@@ -416,16 +416,16 @@ cd src-tauri && cargo test
 - [libautomotive](https://crates.io/crates/libautomotive)
 
 <!-- links -->
-[contributors-shield]: https://img.shields.io/github/contributors/horldsence/vofa-next.svg?style=flat-square
-[contributors-url]: https://github.com/horldsence/vofa-next/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/horldsence/vofa-next.svg?style=flat-square
-[forks-url]: https://github.com/horldsence/vofa-next/network/members
-[stars-shield]: https://img.shields.io/github/stars/horldsence/vofa-next.svg?style=flat-square
-[stars-url]: https://github.com/horldsence/vofa-next/stargazers
-[issues-shield]: https://img.shields.io/github/issues/horldsence/vofa-next.svg?style=flat-square
-[issues-url]: https://github.com/horldsence/vofa-next/issues
-[license-shield]: https://img.shields.io/github/license/horldsence/vofa-next.svg?style=flat-square
-[license-url]: https://github.com/horldsence/vofa-next/blob/master/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/horldsence/lissio.svg?style=flat-square
+[contributors-url]: https://github.com/horldsence/lissio/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/horldsence/lissio.svg?style=flat-square
+[forks-url]: https://github.com/horldsence/lissio/network/members
+[stars-shield]: https://img.shields.io/github/stars/horldsence/lissio.svg?style=flat-square
+[stars-url]: https://github.com/horldsence/lissio/stargazers
+[issues-shield]: https://img.shields.io/github/issues/horldsence/lissio.svg?style=flat-square
+[issues-url]: https://github.com/horldsence/lissio/issues
+[license-shield]: https://img.shields.io/github/license/horldsence/lissio.svg?style=flat-square
+[license-url]: https://github.com/horldsence/lissio/blob/master/LICENSE
 
 ## 打赏
 

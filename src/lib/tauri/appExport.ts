@@ -467,7 +467,7 @@ export async function exportAppToFile(): Promise<void> {
   try {
     const snap = collectSnapshot();
     const json = serializeSnapshot(snap);
-    const ok = await saveJsonFile('vofa-next-backup', json);
+    const ok = await saveJsonFile('lissio-backup', json);
     if (ok) {
       notify.info(t(lang, 'backupExportSuccess'), t(lang, 'backupExportSuccessDesc'), {
         source: 'exportConfig',
@@ -504,7 +504,7 @@ export async function exportSectionsToFile(sections: BackupSection[]): Promise<b
   const lang = useAppStore.getState().lang;
   try {
     const snap = collectPartialSnapshot(sections);
-    const ok = await saveJsonFile('vofa-next-backup', serializeSnapshot(snap));
+    const ok = await saveJsonFile('lissio-backup', serializeSnapshot(snap));
     if (ok) {
       notify.info(t(lang, 'backupExportSuccess'), t(lang, 'backupExportSuccessDesc'), {
         source: 'exportConfig',

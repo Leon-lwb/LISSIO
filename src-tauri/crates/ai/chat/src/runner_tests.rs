@@ -7,16 +7,16 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::Stream;
-use parking_lot::Mutex;
-use provider::{
+use llm::{
     AiProviderConfig, ChatMessageDto, ChatRoleDto, ChatTurnOutcome, ProviderEvent, ToolCallDto,
     ToolSpecDto,
 };
+use parking_lot::Mutex;
 use serde_json::Value;
 
 use crate::events::{AiChatEvent, EventSink};
 use crate::runner::{run_chat, ChatPayload, ChatTaskRegistry, ToolExecutor, TurnProvider};
-use vofa_core::Result;
+use data_model::Result;
 
 /// 脚本化回合: 每轮弹出预置产物;额外记录每轮收到的历史快照。
 struct MockTurn {
@@ -259,7 +259,7 @@ async fn cancel_flag_aborts_turn() {
     .await;
     assert!(matches!(
         result,
-        Err(vofa_core::Error::Ai(error::AiError::Cancelled))
+        Err(data_model::Error::Ai(error::AiError::Cancelled))
     ));
     let events = events.lock();
     assert!(events.iter().any(|e| matches!(e, AiChatEvent::Cancelled)));

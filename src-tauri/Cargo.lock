@@ -18,30 +18,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ai"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "async-trait",
- "can_types",
- "chat",
- "error",
- "keyring",
- "log",
- "mcp_client",
- "mcp_server",
- "parking_lot",
- "provider",
- "security-framework 3.7.0",
- "serde",
- "serde_json",
- "session",
- "tauri",
- "tokio",
- "vofa_core",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -107,37 +83,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
-name = "app_state"
+name = "app"
 version = "0.1.2"
 dependencies = [
- "buffer_databuffer",
  "buffer_graph",
- "buffer_raw",
- "can_types",
+ "bus",
+ "can",
  "criterion",
- "data_bus",
- "data_plane",
- "dispatcher",
- "dsp_fft",
- "dsp_filter",
- "dsp_measure",
- "dsp_window",
+ "data-model",
  "error",
- "gpu_core",
+ "evaluator",
+ "events",
+ "filter",
+ "gpu",
  "log",
- "logic_types",
- "notify_events",
+ "logic",
+ "measurement",
  "parking_lot",
- "runtime",
+ "pipeline",
+ "raw-data",
  "rustc-hash 2.1.3",
  "schema_types",
  "serde",
  "serde_json",
+ "spectrum",
  "stream",
  "subscription",
  "tauri",
  "tokio",
- "vofa_core",
+ "waveform",
 ]
 
 [[package]]
@@ -352,27 +326,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
-name = "automotive_can"
+name = "automotive"
 version = "0.1.2"
 dependencies = [
  "async-trait",
- "can_types",
+ "can",
+ "data-model",
  "error",
  "log",
  "parking_lot",
+ "protocol",
  "protocol_can_bridge",
- "protocol_engine",
  "tokio",
- "transport_core",
- "vofa_core",
+ "transport",
 ]
 
 [[package]]
 name = "automotive_diag"
 version = "0.1.2"
 dependencies = [
+ "data-model",
  "libautomotive",
- "vofa_core",
 ]
 
 [[package]]
@@ -380,14 +354,14 @@ name = "automotive_isotp"
 version = "0.1.2"
 dependencies = [
  "async-trait",
- "can_types",
+ "can",
+ "data-model",
  "diagnostic",
  "error",
  "log",
  "thiserror 1.0.69",
  "tokio",
- "transport_core",
- "vofa_core",
+ "transport",
 ]
 
 [[package]]
@@ -586,60 +560,30 @@ dependencies = [
 ]
 
 [[package]]
-name = "buffer"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "buffer_databuffer",
- "log",
- "serde",
- "serde_json",
- "tauri",
- "tokio",
- "vofa_core",
- "window-vibrancy",
-]
-
-[[package]]
-name = "buffer_databuffer"
-version = "0.1.2"
-dependencies = [
- "buffer_ring",
- "criterion",
- "parking_lot",
- "serde",
- "serde_json",
- "vofa_core",
-]
-
-[[package]]
 name = "buffer_graph"
 version = "0.1.2"
 dependencies = [
  "criterion",
- "serde",
- "serde_json",
- "vofa_core",
-]
-
-[[package]]
-name = "buffer_raw"
-version = "0.1.2"
-dependencies = [
- "base64 0.22.1",
+ "data-model",
  "serde",
  "serde_json",
 ]
-
-[[package]]
-name = "buffer_ring"
-version = "0.1.2"
 
 [[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
+
+[[package]]
+name = "bus"
+version = "0.1.2"
+dependencies = [
+ "log",
+ "parking_lot",
+ "serde",
+ "tokio",
+]
 
 [[package]]
 name = "bytemuck"
@@ -711,50 +655,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "can_bridge"
+name = "can"
 version = "0.1.2"
 dependencies = [
- "can_types",
+ "data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "can-transport"
+version = "0.1.2"
+dependencies = [
+ "can",
+ "data-model",
  "error",
  "log",
  "nusb",
  "serialport",
  "thiserror 1.0.69",
  "tokio",
- "vofa_core",
-]
-
-[[package]]
-name = "can_load"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "can_types",
- "error",
- "log",
- "subscription",
- "tauri",
- "tokio",
- "vofa_core",
-]
-
-[[package]]
-name = "can_transport"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "can_types",
- "schema_types",
- "tauri",
- "vofa_core",
-]
-
-[[package]]
-name = "can_types"
-version = "0.1.2"
-dependencies = [
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -863,17 +783,30 @@ name = "chat"
 version = "0.1.2"
 dependencies = [
  "async-trait",
+ "chat-session",
+ "data-model",
  "error",
  "futures",
+ "llm",
  "log",
- "mcp_client",
+ "mcp-client",
  "parking_lot",
- "provider",
  "serde",
  "serde_json",
- "session",
  "tokio",
- "vofa_core",
+]
+
+[[package]]
+name = "chat-session"
+version = "0.1.2"
+dependencies = [
+ "data-model",
+ "error",
+ "llm",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1285,54 +1218,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "data_bus"
+name = "data-model"
 version = "0.1.2"
 dependencies = [
- "log",
- "parking_lot",
- "serde",
- "tokio",
-]
-
-[[package]]
-name = "data_plane"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "buffer_databuffer",
- "buffer_graph",
- "buffer_raw",
- "can_types",
- "criterion",
- "data_bus",
- "dsp_fft",
- "dsp_filter",
- "dsp_window",
- "engine",
- "eval",
- "frame_decoder",
- "kind",
- "log",
- "logic_decoder",
- "logic_types",
- "lower",
- "notify_events",
- "parking_lot",
- "protocol_can_bridge",
- "protocol_engine",
- "protocol_float",
- "rustc-hash 2.1.3",
- "schema_engine",
- "schema_types",
- "scirs2-core",
+ "error",
  "serde",
  "serde_json",
- "tauri",
- "testkit",
- "tokio",
- "transport_core",
- "trigger",
- "vofa_core",
 ]
 
 [[package]]
@@ -1354,13 +1245,6 @@ checksum = "708b509edf7889e53d7efb0ffadd994cc6c2345ccb62f55cfd6b0682165e4fa6"
 dependencies = [
  "dbus",
  "zeroize",
-]
-
-[[package]]
-name = "debug"
-version = "0.1.2"
-dependencies = [
- "tauri",
 ]
 
 [[package]]
@@ -1441,10 +1325,10 @@ dependencies = [
 name = "diagnostic"
 version = "0.1.2"
 dependencies = [
- "can_types",
+ "can",
+ "data-model",
  "serde",
  "serde_json",
- "vofa_core",
 ]
 
 [[package]]
@@ -1488,35 +1372,6 @@ dependencies = [
  "block2",
  "libc",
  "objc2",
-]
-
-[[package]]
-name = "dispatcher"
-version = "0.1.2"
-dependencies = [
- "buffer_databuffer",
- "buffer_raw",
- "can_types",
- "data_plane",
- "dsp_fft",
- "dsp_filter",
- "dsp_window",
- "engine",
- "log",
- "logic_types",
- "parking_lot",
- "serde",
- "stream",
- "vofa_core",
-]
-
-[[package]]
-name = "display"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "tauri",
- "vofa_core",
 ]
 
 [[package]]
@@ -1591,40 +1446,6 @@ name = "dpi"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d8b14ccef22fc6f5a8f4d7d768562a182c04ce9a3b3157b91390b52ddfdf1a76"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "dsp_fft"
-version = "0.1.2"
-dependencies = [
- "dsp_window",
- "log",
- "realfft",
- "rustfft",
- "serde",
-]
-
-[[package]]
-name = "dsp_filter"
-version = "0.1.2"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "dsp_measure"
-version = "0.1.2"
-dependencies = [
- "dsp_fft",
- "serde",
-]
-
-[[package]]
-name = "dsp_window"
-version = "0.1.2"
 dependencies = [
  "serde",
 ]
@@ -1713,26 +1534,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "66b7e2430c6dff6a955451e2cfc438f09cea1965a9d6f87f7e3b90decc014099"
 
 [[package]]
-name = "engine"
-version = "0.1.2"
-dependencies = [
- "buffer_graph",
- "criterion",
- "dsp_fft",
- "dsp_filter",
- "dsp_window",
- "eval",
- "frame_decoder",
- "hir",
- "kind",
- "lower",
- "petgraph",
- "plane",
- "testkit",
- "trigger",
-]
-
-[[package]]
 name = "enumflags2"
 version = "0.7.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1805,17 +1606,36 @@ version = "0.1.2"
 dependencies = [
  "buffer_graph",
  "criterion",
- "dsp_fft",
- "dsp_filter",
- "frame_decoder",
+ "data-model",
+ "filter",
+ "frame-decoder",
+ "graph-testkit",
  "hir",
  "kind",
  "lower",
  "plane",
  "rustc-hash 2.1.3",
- "testkit",
+ "spectrum",
  "trigger",
- "vofa_core",
+]
+
+[[package]]
+name = "evaluator"
+version = "0.1.2"
+dependencies = [
+ "can",
+ "data-model",
+ "filter",
+ "graph",
+ "log",
+ "logic",
+ "parking_lot",
+ "pipeline",
+ "raw-data",
+ "serde",
+ "spectrum",
+ "stream",
+ "waveform",
 ]
 
 [[package]]
@@ -1836,6 +1656,17 @@ checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
  "event-listener",
  "pin-project-lite",
+]
+
+[[package]]
+name = "events"
+version = "0.1.2"
+dependencies = [
+ "data-model",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin-notification",
 ]
 
 [[package]]
@@ -1891,6 +1722,14 @@ checksum = "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759"
 dependencies = [
  "cfg-if",
  "libc",
+]
+
+[[package]]
+name = "filter"
+version = "0.1.2"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1971,7 +1810,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "frame_decoder"
+name = "frame-decoder"
 version = "0.1.2"
 dependencies = [
  "criterion",
@@ -2392,6 +2231,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpu"
+version = "0.1.2"
+dependencies = [
+ "bytemuck",
+ "criterion",
+ "log",
+ "pollster",
+ "thiserror 1.0.69",
+ "wgpu",
+]
+
+[[package]]
 name = "gpu-allocator"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2406,56 +2257,56 @@ dependencies = [
 ]
 
 [[package]]
-name = "gpu_core"
-version = "0.1.2"
-dependencies = [
- "bytemuck",
- "criterion",
- "log",
- "pollster",
- "thiserror 1.0.69",
- "wgpu",
-]
-
-[[package]]
 name = "graph"
 version = "0.1.2"
 dependencies = [
- "app_state",
  "buffer_graph",
- "data_bus",
- "error",
- "graph_ops",
- "log",
- "logic_types",
+ "criterion",
+ "eval",
+ "filter",
+ "frame-decoder",
+ "graph-testkit",
+ "hir",
+ "kind",
+ "lower",
  "petgraph",
+ "plane",
+ "spectrum",
+ "trigger",
+]
+
+[[package]]
+name = "graph-testkit"
+version = "0.1.2"
+dependencies = [
+ "buffer_graph",
+ "data-model",
+ "eval",
+ "filter",
+ "kind",
  "schema_types",
- "serde",
- "serde_json",
- "tauri",
- "tokio",
- "vofa_core",
+ "spectrum",
+ "trigger",
 ]
 
 [[package]]
 name = "graph_ops"
 version = "0.1.2"
 dependencies = [
- "app_state",
+ "app",
  "buffer_graph",
  "criterion",
- "data_plane",
- "dispatcher",
+ "data-model",
  "error",
- "notify_events",
+ "evaluator",
+ "events",
+ "graph-testkit",
  "parking_lot",
- "runtime",
+ "pipeline",
  "schema_types",
  "serde",
  "tauri",
- "testkit",
  "tokio",
- "vofa_core",
 ]
 
 [[package]]
@@ -2606,10 +2457,10 @@ version = "0.1.2"
 dependencies = [
  "buffer_graph",
  "error",
+ "graph-testkit",
  "kind",
  "petgraph",
  "rustc-hash 2.1.3",
- "testkit",
 ]
 
 [[package]]
@@ -3205,14 +3056,13 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 name = "kind"
 version = "0.1.2"
 dependencies = [
- "dsp_fft",
- "dsp_filter",
- "dsp_window",
+ "data-model",
+ "filter",
  "schema_types",
  "serde",
  "serde_json",
+ "spectrum",
  "trigger",
- "vofa_core",
 ]
 
 [[package]]
@@ -3335,6 +3185,56 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
+name = "lissio"
+version = "0.1.2"
+dependencies = [
+ "app",
+ "async-trait",
+ "buffer_graph",
+ "bus",
+ "can",
+ "chat",
+ "chat-session",
+ "data-model",
+ "error",
+ "evaluator",
+ "events",
+ "graph_ops",
+ "keyring",
+ "llm",
+ "log",
+ "logic",
+ "mcp-client",
+ "mcp-server",
+ "menu_shell",
+ "parking_lot",
+ "petgraph",
+ "pipeline",
+ "reqwest",
+ "schema_types",
+ "security-framework 3.7.0",
+ "semver",
+ "serde",
+ "serde_json",
+ "stream",
+ "subscription",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-log",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-store",
+ "tauri-plugin-updater",
+ "tokio",
+ "update_flow",
+ "waveform",
+ "window-vibrancy",
+]
+
+[[package]]
 name = "litemap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3345,6 +3245,18 @@ name = "litrs"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
+
+[[package]]
+name = "llm"
+version = "0.1.2"
+dependencies = [
+ "data-model",
+ "error",
+ "futures",
+ "genai",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "lock_api"
@@ -3362,33 +3274,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
-name = "logic_decoder"
+name = "logic"
 version = "0.1.2"
 dependencies = [
- "logic_types",
- "protocol_engine",
- "vofa_core",
+ "data-model",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
-name = "logic_types"
+name = "logic_decoder"
 version = "0.1.2"
 dependencies = [
- "serde",
- "serde_json",
- "vofa_core",
+ "data-model",
+ "logic",
+ "protocol",
 ]
 
 [[package]]
 name = "lower"
 version = "0.1.2"
 dependencies = [
- "dsp_filter",
+ "filter",
+ "graph-testkit",
  "hir",
  "kind",
  "plane",
  "rustc-hash 2.1.3",
- "testkit",
  "trigger",
 ]
 
@@ -3458,9 +3370,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "mcp_client"
+name = "mcp-client"
 version = "0.1.2"
 dependencies = [
+ "data-model",
  "error",
  "futures",
  "log",
@@ -3469,33 +3382,39 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
- "vofa_core",
 ]
 
 [[package]]
-name = "mcp_server"
+name = "mcp-server"
 version = "0.1.2"
 dependencies = [
- "app_state",
+ "app",
  "async-trait",
  "axum",
- "buffer_databuffer",
  "buffer_graph",
- "buffer_raw",
- "can_types",
- "data_plane",
+ "can",
+ "data-model",
  "error",
  "graph_ops",
  "log",
- "logic_types",
+ "logic",
  "parking_lot",
+ "pipeline",
+ "raw-data",
  "rmcp",
- "runtime",
  "serde",
  "serde_json",
  "tauri",
  "tokio",
- "vofa_core",
+ "waveform",
+]
+
+[[package]]
+name = "measurement"
+version = "0.1.2"
+dependencies = [
+ "serde",
+ "spectrum",
 ]
 
 [[package]]
@@ -3684,14 +3603,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "net"
+name = "network"
 version = "0.1.2"
 dependencies = [
+ "data-model",
  "error",
  "log",
  "thiserror 1.0.69",
  "tokio",
- "vofa_core",
 ]
 
 [[package]]
@@ -3745,17 +3664,6 @@ dependencies = [
  "serde",
  "tauri-winrt-notification",
  "zbus",
-]
-
-[[package]]
-name = "notify_events"
-version = "0.1.2"
-dependencies = [
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin-notification",
- "vofa_core",
 ]
 
 [[package]]
@@ -4282,13 +4190,41 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 name = "pipeline"
 version = "0.1.2"
 dependencies = [
- "app_state",
- "error",
+ "app",
+ "buffer_graph",
+ "bus",
+ "can",
+ "can-transport",
+ "criterion",
+ "data-model",
+ "eval",
+ "events",
+ "filter",
+ "frame-decoder",
+ "graph",
+ "graph-testkit",
+ "kind",
  "log",
- "notify_events",
+ "logic",
+ "logic_decoder",
+ "lower",
+ "parking_lot",
+ "protocol",
+ "protocol_can_bridge",
+ "protocol_float",
+ "raw-data",
+ "rustc-hash 2.1.3",
+ "schema",
+ "schema_types",
+ "scirs2-core",
  "serde",
+ "serde_json",
+ "spectrum",
  "tauri",
- "vofa_core",
+ "tokio",
+ "transport",
+ "trigger",
+ "waveform",
 ]
 
 [[package]]
@@ -4312,11 +4248,11 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 name = "plane"
 version = "0.1.2"
 dependencies = [
+ "graph-testkit",
  "hir",
  "kind",
  "petgraph",
  "rustc-hash 2.1.3",
- "testkit",
 ]
 
 [[package]]
@@ -4549,42 +4485,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
-name = "protocol_can_bridge"
+name = "protocol"
 version = "0.1.2"
 dependencies = [
- "can_types",
- "protocol_engine",
- "vofa_core",
+ "can",
+ "data-model",
+ "logic",
+ "serde",
 ]
 
 [[package]]
-name = "protocol_engine"
+name = "protocol_can_bridge"
 version = "0.1.2"
 dependencies = [
- "can_types",
- "logic_types",
- "serde",
- "vofa_core",
+ "can",
+ "data-model",
+ "protocol",
 ]
 
 [[package]]
 name = "protocol_float"
 version = "0.1.2"
 dependencies = [
- "protocol_engine",
- "vofa_core",
-]
-
-[[package]]
-name = "provider"
-version = "0.1.2"
-dependencies = [
- "error",
- "futures",
- "genai",
- "serde",
- "serde_json",
- "vofa_core",
+ "data-model",
+ "protocol",
 ]
 
 [[package]]
@@ -4756,6 +4680,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca45419789ae5a7899559e9512e58ca889e41f04f1f2445e9f4b290ceccd1d08"
 
 [[package]]
+name = "raw-data"
+version = "0.1.2"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4771,17 +4704,6 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-foundation",
  "objc2-quartz-core",
-]
-
-[[package]]
-name = "rawdata"
-version = "0.1.2"
-dependencies = [
- "app_state",
- "serde",
- "tauri",
- "tokio",
- "vofa_core",
 ]
 
 [[package]]
@@ -5023,37 +4945,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "runtime"
-version = "0.1.2"
-dependencies = [
- "buffer_graph",
- "can_bridge",
- "data_plane",
- "dsp_fft",
- "engine",
- "frame_decoder",
- "kind",
- "log",
- "logic_decoder",
- "logic_types",
- "parking_lot",
- "protocol_can_bridge",
- "protocol_engine",
- "protocol_float",
- "rustc-hash 2.1.3",
- "schema_engine",
- "schema_types",
- "serde",
- "serde_json",
- "stream",
- "tauri",
- "tokio",
- "transport_core",
- "trigger",
- "vofa_core",
-]
-
-[[package]]
 name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5211,31 +5102,31 @@ dependencies = [
 ]
 
 [[package]]
-name = "schema_engine"
+name = "schema"
 version = "0.1.2"
 dependencies = [
- "can_types",
+ "can",
+ "data-model",
+ "logic",
  "logic_decoder",
- "logic_types",
+ "protocol",
  "protocol_can_bridge",
- "protocol_engine",
  "protocol_float",
  "schema_types",
  "serde",
  "serde_json",
- "vofa_core",
 ]
 
 [[package]]
 name = "schema_types"
 version = "0.1.2"
 dependencies = [
- "can_types",
+ "can",
+ "data-model",
  "diagnostic",
- "logic_types",
+ "logic",
  "serde",
  "serde_json",
- "vofa_core",
 ]
 
 [[package]]
@@ -5554,12 +5445,12 @@ dependencies = [
 name = "serial"
 version = "0.1.2"
 dependencies = [
+ "data-model",
  "error",
  "log",
  "serialport",
  "thiserror 1.0.69",
  "tokio",
- "vofa_core",
  "windows-sys 0.52.0",
 ]
 
@@ -5611,19 +5502,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "170fb83ab34de17dc69aa7c67482b22218ddb85da56546f9bd6b929e32a05930"
 dependencies = [
  "stable_deref_trait",
-]
-
-[[package]]
-name = "session"
-version = "0.1.2"
-dependencies = [
- "error",
- "log",
- "parking_lot",
- "provider",
- "serde",
- "serde_json",
- "vofa_core",
 ]
 
 [[package]]
@@ -5761,6 +5639,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "spectrum"
+version = "0.1.2"
+dependencies = [
+ "log",
+ "realfft",
+ "rustfft",
+ "serde",
+]
+
+[[package]]
 name = "spirv"
 version = "0.4.0+sdk-1.4.341.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5798,19 +5686,19 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 name = "stream"
 version = "0.1.2"
 dependencies = [
- "buffer_databuffer",
- "buffer_raw",
- "can_types",
- "data_plane",
+ "can",
+ "data-model",
  "error",
  "log",
- "logic_types",
+ "logic",
  "parking_lot",
+ "pipeline",
+ "raw-data",
  "serde",
  "serde_json",
  "tauri",
  "tokio",
- "vofa_core",
+ "waveform",
 ]
 
 [[package]]
@@ -6484,21 +6372,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "testkit"
-version = "0.1.2"
-dependencies = [
- "buffer_graph",
- "dsp_fft",
- "dsp_filter",
- "dsp_window",
- "eval",
- "kind",
- "schema_types",
- "trigger",
- "vofa_core",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6869,23 +6742,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "transport_core"
+name = "transport"
 version = "0.1.2"
 dependencies = [
  "async-trait",
- "can_bridge",
- "can_types",
+ "can",
+ "can-transport",
+ "data-model",
  "error",
  "log",
- "logic_types",
- "net",
+ "logic",
+ "network",
  "parking_lot",
  "schema_types",
  "serde",
  "serial",
  "thiserror 1.0.69",
  "tokio",
- "vofa_core",
 ]
 
 [[package]]
@@ -7050,13 +6923,13 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 name = "update_flow"
 version = "0.1.2"
 dependencies = [
+ "data-model",
  "error",
  "reqwest",
  "serde",
  "serde_json",
  "tauri",
  "tauri-plugin-updater",
- "vofa_core",
 ]
 
 [[package]]
@@ -7124,57 +6997,6 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
-
-[[package]]
-name = "vofa-next"
-version = "0.1.2"
-dependencies = [
- "ai",
- "app_state",
- "buffer",
- "can_load",
- "can_transport",
- "data_plane",
- "debug",
- "dispatcher",
- "display",
- "graph",
- "log",
- "menu_shell",
- "notify_events",
- "parking_lot",
- "pipeline",
- "rawdata",
- "reqwest",
- "semver",
- "serde",
- "serde_json",
- "stream",
- "subscription",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-log",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-store",
- "tauri-plugin-updater",
- "tokio",
- "update_flow",
- "window-vibrancy",
-]
-
-[[package]]
-name = "vofa_core"
-version = "0.1.2"
-dependencies = [
- "can_types",
- "error",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "vswhom"
@@ -7296,6 +7118,17 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+]
+
+[[package]]
+name = "waveform"
+version = "0.1.2"
+dependencies = [
+ "criterion",
+ "data-model",
+ "parking_lot",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

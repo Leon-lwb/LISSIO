@@ -1,4 +1,4 @@
-use protocol_engine::{FeedOutput, ProtocolEngine};
+use protocol::{FeedOutput, ProtocolEngine};
 
 /// RawData 协议引擎 — 不解析, 仅透传
 ///
@@ -30,7 +30,7 @@ impl ProtocolEngine for RawDataEngine {
         "RawData"
     }
 
-    fn encode_frame(&mut self, _frame: &vofa_core::DataFrame) -> Vec<u8> {
+    fn encode_frame(&mut self, _frame: &data_model::DataFrame) -> Vec<u8> {
         // RawData 无帧概念, DataFrame 重编码语义不符
         Vec::new()
     }

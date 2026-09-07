@@ -1,8 +1,8 @@
 //! SLCAN 协议集成测试
 
-use can_types::{CanDirection, CanFrame};
+use can::{CanDirection, CanFrame};
+use protocol::{FeedOutput, ProtocolEngine};
 use protocol_can_bridge::SlcanEngine;
-use protocol_engine::{FeedOutput, ProtocolEngine};
 
 /// 解析标准数据帧: t123401020304\r -> id=0x123, dlc=4, data=[0x01,0x02,0x03,0x04]
 #[test]

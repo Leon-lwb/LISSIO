@@ -1,0 +1,24 @@
+[package]
+name = "automotive"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+data_model = { workspace = true }
+can = { workspace = true }
+transport = { workspace = true }
+protocol = { workspace = true }
+protocol_can_bridge = { workspace = true }
+tokio = { workspace = true }
+log = { workspace = true }
+async-trait = { workspace = true }
+parking_lot = { workspace = true }
+error = { workspace = true }
+[package.metadata.lissio]
+domain = "transport"
+layer = 4
+responsibility = "Focused crate responsibility"

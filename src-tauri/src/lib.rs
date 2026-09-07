@@ -1,22 +1,25 @@
-//! `vofa-next` 二进制组合根 — 只做插件装配、状态管理与命令注册。
+//! `lissio` 二进制组合根 — 只做插件装配、状态管理与命令注册。
 //!
 //! 层级: L5 (顶端)。全部业务逻辑位于 `crates/<层>/*`; 后台任务 (ticker /
 //! 工作区防抖落盘 / 启动页兜底) 在 [`app_state`] 的 `runtime` 模块。
 
+mod commands;
+mod config_migration;
+
 // 必须 glob 导入: `#[tauri::command]` 生成的 `__cmd__*` / `__tauri_command_name_*`
 // 宏 (`#[macro_export]`, doc-hidden) 只在 glob 导入时进入本 crate 宏命名空间,
 // `generate_handler!` 展开时需要它们在作用域内。
-pub use ai::*;
-pub use buffer::*;
-pub use can_load::*;
-pub use can_transport::*;
-pub use debug::*;
-pub use display::*;
-pub use graph::*;
-pub use pipeline::*;
-pub use rawdata::*;
+pub use commands::ai::*;
+pub use commands::buffer::*;
+pub use commands::can_load::*;
+pub use commands::can_transport::*;
+pub use commands::debug::*;
+pub use commands::display::*;
+pub use commands::graph::*;
+pub use commands::pipeline::*;
+pub use commands::rawdata::*;
 
-pub use app_state::AppState;
+pub use app::AppState;
 pub use menu_shell::{build_menu, ids, on_menu_event};
 pub use update_flow::*;
 
@@ -68,7 +71,14 @@ pub fn run() {
                 .path()
                 .app_config_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
-            app.manage(ai::AiState::new(ai_config_dir.clone()));
+            match config_migration::migrate_legacy_config(&ai_config_dir) {
+                Ok(files) if !files.is_empty() => {
+                    log::info!("migrated legacy Lissio state: {}", files.join(", "));
+                }
+                Err(error) => log::warn!("legacy configuration migration failed: {error}"),
+                _ => {}
+            }
+            app.manage(commands::ai::AiState::new(ai_config_dir.clone()));
 
             // 工作区启动恢复: widget 配置 + 画布位置 + tab 元数据 + 各 tab 源图
             // 落盘在 app config dir 的 workspace.json; 恢复在后台任务执行 (不阻塞
@@ -79,7 +89,7 @@ pub fn run() {
             let restore_dir = ai_config_dir.clone();
             tauri::async_runtime::spawn(async move {
                 let state = app_handle.state::<AppState>();
-                let restored = graph::restore_workspace(&state, &restore_dir).await;
+                let restored = commands::graph::restore_workspace(&state, &restore_dir).await;
                 state.signal_restore_done();
                 log::info!(
                     "workspace restore: {}",
@@ -88,7 +98,7 @@ pub fn run() {
             });
 
             // 后台任务: 工作区防抖落盘 / 推送 ticker / 启动页兜底
-            app_state::spawn_background_tasks(app.handle(), ai_config_dir);
+            app::spawn_background_tasks(app.handle(), ai_config_dir);
 
             Ok(())
         })
@@ -214,9 +224,9 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // 退出 flush: 把未落盘的工作区变更同步写盘 (逻辑在 app_state::runtime)
+            // 退出 flush: 把未落盘的工作区变更同步写盘 (逻辑在 app::runtime)
             if let tauri::RunEvent::Exit = event {
-                app_state::flush_workspace_on_exit(app);
+                app::flush_workspace_on_exit(app);
             }
         });
 }

@@ -1,6 +1,6 @@
 # AI 功能架构 (AI 对话 + MCP 双向 + 内置工具层)
 
-VOFA-NEXT 的 AI 能力统一规划在 Rust 后端,前端只是薄 UI。三条通道:
+Lissio 的 AI 能力统一规划在 Rust 后端,前端只是薄 UI。三条通道:
 
 1. **AI 对话**(出站):前端聊天面板 → Tauri 命令 → 后端多 provider 聚合层调用 LLM,
    流式增量经 `Channel` 推回;模型可调用工具(工具调用循环)——工具来自
@@ -239,7 +239,7 @@ rmcp handler 只做参数包装——内置原生工具执行器调用同一批�
 
 ## API key 存储
 
-密钥经 `ai_keychain_*` 命令存系统钥匙串(`service = "vofa-next"`,
+密钥经 `ai_keychain_*` 命令存系统钥匙串(`service = "lissio"`,
 `user = "ai-api-key-{adapter}"`,按适配器隔离);settings.json 与配置备份文件中
 恒为空串,启动时从钥匙串水合,旧版本明文自动迁移。发送前前端按后端
 `validate_config` 同规则预检(`src/settings/aiProvider.ts`),配置缺失在面板

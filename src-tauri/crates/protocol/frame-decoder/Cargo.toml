@@ -1,0 +1,25 @@
+[package]
+name = "frame-decoder"
+description = "Lissio 帧解码状态机 — 镜像前端 DecoderBlock 块列表, 字节流 → 帧解析 → 输出端口值"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+schema_types = { workspace = true }
+log = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "frame_decoder_bench"
+harness = false
+[package.metadata.lissio]
+domain = "protocol"
+layer = 1
+responsibility = "Lissio 帧解码状态机 — 镜像前端 DecoderBlock 块列表, 字节流 → 帧解析 → 输出端口值"

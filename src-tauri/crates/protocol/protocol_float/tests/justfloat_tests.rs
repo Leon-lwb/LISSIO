@@ -1,8 +1,8 @@
 //! 集成测试: JustFloat 协议引擎
 
-use protocol_engine::{FeedOutput, ProtocolEngine};
+use data_model::DataFrame;
+use protocol::{FeedOutput, ProtocolEngine};
 use protocol_float::JustFloatEngine;
-use vofa_core::DataFrame;
 
 /// JustFloat 帧尾: 0x00 0x00 0x80 0x7f (LE +Inf)
 const TAIL: [u8; 4] = [0x00, 0x00, 0x80, 0x7f];

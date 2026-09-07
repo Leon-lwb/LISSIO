@@ -1,3 +1,4 @@
+use data_model::{PortInfo, Result, SerialConfig, INGEST_CHANNEL_CAPACITY};
 use error::TransportError;
 use serialport::{DataBits, FlowControl, Parity, SerialPortType, StopBits};
 use std::io::{Read, Write};
@@ -5,7 +6,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
-use vofa_core::{PortInfo, Result, SerialConfig, INGEST_CHANNEL_CAPACITY};
 
 #[cfg(windows)]
 use crate::windows_ports::port_descriptions;
@@ -72,18 +72,18 @@ pub fn spawn(
             _ => DataBits::Eight,
         })
         .parity(match config.parity {
-            vofa_core::Parity::Odd => Parity::Odd,
-            vofa_core::Parity::Even => Parity::Even,
-            vofa_core::Parity::None => Parity::None,
+            data_model::Parity::Odd => Parity::Odd,
+            data_model::Parity::Even => Parity::Even,
+            data_model::Parity::None => Parity::None,
         })
         .stop_bits(match config.stop_bits {
-            vofa_core::StopBits::Two => StopBits::Two,
-            vofa_core::StopBits::One => StopBits::One,
+            data_model::StopBits::Two => StopBits::Two,
+            data_model::StopBits::One => StopBits::One,
         })
         .flow_control(match config.flow_control {
-            vofa_core::FlowControl::Software => FlowControl::Software,
-            vofa_core::FlowControl::Hardware => FlowControl::Hardware,
-            vofa_core::FlowControl::None => FlowControl::None,
+            data_model::FlowControl::Software => FlowControl::Software,
+            data_model::FlowControl::Hardware => FlowControl::Hardware,
+            data_model::FlowControl::None => FlowControl::None,
         })
         .timeout(Duration::from_millis(50))
         .open()

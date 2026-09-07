@@ -4,13 +4,13 @@
 //! [`TurnRecorder`];回合终态 (Done / Cancelled / Error) 后调用 [`TurnRecorder::finish`]
 //! 得到待落盘条目。语义与前端视图聚合规则一致:
 //! - 文本与工具卡片聚合为一条 assistant 条目
-//! - `Error` 事件单独产出一条 error 条目 (不进 LLM 历史, 见 `session::history`)
+//! - `Error` 事件单独产出一条 error 条目 (不进 LLM 历史, 见 `chat_session::history`)
 //! - 未收到结果的工具调用在收束时标记为失败, 避免持久化"永远运行中"的卡片
 
 use std::collections::BTreeMap;
 
+use chat_session::{ToolRunDto, ViewItemDto, ViewRoleDto};
 use serde_json::Value;
-use session::{ToolRunDto, ViewItemDto, ViewRoleDto};
 
 use crate::events::AiChatEvent;
 

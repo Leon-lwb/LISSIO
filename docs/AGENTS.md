@@ -4,11 +4,13 @@
 
 ## 项目概览
 
-VOFA-NEXT:基于 Tauri 2 的跨平台串口数据上位机(波形 / 节点图 / 协议解析 / CAN 诊断)。
+Lissio:基于 Tauri 2 的跨平台串口数据上位机(波形 / 节点图 / 协议解析 / CAN 诊断)。
 
 - 前端:React 19 + TypeScript + Vite + Tailwind 4 + Zustand + React Flow,包管理用 **pnpm**
-- 后端:Rust workspace(`src-tauri/crates/`,40+ 个单一职责 crate),Tauri 2 + Tokio
-- 前后端通过 Tauri command + event 通信,事件契约在 `notify_events` crate,类型需前后端严格对齐
+- 后端:Rust workspace(`src-tauri/crates/<domain>/<crate>`),Tauri 2 + Tokio
+- 前后端通过 Tauri command + event 通信,事件契约在 `events` crate,类型需前后端严格对齐
+
+修改 Rust 前必须先读 `docs/architecture/crates.md`,并运行 `pnpm architecture` 查看定义者和反向依赖。
 
 ## 常用命令
 
@@ -31,7 +33,8 @@ pnpm tauri dev
 
 ```bash
 # 分层与依赖审查门禁 (CI 硬门槛)
-pnpm check:layers       # crate 分层: 每层只调前一层 + L0 基座豁免 + 组合根豁免 + 命名规则
+pnpm architecture       # 当前 crate 的领域、层级、职责、正反向依赖
+pnpm check:architecture # 二级领域目录、metadata、领域 DAG、层级和适配器隔离
 pnpm check:deps         # 第三方依赖版本统一 (workspace.dependencies 唯一登记)
 cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / 依赖来源
 ```
@@ -42,8 +45,8 @@ cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / �
 - `src/lib/` — 前端逻辑(hooks / tauri IPC 封装 / utils)
 - `src/types/` — 与后端对齐的 TS 类型(改 Rust 侧 serde 结构时必须同步)
 - `src/i18n/locales/{zh,en}.yml` — 所有用户可见文案走 i18n,中英双语同步添加
-- `src-tauri/src/lib.rs` — Tauri 入口,命令来自 `cmd_*` crates
-- `src-tauri/crates/` — 后端 workspace,命名即职责:`transport_*` 传输、`protocol_*` 协议、`buffer_*` 缓冲、`node_*` 节点图、`dsp_*` 信号处理、`pipeline_*` 数据平面、`cmd_*` Tauri 命令
+- `src-tauri/src/lib.rs` — Tauri 组合根;IPC 命令位于 `src/commands/*`
+- `src-tauri/crates/<domain>/<crate>` — 二级目录按功能域直观分区;依赖层由 manifest metadata 表达
 - `src-tauri/buffer/src/{frame_field,frame_checksum,command_frame}.rs` — 命令帧字节打包后端权威
 
 ## 编码约定
@@ -62,7 +65,7 @@ vibe coding 提速的是写代码,不是验证。提 PR 前必须亲自跑通以
 2. `pnpm test` 通过;新增功能 / 修复 bug 必须附带或更新对应测试
 3. `cd src-tauri && cargo test --workspace` 通过
 4. `cd src-tauri && cargo clippy --workspace --all-targets` 无新增警告
-5. `pnpm check:layers` 与 `pnpm check:deps` 通过 — 新 crate 不得直连 L1 crate(L1 类型经 `pipeline/runtime` 门面), 新第三方依赖必须先登记根 `[workspace.dependencies]`; 涉及依赖变更时 `cargo deny check` 无新增告警
+5. `pnpm check:architecture` 与 `pnpm check:deps` 通过 — 允许直接依赖任意更低层,禁止 facade;新第三方依赖必须先登记根 `[workspace.dependencies]`;涉及依赖变更时 `cargo deny check` 无新增告警
 6. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,两侧一起改并核对字段名逐一对应
 7. 涉及 UI 的改动,`pnpm tauri dev` 实际点开验证过,而不是"理论上没问题"
 

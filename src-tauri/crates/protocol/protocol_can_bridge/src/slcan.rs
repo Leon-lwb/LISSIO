@@ -1,8 +1,8 @@
 use std::fmt::Write as _;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use can_types::{CanDirection, CanFrame};
-use protocol_engine::{split_at_boundaries, FeedOutput, ProtocolEngine};
+use can::{CanDirection, CanFrame};
+use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
 
 /// slcan (Lawicel ASCII) 协议引擎
 ///
@@ -183,7 +183,7 @@ impl ProtocolEngine for SlcanEngine {
         "Slcan"
     }
 
-    fn encode_frame(&mut self, _frame: &vofa_core::DataFrame) -> Vec<u8> {
+    fn encode_frame(&mut self, _frame: &data_model::DataFrame) -> Vec<u8> {
         // CAN 协议无法从 DataFrame 重编码 (需走 encode_can), 语义不符
         Vec::new()
     }

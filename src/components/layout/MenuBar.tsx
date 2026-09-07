@@ -10,8 +10,8 @@ import { getAvailableDataPanelEntries, type DataPanelEntry } from '../../store/s
 import { openDataPanelAndReveal, openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
 import { t, type Lang } from '../../i18n';
 
-const APP_GITHUB = 'https://github.com/Horldsence/vofa-NEXT';
-const APP_DOCS = 'https://github.com/Horldsence/vofa-NEXT#readme';
+const APP_GITHUB = 'https://github.com/Horldsence/lissio';
+const APP_DOCS = 'https://github.com/Horldsence/lissio#readme';
 
 /// Windows 平台检测 — 仅 Windows 挂载自定义菜单栏。
 ///

@@ -1,6 +1,6 @@
 [package]
 name = "logic_decoder"
-description = "VOFA-NEXT 逻辑分析仪解码引擎 — UART/I2C/SPI"
+description = "Lissio 逻辑分析仪解码引擎 — UART/I2C/SPI"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,10 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-vofa_core = { workspace = true }
-logic_types = { workspace = true }
-protocol_engine = { workspace = true }
+data_model = { workspace = true }
+logic = { workspace = true }
+protocol = { workspace = true }
+[package.metadata.lissio]
+domain = "protocol"
+layer = 1
+responsibility = "Lissio 逻辑分析仪解码引擎 — UART/I2C/SPI"

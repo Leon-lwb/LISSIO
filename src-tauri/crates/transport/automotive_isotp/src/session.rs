@@ -3,7 +3,7 @@
 use diagnostic::IsoTpConfig;
 use std::sync::Arc;
 use tokio::sync::mpsc;
-use transport_core::CanBackend;
+use transport::CanBackend;
 
 use crate::error::AutomotiveError;
 use crate::state::IsoTpCmd;

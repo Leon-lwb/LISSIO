@@ -1,0 +1,20 @@
+[package]
+name = "menu_shell"
+description = "Lissio 原生菜单栏构建 + 菜单事件路由 (macOS/Windows/Linux)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+tauri = { workspace = true }
+tauri-plugin-opener = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 5
+responsibility = "Lissio 原生菜单栏构建 + 菜单事件路由 (macOS/Windows/Linux)"

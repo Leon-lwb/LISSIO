@@ -1,0 +1,23 @@
+[package]
+name = "kind"
+description = "Lissio 节点种类系统 — NodeKind + NodeDef + PortDomain + MathOp + DecoderBlockDef re-export"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+data_model = { workspace = true }
+filter = { workspace = true }
+spectrum = { workspace = true }
+trigger = { workspace = true }
+schema_types = { workspace = true }
+
+[package.metadata.lissio]
+domain = "graph"
+layer = 1
+responsibility = "Lissio 节点种类系统 — NodeKind + NodeDef + PortDomain + MathOp + DecoderBlockDef re-export"

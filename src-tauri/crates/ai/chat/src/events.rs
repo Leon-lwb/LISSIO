@@ -52,9 +52,9 @@ pub enum AiChatEvent {
     Cancelled,
     /// 发生错误,任务终止。
     Error {
-        /// 错误描述 (来自 [`vofa_core::Error`] 链)。
+        /// 错误描述 (来自 [`data_model::Error`] 链)。
         message: String,
-        /// 错误种类 ([`vofa_core::Error::kind()`]), 供前端本地化; 旧事件缺省为空。
+        /// 错误种类 ([`data_model::Error::kind()`]), 供前端本地化; 旧事件缺省为空。
         #[serde(default)]
         kind: String,
         /// 结构化字段 (adapter / model / rounds 等), 供前端本地化插值。

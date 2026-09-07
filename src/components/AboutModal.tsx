@@ -15,8 +15,8 @@ interface AboutModalProps {
 
 const APP_AUTHOR = 'Horldsence';
 const APP_LICENSE = 'GPLv2';
-const APP_GITHUB = 'https://github.com/Horldsence/vofa-NEXT';
-const APP_DOCS = 'https://github.com/Horldsence/vofa-NEXT#readme';
+const APP_GITHUB = 'https://github.com/Horldsence/lissio';
+const APP_DOCS = 'https://github.com/Horldsence/lissio#readme';
 
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const lang = useAppStore((s) => s.lang);

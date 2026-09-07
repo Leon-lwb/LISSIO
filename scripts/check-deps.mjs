@@ -3,7 +3,7 @@
  * check-deps.mjs — 第三方依赖版本统一机械校验
  *
  * 规则 (docs/architecture/crate-layers.md「第三方依赖版本统一」节):
- *   1. 全部 workspace 成员(含根 package vofa-next)的依赖必须以 `X = { workspace = true }`
+ *   1. 全部 workspace 成员(含根 package lissio)的依赖必须以 `X = { workspace = true }`
  *      继承根 [workspace.dependencies],禁止在成员 manifest 内联 `version` 或 `path`;
  *   2. 继承项不得重复书写 version(cargo 本身禁止,此处双保险);
  *   3. 一次性依赖也必须先登记到根 [workspace.dependencies],保证版本单一来源。
@@ -11,7 +11,7 @@
  * 校验范围: src-tauri/Cargo.toml(根 package)+ crates/<层>/<crate>/Cargo.toml 全部成员。
  * 用法: pnpm check:deps
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -159,7 +159,7 @@ function checkManifest(label, text) {
 }
 
 // ---- 根 manifest (workspace + 根 package 二合一) ----
-const rootLabel = "vofa-next (根)";
+const rootLabel = "lissio (根)";
 checkManifest(rootLabel, readFileSync(join(workspaceRoot, "Cargo.toml"), "utf8"));
 
 // ---- 全部成员 crate ----
@@ -170,6 +170,7 @@ for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
   for (const crate of readdirSync(join(cratesDir, layer.name), { withFileTypes: true })) {
     if (!crate.isDirectory()) continue;
     const manifest = join(cratesDir, layer.name, crate.name, "Cargo.toml");
+    if (!existsSync(manifest)) continue;
     checkManifest(`${layer.name}/${crate.name}`, readFileSync(manifest, "utf8"));
     memberCount++;
   }

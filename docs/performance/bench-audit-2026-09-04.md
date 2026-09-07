@@ -357,7 +357,7 @@ P99/max 5.929/6.996ms。此项只证明该有限停顿场景，不抵消摄入�
 
 | 调用路径 | 样本 | 全图占比 |
 |---|---:|---:|
-| 主线程 `main → vofa_next_lib::run` | 2874 | 57.11% |
+| 主线程 `main → lissio_lib::run` | 2874 | 57.11% |
 | 主线程 WebKit `dispatchIncomingMessages` 主分支 | 1866 | 37.08% |
 | 求值入口 `eval_frames` | 392 | 7.79% |
 | 串行 `process_source_batch` | 383 | 7.61% |

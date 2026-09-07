@@ -1,10 +1,10 @@
 //! candleLight 协议集成测试
 
-use can_types::{CanDirection, CanFrame};
+use can::{CanDirection, CanFrame};
+use protocol::{FeedOutput, ProtocolEngine};
 use protocol_can_bridge::{
     CandleEngine, CAND_CMD_RX, CAND_CMD_TX, CAND_FRAME_SIZE, CAND_ID_EFF, CAND_ID_MASK, CAND_ID_RTR,
 };
-use protocol_engine::{FeedOutput, ProtocolEngine};
 
 /// 构造一个 24 字节帧
 fn make_rx_frame(cmd_id: u8, can_id_raw: u32, dlc: u8, data: &[u8]) -> Vec<u8> {

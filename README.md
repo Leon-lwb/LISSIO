@@ -1,4 +1,4 @@
-# VOFA-NEXT
+# Lissio
 
 [English](./README.md) | [简体中文](./README.zh-CN.md)
 
@@ -16,20 +16,20 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 <br />
 
 <p align="center">
-  <a href="https://github.com/horldsence/vofa-next">
+  <a href="https://github.com/horldsence/lissio">
     <img src="icon.png" alt="Logo" width="80" height="80">
   </a>
 
-  <h3 align="center">VOFA-NEXT</h3>
+  <h3 align="center">Lissio</h3>
   <p align="center">
     A modern serial debugging tool with waveform display, node editor, multi-protocol parsing, CAN diagnostics, and logic analysis.
     <br />
-    <a href="https://github.com/horldsence/vofa-next"><strong>Explore the repo »</strong></a>
+    <a href="https://github.com/horldsence/lissio"><strong>Explore the repo »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/horldsence/vofa-next/issues">Report Bug</a>
+    <a href="https://github.com/horldsence/lissio/issues">Report Bug</a>
     ·
-    <a href="https://github.com/horldsence/vofa-next/issues">Request Feature</a>
+    <a href="https://github.com/horldsence/lissio/issues">Request Feature</a>
   </p>
 </p>
 
@@ -54,7 +54,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 
 ## Introduction
 
-VOFA-NEXT is a desktop serial assistant designed for embedded debugging scenarios. The frontend is built with React 19 + TypeScript + Vite, while the backend is powered by Rust + Tauri 2 to deliver high-performance transport I/O, protocol parsing, a node-graph DAG engine, DSP (FIR/IIR filters, FFT spectrum), and automotive diagnostic protocols (ISO-TP / UDS / OBD-II / J1939).
+Lissio is a desktop serial assistant designed for embedded debugging scenarios. The frontend is built with React 19 + TypeScript + Vite, while the backend is powered by Rust + Tauri 2 to deliver high-performance transport I/O, protocol parsing, a node-graph DAG engine, DSP (FIR/IIR filters, FFT spectrum), and automotive diagnostic protocols (ISO-TP / UDS / OBD-II / J1939).
 
 The app supports 7 transport types, 7 protocol engines, a React Flow-based node editor for dataflow orchestration, oscilloscope-style waveform display, CAN frame / load analysis, logic analyzer with UART/I2C/SPI decoding, and a custom JS widget system running in sandboxed iframes.
 
@@ -146,7 +146,7 @@ The UI features a **dock-style window layout**: control canvases and data views 
 - **Streaming AI chat** — a dockable chat panel (right side by default; drag its title bar to re-dock left / bottom or float, layout persisted) with **Markdown rendering** (tables, code highlighting, copyable code blocks / messages) and multi-session management (create / rename / delete, history persisted on the Rust side across restarts).
 - **26+ LLM providers** — OpenAI / Anthropic / Gemini / DeepSeek / Qwen / Kimi / GLM / Ollama / OpenRouter etc., with [**OrcaRouter**](https://orcarouter.ai) as the featured default (one key for all vendors; [get an API key via our referral link](https://www.orcarouter.ai/ref/ref_1f7582998bdadbe7e0f3) to support the project).
 - **Tool calling (MCP client)** — the model can call tools from external MCP servers (stdio / HTTP) during a conversation, with per-call tracing.
-- **MCP server (inbound)** — the app exposes its own capabilities (serial send, waveform read, node-graph editing…) as MCP tools at `http://127.0.0.1:{port}/mcp`, so Claude Desktop / other MCP clients can drive VOFA-NEXT directly.
+- **MCP server (inbound)** — the app exposes its own capabilities (serial send, waveform read, node-graph editing…) as MCP tools at `http://127.0.0.1:{port}/mcp`, so Claude Desktop / other MCP clients can drive Lissio directly.
 
 ## Usage Guide
 
@@ -242,7 +242,7 @@ The default layout looks like this (all panels can be freely rearranged):
 ## Project Structure
 
 ```
-vofa-next/
+lissio/
 ├── scripts/                       # Build scripts
 │   └── build.sh
 ├── src/                           # Frontend source
@@ -326,8 +326,8 @@ vofa-next/
 1. Clone the repository
 
 ```sh
-git clone https://github.com/horldsence/vofa-next.git
-cd vofa-next
+git clone https://github.com/horldsence/lissio.git
+cd lissio
 ```
 
 2. Install frontend dependencies
@@ -402,7 +402,7 @@ Please make sure `pnpm tsc --noEmit` and `cd src-tauri && cargo clippy --workspa
 
 ## Versioning
 
-This project is managed with Git. Available releases can be found on the [Releases](https://github.com/horldsence/vofa-next/releases) page.
+This project is managed with Git. Available releases can be found on the [Releases](https://github.com/horldsence/lissio/releases) page.
 
 ## License
 
@@ -421,13 +421,13 @@ This project is licensed under the MIT License — see [LICENSE](./LICENSE) for 
 - [libautomotive](https://crates.io/crates/libautomotive)
 
 <!-- links -->
-[contributors-shield]: https://img.shields.io/github/contributors/horldsence/vofa-next.svg?style=flat-square
-[contributors-url]: https://github.com/horldsence/vofa-next/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/horldsence/vofa-next.svg?style=flat-square
-[forks-url]: https://github.com/horldsence/vofa-next/network/members
-[stars-shield]: https://img.shields.io/github/stars/horldsence/vofa-next.svg?style=flat-square
-[stars-url]: https://github.com/horldsence/vofa-next/stargazers
-[issues-shield]: https://img.shields.io/github/issues/horldsence/vofa-next.svg?style=flat-square
-[issues-url]: https://github.com/horldsence/vofa-next/issues
-[license-shield]: https://img.shields.io/github/license/horldsence/vofa-next.svg?style=flat-square
-[license-url]: https://github.com/horldsence/vofa-next/blob/master/LICENSE
+[contributors-shield]: https://img.shields.io/github/contributors/horldsence/lissio.svg?style=flat-square
+[contributors-url]: https://github.com/horldsence/lissio/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/horldsence/lissio.svg?style=flat-square
+[forks-url]: https://github.com/horldsence/lissio/network/members
+[stars-shield]: https://img.shields.io/github/stars/horldsence/lissio.svg?style=flat-square
+[stars-url]: https://github.com/horldsence/lissio/stargazers
+[issues-shield]: https://img.shields.io/github/issues/horldsence/lissio.svg?style=flat-square
+[issues-url]: https://github.com/horldsence/lissio/issues
+[license-shield]: https://img.shields.io/github/license/horldsence/lissio.svg?style=flat-square
+[license-url]: https://github.com/horldsence/lissio/blob/master/LICENSE

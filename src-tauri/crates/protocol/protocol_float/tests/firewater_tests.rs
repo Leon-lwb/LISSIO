@@ -1,8 +1,8 @@
 //! 集成测试: FireWater 协议引擎
 
-use protocol_engine::{FeedOutput, ProtocolEngine};
+use data_model::DataFrame;
+use protocol::{FeedOutput, ProtocolEngine};
 use protocol_float::FireWaterEngine;
-use vofa_core::DataFrame;
 
 #[test]
 fn test_parse_firewater() {

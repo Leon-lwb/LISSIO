@@ -1,7 +1,7 @@
 //! 逻辑分析仪解码引擎核心实现
 
-use logic_types::{DecodedEvent, LogicDecoderConfig, LogicSample};
-use protocol_engine::{FeedOutput, ProtocolEngine};
+use logic::{DecodedEvent, LogicDecoderConfig, LogicSample};
+use protocol::{FeedOutput, ProtocolEngine};
 
 /// 逻辑分析仪解码引擎
 ///

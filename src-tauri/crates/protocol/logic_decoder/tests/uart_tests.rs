@@ -1,9 +1,9 @@
 //! 集成测试: UART 解码
 
+use data_model::{Parity, StopBits};
+use logic::{DecodedEvent, LogicDecoderConfig};
 use logic_decoder::LogicDecoderEngine;
-use logic_types::{DecodedEvent, LogicDecoderConfig};
-use protocol_engine::ProtocolEngine;
-use vofa_core::{Parity, StopBits};
+use protocol::ProtocolEngine;
 
 #[test]
 fn test_feed_logic_converts_bytes_to_samples() {

@@ -46,3 +46,4 @@ dist-ssr/
 /src-tauri/flamegraph.svg
 /src-tauri/perf.data*
 *.profraw
+media/

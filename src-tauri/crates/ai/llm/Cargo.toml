@@ -1,0 +1,22 @@
+[package]
+name = "llm"
+description = "Lissio AI 对话 LLM provider 聚合层 (genai 封装: 多 provider / 流式 / 工具调用)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+genai = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }
+error = { workspace = true }
+data_model = { workspace = true }
+
+[package.metadata.lissio]
+domain = "ai"
+layer = 4
+responsibility = "Lissio AI 对话 LLM provider 聚合层 (genai 封装: 多 provider / 流式 / 工具调用)"

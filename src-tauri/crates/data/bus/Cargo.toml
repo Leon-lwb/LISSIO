@@ -1,0 +1,20 @@
+[package]
+name = "bus"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+tokio = { workspace = true }
+parking_lot = { workspace = true }
+log = { workspace = true }
+
+
+[package.metadata.lissio]
+domain = "data"
+layer = 1
+responsibility = "Focused crate responsibility"

@@ -73,7 +73,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Check crate layering rules
-        run: pnpm check:layers
+        run: pnpm check:architecture
 
       - name: Check dependency version unification
         run: pnpm check:deps

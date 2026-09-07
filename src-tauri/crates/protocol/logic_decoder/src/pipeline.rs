@@ -1,6 +1,6 @@
 //! UART / I2C / SPI 协议解码实现 — 各协议状态机
 
-use logic_types::{DecodedEvent, I2cEvent, LogicDecoderConfig, LogicSample};
+use logic::{DecodedEvent, I2cEvent, LogicDecoderConfig, LogicSample};
 
 use crate::core::{I2cState, LogicDecoderEngine, SpiState, UartState};
 
@@ -15,7 +15,7 @@ impl LogicDecoderEngine {
         let mut events = Vec::with_capacity(data.len());
         for &b in data {
             let ts = now;
-            let parity_ok = matches!(parity, vofa_core::Parity::None);
+            let parity_ok = matches!(parity, data_model::Parity::None);
             events.push(DecodedEvent::Uart {
                 timestamp: ts,
                 byte: b,
