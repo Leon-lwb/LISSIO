@@ -72,6 +72,7 @@ members = [
   "crates/graph/graph-testkit",
   # L2 pipeline — 数据平面（字节路由/数值求值/流框架/调度）
   "crates/data/bus",
+  "crates/data/recording",
   "crates/desktop/pipeline",
   "crates/desktop/stream",
   "crates/desktop/evaluator",
@@ -225,6 +226,8 @@ windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices
 rustfft = "6"
 realfft = "3"
 bytemuck = { version = "1", features = ["derive"] }
+duckdb = { version = "1.5.5", features = ["bundled"] }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
 # ---- workspace 内部 crate (路径 = crates/<domain>/<crate>) ----
 # L0 foundation
 gpu = { path = "crates/signal/gpu" }
@@ -273,6 +276,7 @@ trigger = { path = "crates/graph/trigger" }
 # L2 pipeline
 pipeline = { path = "crates/desktop/pipeline" }
 bus = { path = "crates/data/bus" }
+recording = { path = "crates/data/recording" }
 evaluator = { path = "crates/desktop/evaluator" }
 stream = { path = "crates/desktop/stream" }
 # L3 app
@@ -297,6 +301,7 @@ acquisition = { workspace = true }
 async-trait = { workspace = true }
 buffer_graph = { workspace = true }
 bus = { workspace = true }
+recording = { workspace = true }
 can = { workspace = true }
 chat = { workspace = true }
 chat-session = { workspace = true }

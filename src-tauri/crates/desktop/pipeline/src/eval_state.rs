@@ -89,6 +89,8 @@ pub struct GraphEvalState {
     pub send: Arc<Mutex<crate::execution::SendScheduler>>,
     /// 每端口真实样本 Topic。图求值仅发布 written=true 的槽位。
     pub bus: DataBus,
+    /// 四域共用的持久化端口。数据库连接由 recording writer 独占。
+    pub recording: recording::RecordingHub,
     pub graphs: Arc<Mutex<HashMap<String, CompiledGraph>>>,
     /// 图版本号 — sync_tab_graph/remove_tab_graph 时 +1,
     /// process_source_batch 据此检测重编译并清空复用的输出缓存
@@ -156,6 +158,7 @@ pub struct GraphEvalState {
 #[must_use]
 pub fn build_graph_eval_state(
     bus: DataBus,
+    recording: recording::RecordingHub,
     graphs: Arc<Mutex<HashMap<String, CompiledGraph>>>,
     graphs_version: Arc<AtomicU64>,
     input_values: Arc<RwLock<HashMap<String, f32>>>,
@@ -176,6 +179,7 @@ pub fn build_graph_eval_state(
         execution: Arc::new(crate::execution::ExecutionControl::default()),
         send: Arc::new(Mutex::new(crate::execution::SendScheduler::default())),
         bus,
+        recording,
         graphs,
         graphs_version,
         input_values,

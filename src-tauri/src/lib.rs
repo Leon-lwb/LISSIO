@@ -18,6 +18,7 @@ pub use commands::display::*;
 pub use commands::graph::*;
 pub use commands::pipeline::*;
 pub use commands::rawdata::*;
+pub use commands::recording::*;
 
 pub use app::AppState;
 pub use menu_shell::{build_menu, ids, on_menu_event};
@@ -148,6 +149,13 @@ pub fn run() {
             unsubscribe_data,
             ack_data,
             get_data_health,
+            get_recording_health,
+            list_recording_sessions,
+            query_recording_history,
+            query_recording_sql,
+            cancel_recording_query,
+            flush_recording,
+            delete_recording_session,
             create_waveform_snapshot,
             query_waveform_snapshot,
             release_waveform_snapshot,

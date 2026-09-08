@@ -28,7 +28,7 @@ pub(super) async fn eval_worker(plane: DataPlaneState) {
         while let Some((source, frames, gap)) = plane.pop_frame_batch() {
             // boundary 读锁先行并跨越整个批次求值: 运行状态切换 (写锁) 等待
             // 在途批次完成 — 旧 epoch 的求值结果不可能在切换后发布。
-            let _boundary = plane.eval.execution.boundary.read().await;
+            let boundary = plane.eval.execution.boundary.read().await;
             // 运行门控: 暂停/停止瞬间残留入队的批次直接丢弃 (切换路径已清空
             // 队列, 此处兜底竞态窗口内入队的最后一批), 不在非运行态求值。
             // 锁内复查 — 取锁与查票之间不会有切换插入。
@@ -93,6 +93,8 @@ pub(super) async fn eval_worker(plane: DataPlaneState) {
                 Err(e) if e.is_panic() => std::panic::resume_unwind(e.into_panic()),
                 Err(_) => {}
             }
+            drop(boundary);
+            let _ = plane.stop_for_recording_fault().await;
         }
     }
 }

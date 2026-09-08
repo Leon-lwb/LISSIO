@@ -15,9 +15,19 @@ use crate::{send_scheduler_ticker, spectrum_ticker, text_output_ticker, textout_
 ///
 /// `config_dir`: workspace.json 所在目录 (app config dir)。
 pub fn spawn_background_tasks(app: &AppHandle, config_dir: PathBuf) {
+    start_recording(app, &config_dir);
     spawn_workspace_autosave(app, config_dir);
     spawn_push_tickers(app);
     spawn_splashscreen_fallback(app);
+}
+
+fn start_recording(app: &AppHandle, config_dir: &std::path::Path) {
+    let path = config_dir.join("recordings").join("acquisition.duckdb");
+    let recording = app.state::<AppState>().eval_state().recording;
+    match recording.start(path, Vec::new(), recording::RecordingLimits::default()) {
+        Ok(session) => log::info!("recording session started: {}", session.id),
+        Err(error) => log::error!("recording unavailable: {error}"),
+    }
 }
 
 /// 工作区防抖落盘任务 — 图提交 / 位置上报 / tab 变更置 dirty,
@@ -124,6 +134,9 @@ fn spawn_splashscreen_fallback(app: &AppHandle) {
 /// 工作区变更同步写盘, 避免丢最后一次编辑
 pub fn flush_workspace_on_exit(app: &AppHandle) {
     let state = app.state::<AppState>();
+    if let Err(error) = state.eval_state().recording.stop() {
+        log::error!("recording shutdown failed: {error}");
+    }
     let ws = &state.workspace;
     if ws.lock().dirty {
         let file = collect_workspace_file(ws, &state.source_graphs);

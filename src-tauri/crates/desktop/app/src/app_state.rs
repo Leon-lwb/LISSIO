@@ -130,10 +130,12 @@ impl AppState {
         )));
         let pipeline_config = Arc::new(RwLock::new(PipelineConfig::default()));
         let bus = DataBus::default();
+        let recording = recording::RecordingHub::default();
         let (restore_done_tx, _restore_done_rx) = tokio::sync::watch::channel(false);
 
         let eval: GraphEvalState = build_graph_eval_state(
             bus,
+            recording,
             graphs.clone(),
             graphs_version.clone(),
             input_values.clone(),

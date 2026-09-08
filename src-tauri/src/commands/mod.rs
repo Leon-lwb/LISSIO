@@ -7,3 +7,4 @@ pub mod display;
 pub mod graph;
 pub mod pipeline;
 pub mod rawdata;
+pub mod recording;

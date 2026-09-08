@@ -11,7 +11,7 @@
 //! 某源来帧 → 评估"引用了该源的 tab 图"与"无 ProtocolSource 的纯本地图"
 //! (后者沿用旧行为: 单源时代任意来帧都评估); 同 tab 多源时其他源用缓存最新帧。
 
-use bus::{DataBus, SampleStatus, TopicKey};
+use bus::{SampleStatus, TopicKey};
 use data_model::{DataFrame, PipelineConfig};
 use kind::{NodeDef, NodeKind};
 use parking_lot::Mutex;
@@ -61,7 +61,7 @@ pub fn record_frames(plane: &DataPlaneState, source_id: &str, frames: &[DataFram
     if frames.is_empty() {
         return;
     }
-    publish_protocol_samples(&plane.eval.bus, &plane.global_nodes, source_id, frames);
+    publish_protocol_samples(&plane.eval, &plane.global_nodes, source_id, frames);
     let buffer = plane.buffer_for(source_id);
     for chunk in frames.chunks(RECORD_CHUNK) {
         let mut buf = buffer.lock();
@@ -100,7 +100,21 @@ pub fn eval_frames(
         .lock()
         .values()
         .any(|g| !g.ifft_node_ids().is_empty());
-    if options.workers > 1 && !has_reconstruction {
+    let has_serial_recording = eval.graphs.lock().values().any(|graph| {
+        graph
+            .compiled()
+            .str_slot_names()
+            .iter()
+            .any(|(node, port)| {
+                eval.recording
+                    .is_bound(&recording::PortIdentity::new(node, port))
+            })
+            || graph.compiled().spectrum_slots().iter().any(|(node, _)| {
+                eval.recording
+                    .is_bound(&recording::PortIdentity::new(node, "spectrum"))
+            })
+    });
+    if options.workers > 1 && !has_reconstruction && !has_serial_recording {
         crate::graph_eval_parallel::process_source_batch_parallel(
             eval,
             &mut sf,
@@ -157,11 +171,12 @@ pub fn on_frames_detached(
 
 /// 把协议帧按真实端口写入 Topic。只有帧中实际存在的通道才产生样本。
 fn publish_protocol_samples(
-    bus: &DataBus,
+    eval: &GraphEvalState,
     global_nodes: &Mutex<HashMap<String, NodeDef>>,
     source_id: &str,
     frames: &[DataFrame],
 ) {
+    let bus = &eval.bus;
     let configured_names = global_nodes
         .lock()
         .get(source_id)
@@ -201,6 +216,31 @@ fn publish_protocol_samples(
             .cloned()
             .unwrap_or_else(|| format!("ch{channel}"));
         let key = TopicKey::new(source_id, handle);
+        let recording_port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
+        let recording_bound = eval.recording.is_bound(&recording_port);
+        if !bus.is_active(&key) && !recording_bound {
+            continue;
+        }
+        if recording_bound {
+            let mut timestamps = Vec::with_capacity(frames.len());
+            let mut values = Vec::with_capacity(frames.len());
+            for frame in frames {
+                if let Some(value) = frame.channels.get(channel) {
+                    timestamps.push(frame.timestamp);
+                    values.push(f64::from(*value));
+                }
+            }
+            if !values.is_empty() {
+                if let Err(error) = eval.recording.record_next(
+                    &recording_port,
+                    eval.execution.snapshot().epoch,
+                    timestamps,
+                    recording::BatchPayload::Float { values },
+                ) {
+                    log::error!("protocol sample recording stopped accepting data: {error}");
+                }
+            }
+        }
         if !bus.is_active(&key) {
             continue;
         }
@@ -240,11 +280,25 @@ fn publish_protocol_samples(
 /// 覆盖, 保持既有行为)。ProtocolSource 的 "str" 端口 (String 域) 求值时按源读取,
 /// 无缓存时槽位不写、快照保持上次值 (见 eval)。
 pub fn cache_source_text(plane: &DataPlaneState, source_id: &str, data: &[u8]) {
-    let text = String::from_utf8_lossy(data);
+    let text = String::from_utf8_lossy(data).into_owned();
+    let timestamp = data_model::now_us();
+    let port = recording::PortIdentity::new(source_id, "str");
+    if plane.eval.recording.is_bound(&port) {
+        if let Err(error) = plane.eval.recording.record_next(
+            &port,
+            plane.eval.execution.snapshot().epoch,
+            vec![timestamp],
+            recording::BatchPayload::String {
+                values: vec![text.clone()],
+            },
+        ) {
+            log::error!("source text recording stopped accepting data: {error}");
+        }
+    }
     plane
         .source_texts
         .lock()
-        .insert(source_id.to_string(), text.into_owned());
+        .insert(source_id.to_string(), text);
 }
 
 /// 快照刷新 — 字节事件 (FrameDecoder 喂入) / 输入事件 (set_input_value 等) 之后,

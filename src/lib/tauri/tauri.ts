@@ -145,6 +145,48 @@ export interface PipelineConfig {
   preview_bandwidth_mb_per_sec: number;
 }
 
+export interface RecordingHealth {
+  accepted_batches: number;
+  accepted_bytes: number;
+  persisted_batches: number;
+  persisted_bytes: number;
+  accepted_sequence: number;
+  persisted_sequence: number;
+  queued_batches: number;
+  failed: string | null;
+}
+
+export interface RecordingSession {
+  id: string;
+  started_at_us: number;
+  ended_at_us: number | null;
+  state: 'running' | 'paused' | 'stopped' | 'failed';
+}
+
+export interface RecordingHistoryPage {
+  rows: Array<{
+    row_id: number;
+    session_id: string;
+    binding_id: string;
+    domain: 'bytes' | 'string' | 'float' | 'spectrum';
+    epoch: number;
+    sequence_start: number;
+    sequence_end: number;
+    first_timestamp_us: number;
+    last_timestamp_us: number;
+    item_count: number;
+    effective_bytes: number;
+    checksum: number;
+    payload?: Record<string, unknown> | null;
+  }>;
+  next_row_id: number | null;
+}
+
+export interface RecordingSqlResult {
+  rows: Record<string, unknown>[];
+  truncated: boolean;
+}
+
 /// transport:state 事件 payload — 按节点分发
 export interface TransportStateEvent {
   node_id: string;
@@ -538,6 +580,35 @@ export const api = {
   // ===== 数据管道性能配置 =====
   setPipelineConfig: (config: PipelineConfig) =>
     invoke<void>('set_pipeline_config', { config }),
+
+  // ===== 四域持久化与历史查询 =====
+  getRecordingHealth: () => invoke<RecordingHealth>('get_recording_health'),
+  listRecordingSessions: () =>
+    invoke<RecordingSession[]>('list_recording_sessions'),
+  queryRecordingHistory: (
+    sessionId: string,
+    bindingId: string | null,
+    afterRowId = 0,
+    limit = 500,
+    includePayload = false,
+  ) => invoke<RecordingHistoryPage>('query_recording_history', {
+    sessionId,
+    bindingId,
+    afterRowId,
+    limit,
+    includePayload,
+  }),
+  queryRecordingSql: (queryId: string, sql: string, maxRows = 10_000) =>
+    invoke<RecordingSqlResult>('query_recording_sql', {
+      queryId,
+      sql,
+      maxRows,
+    }),
+  cancelRecordingQuery: (queryId: string) =>
+    invoke<boolean>('cancel_recording_query', { queryId }),
+  flushRecording: () => invoke<void>('flush_recording'),
+  deleteRecordingSession: (sessionId: string) =>
+    invoke<void>('delete_recording_session', { sessionId }),
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。

@@ -211,7 +211,8 @@ pub(super) fn build_plans(
                 continue;
             }
             let key = TopicKey::new(node_id, port);
-            if eval_state.bus.is_active(&key) {
+            let recording_port = recording::PortIdentity::new(node_id, port);
+            if eval_state.bus.is_active(&key) || eval_state.recording.is_bound(&recording_port) {
                 let b = bucket_of(&unit_bucket[gi], slot_unit, slot);
                 plans[b].ensure_graph(gi);
                 plans[b].port_routes.push((key, slot));

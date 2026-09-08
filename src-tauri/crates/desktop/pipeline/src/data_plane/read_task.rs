@@ -269,6 +269,9 @@ pub(super) async fn read_task(
             )
             .await
         };
+        if plane.stop_for_recording_fault().await {
+            continue;
+        }
         let service_time = t_feed.elapsed();
         let cfg = *plane.pipeline_config.read();
         let queued = rx.len();

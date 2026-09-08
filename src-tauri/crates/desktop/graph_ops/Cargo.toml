@@ -10,6 +10,7 @@ workspace = true
 
 [dependencies]
 pipeline = { workspace = true }
+recording = { workspace = true }
 evaluator = { workspace = true }
 app = { workspace = true }
 buffer_graph = { workspace = true }
@@ -21,6 +22,7 @@ serde = { workspace = true }
 tauri = { workspace = true }
 tokio = { workspace = true }
 data_model = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
 graph_testkit = { workspace = true }

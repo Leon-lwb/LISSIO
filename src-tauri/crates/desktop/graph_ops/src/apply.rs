@@ -15,7 +15,7 @@ use pipeline::data_plane::frame_dispatch;
 use pipeline::decoder_feed::sync_decoders_now;
 use pipeline::BytePlan;
 use pipeline::DataPlaneState;
-use pipeline::NodeDef;
+use pipeline::{NodeDef, NodeKind};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
@@ -214,6 +214,7 @@ pub async fn apply_tab_graph_parts(
         ws.dirty = true;
     }
     prune_positions(workspace, source_graphs);
+    sync_recording_bindings(data_plane, source_graphs);
 
     // 7. 同步 Protocol 节点运行时状态 + FrameDecoder 状态清理 + 孤儿资源清理
     data_plane.sync_protocol_states();
@@ -281,6 +282,82 @@ pub async fn apply_tab_graph_parts(
     Ok(derived)
 }
 
+fn sync_recording_bindings(data_plane: &DataPlaneState, source_graphs: &SourceGraphs) {
+    let store = source_graphs.lock();
+    let global_nodes = data_plane.global_nodes.lock().clone();
+    let mut bindings = HashMap::<recording::PortIdentity, recording::DisplayBinding>::new();
+    for graph in store.values() {
+        let widgets: HashMap<&str, &str> = graph
+            .widgets
+            .iter()
+            .map(|widget| (widget.id.as_str(), widget.kind.as_str()))
+            .collect();
+        let nodes: HashMap<&str, &NodeDef> = graph
+            .nodes
+            .iter()
+            .map(|node| (node.id.as_str(), node))
+            .collect();
+        for edge in &graph.edges {
+            let Some(kind) = widgets.get(edge.target.as_str()).copied() else {
+                continue;
+            };
+            let Some(capability) = display_capability(kind) else {
+                continue;
+            };
+            let Some(source) = nodes
+                .get(edge.source.as_str())
+                .copied()
+                .or_else(|| global_nodes.get(&edge.source))
+            else {
+                continue;
+            };
+            let port = recording::PortIdentity::new(&edge.source, &edge.source_handle);
+            let domain = recording_domain(source, &edge.source_handle);
+            let id = format!("{}:{}:{}", domain.as_str(), edge.source, edge.source_handle);
+            bindings
+                .entry(port.clone())
+                .or_insert_with(|| recording::DisplayBinding {
+                    id,
+                    component_id: edge.target.clone(),
+                    port,
+                    domain,
+                    capability,
+                });
+        }
+    }
+    if let Err(error) = data_plane
+        .eval
+        .recording
+        .sync_bindings(bindings.into_values().collect())
+    {
+        log::error!("display recording bindings failed: {error}");
+    }
+}
+
+fn display_capability(kind: &str) -> Option<recording::BindingCapability> {
+    match kind {
+        "RawData" => Some(recording::BindingCapability::Raw),
+        "TextDisplay" => Some(recording::BindingCapability::Text),
+        "Waveform" | "Spectrum" => Some(recording::BindingCapability::Curve),
+        "TableView" => Some(recording::BindingCapability::Records),
+        "PieChart" | "Image" | "Gauge" | "Progress" | "LED" | "NumberDisplay" | "Label"
+        | "Model3D" | "Custom" => Some(recording::BindingCapability::Scalar),
+        _ => None,
+    }
+}
+
+fn recording_domain(source: &NodeDef, handle: &str) -> recording::Domain {
+    if matches!(source.kind, NodeKind::Protocol { .. }) && handle == "str" {
+        return recording::Domain::String;
+    }
+    match pipeline::port_domain(&source.kind, handle, true) {
+        pipeline::PortDomain::Bytes => recording::Domain::Bytes,
+        pipeline::PortDomain::String => recording::Domain::String,
+        pipeline::PortDomain::Spectrum => recording::Domain::Spectrum,
+        pipeline::PortDomain::F32 => recording::Domain::Float,
+    }
+}
+
 /// 移除指定 tab 的节点图 (tab 删除时调用) — Tauri 命令入口在
 /// `graph::remove_tab_graph`, 本体抽出以便复用与测试
 pub async fn apply_remove_tab_graph(
@@ -291,6 +368,7 @@ pub async fn apply_remove_tab_graph(
     state.graphs.lock().remove(tab_id);
     // 源图存储同步清除 — tab 已不存在, 权威拓扑与 widget 记录随之失效
     state.source_graphs.lock().remove(tab_id);
+    sync_recording_bindings(&state.data_plane, &state.source_graphs);
     prune_positions(&state.workspace, &state.source_graphs);
     state.workspace.lock().dirty = true;
 

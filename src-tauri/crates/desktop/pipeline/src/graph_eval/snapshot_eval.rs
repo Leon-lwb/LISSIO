@@ -11,6 +11,7 @@ use crate::eval_state::GraphEvalState;
 
 use super::hot_path::merge_str_map;
 use super::predicates::graph_triggered_by;
+use super::recording::record_spectrum;
 
 /// 事件驱动快照评估 — 以 source_frames 现状评估所有图并发布 output_snapshot
 ///
@@ -76,6 +77,19 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
         }
         for (port, value) in ports {
             let key = TopicKey::new(node_id, port);
+            let identity = recording::PortIdentity::new(node_id, port);
+            if eval_state.recording.is_bound(&identity) {
+                if let Err(error) = eval_state.recording.record_next(
+                    &identity,
+                    eval_state.execution.snapshot().epoch,
+                    vec![event_timestamp],
+                    recording::BatchPayload::Float {
+                        values: vec![f64::from(*value)],
+                    },
+                ) {
+                    log::error!("event numeric recording stopped accepting data: {error}");
+                }
+            }
             if eval_state.bus.is_active(&key) {
                 eval_state.bus.publish_samples(
                     key,
@@ -91,6 +105,32 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
     // 过期节点条目随 swap 清理 (同 snap.values 语义)
     let mut str_map: HashMap<String, HashMap<String, String>> = HashMap::new();
     merge_str_map(combined_str, &mut str_map);
+    for (node_id, ports) in &str_map {
+        let is_protocol_source = graphs.values().any(|graph| {
+            matches!(
+                graph.value_def(node_id).map(|node| &node.kind),
+                Some(NodeKind::ProtocolSource { .. })
+            )
+        });
+        if is_protocol_source {
+            continue;
+        }
+        for (port, value) in ports {
+            let identity = recording::PortIdentity::new(node_id, port);
+            if eval_state.recording.is_bound(&identity) {
+                if let Err(error) = eval_state.recording.record_next(
+                    &identity,
+                    eval_state.execution.snapshot().epoch,
+                    vec![event_timestamp],
+                    recording::BatchPayload::String {
+                        values: vec![value.clone()],
+                    },
+                ) {
+                    log::error!("event string recording stopped accepting data: {error}");
+                }
+            }
+        }
+    }
     *eval_state.graph_string_outputs.lock() = str_map;
 
     // 收集 Fft 输入值, push 到对应 analyzer 的滑动窗口
@@ -101,7 +141,10 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
             let spectrum_inputs = graph.collect_spectrum_inputs(&combined);
             for (sink_id, value) in spectrum_inputs {
                 if let Some(analyzer) = analyzers.get_mut(&sink_id) {
+                    let output = analyzer.output();
                     analyzer.push_with(value, |frame| {
+                        let display = frame.display(output);
+                        record_spectrum(eval_state, &sink_id, event_timestamp, &display);
                         for target in graph.spectrum_consumers(&sink_id) {
                             if let Err(error) =
                                 ifft_states.entry(target.clone()).or_default().accept(frame)

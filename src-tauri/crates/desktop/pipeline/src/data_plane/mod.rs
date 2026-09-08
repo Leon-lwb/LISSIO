@@ -317,6 +317,33 @@ impl DataPlaneState {
         }
     }
 
+    /// A durable-recording failure invalidates the acquisition contract: once a
+    /// producer cannot enqueue a bound batch, stop the run at the same execution
+    /// boundary used by normal Pause/Stop transitions.
+    pub(crate) async fn stop_for_recording_fault(&self) -> bool {
+        let Some(error) = self.eval.recording.fault() else {
+            return false;
+        };
+        let execution = &self.eval.execution;
+        if execution.snapshot().state == crate::execution::RunState::Stopped {
+            return false;
+        }
+        let _guard = execution.boundary.write().await;
+        if execution.snapshot().state == crate::execution::RunState::Stopped {
+            return false;
+        }
+        let snapshot = execution.transition(crate::execution::RunState::Stopped);
+        let dropped = self.clear_all_eval_queues();
+        let mut send = self.eval.send.lock();
+        send.reset_schedules();
+        send.clear();
+        log::error!(
+            "recording failure stopped acquisition at epoch {} (discarded {dropped} preview frames): {error}",
+            snapshot.epoch
+        );
+        true
+    }
+
     /// 启动评估 worker (单实例; 首次 attach 时调用, 需在 tokio 运行时内)
     fn ensure_eval_worker(&self) {
         if !self.eval_worker_started.swap(true, Ordering::AcqRel) {

@@ -51,7 +51,7 @@ allowed when they also satisfy the layer rule.
 | protocol | `logic`, `protocol`, `schema`, `frame-decoder`, `points`, `acquisition` |
 | graph | `trigger`, `graph`, `graph-testkit` |
 | transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `modbus-adapter` |
-| data | `bus` |
+| data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |
 | desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `menu_shell`, `update_flow`, `mcp-server`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |

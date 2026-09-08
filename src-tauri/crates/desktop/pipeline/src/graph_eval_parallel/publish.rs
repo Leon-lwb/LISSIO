@@ -144,17 +144,47 @@ pub(super) fn publish_port_batches(
         for acc in &ws.ports {
             if !acc.values.is_empty() {
                 let (key, _) = &plan_arcs[b].port_routes[acc.route];
-                eval_state.bus.publish_samples(
-                    key.clone(),
-                    Arc::from(&acc.timestamps[..]),
-                    Arc::from(&acc.values[..]),
-                );
+                let port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
+                if eval_state.recording.is_bound(&port) {
+                    if let Err(error) = eval_state.recording.record_next(
+                        &port,
+                        eval_state.execution.snapshot().epoch,
+                        acc.timestamps.clone(),
+                        recording::BatchPayload::Float {
+                            values: acc.values.clone(),
+                        },
+                    ) {
+                        log::error!("parallel numeric recording stopped accepting data: {error}");
+                    }
+                }
+                if eval_state.bus.is_active(key) {
+                    eval_state.bus.publish_samples(
+                        key.clone(),
+                        Arc::from(&acc.timestamps[..]),
+                        Arc::from(&acc.values[..]),
+                    );
+                }
             }
         }
     }
     for (key, ts, value) in static_publish {
-        eval_state
-            .bus
-            .publish_samples(key, Arc::from([ts]), Arc::from([value]));
+        let port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
+        if eval_state.recording.is_bound(&port) {
+            if let Err(error) = eval_state.recording.record_next(
+                &port,
+                eval_state.execution.snapshot().epoch,
+                vec![ts],
+                recording::BatchPayload::Float {
+                    values: vec![value],
+                },
+            ) {
+                log::error!("parallel static recording stopped accepting data: {error}");
+            }
+        }
+        if eval_state.bus.is_active(&key) {
+            eval_state
+                .bus
+                .publish_samples(key, Arc::from([ts]), Arc::from([value]));
+        }
     }
 }

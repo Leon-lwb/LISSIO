@@ -12,7 +12,8 @@
 //! - Transport 节点 `tx`: registry.send (协议转换回注 / 命令发送落地)
 
 use kind::{
-    NodeKind, FRAME_DECODER_IN_HANDLE, LOOPBACK_IN_HANDLE, PROTOCOL_IN_HANDLE, TRANSPORT_TX_HANDLE,
+    NodeKind, FRAME_DECODER_IN_HANDLE, LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE,
+    PROTOCOL_OUT_HANDLE, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
 };
 use tauri::AppHandle;
 
@@ -82,6 +83,30 @@ pub(super) async fn route_inner(
     if depth > MAX_ROUTE_DEPTH {
         log::warn!("字节路由深度超限 ({}), 丢弃 {} 字节", source_id, data.len());
         return;
+    }
+    let source_kind = plane
+        .global_nodes
+        .lock()
+        .get(source_id)
+        .map(|node| node.kind.clone());
+    let source_handle = match source_kind {
+        Some(NodeKind::Transport { .. }) => TRANSPORT_RX_HANDLE,
+        Some(NodeKind::Protocol { .. }) => PROTOCOL_OUT_HANDLE,
+        _ => LOOPBACK_OUT_HANDLE,
+    };
+    let port = recording::PortIdentity::new(source_id, source_handle);
+    if !data.is_empty() && plane.eval.recording.is_bound(&port) {
+        if let Err(error) = plane.eval.recording.record_next(
+            &port,
+            plane.eval.execution.snapshot().epoch,
+            vec![data_model::now_us()],
+            recording::BatchPayload::Bytes {
+                data: data.to_vec(),
+            },
+        ) {
+            log::error!("byte recording stopped accepting data: {error}");
+            return;
+        }
     }
     // 路由表快照 (锁即刻释放, 下游分发不持 byte_plan 锁)
     let routes: Vec<_> = plane.byte_plan.lock().routes_for(source_id).to_vec();

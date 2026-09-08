@@ -27,6 +27,7 @@ filter = { workspace = true }
 spectrum = { workspace = true }
 protocol = { workspace = true }
 bus = { workspace = true }
+recording = { workspace = true }
 protocol_float = { workspace = true }
 protocol_can_bridge = { workspace = true }
 logic_decoder = { workspace = true }

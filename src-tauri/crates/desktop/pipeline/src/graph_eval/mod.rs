@@ -11,6 +11,7 @@
 mod guards;
 mod hot_path;
 mod predicates;
+mod recording;
 mod snapshot_eval;
 
 pub use guards::{PutBack, TakeGuard};

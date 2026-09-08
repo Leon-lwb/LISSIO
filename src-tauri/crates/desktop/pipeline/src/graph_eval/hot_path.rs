@@ -2,7 +2,6 @@
 
 use std::collections::HashMap;
 use std::hash::BuildHasher;
-use std::sync::Arc;
 
 use bus::TopicKey;
 use data_model::DataFrame;
@@ -13,6 +12,7 @@ use waveform::DerivedWriter;
 use crate::eval_state::GraphEvalState;
 
 use super::predicates::{graph_requires_full_batch, graph_triggered_by, records_waveform_history};
+use super::recording::{publish_recorded_batches, record_spectrum, PortSampleBatch, PortTextBatch};
 
 /// 分段计时抽样周期 — Instant::now 本身在 700k fps 下占 5-7% 纯观测开销,
 /// 每 64 帧抽 1 帧计时 ×64 估算分段耗时 (观测用, 不影响行为)
@@ -29,14 +29,6 @@ pub struct EvalBreakdown {
 
 /// 每 graph 一组槽位缓冲 (slots, written, str_slots, str_written), 批内跨帧复用
 pub type SlotBufs = (Vec<f32>, Vec<bool>, Vec<String>, Vec<bool>);
-
-struct PortSampleBatch {
-    key: TopicKey,
-    graph_index: usize,
-    slot: usize,
-    timestamps: Vec<u64>,
-    values: Vec<f64>,
-}
 
 /// StringValuesMap (FxHash) 深合并进快照 map (std hasher) — 移动语义, 字符串零 clone
 ///
@@ -158,6 +150,7 @@ pub fn process_source_batch(
 
     // 只为存在订阅的端口建立批次，未订阅端口保持热路径零额外分配。
     let mut port_batches = Vec::<PortSampleBatch>::new();
+    let mut text_batches = Vec::<PortTextBatch>::new();
     for (graph_index, graph) in graph_list.iter().enumerate() {
         for (slot, (node_id, port)) in graph.compiled().slot_names().iter().enumerate() {
             // ProtocolSource 已由帧分发按源发布；这里再次发布会让 RawData 每帧重复两次。
@@ -168,9 +161,28 @@ pub fn process_source_batch(
                 continue;
             }
             let key = TopicKey::new(node_id, port);
-            if eval_state.bus.is_active(&key) {
+            let recording_port = recording::PortIdentity::new(node_id, port);
+            if eval_state.bus.is_active(&key) || eval_state.recording.is_bound(&recording_port) {
                 port_batches.push(PortSampleBatch {
                     key,
+                    graph_index,
+                    slot,
+                    timestamps: Vec::with_capacity(frames.len()),
+                    values: Vec::with_capacity(frames.len()),
+                });
+            }
+        }
+        for (slot, (node_id, port)) in graph.compiled().str_slot_names().iter().enumerate() {
+            if matches!(
+                graph.value_def(node_id).map(|node| &node.kind),
+                Some(NodeKind::ProtocolSource { .. })
+            ) {
+                continue;
+            }
+            let identity = recording::PortIdentity::new(node_id, port);
+            if eval_state.recording.is_bound(&identity) {
+                text_batches.push(PortTextBatch {
+                    port: identity,
                     graph_index,
                     slot,
                     timestamps: Vec::with_capacity(frames.len()),
@@ -312,6 +324,13 @@ pub fn process_source_batch(
                 batch.values.push(f64::from(slots[batch.slot]));
             }
         }
+        for batch in &mut text_batches {
+            let (_, _, slots, written) = &slot_bufs[batch.graph_index];
+            if written[batch.slot] {
+                batch.timestamps.push(frame_ts);
+                batch.values.push(slots[batch.slot].clone());
+            }
+        }
 
         // 3. 收集派生值 (批首预计算索引, 携带帧时间戳写派生独立时间轴; 仅 written 槽位)
         let t = if timing_sampled {
@@ -351,7 +370,10 @@ pub fn process_source_batch(
                 let (slots, written, ..) = &slot_bufs[gi];
                 for (sink_id, value) in g.compiled().spectrum_values(slots, written) {
                     if let Some(analyzer) = analyzers.get_mut(sink_id) {
+                        let output = analyzer.output();
                         analyzer.push_with(value, |frame| {
+                            let display = frame.display(output);
+                            record_spectrum(eval_state, sink_id, frame_ts, &display);
                             for target in g.spectrum_consumers(sink_id) {
                                 if let Err(error) =
                                     ifft_states.entry(target.clone()).or_default().accept(frame)
@@ -448,7 +470,11 @@ pub fn process_source_batch(
                     continue;
                 }
                 let key = TopicKey::new(node_id, port);
-                if eval_state.bus.is_active(&key) && bufs.1[slot] {
+                let recording_port = recording::PortIdentity::new(node_id, port);
+                if (eval_state.bus.is_active(&key)
+                    || eval_state.recording.is_bound(&recording_port))
+                    && bufs.1[slot]
+                {
                     static_publish.push((key, last.timestamp, f64::from(bufs.0[slot])));
                 }
             }
@@ -463,18 +489,5 @@ pub fn process_source_batch(
     drop(graphs);
     drop(source_texts);
 
-    for batch in port_batches {
-        if !batch.values.is_empty() {
-            eval_state.bus.publish_samples(
-                batch.key,
-                Arc::from(batch.timestamps),
-                Arc::from(batch.values),
-            );
-        }
-    }
-    for (key, ts, value) in static_publish {
-        eval_state
-            .bus
-            .publish_samples(key, Arc::from([ts]), Arc::from([value]));
-    }
+    publish_recorded_batches(eval_state, port_batches, text_batches, static_publish);
 }

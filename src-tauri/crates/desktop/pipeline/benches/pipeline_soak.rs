@@ -2,6 +2,7 @@
 //! 不包含 Tauri IPC 与 WebView 绘制；输出 JSON 供性能审计，不冒充桌面 FPS。
 #![allow(clippy::cast_precision_loss)]
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -12,7 +13,11 @@ use data_model::{TestDataConfig, TestSignal, TransportConfig};
 use graph::{BytePlan, CompiledGraph};
 use graph_testkit::{edge, make_math, make_protocol_source, make_sink};
 use kind::{NodeDef, NodeKind};
-use pipeline::{byte_router::route_bytes, DataPlaneState, DecoderFeedCache};
+use parking_lot::Mutex;
+use pipeline::{
+    apply_run_action, byte_router::route_bytes, DataPlaneState, DecoderFeedCache, RunAction,
+    StreamGroups,
+};
 use schema_types::{ProtocolConfig, TestDataLink};
 use waveform::{DerivedSeriesSelector, WaveformSeriesSelection};
 
@@ -125,6 +130,8 @@ fn main() {
         .build()
         .unwrap();
     let plane = setup(computed);
+    let stream_groups: StreamGroups = Arc::new(Mutex::new(HashMap::new()));
+    runtime.block_on(apply_run_action(&plane, &stream_groups, RunAction::Start));
     if let Ok(workers) = std::env::var("VOFA_SOAK_EVAL_WORKERS") {
         let workers: usize = workers.parse().expect("eval workers");
         assert!((1..=16).contains(&workers), "评估线程数范围为 1..=16");
@@ -318,6 +325,7 @@ fn main() {
         let diag = plane.eval_diagnostics();
         println!("{}", serde_json::json!({"eval_completed_batches":diag.completed_batches, "injected_ingest_stalls":ingest_stalls, "injected_ingest_stall_ms":ingest_stall_ms}));
         assert!(ingest_stall_ms == 0 || ingest_stalls > 0, "摄入停顿场景必须实际注入至少一次");
+        assert!(diag.completed_frames > 0, "运行态夹具必须实际完成图求值");
         let buffer = plane.buffer_for("pt");
         let buffer = buffer.lock();
         println!("{}", serde_json::json!({"raw_capacity":buffer.max_points(), "raw_points":buffer.point_count(), "raw_overwritten":buffer.storage_overflow(), "buffer_estimated_bytes":buffer.estimated_bytes()}));

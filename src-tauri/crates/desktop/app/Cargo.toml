@@ -15,6 +15,7 @@ workspace = true
 #  evaluator 提供; L1 类型统一经 runtime 门面转发)
 pipeline = { workspace = true }
 bus = { workspace = true }
+recording = { workspace = true }
 stream = { workspace = true }
 evaluator = { workspace = true }
 

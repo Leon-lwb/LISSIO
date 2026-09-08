@@ -87,5 +87,13 @@ pub async fn apply_run_action(
         snapshot.state,
         snapshot.epoch
     );
+    let recording_state = match target {
+        RunState::Running => recording::SessionState::Running,
+        RunState::Paused => recording::SessionState::Paused,
+        RunState::Stopped => recording::SessionState::Stopped,
+    };
+    if let Err(error) = plane.eval.recording.set_state(recording_state) {
+        log::error!("recording state transition failed: {error}");
+    }
     snapshot
 }

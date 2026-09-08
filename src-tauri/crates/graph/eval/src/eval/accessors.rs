@@ -21,6 +21,11 @@ impl CompiledEval {
         self.plan.str_slot_names.len()
     }
 
+    /// 字符串槽位的稳定 `(node_id, port)` 顺序。
+    pub fn str_slot_names(&self) -> &[(String, String)] {
+        &self.plan.str_slot_names
+    }
+
     /// TextOut 发送规格表 (发送 ticker / 手动命令的消费入口)
     pub fn textouts(&self) -> &[lower::TextOutSpec] {
         &self.plan.textouts
