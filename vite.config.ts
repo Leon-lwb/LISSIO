@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
@@ -13,7 +12,10 @@ export default defineConfig(() => ({
   //
   // 1. prevent Vite from obscuring rust errors
   clearScreen: false,
-  // 2. tauri expects a fixed port, fail if that port is not available
+  optimizeDeps: {
+    entries: ["index.html"],
+  },
+
   server: {
     port: 1420,
     strictPort: true,
@@ -25,6 +27,9 @@ export default defineConfig(() => ({
           port: 1421,
         }
       : undefined,
+    warmup: {
+      clientFiles: ["./index.html", "./src/main.tsx"],
+    },
     watch: {
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],

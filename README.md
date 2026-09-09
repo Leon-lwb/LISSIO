@@ -17,7 +17,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 
 <p align="center">
   <a href="https://github.com/horldsence/lissio">
-    <img src="icon.png" alt="Logo" width="80" height="80">
+    <img src="src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Lissio</h3>

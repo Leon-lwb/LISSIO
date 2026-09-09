@@ -179,16 +179,6 @@ body.dragging-dock * {
   to { transform: scaleX(0); }
 }
 
-@keyframes lissio-trace {
-  from { stroke-dashoffset: 100; }
-  to { stroke-dashoffset: 0; }
-}
-
-@keyframes lissio-breathe {
-  0%, 100% { opacity: 0.86; }
-  50% { opacity: 1; }
-}
-
 .lissajous-mark {
   display: block;
   overflow: visible;
@@ -196,55 +186,14 @@ body.dragging-dock * {
   filter: drop-shadow(0 0 8px color-mix(in srgb, var(--color-accent) 32%, transparent));
 }
 
-.lissajous-mark path {
+.lissajous-mark__track {
   fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-}
-
-.lissajous-mark__track {
-  stroke: currentColor;
-  stroke-width: 2.2;
   opacity: 0.16;
-}
-
-.lissajous-mark__trail {
-  stroke-width: 3.8;
-  stroke-dasharray: 24 76;
-  stroke-dashoffset: 100;
-}
-
-.lissajous-mark__head {
-  stroke: var(--color-brand-lime, #c8ff4d);
-  stroke-width: 5.4;
-  stroke-dasharray: 1.5 98.5;
-  stroke-dashoffset: 100;
-}
-
-.lissajous-mark--animated {
-  animation: lissio-breathe 2.7s var(--ease-in-out) infinite;
-}
-
-.lissajous-mark--animated .lissajous-mark__trail,
-.lissajous-mark--animated .lissajous-mark__head {
-  animation: lissio-trace 6s linear infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lissajous-mark,
-  .lissajous-mark path {
-    animation: none !important;
-  }
-
-  .lissajous-mark__trail {
-    stroke-dasharray: none;
-    stroke-dashoffset: 0;
-  }
-
-  .lissajous-mark__head {
-    display: none;
-  }
 }
 
 .animate-led-pulse {

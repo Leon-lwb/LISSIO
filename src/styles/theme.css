@@ -1,4 +1,8 @@
-@import "tailwindcss";
+/* source(none) + 显式 @source: 关闭 Tailwind 全项目自动探测 (它会遍历 src-tauri/target
+   等巨型目录, dev 下每个 CSS 转换耗时 ~54s), 只扫 src/ — 工具类仅用于 src 内 ts/tsx,
+   index.html 与 splashscreen.html 均不含 Tailwind 类。新增 src 之外的 class 来源时需补 @source */
+@import "tailwindcss" source(none);
+@source "../";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
 @import "@fontsource/jetbrains-mono/700.css";
