@@ -1,6 +1,6 @@
 [package]
 name = "lissio"
-version = "0.1.2"
+version = "0.6.0"
 description = "Modern serial port assistant with VOFA protocol support"
 authors = ["peng"]
 license = "GPL-2.0-only"
@@ -93,7 +93,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.2"
+version = "0.6.0"
 license = "GPL-2.0-only"
 
 [workspace.lints.clippy]
