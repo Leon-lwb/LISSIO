@@ -2,6 +2,25 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 约定。
 
+## [0.6.1] - 2026-09-09 (pre-release)
+
+### 新增
+
+- 串口枚举携带丰富元数据:端口类型、USB VID/PID、序列号、厂商与产品名,macOS / Windows / Linux 分平台补全
+- 采集设备面板与发现端点列表:可用串口端点直接选择,新增连接不再需要手动填写端口
+- 一键默认画布:自动创建 Serial → JustFloat → RawData 管线,选中串口节点并打开属性面板
+- 控件面板重构为分类目录(连接 / 处理 / 展示 / 扩展),活动栏分类入口替代跳转条
+- Schema 字段标签中/英双语
+
+### 修复
+
+- 启动播种改为异步安全:不重复建节点、不覆盖已恢复的工作区
+
+### CI
+
+- lint 工作流新增三平台串口发现契约测试(serial、modbus-adapter、can-transport)
+- 发布流水线:release 校验允许构建 head 提交为发布提交的祖先(覆盖自动 version bump 提交)
+
 ## [0.6.0] - 2026-09-09 (pre-release)
 
 ### 新增
