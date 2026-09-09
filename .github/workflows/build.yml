@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: 26
+  NODE_VERSION: 27
   RUST_TOOLCHAIN: stable
 
 jobs:
@@ -99,12 +99,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
-            target: universal-apple-darwin
-            args: '--target universal-apple-darwin'
-            artifact-name: macos-universal
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
-            updater-arch: universal
           - platform: macos-latest
             target: aarch64-apple-darwin
             args: '--target aarch64-apple-darwin'
@@ -218,7 +212,7 @@ jobs:
         if: runner.os == 'macOS'
         shell: bash
         run: |
-          # tauri 生成的 .app.tar.gz 不含架构名, 三个 macOS target 产物同名 —
+          # tauri 生成的 .app.tar.gz 不含架构名, 两个 macOS target 产物同名 —
           # 上传 Release 时会冲突 (HTTP 422 name already exists), 补上架构后缀
           find src-tauri/target -type f -name "*.app.tar.gz*" -path "*/bundle/*" | while read -r f; do
             case "$f" in
