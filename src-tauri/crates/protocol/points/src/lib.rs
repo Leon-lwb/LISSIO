@@ -4,6 +4,8 @@
 //! projection is requested. Protocol-specific addresses and native status are
 //! preserved at the cold configuration/inspection boundary.
 
+pub mod projection;
+
 use flow::FlowEnvelope;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

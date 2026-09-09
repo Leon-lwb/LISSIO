@@ -140,7 +140,7 @@ describe('explicit bindings', () => {
       // 统一发送门控: 控件值发送要求工作区运行中
       runState: 'running',
       rfNodes: [
-        { id: 'transport-1', type: 'transport', position: { x: 0, y: 0 }, data: {} },
+        { id: 'transport-1', type: 'acquisition', position: { x: 0, y: 0 }, data: {} },
         { id: 'protocol-1', type: 'protocol', position: { x: 0, y: 0 }, data: { config: { kind: 'JustFloat' } } },
       ],
       rfEdges: [],
@@ -163,7 +163,7 @@ describe('explicit bindings', () => {
     useAppStore.setState({
       runState: 'paused',
       rfNodes: [
-        { id: 'transport-1', type: 'transport', position: { x: 0, y: 0 }, data: {} },
+        { id: 'transport-1', type: 'acquisition', position: { x: 0, y: 0 }, data: {} },
         { id: 'protocol-1', type: 'protocol', position: { x: 0, y: 0 }, data: { config: { kind: 'JustFloat' } } },
       ],
       rfEdges: [{ id: 'edge-1', source: 'transport-1', target: 'protocol-1' }],
@@ -184,7 +184,7 @@ describe('explicit bindings', () => {
   it('does not send an incomplete Manual template', () => {
     const sendText = vi.fn(() => Promise.resolve());
     useAppStore.setState({
-      rfNodes: [{ id: 'transport-1', type: 'transport', position: { x: 0, y: 0 }, data: {} }],
+      rfNodes: [{ id: 'transport-1', type: 'acquisition', position: { x: 0, y: 0 }, data: {} }],
       sendText,
     });
     sendBindingValue({ mode: 'Manual', params: { transportId: 'transport-1', template: '   ' } }, 4);

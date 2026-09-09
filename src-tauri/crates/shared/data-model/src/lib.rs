@@ -20,6 +20,7 @@
 //! 3. **零业务**:仅数据载体,不包含协议解析/缓冲管理/调度逻辑。
 
 pub mod config;
+pub mod device;
 pub mod frame;
 pub mod serial_params;
 

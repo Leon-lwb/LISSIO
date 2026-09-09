@@ -26,7 +26,7 @@ fn create_protocol_engine(config: &ProtocolConfig) -> Box<dyn ProtocolEngine> {
     }
 }
 
-/// Protocol 节点运行时状态 — 生命周期跟随全局节点表 (图重编译时增删)
+/// Protocol 节点运行时状态 — 生命周期跟随工作区运行时节点索引 (图重编译时增删)
 pub struct ProtocolNodeState {
     /// 解析引擎 (feed 同步, 锁内无 await)
     pub engine: Arc<Mutex<Box<dyn ProtocolEngine>>>,

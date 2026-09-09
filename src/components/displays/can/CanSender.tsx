@@ -34,16 +34,15 @@ export function CanSender() {
   const handleSend = async () => {
     setError('');
     try {
-      // 目标 Transport: 优先 CAN 类 (Slcan/CandleLight), 否则第一个 Transport 节点
+      // Target device: prefer CAN-capable drivers in the active tab.
       const nodes = useAppStore.getState().rfNodes;
       const canNode = nodes.find(
         (n) =>
-          n.type === 'transport' &&
-          n.data?.global === true &&
-          ((n.data as { config?: { kind?: string } }).config?.kind === 'Slcan' ||
-            (n.data as { config?: { kind?: string } }).config?.kind === 'CandleLight')
+          n.type === 'acquisition' &&
+          n.data.tabId === useAppStore.getState().activeControlTabId &&
+          ['slcan', 'candle-light'].includes((n.data as { spec: { driver: { driverId: string } } }).spec.driver.driverId)
       );
-      const anyTransport = nodes.find((n) => n.type === 'transport' && n.data?.global === true);
+      const anyTransport = nodes.find((n) => n.type === 'acquisition' && n.data.tabId === useAppStore.getState().activeControlTabId);
       const targetId = canNode?.id ?? anyTransport?.id;
       if (!targetId) throw new Error(t(lang, 'noTransportNode'));
 

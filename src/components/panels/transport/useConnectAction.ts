@@ -1,4 +1,4 @@
-//! 共享连接 action — 全局 Transport 节点属性面板的 connect 提交流程
+//! 共享连接 action — 设备节点属性面板的 connect 提交流程
 import { useActionState } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
@@ -10,7 +10,7 @@ export interface ConnectActionState {
 
 const INITIAL_STATE: ConnectActionState = { ok: true };
 
-/// 连接 action — 连接指定的 Transport 节点
+/// 连接 action — 连接指定的设备节点
 ///
 /// 注意: store 的 connectNode() 内部捕获异常 (不抛错), 失败时置该节点状态为 'Error',
 /// 因此这里通过连接状态判断成功与否, 并复用 i18n 的 notifConnectFailed 错误文案。

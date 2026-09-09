@@ -1,12 +1,9 @@
-//! 图提交核心 — tab 图整体编译提交 / 全局 BytePlan 重建
+//! 图提交核心 — 页签图整体编译提交 / 合并 BytePlan 重建
 //!
 //! 层级: L3 app。不含任何 `#[tauri::command]`; `app` 参数仅用于可选的事件
 //! emit (`None` 供测试与启动恢复静默提交)。
 
-use app::{
-    prune_positions, AppState, Position, SourceGraphs, SourceNodeHint, TabSourceGraph,
-    WidgetRecord, WorkspaceState,
-};
+use app::{AppState, SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord, WorkspaceState};
 use buffer_graph::Edge;
 use data_model::{Error, Result};
 use error::ConfigError;
@@ -27,9 +24,9 @@ use crate::{
 
 // ============ 节点图 (后端化重构) ============
 
-/// 用候选全局节点表 + 全部 tab 的字节边重建全局 BytePlan
+/// 用候选运行时节点索引 + 全部页签的字节边重建合并 BytePlan
 ///
-/// 简单合并策略: 全局节点表按 id 覆盖合并 (任何 tab 提交后重建全局平面);
+/// 节点 id 在工作区内唯一；任一页签提交后重建共享运行平面。
 /// 孤儿节点 (图删除后残留) 的运行时资源由 `DataPlaneState::reconcile` 清理。
 fn rebuild_byte_plan(
     graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
@@ -49,7 +46,7 @@ fn rebuild_byte_plan(
     if let Some((_, g)) = new_tab {
         byte_edges.extend(g.byte_edges());
     }
-    // 合并后的全局表先建 HIR (边分类应与各 tab 编译期一致), 再投影字节平面
+    // 合并后的运行时节点索引先建 HIR (边分类应与各页签编译期一致), 再投影字节平面
     let typed = pipeline::TypedGraph::build(candidate.values().cloned(), byte_edges)
         .map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))?;
     BytePlan::build(&typed).map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))
@@ -60,12 +57,12 @@ fn rebuild_byte_plan(
 ///
 /// 两层编译:
 /// 1. 本 tab 数值图 CompiledGraph::compile (f32 槽位 + 本 tab BytePlan)
-/// 2. 全局字节平面: 该 tab 节点按 id 覆盖合并进全局节点表, 所有 tab 的
-///    字节边合并重算全局 BytePlan 存入 DataPlaneState, 并同步 protocol_states
+/// 2. 合并字节平面: 以工作区唯一 id 合并所有页签节点与字节边，重算 BytePlan
+///    存入 DataPlaneState，并同步 protocol_states
 ///
 /// 任一层编译失败 (循环/端口域不匹配等) 返回真实编译错误, 旧图与旧平面保留。
-/// `widgets` / `positions` 为 widget 配置记录与画布位置 (配置模型的后端权威存储):
-/// Some 时整体替换 / 合并, None (拓扑 op 等增量写入方) 时保留现状。
+/// `widgets` 是旧式低层调用生成的运行时投影；正式工作区入口使用
+/// [`crate::apply_document`]，由节点文档统一派生投影与布局。
 /// `base_version` 提供时做乐观并发检查: 与当前图版本不符返回
 /// `GraphVersionConflict` (期间有其他写入方 — 拓扑 op / MCP — 推进了版本)。
 /// 提交成功后返回 [`GraphDerived`] (派生端口表 + 新版本号),
@@ -80,7 +77,6 @@ pub async fn apply_tab_graph(
     edges: Vec<Edge>,
     node_hints: HashMap<String, SourceNodeHint>,
     widgets: Option<Vec<WidgetRecord>>,
-    positions: Option<HashMap<String, Position>>,
     base_version: Option<u64>,
 ) -> Result<GraphDerived> {
     let derived = apply_tab_graph_parts(
@@ -95,8 +91,8 @@ pub async fn apply_tab_graph(
         edges,
         node_hints,
         widgets,
-        positions,
         base_version,
+        None,
     )
     .await?;
     state.prune_waveform_snapshots();
@@ -107,7 +103,7 @@ pub async fn apply_tab_graph(
 /// (tab 图表 / 全局版本号 / 数据平面 / 源图存储 / 工作区), 供 MCP server、
 /// 拓扑 op 等非 Tauri-State 场景直接复用同一条提交路径。
 ///
-/// 成功后把 `(nodes, edges, hints, widgets)` 写入源图存储、合并 positions,
+/// 成功后把 `(nodes, edges, hints, widgets)` 写入源图存储，
 /// 并 emit `graph:source`; 编译失败所有存储不变。
 // 参数类型与 AppState.graphs 字段完全一致 (std hasher), 不做 hasher 泛型化
 #[allow(clippy::implicit_hasher)]
@@ -124,8 +120,8 @@ pub async fn apply_tab_graph_parts(
     edges: Vec<Edge>,
     node_hints: HashMap<String, SourceNodeHint>,
     widgets: Option<Vec<WidgetRecord>>,
-    positions: Option<HashMap<String, Position>>,
     base_version: Option<u64>,
+    documents: Option<Vec<kind::document::NodeDocument>>,
 ) -> Result<GraphDerived> {
     // 0. 乐观并发检查 — base_version 过期说明期间有其他写入方推进了图,
     //    整图替换会覆盖掉那批变更, 必须拒绝 (前端据此拉取权威源图合并重试)
@@ -133,6 +129,37 @@ pub async fn apply_tab_graph_parts(
         let current = graphs_version.load(std::sync::atomic::Ordering::Relaxed);
         if current != base {
             return Err(Error::Config(ConfigError::GraphVersionConflict { current }));
+        }
+    }
+
+    let mut node_ids = std::collections::HashSet::with_capacity(nodes.len());
+    for node in &nodes {
+        if node.tab_id != tab_id {
+            return Err(Error::Config(ConfigError::NodeTabMismatch {
+                node_id: node.id.clone(),
+                expected: tab_id.clone(),
+                actual: node.tab_id.clone(),
+            }));
+        }
+        if !node_ids.insert(node.id.as_str()) {
+            return Err(Error::Config(ConfigError::DuplicateNode {
+                node_id: node.id.clone(),
+                tab_id: tab_id.clone(),
+            }));
+        }
+    }
+    {
+        let existing = data_plane.global_nodes.lock();
+        if let Some(node) = nodes.iter().find(|node| {
+            existing
+                .get(&node.id)
+                .is_some_and(|current| current.tab_id != tab_id)
+        }) {
+            let owner = existing[&node.id].tab_id.clone();
+            return Err(Error::Config(ConfigError::DuplicateNode {
+                node_id: node.id.clone(),
+                tab_id: owner,
+            }));
         }
     }
 
@@ -162,9 +189,9 @@ pub async fn apply_tab_graph_parts(
             }
         };
 
-    // 3. 候选全局节点表: 移除该 tab 旧节点 → 插入新节点 (按 id 覆盖)
-    // ProtocolSource 是 tab 数值平面的帧源引用, 不参与字节平面, 不进全局表
-    // (避免与全局 Protocol 定义同 id 冲突)
+    // 3. 候选运行时节点索引: 移除该 tab 旧节点 → 插入新节点
+    // ProtocolSource 是页签数值平面的帧源引用，不参与字节平面，不进运行时索引
+    // (避免与所引用的 Protocol 定义同 id 冲突)
     let mut candidate = data_plane.global_nodes.lock().clone();
     candidate.retain(|_, n| n.tab_id != tab_id);
     for n in &nodes {
@@ -174,19 +201,19 @@ pub async fn apply_tab_graph_parts(
         candidate.insert(n.id.clone(), n.clone());
     }
 
-    // 4. 全局字节平面重建 (失败则不提交任何状态)
+    // 4. 合并字节平面重建 (失败则不提交任何状态)
     let plan = rebuild_byte_plan(graphs, &candidate, Some((&tab_id, &compiled)))?;
 
     // 5. 派生数据计算 (本次图变化涉及的全部节点的输出端口表 / 通道数)
     let derived_nodes = compute_derived(&candidate.values().cloned().collect::<Vec<_>>());
 
-    // 6. 提交: tab 图 + 全局节点表 + 全局平面 + 版本号 + 源图存储 + 工作区
+    // 6. 提交: 页签图 + 运行时节点索引 + 合并平面 + 版本号 + 源图存储 + 工作区
     graphs.lock().insert(tab_id.clone(), compiled);
     *data_plane.global_nodes.lock() = candidate;
     *data_plane.byte_plan.lock() = plan;
     let version = graphs_version.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
     // widget 记录: 提交携带时整体替换, 增量写入方 (拓扑 op / MCP 纯拓扑) 保留现状
-    let stored_widgets = {
+    {
         let mut store = source_graphs.lock();
         let widgets = widgets.unwrap_or_else(|| {
             store
@@ -194,26 +221,24 @@ pub async fn apply_tab_graph_parts(
                 .map(|g| g.widgets.clone())
                 .unwrap_or_default()
         });
+        let documents = documents.unwrap_or_else(|| {
+            store
+                .get(&tab_id)
+                .map(|g| g.documents.clone())
+                .unwrap_or_default()
+        });
         store.insert(
             tab_id.clone(),
             TabSourceGraph {
+                documents,
                 nodes,
                 edges,
                 hints: node_hints,
-                widgets: widgets.clone(),
+                widgets,
             },
         );
-        widgets
     };
-    // 工作区: 画布位置合并 + 孤儿位置清理 (存活集合 = 全部 tab 源图节点)
-    {
-        let mut ws = workspace.lock();
-        if let Some(pos) = positions {
-            ws.positions.extend(pos);
-        }
-        ws.dirty = true;
-    }
-    prune_positions(workspace, source_graphs);
+    workspace.lock().dirty = true;
     sync_recording_bindings(data_plane, source_graphs);
 
     // 7. 同步 Protocol 节点运行时状态 + FrameDecoder 状态清理 + 孤儿资源清理
@@ -237,36 +262,18 @@ pub async fn apply_tab_graph_parts(
         // 权威源图回推 — 前端画布据此收敛 (多写入方: 前端提交 / 拓扑 op / MCP)。
         // 携带 widget 配置记录与画布位置: 画布按此重建该 tab 完整视图
         // (外部提交的纯 widget 图也可完整渲染)
-        let (nodes, edges, widgets) = {
-            let store = source_graphs.lock();
-            let g = store.get(&tab_id);
-            (
-                g.map(|g| g.nodes.clone()).unwrap_or_default(),
-                g.map(|g| g.edges.clone()).unwrap_or_default(),
-                stored_widgets,
-            )
-        };
-        let tab_node_ids: std::collections::HashSet<String> = source_graphs
+        let (documents, edges) = source_graphs
             .lock()
             .get(&tab_id)
-            .map(|g| g.nodes.iter().map(|n| n.id.clone()).collect())
+            .map(|g| (g.documents.clone(), g.edges.clone()))
             .unwrap_or_default();
-        let event_positions: HashMap<String, Position> = workspace
-            .lock()
-            .positions
-            .iter()
-            .filter(|(id, _)| tab_node_ids.contains(*id))
-            .map(|(id, p)| (id.clone(), *p))
-            .collect();
         let _ = app.emit(
             GRAPH_SOURCE_EVENT,
             GraphSourceEvent {
                 tab_id: tab_id.clone(),
                 version,
-                nodes,
+                documents,
                 edges,
-                widgets,
-                positions: event_positions,
             },
         );
         let _ = app.emit(
@@ -312,7 +319,9 @@ fn sync_recording_bindings(data_plane: &DataPlaneState, source_graphs: &SourceGr
                 continue;
             };
             let port = recording::PortIdentity::new(&edge.source, &edge.source_handle);
-            let domain = recording_domain(source, &edge.source_handle);
+            let Some(domain) = recording_domain(source, &edge.source_handle) else {
+                continue;
+            };
             let id = format!("{}:{}:{}", domain.as_str(), edge.source, edge.source_handle);
             bindings
                 .entry(port.clone())
@@ -346,16 +355,17 @@ fn display_capability(kind: &str) -> Option<recording::BindingCapability> {
     }
 }
 
-fn recording_domain(source: &NodeDef, handle: &str) -> recording::Domain {
+fn recording_domain(source: &NodeDef, handle: &str) -> Option<recording::Domain> {
     if matches!(source.kind, NodeKind::Protocol { .. }) && handle == "str" {
-        return recording::Domain::String;
+        return Some(recording::Domain::String);
     }
-    match pipeline::port_domain(&source.kind, handle, true) {
+    Some(match pipeline::port_domain(&source.kind, handle, true) {
+        pipeline::PortDomain::Points => return None,
         pipeline::PortDomain::Bytes => recording::Domain::Bytes,
         pipeline::PortDomain::String => recording::Domain::String,
         pipeline::PortDomain::Spectrum => recording::Domain::Spectrum,
         pipeline::PortDomain::F32 => recording::Domain::Float,
-    }
+    })
 }
 
 /// 移除指定 tab 的节点图 (tab 删除时调用) — Tauri 命令入口在
@@ -369,10 +379,9 @@ pub async fn apply_remove_tab_graph(
     // 源图存储同步清除 — tab 已不存在, 权威拓扑与 widget 记录随之失效
     state.source_graphs.lock().remove(tab_id);
     sync_recording_bindings(&state.data_plane, &state.source_graphs);
-    prune_positions(&state.workspace, &state.source_graphs);
     state.workspace.lock().dirty = true;
 
-    // 全局节点表移除该 tab 节点 + 重建全局字节平面
+    // 运行时节点索引移除该页签节点 + 重建合并字节平面
     let mut candidate = state.data_plane.global_nodes.lock().clone();
     candidate.retain(|_, n| n.tab_id != tab_id);
     // 在移动 candidate 前计算派生数据 (后置消费者仍需遍历)

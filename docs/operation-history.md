@@ -46,7 +46,7 @@ tracked 切片: `rfNodes` / `rfEdges` / `widgets` / `controlTabs` /
 
 `restoreSnapshot` 全量替换切片后必须:
 
-1. `removeDerived` 清掉消失全局节点的派生端口表;
+1. `removeDerived` 清掉已删除节点的派生端口表;
 2. 尽力关闭消失 Transport 的连接 (`api.closeTransport`);
 3. `syncAllTabGraphs` 让后端按恢复后的图重建派生端口与求值引擎。
 

@@ -19,18 +19,20 @@
 
 import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
 import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
-import type { FilterPresetKind, MathOp, StrOp, TransportConfig, WidgetConfig } from '../types';
+import type { FilterPresetKind, MathOp, StrOp, WidgetConfig } from '../types';
+import type { DeviceCardModel } from './acquisition/deviceCardModel';
 
 /// 从控件面板拖出的控件参数 (拖到画布)
 export interface WidgetDragSpec {
-  /// 控件类型 — 全局节点条目 (globalNode 设置) 时缺省
+  /// 控件类型 — 结构节点条目 (`nodeType` 设置) 时缺省
   kind?: WidgetConfig['kind'];
   /// 操作变体 — Math 用 MathOp, Str 用 StrOp (按 kind 区分)
   op?: MathOp | StrOp;
   preset?: FilterPresetKind;
-  /// 全局节点拖入: 'transport' = 数据接口 (transportKind 指定类型), 'protocol' = 协议引擎
-  globalNode?: 'transport' | 'protocol';
-  transportKind?: TransportConfig['kind'];
+  /// 结构节点类型
+  nodeType?: 'protocol' | 'acquisition' | 'point-selector';
+  attribute?: 'test-data';
+  acquisition?: DeviceCardModel;
 }
 
 export type DockDragSpec =

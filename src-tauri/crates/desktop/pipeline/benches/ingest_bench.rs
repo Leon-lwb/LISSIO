@@ -10,8 +10,8 @@ use std::time::Duration;
 use app::AppState;
 use buffer_graph::Edge;
 use criterion::{criterion_group, criterion_main, Criterion, Throughput};
-use data_model::{TestDataConfig, TestSignal, TransportConfig};
 use graph::BytePlan;
+use graph_testkit::make_device_in;
 use kind::{NodeDef, NodeKind};
 use pipeline::byte_router::route_bytes;
 use pipeline::decoder_feed::DecoderFeedCache;
@@ -25,17 +25,7 @@ fn setup_plane() -> pipeline::DataPlaneState {
     let state = AppState::new();
     let plane = state.data_plane;
     let nodes = vec![
-        NodeDef {
-            id: "tp".into(),
-            tab_id: "bench".into(),
-            kind: NodeKind::Transport {
-                config: TransportConfig::TestData(TestDataConfig {
-                    channels: CHANNELS,
-                    sample_rate: 700_000.0,
-                    signal: TestSignal::Sine,
-                }),
-            },
-        },
+        make_device_in("tp", "bench"),
         NodeDef {
             id: "pt".into(),
             tab_id: "bench".into(),

@@ -1,3 +1,4 @@
+import { api } from '../../lib/tauri/tauri';
 import { nanoid } from 'nanoid';
 import { withHistoryOp, type HistoryTarget } from '../historyStore';
 import type { AppSlice } from './types';
@@ -6,7 +7,7 @@ import type { AppSlice } from './types';
 const tabTarget = (): HistoryTarget => ({ kind: 'tab' });
 
 export interface ControlTabSlice {
-  controlTabs: { id: string; name: string; widgets: string[] }[];
+  controlTabs: { id: string; name: string }[];
   activeControlTabId: string;
   addControlTab: (name?: string) => void;
   removeControlTab: (tabId: string) => void;
@@ -16,7 +17,7 @@ export interface ControlTabSlice {
 
 export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
   return {
-    controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
+    controlTabs: [{ id: 'default', name: 'Tab 1' }],
     activeControlTabId: 'default',
 
     addControlTab: (name) =>
@@ -25,7 +26,7 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
         set((s) => {
           const tabName = name ?? `Tab ${s.controlTabs.length + 1}`;
           return {
-            controlTabs: [...s.controlTabs, { id, name: tabName, widgets: [] }],
+            controlTabs: [...s.controlTabs, { id, name: tabName }],
             activeControlTabId: id,
           };
         });
@@ -40,15 +41,13 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
           target: tabTarget(),
         },
         () => {
+          if (!get().controlTabs.some(tab => tab.id === tabId)) return;
+          for (const node of get().rfNodes.filter(n => n.data.tabId === tabId && n.type === 'acquisition')) {
+            void api.closeTransport(node.id).catch(() => undefined);
+          }
           set((s) => {
             const remaining = s.controlTabs.filter((t) => t.id !== tabId);
-            if (remaining.length === 0) {
-              const defaultTab = { id: 'default', name: 'Tab 1', widgets: [] };
-              return {
-                controlTabs: [defaultTab],
-                activeControlTabId: 'default',
-              };
-            }
+            if (!remaining.length) remaining.push({ id: nanoid(8), name: 'Tab 1' });
             const tabNodeIds = new Set(
               s.rfNodes.filter((n) => n.data.tabId === tabId).map((n) => n.id)
             );
@@ -56,18 +55,13 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
               controlTabs: remaining,
               activeControlTabId:
                 s.activeControlTabId === tabId ? remaining[0].id : s.activeControlTabId,
-              // 全局节点 (data.global) 不属于任何 tab, 不随 tab 删除
               rfNodes: s.rfNodes.filter((n) => n.data.tabId !== tabId),
+              dataTabs: s.dataTabs.filter(t => !t.widgetId || !tabNodeIds.has(t.widgetId)),
               rfEdges: s.rfEdges.filter((e) => !tabNodeIds.has(e.source) && !tabNodeIds.has(e.target)),
             };
           });
-          // 全局节点 (Transport/Protocol) 在后端全局表中归属最后提交它的 tab:
-          // 先重同步全部存活 tab (把全局节点重新托管到存活 tab 名下),
-          // 再移除被删 tab 的图 — 否则后端的 retain 清理会连带删掉全局节点。
-          // 必须等存活 tab 同步落地后再 remove (先后顺序即正确性本身)
-          const syncs = get()
-            .controlTabs.map((t) => get().syncTabGraph(t.id) as Promise<unknown>);
-          void Promise.all(syncs).then(() => get().removeTabGraph(tabId));
+          get().removeTabGraph(tabId);
+          get().syncAllTabGraphs();
         }
       ),
 

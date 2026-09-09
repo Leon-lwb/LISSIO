@@ -1,6 +1,6 @@
 //! 原始字节收集器 (RawDataCollector) — 固定容量游标式历史缓冲
 //!
-//! 多数据源场景由 app 侧每个 Transport 节点 rx 各持一个实例
+//! 多数据源场景由 app 侧每个字节设备节点 rx 各持一个实例
 //! (FrameDecoder 节点旁路收集器独立管理, 见 app 侧 decoder_feed)。
 
 use std::collections::VecDeque;

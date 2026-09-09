@@ -208,7 +208,6 @@ fn test_compiled_eval_equivalence() {
                 enable_frame_count: true,
                 enable_last_timestamp: false,
                 enable_fps: false,
-                loopback: false,
             },
         },
     ];

@@ -2,7 +2,7 @@
 
 use app::AppState;
 use can::{CanFrame, CanFrameBatch, CandleDeviceInfo};
-use data_model::{PortInfo, Result, TestDataConfig, TransportConfig, WidgetBinding};
+use data_model::{PortInfo, Result, TestDataConfig, WidgetBinding};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use tauri::{AppHandle, State};
 
@@ -12,25 +12,7 @@ pub async fn list_ports() -> Result<Vec<PortInfo>> {
     serial::serial::list_ports()
 }
 
-/// 打开传输连接 (node_id = 图中 Transport 节点 id)
-///
-/// `protocol` 与 `schema` 仅被 TestData 用作生成数据的线缆格式参考, 其他传输类型忽略。
-/// 成功后挂载数据平面读任务 (subscribe → 字节路由 → 数值平面)。
-#[tauri::command]
-pub async fn open_transport(
-    app: AppHandle,
-    state: State<'_, AppState>,
-    node_id: String,
-    config: TransportConfig,
-    protocol: ProtocolConfig,
-    schema: Option<ProtocolSchema>,
-) -> Result<()> {
-    state
-        .open_transport(&app, &node_id, config, protocol, schema)
-        .await
-}
-
-/// 关闭传输连接 (node_id = 图中 Transport 节点 id)
+/// 关闭设备连接 (node_id = 图中设备节点 id)
 #[tauri::command]
 pub async fn close_transport(
     app: AppHandle,
@@ -40,13 +22,13 @@ pub async fn close_transport(
     state.close_transport(&app, &node_id).await
 }
 
-/// 发送原始字节 (node_id = 目标 Transport 节点 id)
+/// 发送原始字节 (node_id = 目标设备节点 id)
 #[tauri::command]
 pub async fn send_raw(state: State<'_, AppState>, node_id: String, data: Vec<u8>) -> Result<()> {
     state.send_raw(&node_id, data).await
 }
 
-/// 发送字符串 (node_id = 目标 Transport 节点 id)
+/// 发送字符串 (node_id = 目标设备节点 id)
 #[tauri::command]
 pub async fn send_string(state: State<'_, AppState>, node_id: String, text: String) -> Result<()> {
     send_raw(state, node_id, text.into_bytes()).await

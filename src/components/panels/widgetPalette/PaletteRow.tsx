@@ -65,10 +65,11 @@ export const PaletteRow = memo(function PaletteRow({ entry, category, entering, 
           kind: 'widget',
           widget: {
             kind: entry.kind,
+            attribute: entry.attribute,
             op: entry.op,
             preset: entry.preset,
-            globalNode: entry.globalNode,
-            transportKind: entry.transportKind,
+            nodeType: entry.nodeType,
+            acquisition: entry.acquisition,
           },
           label: entry.label,
         });

@@ -12,7 +12,7 @@ export const TextOutProperties = memo(function TextOutProperties({ widget, updat
   const nodes = useAppStore((s) => s.rfNodes);
   const { targetTransport, newline, minIntervalMs } = widget.params;
   const patch = (p: Partial<typeof widget.params>) => update({ kind: 'TextOut', params: { ...widget.params, ...p } });
-  const transports = nodes.filter((n) => n.type === 'transport');
+  const transports = nodes.filter((n) => n.type === 'acquisition');
   return (
     <section className="mt-3 pt-3 border-t border-border">
       <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'textOutSettings')}</div>

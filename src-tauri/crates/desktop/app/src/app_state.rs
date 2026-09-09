@@ -1,13 +1,13 @@
 //! 应用全局状态 — AppState (Tauri-managed) + GraphEvalState 由
 //! [`data_plane`] 提供 (本文件 re-use 即可)。
 
+use acquisition::AcquisitionRuntime;
 use bus::DataBus;
 use can::{CanBuffer, CanLoadStats};
 use data_model::PipelineConfig;
 use logic::{DecodedBuffer, LogicBuffer};
 use parking_lot::{Mutex, RwLock};
 use pipeline::NodeKind;
-use pipeline::TransportManager;
 use pipeline::{
     build_graph_eval_state, GraphEvalState, StreamGroupState, DEFAULT_CAN_BUFFER_CAPACITY,
     DEFAULT_CAN_LOAD_STATS_WINDOW, DEFAULT_DECODED_BUFFER_CAPACITY, DEFAULT_LOGIC_BUFFER_CAPACITY,
@@ -29,7 +29,7 @@ pub struct WaveformSnapshot {
 /// 应用全局状态
 pub struct AppState {
     /// 传输注册表 (node_id → 连接实例; open 是异步的, 用 tokio mutex)
-    pub transport: Arc<tokio::sync::Mutex<TransportManager>>,
+    pub transport: Arc<AcquisitionRuntime>,
     /// 数据平面状态 (字节平面 BytePlan / protocol_states / source_frames /
     /// 按源 buffers 与 raw_collectors / 读任务句柄) — 取代旧 protocol/protocol_config/
     /// buffer/raw_data_collector 单例字段
@@ -92,12 +92,12 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        Self::with_transport_manager(TransportManager::new())
+        Self::with_acquisition(AcquisitionRuntime::default())
     }
 
     /// Construct application state with adapters assembled by the composition root.
-    pub fn with_transport_manager(transport_manager: TransportManager) -> Self {
-        let transport = Arc::new(tokio::sync::Mutex::new(transport_manager));
+    pub fn with_acquisition(transport_manager: AcquisitionRuntime) -> Self {
+        let transport = Arc::new(transport_manager);
         let graphs = Arc::new(Mutex::new(HashMap::new()));
         let graphs_version = Arc::new(AtomicU64::new(0));
         let source_graphs: crate::SourceGraphs = Arc::new(Mutex::new(HashMap::new()));

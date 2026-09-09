@@ -17,7 +17,7 @@ export function sendBindingValue(binding: WidgetBinding, value: number) {
       return;
     case 'Auto': {
       const { transportId, protocolId } = binding.params;
-      const transportNode = state.rfNodes.find((n) => n.id === transportId && n.type === 'transport');
+      const transportNode = state.rfNodes.find((n) => n.id === transportId && n.type === 'acquisition');
       const protocolNode = state.rfNodes.find((n) => n.id === protocolId && n.type === 'protocol');
       if (!transportNode || !protocolNode) return;
       if (!state.rfEdges.some((edge) => edge.source === transportId && edge.target === protocolId)) return;
@@ -28,7 +28,7 @@ export function sendBindingValue(binding: WidgetBinding, value: number) {
     }
     case 'Manual': {
       const { transportId, template } = binding.params;
-      if (template.trim() === '' || !state.rfNodes.some((n) => n.id === transportId && n.type === 'transport')) return;
+      if (template.trim() === '' || !state.rfNodes.some((n) => n.id === transportId && n.type === 'acquisition')) return;
       void state.sendText(transportId, template.replace(/\{value\}/g, String(value)));
       return;
     }

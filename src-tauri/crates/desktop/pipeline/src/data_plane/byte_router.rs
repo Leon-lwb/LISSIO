@@ -1,6 +1,6 @@
 //! 字节路由 — 沿全局 BytePlan 把字节事件推送到所有下游
 //!
-//! 入口 [`route_bytes`]: 以 `source_id` (Transport 节点 / widget loopbackOut /
+//! 入口 [`route_bytes`]: 以 `source_id` (字节设备节点 / widget loopbackOut /
 //! Protocol 节点 convert 链) 为源, 查 `BytePlan::routes_for` 逐个下游分发:
 //! - Protocol 节点 `in`: 喂入解析引擎 (保留合批后的顺序/并行解析),
 //!   产帧 → [`super::frame_dispatch::on_frames`] 写 source_frames + 触发数值平面;
@@ -8,12 +8,12 @@
 //!   重编码 → 沿本节点 `out` 边递归下推 (BytePlan 拓扑序保证无环, 另有深度上限兜底);
 //!   RawData 协议不产帧: 原始字节 UTF-8 lossy 解码缓存到 source_texts
 //!   (ProtocolSource "str" 端口数据源), 无 convert_to 时原始字节沿 `out` 边透传下推
-//! - FrameDecoder 节点 `in`/`loopbackIn`: 走 feed_one_decoder 语义 (按边路由)
-//! - Transport 节点 `tx`: registry.send (协议转换回注 / 命令发送落地)
+//! - FrameDecoder 节点 `in`: 走 feed_one_decoder 语义 (按边路由)
+//! - 设备节点 `tx`: AcquisitionRuntime.send (协议转换回注 / 命令发送落地)
 
 use kind::{
-    NodeKind, FRAME_DECODER_IN_HANDLE, LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE,
-    PROTOCOL_OUT_HANDLE, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
+    NodeKind, FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE,
+    PROTOCOL_OUT_HANDLE, TRANSPORT_TX_HANDLE,
 };
 use tauri::AppHandle;
 
@@ -39,7 +39,7 @@ pub struct RouteSummary {
 
 /// 沿全局 BytePlan 推送字节 (事件驱动入口)
 ///
-/// - `source_id`: 字节源节点 (Transport 节点 id / widget loopbackOut 所在 widget id)
+/// - `source_id`: 字节源节点 (设备节点 id / widget loopbackOut 所在 widget id)
 /// - `depth_hint`: 源端积压深度 (并行解析判定用; 命令注入路径传 0)
 /// - `app`: 自动通道检测的系统通知与 `protocol:channels-detected` 事件推送用
 ///   (测试/无界面路径传 None, 跳过 emit 但 buffer 通道数对齐仍生效)
@@ -50,7 +50,7 @@ pub async fn route_bytes(
     data: &[u8],
     depth_hint: usize,
     dec_cache: &mut DecoderFeedCache,
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
 ) -> RouteSummary {
     let mut summary = RouteSummary::default();
     route_inner(
@@ -78,7 +78,7 @@ pub(super) async fn route_inner(
     dec_cache: &mut DecoderFeedCache,
     summary: &mut RouteSummary,
     depth: usize,
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
 ) {
     if depth > MAX_ROUTE_DEPTH {
         log::warn!("字节路由深度超限 ({}), 丢弃 {} 字节", source_id, data.len());
@@ -90,9 +90,15 @@ pub(super) async fn route_inner(
         .get(source_id)
         .map(|node| node.kind.clone());
     let source_handle = match source_kind {
-        Some(NodeKind::Transport { .. }) => TRANSPORT_RX_HANDLE,
-        Some(NodeKind::Protocol { .. }) => PROTOCOL_OUT_HANDLE,
-        _ => LOOPBACK_OUT_HANDLE,
+        Some(NodeKind::Acquisition { ports, .. }) => ports
+            .iter()
+            .find(|port| {
+                port.direction != data_model::device::DevicePortDirection::Input
+                    && port.domain == data_model::device::DevicePortDomain::Bytes
+            })
+            .map_or_else(|| LOOPBACK_OUT_HANDLE.to_string(), |port| port.id.clone()),
+        Some(NodeKind::Protocol { .. }) => PROTOCOL_OUT_HANDLE.to_string(),
+        _ => LOOPBACK_OUT_HANDLE.to_string(),
     };
     let port = recording::PortIdentity::new(source_id, source_handle);
     if !data.is_empty() && plane.eval.recording.is_bound(&port) {
@@ -196,7 +202,7 @@ async fn dispatch_non_protocol(
     summary: &mut RouteSummary,
     target: &str,
     target_handle: &str,
-    _live: Option<&transport::LiveNodeHandle>,
+    _live: Option<&acquisition::LiveNodeHandle>,
 ) {
     let kind = plane
         .global_nodes
@@ -205,25 +211,19 @@ async fn dispatch_non_protocol(
         .map(|n| n.kind.clone());
     let Some(kind) = kind else { return };
     match (&kind, target_handle) {
-        (NodeKind::FrameDecoder { .. }, FRAME_DECODER_IN_HANDLE | LOOPBACK_IN_HANDLE) => {
+        (NodeKind::FrameDecoder { .. }, FRAME_DECODER_IN_HANDLE) => {
             let ts = data_model::now_us();
             if crate::decoder_feed::feed_decoder_by_id(&plane.eval, target, data, ts, dec_cache) {
                 summary.decoders_fed = true;
             }
         }
-        (NodeKind::Transport { .. }, TRANSPORT_TX_HANDLE) => {
+        (NodeKind::Acquisition { .. }, TRANSPORT_TX_HANDLE) => {
             // 协议转换回注 / 命令发送落地 — try_lock 避免与 open 的长持锁互等
-            match plane.transport.try_lock() {
-                Ok(m) => match m.send(target, data) {
-                    Ok(()) => summary.tx_sends += 1,
-                    Err(e) => {
-                        summary.tx_errors += 1;
-                        log::debug!("字节路由发送失败 ({target}): {e}");
-                    }
-                },
-                Err(_) => {
+            match plane.transport.send(target, data) {
+                Ok(()) => summary.tx_sends += 1,
+                Err(e) => {
                     summary.tx_errors += 1;
-                    log::warn!("传输注册表锁忙, 丢弃发往 {} 的 {} 字节", target, data.len());
+                    log::debug!("字节路由发送失败 ({target}): {e}");
                 }
             }
         }

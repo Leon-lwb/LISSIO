@@ -152,10 +152,10 @@ fn test_ifft_node_in_eval_order_and_source() {
 // ============ 字节平面编译测试 ============
 
 #[test]
-fn test_transport_protocol_not_in_f32_eval_order() {
+fn test_device_protocol_not_in_f32_eval_order() {
     // Transport/Protocol 是字节平面节点, 不进入 f32 eval_order
     let nodes = vec![
-        make_transport("tp"),
+        make_device("tp"),
         make_protocol("pt"),
         make_decoder("dec", "t1"),
     ];
@@ -196,28 +196,29 @@ fn test_domain_mismatch_detected() {
 #[test]
 fn test_cross_plane_loopback_no_false_cycle() {
     // 经典回环: FrameDecoder 输出 (F32) → Command 输入;
-    // Command.loopbackOut (Bytes) → FrameDecoder.loopbackIn (Bytes)
+    // Command.loopbackOut (Bytes) → FrameDecoder.in (Bytes)
     // 跨平面不构成循环: f32 平面只看 f32 边, 字节平面只看字节边 → 编译应成功
     let nodes = vec![make_decoder("dec", "t1"), make_sink("cmd", "t1")];
     let edges = vec![
         edge("e1", "dec", "value", "cmd", "value"),
-        edge("e2", "cmd", "loopbackOut", "dec", "loopbackIn"),
+        edge("e2", "cmd", "loopbackOut", "dec", "in"),
     ];
     let g = CompiledGraph::compile("t1".into(), nodes, edges).unwrap();
-    // 字节路由: cmd → dec (loopbackIn)
+    // 字节路由: cmd → dec (in)
     let routes = g.byte_plan().routes_for("cmd");
     assert_eq!(routes.len(), 1);
     assert_eq!(routes[0].target, "dec");
-    assert_eq!(routes[0].target_handle, "loopbackIn");
+    assert_eq!(routes[0].target_handle, "in");
 }
 
 #[test]
-fn test_legacy_loopback_in_handle_is_bytes() {
-    // 旧名 loopbackIn 与新名 in 均为 FrameDecoder 的字节入口
-    let nodes = vec![make_transport("tp"), make_decoder("dec", "t1")];
+fn test_undeclared_loopback_in_handle_is_rejected() {
+    let nodes = vec![make_device("tp"), make_decoder("dec", "t1")];
     let edges = vec![edge("e1", "tp", "rx", "dec", "loopbackIn")];
-    let g = CompiledGraph::compile("t1".into(), nodes, edges).unwrap();
-    assert_eq!(g.byte_edges().count(), 1);
+    assert!(matches!(
+        CompiledGraph::compile("t1".into(), nodes, edges),
+        Err(CompileError::DomainMismatch { .. })
+    ));
 }
 
 #[test]
@@ -229,7 +230,7 @@ fn test_same_id_protocol_and_protocol_source_coexist() {
     let nodes = vec![
         make_protocol_source("pt", "t1", "pt", 2),
         make_protocol("pt"),
-        make_transport("tp"),
+        make_device("tp"),
         make_math("m1", "t1", MathOp::Add, 1),
     ];
     let edges = vec![
@@ -269,7 +270,7 @@ fn test_raw_data_channel_edges_classified_by_source_domain() {
     // RawData 关联通道边 (Sink 的 src:<source>:<handle> 动态端口) 按源端域归类放行:
     // 字节源 (Transport.rx / Protocol.out) → byte_edges; 数值源 (chN) → f32 边 (不进 byte_edges)
     let nodes = vec![
-        make_transport("tp"),
+        make_device("tp"),
         make_protocol("pt"),
         make_protocol_source("pt", "t1", "pt", 1),
         make_sink("w-raw", "t1"),

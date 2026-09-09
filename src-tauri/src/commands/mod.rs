@@ -1,3 +1,4 @@
+pub mod acquisition;
 pub mod ai;
 pub mod buffer;
 pub mod can_load;

@@ -251,7 +251,7 @@ mod tests {
                 make_protocol_source("ps1", "t1", "proto1", 1),
                 make_math("m1", "t1", MathOp::Add, 1),
                 make_sink("sink1", "t1"),
-                make_transport("tp"),
+                make_device("tp"),
             ],
             vec![
                 edge("e1", "ps1", "ch0", "m1", "in0"),
@@ -297,12 +297,12 @@ mod tests {
     #[test]
     fn test_cross_plane_no_false_cycle() {
         // FrameDecoder 输出 (F32) → Command 输入; Command.loopbackOut (Bytes)
-        // → FrameDecoder.loopbackIn (Bytes): 跨平面不构成循环
+        // → FrameDecoder.in (Bytes): 跨平面不构成循环
         let g = TypedGraph::build(
             vec![make_decoder("dec", "t1"), make_sink("cmd", "t1")],
             vec![
                 edge("e1", "dec", "value", "cmd", "value"),
-                edge("e2", "cmd", "loopbackOut", "dec", "loopbackIn"),
+                edge("e2", "cmd", "loopbackOut", "dec", "in"),
             ],
         )
         .unwrap();
@@ -311,18 +311,11 @@ mod tests {
     }
 
     #[test]
-    fn test_value_plane_excludes_ghost_endpoints() {
-        // 占位端点 (无定义) 不参与值平面拓扑, 但边仍进 input_index
-        // (反查时上游无槽位 → 缺省 0.0)
-        let g = TypedGraph::build(
+    fn test_value_plane_rejects_ghost_endpoints() {
+        let result = TypedGraph::build(
             vec![make_math("m1", "t1", MathOp::Add, 1)],
             vec![edge("e1", "ghost", "result", "m1", "in0")],
-        )
-        .unwrap();
-        let mir = value_plane(&g).unwrap();
-        let order = ids(&g, &mir.order);
-        assert!(order.contains(&"m1"));
-        assert!(!order.contains(&"ghost"));
-        assert!(mir.input_index["m1"].contains_key("in0"));
+        );
+        assert!(matches!(result, Err(CompileError::NodeNotFound { id }) if id == "ghost"));
     }
 }

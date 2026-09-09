@@ -15,7 +15,7 @@
 //! 遗留系统若原地改写嵌套对象, 深拷贝保证 undo 的存档不受后续污染。
 //!
 //! 恢复副作用: 全量替换切片后必须
-//! ① removeDerived 清掉消失全局节点的派生端口表
+//! ① removeDerived 清掉消失结构节点的派生端口表
 //! ② closeTransport 关闭消失 Transport 的连接 (尽力而为)
 //! ③ syncAllTabGraphs 让后端按恢复后的图重建派生端口与求值引擎。
 
@@ -23,7 +23,7 @@ import { create } from 'zustand';
 import type { Node, Edge } from '@xyflow/react';
 import { api } from '../lib/tauri/tauri';
 import { useAppStore } from './appStore';
-import { isGlobalNode } from './appStoreHelpers';
+import { isStructuralNode } from './appStoreHelpers';
 import type { NodeVisualRef } from '../lib/utils/nodeKindVisuals';
 import type { WidgetConfig, DataTab, ControlTab } from '../types';
 
@@ -206,12 +206,12 @@ export const useHistoryStore = create<HistoryState>()((set, get) => ({
 /// restoring 标志保证恢复期间不入栈 (undo 本身不是一次「用户操作」)。
 function restoreSnapshot(snapshot: DocSnapshot): void {
   const prev = useAppStore.getState();
-  // 消失的全局节点: 清派生端口表; 其中 Transport 还要尽力关闭连接
-  const prevGlobalIds = new Set(prev.rfNodes.filter(isGlobalNode).map((n) => n.id));
-  const nextGlobalIds = new Set(snapshot.rfNodes.filter(isGlobalNode).map((n) => n.id));
-  const removedGlobal = [...prevGlobalIds].filter((id) => !nextGlobalIds.has(id));
+  // 消失的结构节点: 清派生端口表; 其中设备还要尽力关闭连接
+  const previousStructuralIds = new Set(prev.rfNodes.filter(isStructuralNode).map((n) => n.id));
+  const nextStructuralIds = new Set(snapshot.rfNodes.filter(isStructuralNode).map((n) => n.id));
+  const removedGlobal = [...previousStructuralIds].filter((id) => !nextStructuralIds.has(id));
   const removedTransports = new Set(
-    removedGlobal.filter((id) => prev.rfNodes.find((n) => n.id === id)?.type === 'transport')
+    removedGlobal.filter((id) => prev.rfNodes.find((n) => n.id === id)?.type === 'acquisition')
   );
 
   restoring = true;
@@ -242,6 +242,9 @@ function restoreSnapshot(snapshot: DocSnapshot): void {
     });
     if (removedGlobal.length > 0) {
       useAppStore.getState().removeDerived(removedGlobal);
+    }
+    for (const tab of prev.controlTabs) {
+      if (!snapshot.controlTabs.some(next => next.id === tab.id)) useAppStore.getState().removeTabGraph(tab.id);
     }
     useAppStore.getState().syncAllTabGraphs();
   } finally {

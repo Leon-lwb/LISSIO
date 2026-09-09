@@ -1,10 +1,10 @@
 //! ProtocolSource NodeDef 自动注入 — 取代前端 `syncTabGraphToBackend` 内的手工注入
 //!
-//! 前端 `update_tab_graph` 只提交原始节点 (widget + 全局 Transport/Protocol) + 边;
-//! 后端编译时按"本 tab 内存在从某全局 Protocol 节点输出端口出发的边"自动追加
+//! 前端 `update_tab_graph` 只提交当前页签节点文档和边；
+//! 后端编译时按"本 tab 内存在从 Protocol 节点输出端口出发的边"自动追加
 //! 对应 ProtocolSource NodeDef, 供 `CompiledGraph::compile` 与 `evaluate` 消费。
 //!
-//! ProtocolSource 节点的 `id` = 被引用的全局 Protocol 节点 id (与原前端约定一致),
+//! ProtocolSource 节点的 `id` = 被引用的 Protocol 节点 id,
 //! `port_names` 与 `channels` 由 `protocol_source_port_names` / `ProtocolSchema::port_names`
 //! 推导 (后端单一权威)。
 
@@ -15,10 +15,9 @@ use std::collections::HashSet;
 
 /// 给定原始节点表 + 边, 返回需要追加到编译列表的 ProtocolSource NodeDef
 ///
-/// 输入边为前端提交的本 tab 边 (含 widget ↔ widget / widget ↔ global);
-/// ProtocolSource 仅在边**起点**为全局 Protocol 节点时追加 (id 与全局节点 id 重合)。
+/// 输入边为前端提交的本 tab 边；ProtocolSource 仅在边**起点**为 Protocol 节点时追加。
 pub fn inject_protocol_sources(nodes: &[NodeDef], edges: &[Edge]) -> Vec<NodeDef> {
-    // 收集全局 Protocol 节点 (候选源)
+    // 收集当前页签 Protocol 节点 (候选源)
     let protocols: Vec<&NodeDef> = nodes
         .iter()
         .filter(|n| matches!(n.kind, NodeKind::Protocol { .. }))
@@ -102,7 +101,7 @@ fn channels_from_config(config: &ProtocolConfig) -> usize {
 mod tests {
     use super::*;
     use buffer_graph::Edge;
-    use data_model::config::TransportConfig;
+    use graph_testkit::make_device_in;
     use pipeline::NodeKind;
     use schema_types::{DecoderBlockDef, FieldType, SchemaPreset};
 
@@ -193,21 +192,15 @@ mod tests {
     }
 
     #[test]
-    fn edge_from_transport_does_not_emit_protocol_source() {
-        let transport = NodeDef {
-            id: "t1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Transport {
-                config: TransportConfig::TestData(data_model::config::TestDataConfig::default()),
-            },
-        };
+    fn edge_from_device_does_not_emit_protocol_source() {
+        let device = make_device_in("t1", "tab1");
         let widget = NodeDef {
             id: "w1".into(),
             tab_id: "tab1".into(),
             kind: NodeKind::Sink,
         };
         let edges = vec![edge("t1", "rx", "w1", "data")];
-        let sources = inject_protocol_sources(&[transport, widget], &edges);
+        let sources = inject_protocol_sources(&[device, widget], &edges);
         assert!(sources.is_empty());
     }
 

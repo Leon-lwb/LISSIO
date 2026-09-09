@@ -9,9 +9,9 @@ use std::time::{Duration, Instant};
 
 use app::AppState;
 use bus::TopicKey;
-use data_model::{TestDataConfig, TestSignal, TransportConfig};
+use data_model::{TestDataConfig, TestSignal};
 use graph::{BytePlan, CompiledGraph};
-use graph_testkit::{edge, make_math, make_protocol_source, make_sink};
+use graph_testkit::{edge, make_device_in, make_math, make_protocol_source, make_sink};
 use kind::{NodeDef, NodeKind};
 use parking_lot::Mutex;
 use pipeline::{
@@ -24,13 +24,7 @@ use waveform::{DerivedSeriesSelector, WaveformSeriesSelection};
 fn setup(computed: bool) -> DataPlaneState {
     let plane = AppState::new().data_plane;
     let nodes = vec![
-        NodeDef {
-            id: "tp".into(),
-            tab_id: "t".into(),
-            kind: NodeKind::Transport {
-                config: TransportConfig::TestData(config()),
-            },
-        },
+        make_device_in("tp", "t"),
         NodeDef {
             id: "pt".into(),
             tab_id: "t".into(),

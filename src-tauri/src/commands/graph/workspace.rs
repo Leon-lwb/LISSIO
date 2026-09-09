@@ -7,19 +7,15 @@
 //! - [`restore_workspace`]: 启动时从 `workspace.json` 恢复存储并逐 tab 重编译,
 //!   让图在后端立即可求值 (前端随后水合, 不再回推整图)
 
-use app::{load_workspace, DataTabMeta, Position, TabGraphFile, TabMeta, WidgetRecord};
+use app::{load_workspace, DataTabMeta, TabGraphFile, TabMeta};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use tauri::State;
 
 use app::AppState;
-use app::NodeDef;
 use buffer_graph::Edge;
 use data_model::Result;
-
-use graph_ops::apply_tab_graph_parts;
 
 /// `workspace_get` 响应 — 前端水合快照 (图形与 `graph:source` 事件同构,
 /// 另带 tab 元数据与全局版本号)
@@ -29,16 +25,14 @@ pub struct WorkspaceSnapshot {
     pub tabs: Vec<TabMeta>,
     pub data_tabs: Vec<DataTabMeta>,
     pub graphs: Vec<TabGraphSnapshot>,
-    pub positions: HashMap<String, Position>,
 }
 
 /// 单 tab 快照 — 权威源图 + widget 配置记录
 #[derive(Debug, Clone, Serialize)]
 pub struct TabGraphSnapshot {
+    pub documents: Vec<kind::document::NodeDocument>,
     pub tab_id: String,
-    pub nodes: Vec<NodeDef>,
     pub edges: Vec<Edge>,
-    pub widgets: Vec<WidgetRecord>,
 }
 
 /// 读取工作区水合快照;启动时未恢复过持久化工作区返回 None。
@@ -59,8 +53,7 @@ pub async fn workspace_get(state: State<'_, AppState>) -> Result<Option<Workspac
     if !ws.restored {
         return Ok(None);
     }
-    let (tabs, data_tabs, positions) =
-        (ws.tabs.clone(), ws.data_tabs.clone(), ws.positions.clone());
+    let (tabs, data_tabs) = (ws.tabs.clone(), ws.data_tabs.clone());
     drop(ws);
     let graphs = {
         let store = state.source_graphs.lock();
@@ -69,10 +62,9 @@ pub async fn workspace_get(state: State<'_, AppState>) -> Result<Option<Workspac
         for tab in &tabs {
             if let Some(g) = store.get(&tab.id) {
                 ordered.push(TabGraphSnapshot {
+                    documents: g.documents.clone(),
                     tab_id: tab.id.clone(),
-                    nodes: g.nodes.clone(),
                     edges: g.edges.clone(),
-                    widgets: g.widgets.clone(),
                 });
             }
         }
@@ -84,10 +76,9 @@ pub async fn workspace_get(state: State<'_, AppState>) -> Result<Option<Workspac
             }
             let g = &store[tab_id];
             ordered.push(TabGraphSnapshot {
+                documents: g.documents.clone(),
                 tab_id: tab_id.clone(),
-                nodes: g.nodes.clone(),
                 edges: g.edges.clone(),
-                widgets: g.widgets.clone(),
             });
         }
         ordered
@@ -98,7 +89,6 @@ pub async fn workspace_get(state: State<'_, AppState>) -> Result<Option<Workspac
         tabs,
         data_tabs,
         graphs,
-        positions,
     }))
 }
 
@@ -128,23 +118,16 @@ pub async fn restore_workspace(state: &AppState, dir: &Path) -> bool {
         tabs,
         data_tabs,
         graphs,
-        positions,
     } = file;
     {
         let mut ws = state.workspace.lock();
         ws.tabs = tabs;
         ws.data_tabs = data_tabs;
-        ws.positions = positions;
         ws.restored = true;
     }
     for (tab_id, g) in graphs {
-        let TabGraphFile {
-            nodes,
-            edges,
-            hints,
-            widgets,
-        } = g;
-        if let Err(e) = apply_tab_graph_parts(
+        let TabGraphFile { documents, edges } = g;
+        if let Err(e) = graph_ops::apply_document(
             &state.graphs,
             &state.graphs_version,
             &state.data_plane,
@@ -152,11 +135,8 @@ pub async fn restore_workspace(state: &AppState, dir: &Path) -> bool {
             &state.workspace,
             None,
             tab_id,
-            nodes,
+            documents,
             edges,
-            hints,
-            Some(widgets),
-            None,
             None,
         )
         .await

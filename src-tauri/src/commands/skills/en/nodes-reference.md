@@ -1,20 +1,22 @@
 # Node & Widget Type Reference
 
-## Transport nodes (global)
+## Device nodes (per tab, capability-driven)
 
-| kind | key params |
+| adapter id | key configuration |
 |---|---|
 | Serial | port_name (query via list_serial_ports first), baud_rate, data_bits, parity, stop_bits, flow_control |
 | Udp | local_addr/local_port (local), remote_addr/remote_port (peer) |
 | TcpClient | host, port |
 | TcpServer | listen_addr, listen_port |
-| TestData | channels, sample_rate, signal (Sine/Square/Triangle/Sawtooth/Random/Dc/Chirp/Steps/Noise/MultiTone) — simulated source for hardware-less testing |
 | Slcan | serial params + can_bitrate (lawicel adapter) |
 | CandleLight | bus, address, can_bitrate, channel (canable etc. USB-CAN) |
+| modbus-tcp / modbus-rtu | endpoint plus typed point definitions, polling and reconnect settings |
 
-Node id pattern: `transport-XXXXXXXX` (nanoid). Connection state via list_transports.
+Use `list_devices` for open sessions. Test Data is a unique attribute attached
+to a device; it retains the real configuration and ports and never opens the
+real hardware while active.
 
-## Protocol nodes (global)
+## Parser and encoder nodes (per tab)
 
 | kind | notes |
 |---|---|
@@ -26,6 +28,12 @@ Node id pattern: `transport-XXXXXXXX` (nanoid). Connection state via list_transp
 
 Node id pattern: `protocol-XXXXXXXX`. Protocols support convertTo (secondary
 conversion) and custom frame schema.
+
+## Point selection
+
+Point devices output one `points` stream. Point Selector accepts exactly one
+point source and creates named numeric outputs from selected stable point IDs.
+Bool maps to 0/1; bad quality and overflow are not emitted as valid numbers.
 
 ## Widgets (per tab)
 
@@ -56,13 +64,14 @@ backend compiler (the error names both ports and their domains):
 
 | Domain | Typical ports |
 |---|---|
-| bytes | Transport.rx / Transport.tx, Protocol.in / Protocol.out, FrameDecoder.in, Command.loopbackOut |
-| time | protocol ch0..chN, Math.result, Filter.result, IFFT.out0, FrameDecoder field ports, input-widget value outputs, display inputs (Waveform.CH0..N, Gauge.value, ...) |
+| points | Device.points → PointSelector.points |
+| bytes | Device.rx / Device.tx, Protocol.in / Protocol.out, FrameDecoder.in, Command.loopbackOut |
+| f32 | PointSelector named outputs, protocol ch0..chN, Math.result, Filter.result, IFFT.out0, input and display ports |
 | freq | FFT.spectrum (output) → only IFFT.spectrum / Spectrum.spectrum inputs |
 | string | RawData-preset protocol str, TextInput.str, Trigger.text, Str string ports, TextDisplay.text, TextOut.text |
 
-Typical chains: Transport.rx(bytes) → Protocol.in; Protocol.chN(time) →
-Waveform/Gauge/Math; FFT.spectrum(freq) → IFFT or Spectrum; str(string) →
+Typical chains: Device.rx(bytes) → Protocol.in; Device.points → PointSelector;
+numeric outputs → Waveform/Gauge/Math; FFT.spectrum(freq) → IFFT or Spectrum; str(string) →
 TextDisplay / Str / TextOut.
 
 ### Other rules
@@ -70,8 +79,7 @@ TextDisplay / Str / TextOut.
 - RawData widget input ports are dynamically derived (`src:<source>:<handle>`);
   targetHandle is rewritten automatically on connect. RawData accepts bytes and
   time sources; only freq is rejected.
-- Widgets can only connect to widgets of the same tab or to global nodes
-  (cross-tab is rejected).
+- Every connection stays inside one tab; cross-tab edges are rejected.
 - Port names and domains: use each node's `ports` field in the get_workspace
   response (inputs/outputs carry domain annotations, same source as the
   canvas); read first, then connect.

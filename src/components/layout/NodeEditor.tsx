@@ -6,7 +6,6 @@ import {
   Controls,
   MiniMap,
   useReactFlow,
-  type NodeTypes,
   Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -19,9 +18,9 @@ import { transitionStore } from '../../lib/utils/transitionStore';
 import { dockDrag, type WidgetDragSpec } from '../../lib/dockDrag';
 import type { MathOp, StrOp } from '../../types';
 import { isUnaryMathOp } from '../../types';
-import { WidgetNode } from '../nodes/WidgetNode';
-import { TransportNode } from '../nodes/TransportNode';
-import { ProtocolNode } from '../nodes/ProtocolNode';
+import { applyTestAttribute } from '../../lib/acquisition/simulation';
+import { addPaletteNode } from '../../lib/utils/paletteCreation';
+import { REACT_FLOW_NODE_TYPES } from '../nodes/registry';
 import { validateConnection } from '../../lib/utils/connectionRules';
 import { openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
 import { Maximize, LayoutGrid } from 'lucide-react';
@@ -31,16 +30,10 @@ interface NodeEditorProps {
 }
 
 /// 节点类型注册 — React Flow 要求在组件外部定义以避免无限渲染
-const nodeTypes: NodeTypes = {
-  transport: TransportNode,
-  protocol: ProtocolNode,
-  widget: WidgetNode,
-};
-
 /// React Flow 风格节点编辑器
 /// - 从侧边栏拖拽控件到画布 (onDrop 绑在 <ReactFlow> 上, 外层 div 不拦截)
 /// - 节点之间通过边连接表示数据流
-/// - 全局节点 (Transport/Protocol) 渲染在所有 tab 画布上
+/// - every node belongs to exactly one tab
 ///
 /// 必须用 ReactFlowProvider 包裹, 才能在内部使用 useReactFlow().screenToFlowPosition()
 /// 否则拖拽放置的节点会落到错误的画布坐标 (尤其 fitView/pan/zoom 后)
@@ -60,8 +53,6 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   const onEdgesChange = useAppStore((s) => s.onEdgesChange);
   const onConnect = useAppStore((s) => s.onConnect);
   const addWidget = useAppStore((s) => s.addWidget);
-  const addTransportNode = useAppStore((s) => s.addTransportNode);
-  const addProtocolNode = useAppStore((s) => s.addProtocolNode);
   const setSidebarView = useAppStore((s) => s.setSidebarView);
   const reactFlow = useReactFlow();
 
@@ -108,11 +99,11 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   // React Flow 容器引用 — 仅用于视觉反馈 (drag-over 高亮)
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // 按当前 tab 过滤节点: 本 tab 的 widget 节点 + 全部全局节点 (Transport/Protocol)
+  // 所有节点均归属创建页签，画布只显示当前页签节点。
   const tabNodes = useMemo(
     () =>
       rfNodes
-        .filter((n) => n.data.tabId === tabId || n.data.global === true)
+        .filter((n) => n.data.tabId === tabId)
         .map((n) => ({ ...n, dragHandle: '.node-drag-handle' })),
     [rfNodes, tabId]
   );
@@ -141,9 +132,9 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       });
   }, [rfEdges, tabNodeIds, tabErrorEdges, tabState]);
 
-  // 选中的节点 → 停靠属性面板 (全局节点优先, 与旧浮层面板行为一致)
-  const selectedGlobalNode = useMemo(
-    () => tabNodes.find((n) => n.selected && n.data.global === true),
+  // 选中的节点 → 停靠属性面板
+  const selectedStructuralNode = useMemo(
+    () => tabNodes.find((n) => n.selected && n.type !== 'widget'),
     [tabNodes]
   );
 
@@ -152,7 +143,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
     [tabNodes]
   );
 
-  const propertiesNode = selectedGlobalNode ?? selectedWidgetNode;
+  const propertiesNode = selectedStructuralNode ?? selectedWidgetNode;
 
   // 选中节点 → 自动打开并激活「节点属性」数据面板 tab (单例; 创建时在画布
   // 右侧拆分专属小卡, 已有归属则只激活)
@@ -165,18 +156,16 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   // 从控件面板拖出控件 — 指针事件落点 (dockDrag 控制器命中 canvas 投放区后调用)
   const createFromDrop = useCallback(
     (x: number, y: number, spec: WidgetDragSpec) => {
+      if (spec.attribute === 'test-data') {
+        const target = document.elementFromPoint(x, y)?.closest('[data-node-id]')?.getAttribute('data-node-id');
+        if (target) applyTestAttribute(target);
+        return;
+      }
       // 用 screenToFlowPosition 正确处理 zoom/pan 后的坐标转换
       const position = reactFlow.screenToFlowPosition({ x, y });
 
-      // 全局节点 (数据接口 / 协议引擎)
-      if (spec.globalNode === 'transport') {
-        addTransportNode(spec.transportKind ?? 'Serial', position);
-        return;
-      }
-      if (spec.globalNode === 'protocol') {
-        addProtocolNode(undefined, position);
-        return;
-      }
+      // 设备、协议和点位选择等结构节点
+      if (addPaletteNode(spec, position, tabId)) return;
       if (!spec.kind) return;
 
       const widget = createWidget(spec.kind);
@@ -203,7 +192,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       }
       addWidget(widget, tabId, position);
     },
-    [addWidget, addTransportNode, addProtocolNode, tabId, reactFlow]
+    [addWidget, tabId, reactFlow]
   );
 
   // 当前可见画布注册为控件投放目标 (按画布元素注册 — 多个控制卡片并存时落点各归其主)
@@ -268,7 +257,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
-        nodeTypes={nodeTypes}
+        nodeTypes={REACT_FLOW_NODE_TYPES}
         defaultEdgeOptions={{ interactionWidth: 40, style: { strokeWidth: 2 } }}
         fitView
         fitViewOptions={{ padding: 0.2, minZoom: 1, maxZoom: 1 }}
@@ -283,7 +272,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
           zoomable
           className="bg-bg-sidebar border border-border rounded overflow-hidden"
           nodeColor={(n) =>
-            n.type === 'transport' ? '#e5c07b' : n.type === 'protocol' ? '#75beff' : '#89d185'
+            n.type === 'acquisition' ? '#e5c07b' : n.type === 'protocol' ? '#75beff' : '#89d185'
           }
         />
         <Panel position="top-left">

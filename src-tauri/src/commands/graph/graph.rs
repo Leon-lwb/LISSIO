@@ -4,12 +4,11 @@
 //! `State` 借用与命令注册。
 
 use app::DecoderFeedCache;
-use app::NodeDef;
 use app::{byte_router, frame_dispatch};
-use app::{AppState, Position, SourceNodeHint, WidgetRecord};
+use app::{AppState, Position};
 use buffer_graph::Edge;
 use data_model::Result;
-use graph_ops::{apply_remove_tab_graph, apply_tab_graph, GraphDerived};
+use graph_ops::{apply_document, apply_remove_tab_graph, GraphDerived};
 use std::collections::HashMap;
 use tauri::{AppHandle, State};
 
@@ -24,22 +23,20 @@ pub async fn update_tab_graph(
     state: State<'_, AppState>,
     app: AppHandle,
     tab_id: String,
-    nodes: Vec<NodeDef>,
+    documents: Vec<kind::document::NodeDocument>,
     edges: Vec<Edge>,
-    node_hints: Option<HashMap<String, SourceNodeHint>>,
-    widgets: Option<Vec<WidgetRecord>>,
-    positions: Option<HashMap<String, Position>>,
     base_version: Option<u64>,
 ) -> Result<GraphDerived> {
-    apply_tab_graph(
-        &state,
+    apply_document(
+        &state.graphs,
+        &state.graphs_version,
+        &state.data_plane,
+        &state.source_graphs,
+        &state.workspace,
         Some(&app),
         tab_id,
-        nodes,
+        documents,
         edges,
-        node_hints.unwrap_or_default(),
-        widgets,
-        positions,
         base_version,
     )
     .await
@@ -73,17 +70,30 @@ pub async fn set_input_value(
     Ok(())
 }
 
-/// 上报节点画布位置 (拖拽结束时批量提交) — 轻量路径, 不触发编译,
-/// 仅更新工作区位置表并标记落盘脏
+/// 上报节点画布布局 (拖拽或缩放结束时批量提交) — 轻量路径，不触发编译。
+/// 布局直接写回节点文档，不维护第二份位置索引。
 #[allow(clippy::implicit_hasher)]
 #[tauri::command]
 pub fn set_node_positions(
     state: State<'_, AppState>,
     positions: HashMap<String, Position>,
 ) -> Result<()> {
-    let mut ws = state.workspace.lock();
-    ws.positions.extend(positions);
-    ws.dirty = true;
+    for graph in state.source_graphs.lock().values_mut() {
+        for doc in &mut graph.documents {
+            if let Some(position) = positions.get(&doc.id) {
+                if !position.x.is_finite() || !position.y.is_finite() {
+                    continue;
+                }
+                doc.layout = kind::document::NodeLayout {
+                    x: position.x,
+                    y: position.y,
+                    width: position.width,
+                    height: position.height,
+                };
+            }
+        }
+    }
+    state.workspace.lock().dirty = true;
     Ok(())
 }
 

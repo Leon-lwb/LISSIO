@@ -9,6 +9,8 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+serde_json = { workspace = true }
+acquisition = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
 tokio = { workspace = true }

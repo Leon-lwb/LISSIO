@@ -71,21 +71,10 @@ pub(super) struct BufferInfoParams {
 /// 图更新参数 — nodes/edges 为前端同构的 JSON (`NodeDef` / `Edge`)。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct UpdateGraphParams {
-    /// 目标 tab id (前端控件页 tab)。
     pub(super) tab_id: String,
-    /// 节点定义数组 (与前端 NodeDef 格式一致: id / tab_id / kind)。
-    #[serde(default)]
-    pub(super) nodes: Vec<Value>,
-    /// 边数组 (与前端 Edge 格式一致: from/to + 端口引用)。
-    #[serde(default)]
+    /// Complete node documents: id, tabId, label, layout, kind, config, attributes.
+    pub(super) documents: Vec<Value>,
     pub(super) edges: Vec<Value>,
-    /// widget 配置记录数组 ({id, kind, params}) — 提供时整体替换该 tab 的
-    /// widget 配置 (画布可完整渲染), 缺省保留现状。
-    #[serde(default)]
-    pub(super) widgets: Option<Vec<Value>>,
-    /// 节点画布位置 ({node_id: {x, y}}) — 提供时合并进工作区位置表。
-    #[serde(default)]
-    pub(super) positions: Option<std::collections::HashMap<String, Value>>,
 }
 
 /// 连线入参。
@@ -126,7 +115,7 @@ pub(super) struct CanFramesParams {
 /// CAN 帧发送入参。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct SendCanFrameParams {
-    /// 目标 Transport 节点 id。
+    /// 目标设备节点 id。
     pub(super) node_id: String,
     /// 编码用 Protocol 节点 id (缺省沿字节平面自动溯源第一个)。
     pub(super) protocol_node: Option<String>,

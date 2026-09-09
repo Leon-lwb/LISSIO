@@ -22,6 +22,7 @@ use data_model::Result;
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub enum PortDomainView {
+    Points,
     F32,
     Bytes,
     String,
@@ -31,6 +32,7 @@ pub enum PortDomainView {
 impl From<PortDomain> for PortDomainView {
     fn from(d: PortDomain) -> Self {
         match d {
+            PortDomain::Points => Self::Points,
             PortDomain::F32 => Self::F32,
             PortDomain::Bytes => Self::Bytes,
             PortDomain::String => Self::String,
@@ -44,6 +46,7 @@ impl From<PortDomain> for PortDomainView {
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum HirEdgeClassView {
+    Points,
     Byte,
     F32,
     Str,
@@ -54,6 +57,7 @@ pub enum HirEdgeClassView {
 impl From<EdgeClass> for HirEdgeClassView {
     fn from(c: EdgeClass) -> Self {
         match c {
+            EdgeClass::Points => Self::Points,
             EdgeClass::Byte => Self::Byte,
             EdgeClass::F32 => Self::F32,
             EdgeClass::Str => Self::Str,
@@ -202,16 +206,8 @@ mod tests {
         }
     }
 
-    fn transport_def(id: &str) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: "main".into(),
-            kind: NodeKind::Transport {
-                config: data_model::config::TransportConfig::TestData(
-                    data_model::config::TestDataConfig::default(),
-                ),
-            },
-        }
+    fn device_def(id: &str) -> NodeDef {
+        graph_testkit::make_device_in(id, "main")
     }
 
     fn protocol_def(id: &str) -> NodeDef {
@@ -266,7 +262,7 @@ mod tests {
     /// 字节边分类: Transport.out → Protocol.in (两端 Bytes 域)
     #[test]
     fn extract_hir_byte_edge_class() {
-        let nodes = vec![transport_def("tp"), protocol_def("pt")];
+        let nodes = vec![device_def("tp"), protocol_def("pt")];
         let edges = vec![buffer_graph::Edge {
             id: "e-byte".into(),
             source: "tp".into(),

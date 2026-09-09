@@ -9,7 +9,9 @@
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { LazyStore } from '@tauri-apps/plugin-store';
-import type { Node, Edge } from '@xyflow/react';
+import { canvasNode, nodeDocument, type NodeDocument } from '../nodes/document';
+import { edgeToGraphEdge } from '../utils/nodeDef';
+import type { GraphEdge } from '../utils/nodeDef';
 import { useAppStore } from '../../store/appStore';
 import { rebaseHistory } from '../../store/historyStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -22,53 +24,37 @@ import {
 import { useLayoutStore, type SidebarDock } from '../../store/layoutStore';
 import { applyAppearance } from '../../settings/applyTheme';
 import type { AppSettings } from '../../settings/defaults';
-import type { ControlTab, DataTab, WidgetConfig } from '../../types';
+import type { ControlTab, DataTab } from '../../types';
 import { api } from './tauri';
-import { rawDataPortId } from '../utils/nodeDef';
 import { setRawDataPreviewCapacity } from '../buffers/rawDataPreviewRegistry';
 import { canFrameBuffer } from '../buffers/canBuffer';
 import { logicSampleBuffer } from '../buffers/logicBuffer';
 import { notify, formatError } from './notifications';
 import { t } from '../../i18n';
-import { selectWidgets } from '../../store/appStoreHelpers';
-import { WIDGET_DEFAULT_WIDTH } from '../../lib/utils/widgetSize';
+import { removeTabGraphFromBackend } from '../../store/appStoreHelpers';
 import { getAllRawDataViewPrefs, useRawDataViewStore, type RawDataViewPrefs } from '../buffers/rawDataViewStore';
 
 /// 备份分区 — 拆分备份/模板的最小单元
-export type BackupSection =
-  | 'nodeGraph'        // 节点图 (rfNodes + rfEdges)
-  | 'windowLayout'     // 窗口组织 (Dock 布局树 + 侧边栏停靠)
-  | 'settings'         // 应用设置
-  | 'transportProtocol' // 传输 + 协议配置
-  | 'widgetsTabs';     // 控件 + 标签页 + 活动页 + RawData 视图偏好
+export type BackupSection = 'workspace' | 'windowLayout' | 'settings';
 
-/// 全部分区 (导出全量备份时的固定顺序)
-export const ALL_BACKUP_SECTIONS: BackupSection[] = [
-  'nodeGraph',
-  'windowLayout',
-  'settings',
-  'transportProtocol',
-  'widgetsTabs',
-];
+export const ALL_BACKUP_SECTIONS: BackupSection[] = ['workspace', 'windowLayout', 'settings'];
 
-/// 备份快照 schema — version 3
-/// 各分区字段均为可选: sections 未提供 = 全量; 拆分备份仅含所选分区字段。
-/// 传输/协议配置存储在全局 Transport/Protocol 节点 (rfNodes) 内。
+export interface WorkspaceDocument {
+  tabs: Pick<ControlTab, 'id' | 'name'>[];
+  graphs: { tab_id: string; documents: NodeDocument[]; edges: GraphEdge[] }[];
+  dataTabs: DataTab[];
+  activeDataTabId: string;
+  activeControlTabId: string;
+  rawDataViewPrefs: Record<string, unknown>;
+}
+
+/** Workspace is atomic: nodes, edges and tab ownership are never imported separately. */
 export interface AppSnapshot {
-  version: 3;
+  version: 4;
   exportedAt: string;
-  /// 该快照包含的分区; 缺省 = 全部
   sections?: BackupSection[];
   settings?: AppSettings;
-  widgets?: WidgetConfig[];
-  controlTabs?: ControlTab[];
-  dataTabs?: DataTab[];
-  activeDataTabId?: string;
-  activeControlTabId?: string;
-  rfNodes?: Node[];
-  rfEdges?: Edge[];
-  rawDataViewPrefs?: Record<string, unknown>;
-  /// 窗口组织
+  workspace?: WorkspaceDocument;
   dockRoot?: DockNode;
   dockCards?: Record<string, DockCard>;
   sidebarDock?: SidebarDock;
@@ -125,23 +111,28 @@ export async function readSnapshotFromFile(): Promise<AppSnapshot | null> {
 
 /// 读取所有 store 的当前状态并生成全量快照。
 /// rfNodes/rfEdges 经 JSON 往返确保无函数 / undefined 等不可序列化字段。
-/// v3: 传输/协议配置已包含在全局节点 (rfNodes) 内, 不再单列顶层字段。
+/// 工作区节点配置仅存在于每页签的节点文档中。
 export function collectSnapshot(): AppSnapshot {
   const app = useAppStore.getState();
   return {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     sections: ALL_BACKUP_SECTIONS,
     // 导出剥离 API key — 密钥不入备份文件 (明文扩散面)
     settings: stripApiKey(useSettingsStore.getState().settings),
-    widgets: selectWidgets(app),
-    controlTabs: app.controlTabs,
-    dataTabs: app.dataTabs,
-    activeDataTabId: app.activeDataTabId,
-    activeControlTabId: app.activeControlTabId,
-    rfNodes: JSON.parse(JSON.stringify(app.rfNodes)) as Node[],
-    rfEdges: JSON.parse(JSON.stringify(app.rfEdges)) as Edge[],
-    rawDataViewPrefs: getAllRawDataViewPrefs(),
+    workspace: {
+      tabs: app.controlTabs.map(({ id, name }) => ({ id, name })),
+      graphs: app.controlTabs.map(tab => {
+        const nodes = app.rfNodes.filter(n => n.data.tabId === tab.id);
+        const ids = new Set(nodes.map(n => n.id));
+        return { tab_id: tab.id, documents: nodes.map(nodeDocument),
+          edges: app.rfEdges.filter(e => ids.has(e.source) && ids.has(e.target)).map(edgeToGraphEdge) };
+      }),
+      dataTabs: app.dataTabs,
+      activeDataTabId: app.activeDataTabId,
+      activeControlTabId: app.activeControlTabId,
+      rawDataViewPrefs: getAllRawDataViewPrefs(),
+    },
     dockRoot: useDockStore.getState().root,
     dockCards: useDockStore.getState().cards,
     sidebarDock: useLayoutStore.getState().sidebarDock,
@@ -153,32 +144,12 @@ export function collectSnapshot(): AppSnapshot {
 export function collectPartialSnapshot(sections: BackupSection[]): AppSnapshot {
   const full = collectSnapshot();
   const partial: AppSnapshot = {
-    version: 3,
+    version: 4,
     exportedAt: full.exportedAt,
     sections: [...sections],
   };
   if (sections.includes('settings')) partial.settings = full.settings;
-  if (sections.includes('transportProtocol')) {
-    const globalNodes = (full.rfNodes ?? []).filter((n) => n.data?.global === true);
-    const globalIds = new Set(globalNodes.map((n) => n.id));
-    partial.rfNodes = globalNodes;
-    partial.rfEdges = (full.rfEdges ?? []).filter(
-      (e) => globalIds.has(e.source) && globalIds.has(e.target)
-    );
-  }
-  if (sections.includes('widgetsTabs')) {
-    partial.widgets = full.widgets;
-    partial.controlTabs = full.controlTabs;
-    partial.dataTabs = full.dataTabs;
-    partial.activeDataTabId = full.activeDataTabId;
-    partial.activeControlTabId = full.activeControlTabId;
-    partial.rawDataViewPrefs = full.rawDataViewPrefs;
-  }
-  if (sections.includes('nodeGraph')) {
-    // transportProtocol 与 nodeGraph 同选时避免覆盖: nodeGraph 含全量节点
-    partial.rfNodes = full.rfNodes;
-    partial.rfEdges = full.rfEdges;
-  }
+  if (sections.includes('workspace')) partial.workspace = full.workspace;
   if (sections.includes('windowLayout')) {
     partial.dockRoot = full.dockRoot;
     partial.dockCards = full.dockCards;
@@ -204,18 +175,11 @@ export function parseSnapshot(json: string): AppSnapshot {
   if (!data || typeof data !== 'object') {
     throw new Error('备份文件格式无效');
   }
-  // version 取自不受信的 JSON — 以 unknown 读入再比较 (AppSnapshot.version 已收敛为 3)
-  const version = (data as { version?: unknown }).version;
-  if (version === 1 || version === 2) {
-    throw new Error(`备份版本过旧 (v${String(version)} 不再支持): 请用当前版本重新导出备份`);
-  }
-  if (version !== 3) {
-    throw new Error(`不支持的备份版本: ${String(version)}`);
-  }
+  if (data.version !== 4) throw new Error('不支持的备份格式；请使用当前版本的节点文档。');
+  if (data.workspace) validateWorkspace(data.workspace);
   const hasContent = (
     [
-      'settings', 'widgets', 'controlTabs',
-      'dataTabs', 'rfNodes', 'rfEdges', 'dockRoot',
+      'settings', 'workspace', 'dockRoot',
     ] as const
   ).some((k) => data[k] != null);
   if (!hasContent) {
@@ -227,41 +191,50 @@ export function parseSnapshot(json: string): AppSnapshot {
 /// 检测快照实际包含哪些分区 (供拆分备份导入时的勾选预填), 按 ALL_BACKUP_SECTIONS 顺序返回
 /// transportProtocol 分区内容 = rfNodes 中的全局 Transport/Protocol 节点
 export function detectPresentSections(snap: AppSnapshot): BackupSection[] {
-  const globalNodes = (snap.rfNodes ?? []).filter((n) => n.data?.global === true);
-  const globalIds = new Set(globalNodes.map((n) => n.id));
-  const widgetNodes = (snap.rfNodes ?? []).filter((n) => n.data?.global !== true);
-  // 字节边 (两端皆全局节点) 属于 transportProtocol 分区, 不算 nodeGraph 内容
-  const nonGlobalEdges = (snap.rfEdges ?? []).filter(
-    (e) => !globalIds.has(e.source) || !globalIds.has(e.target)
-  );
-  const has = (s: BackupSection): boolean => {
-    switch (s) {
-      case 'settings': return snap.settings != null;
-      case 'transportProtocol':
-        return globalNodes.length > 0;
-      case 'widgetsTabs': return snap.widgets != null || snap.controlTabs != null || snap.dataTabs != null;
-      case 'nodeGraph': return widgetNodes.length > 0 || nonGlobalEdges.length > 0 || (snap.rfNodes != null && globalNodes.length === 0);
-      case 'windowLayout': return snap.dockRoot != null || snap.dockCards != null;
+  return ALL_BACKUP_SECTIONS.filter(section => {
+    if (section === 'workspace') return snap.workspace != null;
+    if (section === 'settings') return snap.settings != null;
+    return snap.dockRoot != null || snap.dockCards != null;
+  });
+}
+
+function validateWorkspace(workspace: WorkspaceDocument): void {
+  if (!Array.isArray(workspace.tabs) || !workspace.tabs.length || !Array.isArray(workspace.graphs)) throw new Error('工作区缺少页签文档');
+  const tabs = new Set(workspace.tabs.map(tab => tab.id));
+  if (tabs.size !== workspace.tabs.length || workspace.graphs.length !== tabs.size) throw new Error('工作区页签重复或缺少节点文档');
+  const ids = new Set<string>();
+  const graphTabs = new Set<string>();
+  for (const graph of workspace.graphs) {
+    if (!tabs.has(graph.tab_id) || graphTabs.has(graph.tab_id)) throw new Error('节点文档页签无效');
+    graphTabs.add(graph.tab_id);
+    const localIds = new Set(graph.documents.map(doc => doc.id));
+    for (const doc of graph.documents) {
+      if (!doc.id || ids.has(doc.id) || doc.tabId !== graph.tab_id || !doc.label?.trim()) throw new Error('节点标识或页签归属无效');
+      if (!Number.isFinite(doc.layout.x) || !Number.isFinite(doc.layout.y) ||
+        [doc.layout.width, doc.layout.height].some(size => size != null && (!Number.isFinite(size) || size <= 0))) throw new Error('节点布局无效');
+      if (doc.kind !== 'device' && doc.attributes.testData) throw new Error('测试属性只能附加到设备');
+      if (!['device', 'protocol', 'pointSelector', 'widget'].includes(doc.kind)) throw new Error('节点类型无效');
+      canvasNode(doc);
+      ids.add(doc.id);
     }
-  };
-  return ALL_BACKUP_SECTIONS.filter(has);
+    if (graph.edges.some(edge => !localIds.has(edge.source) || !localIds.has(edge.target))) throw new Error('不允许跨页签或悬空连线');
+  }
 }
 
 // ==================== 状态恢复 ====================
 
 /// 将 data 分类的缓存容量设置同步到后端与前端 buffer 实例
 /// (与 settingsStore.applyDataCapacity 相同 — 该函数未导出, 此处复刻)
-/// v3: 波形/原始数据容量按源 (节点) 生效, 对当前图中全部 Protocol/Transport 节点应用
+/// v3: 波形/原始数据容量按源 (节点) 生效，对当前图中全部 Protocol/设备节点应用
 function applyDataCapacity(settings: AppSettings) {
   const data = settings.data;
   const nodes = useAppStore.getState().rfNodes;
   for (const n of nodes) {
-    if (n.data?.global !== true) continue;
     if (n.type === 'protocol') {
       api.setWaveformBufferCapacity(n.id, data.waveformBufferPoints).catch((e: unknown) =>
         console.warn('[appExport] 设置波形缓冲区容量失败:', e)
       );
-    } else if (n.type === 'transport') {
+    } else if (n.type === 'acquisition') {
       api.setRawDataBufferCapacity(n.id, data.rawDataBufferBytes).catch((e: unknown) =>
         console.warn('[appExport] 设置原始数据缓冲区容量失败:', e)
       );
@@ -329,101 +302,33 @@ export async function applySnapshot(
     await applySettings(snap.settings);
   }
 
-  // 2. 传输 + 协议 (v3: 全局节点; 未同时应用 nodeGraph 时按 id 合并进现有图)
-  const applyNodeGraph = want.has('nodeGraph') && snap.rfNodes != null;
-  if (want.has('transportProtocol') && !applyNodeGraph && snap.rfNodes) {
-    const globalNodes = snap.rfNodes.filter((n) => n.data?.global === true);
-    if (globalNodes.length > 0) {
-      const globalIds = new Set(globalNodes.map((n) => n.id));
-      const byteEdges = (snap.rfEdges ?? []).filter(
-        (e) => globalIds.has(e.source) && globalIds.has(e.target)
-      );
-      useAppStore.setState((s) => ({
-        rfNodes: [
-          ...s.rfNodes.filter((n) => !globalIds.has(n.id)),
-          ...globalNodes,
-        ],
-        rfEdges: [
-          ...s.rfEdges.filter((e) => !(globalIds.has(e.source) && globalIds.has(e.target))),
-          ...byteEdges,
-        ],
-      }));
+  if (want.has('workspace') && snap.workspace) {
+    validateWorkspace(snap.workspace);
+    const workspace = snap.workspace;
+    // Replacement always restores disconnected configuration, including unchanged IDs.
+    await Promise.all(useAppStore.getState().rfNodes.filter(n => n.type === 'acquisition')
+      .map(n => api.closeTransport(n.id).catch(() => undefined)));
+    const rfNodes = workspace.graphs.flatMap(graph => graph.documents.map(doc => canvasNode(doc)));
+    const rfEdges = workspace.graphs.flatMap(graph => graph.edges.map(edge => ({
+      id: edge.id, source: edge.source, target: edge.target,
+      sourceHandle: edge.source_handle, targetHandle: edge.target_handle,
+    })));
+    useAppStore.setState({
+      rfNodes, rfEdges,
+      controlTabs: workspace.tabs.map(tab => ({ ...tab })),
+      dataTabs: workspace.dataTabs,
+      activeControlTabId: workspace.activeControlTabId,
+      activeDataTabId: workspace.activeDataTabId,
+      connectionStates: {},
+    });
+    useRawDataViewStore.setState({ prefsByWidget: workspace.rawDataViewPrefs as Record<string, RawDataViewPrefs> });
+    for (const tabId of prevTabIds) {
+      if (!workspace.tabs.some(tab => tab.id === tabId)) await removeTabGraphFromBackend(tabId);
     }
-  }
-
-  // 3. 控件 + 标签页 + 活动页 + RawData 视图偏好
-  if (want.has('widgetsTabs')) {
-    const patch: Record<string, unknown> = {};
-    if (snap.controlTabs) patch.controlTabs = snap.controlTabs;
-    if (snap.dataTabs) {
-      // 兜底注入 fixed compile-errors / compile-results Tab
-      // 老快照 (或外部导入的快照) 可能不包含; 缺一补一, 已存在则跳过
-      const fixedTabs: DataTab[] = [
-        { id: 'compile-errors-fixed', type: 'compile-errors', name: 'Compile Errors', closable: false },
-        { id: 'compile-results-fixed', type: 'compile-results', name: 'Compile Results', closable: false },
-        // 旧快照无属性面板 tab — 兜底补入 (默认布局卡片按 id 承载它)
-        { id: 'node-properties-fixed', type: 'node-properties', name: 'Properties', closable: true },
-      ];
-      const have = new Set(snap.dataTabs.map((t) => t.id));
-      const mergedDataTabs = [...snap.dataTabs];
-      for (const ft of fixedTabs) {
-        if (!have.has(ft.id)) mergedDataTabs.push(ft);
-      }
-      patch.dataTabs = mergedDataTabs;
+    for (const tab of workspace.tabs) {
+      const error = await useAppStore.getState().syncTabGraph(tab.id);
+      if (error) throw new Error(error);
     }
-    if (snap.activeDataTabId != null) {
-      patch.activeDataTabId = snap.activeDataTabId;
-    } else {
-      // 快照未指定活动数据 Tab → 兜底到 compile-results-fixed (须存在)
-      const ids = (patch.dataTabs as DataTab[] | undefined)?.map((t) => t.id) ?? [];
-      if (ids.includes('compile-results-fixed')) patch.activeDataTabId = 'compile-results-fixed';
-    }
-    if (snap.activeControlTabId != null) patch.activeControlTabId = snap.activeControlTabId;
-    useAppStore.setState(patch);
-    // widget 配置权威在画布节点 data.widget — 导入的控件若尚无节点 (未同时
-    // 应用 nodeGraph 的拆分备份), 按控件 tab 隶属补建占位节点保持配置可达
-    if (snap.widgets) {
-      const state = useAppStore.getState();
-      const tabOfWidget = new Map<string, string>();
-      for (const t of state.controlTabs) {
-        for (const id of t.widgets) if (!tabOfWidget.has(id)) tabOfWidget.set(id, t.id);
-      }
-      const missing = snap.widgets
-        .filter((w) => !state.rfNodes.some((n) => n.id === w.params.id))
-        .map((w) => ({
-          id: w.params.id,
-          type: 'widget' as const,
-          position: { x: 240, y: 80 },
-          width: WIDGET_DEFAULT_WIDTH,
-          data: { widget: w, tabId: tabOfWidget.get(w.params.id) ?? state.activeControlTabId },
-        }));
-      if (missing.length) {
-        useAppStore.setState((s) => ({ rfNodes: [...s.rfNodes, ...missing] }));
-      }
-    }
-    if (snap.rawDataViewPrefs) {
-      useRawDataViewStore.setState({
-        prefsByWidget: snap.rawDataViewPrefs as Record<string, RawDataViewPrefs>,
-      });
-    }
-  }
-
-  // 4. 节点图 (含全局 Transport/Protocol 节点)
-  if (applyNodeGraph && snap.rfNodes && snap.rfEdges) {
-    // 迁移旧版快照: 连到 RawData 的边可能还带着回退端口 'data' 作为 targetHandle,
-    // 而 RawData 的端口是动态派生的 (`src:<source>:<handle>`) — 不归一化会导致
-    // React Flow 找不到 handle (warning #008), 边无法渲染
-    const rawDataNodeIds = new Set(
-      snap.rfNodes
-        .filter((n) => (n.data?.widget as WidgetConfig | undefined)?.kind === 'RawData')
-        .map((n) => n.id)
-    );
-    const rfEdges = snap.rfEdges.map((e) =>
-      rawDataNodeIds.has(e.target) && !e.targetHandle?.startsWith('src:')
-        ? { ...e, targetHandle: rawDataPortId(e.source, e.sourceHandle) }
-        : e
-    );
-    useAppStore.setState({ rfNodes: snap.rfNodes, rfEdges });
   }
 
   // 5. 窗口组织
@@ -439,23 +344,7 @@ export async function applySnapshot(
     if (snap.sidebarDock) useLayoutStore.setState({ sidebarDock: snap.sidebarDock });
   }
 
-  // 6. 重新同步后端节点图 (节点图或标签页变化后)
-  if (want.has('nodeGraph') || want.has('widgetsTabs') || want.has('transportProtocol')) {
-    // 应用后消失的 tab: 后端仍残留其图与其名下的全局节点, 须显式移除。
-    // 顺序: 先同步存活 tab (全局节点重新托管到存活 tab 名下), 再移除消失的 tab
-    // (必须等同步落地后再 remove — 先后顺序即正确性本身)
-    const syncs = useAppStore
-      .getState()
-      .controlTabs.map((tab) => useAppStore.getState().syncTabGraph(tab.id));
-    void Promise.all(syncs).then(() => {
-      const currentTabIds = new Set(useAppStore.getState().controlTabs.map((t) => t.id));
-      for (const tabId of prevTabIds) {
-        if (!currentTabIds.has(tabId)) useAppStore.getState().removeTabGraph(tabId);
-      }
-    });
-  }
-
-  // 7. 快照应用是批量覆盖而非用户单步操作 — 撤销历史重置为新基线
+  // 快照应用是批量覆盖而非用户单步操作 — 撤销历史重置为新基线
   rebaseHistory('opImportWorkspace');
 }
 

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch};
 
-use crate::{ConnectionControl, TransportBackend, TransportConnection};
+use acquisition::{ConnectionControl, TransportBackend, TransportConnection};
 use async_trait::async_trait;
 
 /// TestData 每条广播消息覆盖的目标采样时长。数据平面使用同一换算规则把

@@ -7,8 +7,7 @@
 //! - 端口域解析 + 边分类在构建时一次完成 ([`EdgeClass`]), 各平面据此
 //!   投影出子图 (见 `plane` 模块)
 //!
-//! 容错语义: 边端点节点缺失时创建占位节点 (无双角色定义),
-//! 端口域按 F32 处理。
+//! 边端点与能力派生端口均严格校验；无效引用不会进入运行图。
 
 use buffer_graph::Edge;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
@@ -24,6 +23,7 @@ pub type Hir = StableDiGraph<HirNode, HirEdge>;
 /// 边分类 — 构建时按两端端口域判定, 各平面据此投影
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EdgeClass {
+    Points,
     /// 字节边 (两端端口域均为 Bytes) — 字节平面
     Byte,
     /// 数值边 (两端端口域均为 F32) — 值平面 (f32 槽位)
@@ -105,7 +105,7 @@ impl TypedGraph {
             let w = &mut graph[ix];
             if matches!(
                 n.kind,
-                NodeKind::Transport { .. } | NodeKind::Protocol { .. }
+                NodeKind::Protocol { .. } | NodeKind::Acquisition { .. }
             ) {
                 w.byte_def = Some(n);
             } else {
@@ -113,19 +113,44 @@ impl TypedGraph {
             }
         }
 
-        // 边: 端点 interning (缺失端点 → 占位节点, 域按 F32 容错) + 端口域分类
+        // 边: 端点、能力派生端口校验 + 端口域分类
         for e in edges {
-            let src = intern(&mut graph, &mut index, &e.source);
-            let tgt = intern(&mut graph, &mut index, &e.target);
-            let src_domain = domain_of(&graph, src, &e.source_handle, true);
-            let tgt_domain = domain_of(&graph, tgt, &e.target_handle, false);
+            let src = index
+                .get(&e.source)
+                .copied()
+                .ok_or_else(|| CompileError::NodeNotFound {
+                    id: e.source.clone(),
+                })?;
+            let tgt = index
+                .get(&e.target)
+                .copied()
+                .ok_or_else(|| CompileError::NodeNotFound {
+                    id: e.target.clone(),
+                })?;
+            let src_domain = domain_of(&graph, src, &e.source_handle, true).ok_or_else(|| {
+                CompileError::PortNotFound {
+                    edge_id: e.id.as_str().into(),
+                    node_id: e.source.as_str().into(),
+                    port: e.source_handle.as_str().into(),
+                    output: true,
+                }
+            })?;
+            let tgt_domain = domain_of(&graph, tgt, &e.target_handle, false).ok_or_else(|| {
+                CompileError::PortNotFound {
+                    edge_id: e.id.as_str().into(),
+                    node_id: e.target.as_str().into(),
+                    port: e.target_handle.as_str().into(),
+                    output: false,
+                }
+            })?;
             let class = match (src_domain, tgt_domain) {
+                (PortDomain::Points, PortDomain::Points) => EdgeClass::Points,
                 (PortDomain::Bytes, PortDomain::Bytes) => EdgeClass::Byte,
                 (PortDomain::F32, PortDomain::F32) => EdgeClass::F32,
                 (PortDomain::String, PortDomain::String) => EdgeClass::Str,
                 (PortDomain::Spectrum, PortDomain::Spectrum) => EdgeClass::Spectrum,
                 // RawData 关联通道边 (Sink 的 src:<source>:<handle> 动态端口):
-                // 按源端域归类放行 (取代旧 LOOPBACK_IN_HANDLE 字符串特判)
+                // 按源端域归类放行，端口名由节点端口表校验。
                 _ if is_raw_data_channel_target(&graph, tgt, &e.target_handle) => {
                     EdgeClass::RawDataMarker(src_domain)
                 }
@@ -197,17 +222,47 @@ fn intern(graph: &mut Hir, index: &mut FxHashMap<String, NodeIndex>, id: &str) -
 
 /// 端口域查询: 字节平面定义只在判定为 Bytes 时生效 (handle 命名两平面正交),
 /// 否则回落数值平面定义; 占位节点 (端点缺失) 按 F32 处理
-fn domain_of(graph: &Hir, ix: NodeIndex, handle: &str, is_output: bool) -> PortDomain {
+fn domain_of(graph: &Hir, ix: NodeIndex, handle: &str, is_output: bool) -> Option<PortDomain> {
     let w = &graph[ix];
     if let Some(bn) = &w.byte_def {
+        if let NodeKind::Acquisition { ports, .. } = &bn.kind {
+            return ports
+                .iter()
+                .find(|port| {
+                    port.id == handle
+                        && (port.direction
+                            == data_model::device::DevicePortDirection::Bidirectional
+                            || port.direction
+                                == if is_output {
+                                    data_model::device::DevicePortDirection::Output
+                                } else {
+                                    data_model::device::DevicePortDirection::Input
+                                })
+                })
+                .and_then(|port| match port.domain {
+                    data_model::device::DevicePortDomain::Bytes => Some(PortDomain::Bytes),
+                    data_model::device::DevicePortDomain::Points => Some(PortDomain::Points),
+                    data_model::device::DevicePortDomain::Numeric => Some(PortDomain::F32),
+                    data_model::device::DevicePortDomain::Events => None,
+                });
+        }
         let d = port_domain(&bn.kind, handle, is_output);
         if d == PortDomain::Bytes {
-            return d;
+            return Some(d);
         }
     }
-    w.value_def
-        .as_ref()
-        .map_or(PortDomain::F32, |n| port_domain(&n.kind, handle, is_output))
+    let node = w.value_def.as_ref()?;
+    if let NodeKind::PointSelector { points } = &node.kind {
+        return if is_output {
+            points
+                .iter()
+                .any(|point| point == handle)
+                .then_some(PortDomain::F32)
+        } else {
+            (handle == "points").then_some(PortDomain::Points)
+        };
+    }
+    Some(port_domain(&node.kind, handle, is_output))
 }
 
 /// 判定边目标是否为 RawData 控件的关联通道端口 (Sink + `src:` 动态端口 id)
@@ -253,7 +308,7 @@ mod tests {
     fn test_edge_classification() {
         let g = TypedGraph::build(
             vec![
-                make_transport("tp"),
+                make_device("tp"),
                 make_protocol("pt"),
                 make_decoder("dec", "t1"),
                 make_math("m1", "t1", kind::MathOp::Add, 1),
@@ -298,7 +353,7 @@ mod tests {
     fn test_raw_data_marker_classified_by_source_domain() {
         let g = TypedGraph::build(
             vec![
-                make_transport("tp"),
+                make_device("tp"),
                 make_protocol_source("pt", "t1", "pt", 1),
                 make_protocol("pt"),
                 make_sink("w-raw", "t1"),
@@ -330,16 +385,77 @@ mod tests {
     }
 
     #[test]
-    fn test_missing_endpoint_tolerated() {
-        // 边端点缺失 → 占位节点, 域按 F32, 编译不报错
-        let g = TypedGraph::build(
+    fn test_missing_endpoint_rejected() {
+        let result = TypedGraph::build(
             vec![make_math("m1", "t1", kind::MathOp::Add, 1)],
             vec![edge("e1", "ghost", "result", "m1", "in0")],
+        );
+        assert!(matches!(result, Err(CompileError::NodeNotFound { id }) if id == "ghost"));
+    }
+
+    #[test]
+    fn acquisition_and_point_selector_use_declared_ports() {
+        use data_model::device::{
+            DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
+            EndpointSpec,
+        };
+        let device = kind::NodeDef {
+            id: "device".into(),
+            tab_id: "t1".into(),
+            kind: NodeKind::Acquisition {
+                spec: EndpointSpec {
+                    id: EndpointId("device".into()),
+                    label: "Device".into(),
+                    enabled: true,
+                    capability_endpoint_id: Some("device".into()),
+                    driver: DriverPayload {
+                        driver_id: DriverId("modbus-tcp".into()),
+                        schema_version: 1,
+                        payload: serde_json::json!({}),
+                    },
+                    simulation: None,
+                },
+                ports: vec![DevicePort {
+                    id: "points".into(),
+                    direction: DevicePortDirection::Output,
+                    domain: DevicePortDomain::Points,
+                }],
+            },
+        };
+        let selector = kind::NodeDef {
+            id: "selector".into(),
+            tab_id: "t1".into(),
+            kind: NodeKind::PointSelector {
+                points: vec!["temperature".into()],
+            },
+        };
+        let graph = TypedGraph::build(
+            vec![device.clone(), selector.clone()],
+            vec![edge("points", "device", "points", "selector", "points")],
         )
         .unwrap();
-        let ix = g.node_index("ghost").unwrap();
-        assert!(g.graph[ix].value_def.is_none());
-        assert!(g.graph[ix].byte_def.is_none());
+        assert_eq!(
+            graph.graph.edge_weights().next().unwrap().class,
+            EdgeClass::Points
+        );
+
+        let unknown_device_port = TypedGraph::build(
+            vec![device, selector.clone()],
+            vec![edge("bad", "device", "missing", "selector", "points")],
+        );
+        assert!(matches!(
+            unknown_device_port,
+            Err(CompileError::PortNotFound { .. })
+        ));
+
+        let unknown_point = TypedGraph::build(
+            vec![selector, make_math("math", "t1", kind::MathOp::Add, 1)],
+            vec![edge("bad-point", "selector", "missing", "math", "in0")],
+        );
+        assert!(matches!(
+            unknown_point,
+            Err(CompileError::PortNotFound { .. })
+        ));
     }
 
     #[test]

@@ -46,7 +46,7 @@ describe('控件节点尺寸 (NodeResizer 持久化)', () => {
     tauriMock.invoke.mockClear();
     (tauriMock.invoke as unknown as { mockResolvedValue: (v: unknown) => void }).mockResolvedValue(undefined);
     useAppStore.setState({
-      controlTabs: [{ id: 'default', name: 'Tab 1', widgets: ['w-gauge'] }],
+      controlTabs: [{ id: 'default', name: 'Tab 1' }],
       activeControlTabId: 'default',
       widgets: [
         { kind: 'Gauge', params: { id: 'w-gauge', label: 'G', min: 0, max: 100, unit: '', channel: null } },
@@ -66,7 +66,7 @@ describe('控件节点尺寸 (NodeResizer 持久化)', () => {
     expect(setNodePositionsCall()).toBeUndefined();
   });
 
-  it('缩放结束批 (resizing=false) 上报位置 + 尺寸到后端', () => {
+  it('缩放结束批 (resizing=false) 上报位置 + 尺寸到后端', async () => {
     // 模拟真实拖拽: 先过程中的 setAttributes 批, 再 onEnd 的收尾批
     useAppStore.getState().onNodesChange([
       { id: 'w-gauge', type: 'dimensions', resizing: true, setAttributes: true, dimensions: { width: 320, height: 240 } },
@@ -75,9 +75,9 @@ describe('控件节点尺寸 (NodeResizer 持久化)', () => {
       { id: 'w-gauge', type: 'dimensions', resizing: false, dimensions: { width: 320, height: 240 } },
     ]);
 
-    expect(setNodePositionsCall()).toEqual({
+    await vi.waitFor(() => expect(setNodePositionsCall()).toEqual({
       positions: { 'w-gauge': { x: 560, y: 40, width: 320, height: 240 } },
-    });
+    }));
   });
 
   it('初始测量批 (无 resizing 标志) 不落盘', () => {
@@ -90,22 +90,22 @@ describe('控件节点尺寸 (NodeResizer 持久化)', () => {
     expect(setNodePositionsCall()).toBeUndefined();
   });
 
-  it('setWidgetNodeSize 更新显式尺寸并持久化; 空对象恢复自适应', () => {
-    useAppStore.getState().setWidgetNodeSize('w-gauge', { width: 280, height: 200 });
+  it('setNodeSize 更新显式尺寸并持久化; 空对象恢复自适应', async () => {
+    useAppStore.getState().setNodeSize('w-gauge', { width: 280, height: 200 });
     let gauge = useAppStore.getState().rfNodes.find((n) => n.id === 'w-gauge');
     expect(gauge?.width).toBe(280);
     expect(gauge?.height).toBe(200);
-    expect(setNodePositionsCall()).toEqual({
+    await vi.waitFor(() => expect(setNodePositionsCall()).toEqual({
       positions: { 'w-gauge': { x: 560, y: 40, width: 280, height: 200 } },
-    });
+    }));
 
     // 重置 — 尺寸字段移除, 上报载荷不带 width/height
-    useAppStore.getState().setWidgetNodeSize('w-gauge', {});
+    useAppStore.getState().setNodeSize('w-gauge', {});
     gauge = useAppStore.getState().rfNodes.find((n) => n.id === 'w-gauge');
     expect(gauge?.width).toBeUndefined();
     expect(gauge?.height).toBeUndefined();
-    expect(setNodePositionsCall()).toEqual({
+    await vi.waitFor(() => expect(setNodePositionsCall()).toEqual({
       positions: { 'w-gauge': { x: 560, y: 40 } },
-    });
+    }));
   });
 });

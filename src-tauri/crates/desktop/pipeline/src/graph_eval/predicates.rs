@@ -12,6 +12,12 @@ use kind::NodeKind;
 pub fn graph_triggered_by(g: &CompiledGraph, source_id: &str) -> bool {
     let mut has_source = false;
     for n in g.value_nodes() {
+        if let NodeKind::PointSelector { .. } = &n.kind {
+            has_source = true;
+            if n.id == source_id {
+                return true;
+            }
+        }
         if let NodeKind::ProtocolSource { node_id, .. } = &n.kind {
             has_source = true;
             if node_id == source_id {

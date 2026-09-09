@@ -9,7 +9,7 @@
 //! ([`app::SourceNodeHint`] — widget 端口表形状由前端参数派生,
 //! 后端经提示解析)。拓扑 op 不携带 widget 记录与位置 — 源图中现状保留。
 
-use app::{Position, SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord, WorkspaceState};
+use app::{SourceGraphs, SourceNodeHint, TabSourceGraph, WorkspaceState};
 use buffer_graph::Edge;
 use error::ConfigError;
 use pipeline::NodeKind;
@@ -22,7 +22,7 @@ use data_model::{Error, Result};
 use pipeline::DataPlaneState;
 use tauri::AppHandle;
 
-use crate::apply_tab_graph_parts;
+use crate::apply_document;
 
 /// `graph:source` 事件名 — apply 成功后推送该 tab 的权威源图 (前端画布收敛依据)
 pub const GRAPH_SOURCE_EVENT: &str = "graph:source";
@@ -31,14 +31,10 @@ pub const GRAPH_SOURCE_EVENT: &str = "graph:source";
 /// (含 widget 配置记录与画布位置: 画布据此重建该 tab 完整视图)
 #[derive(Debug, Clone, Serialize)]
 pub struct GraphSourceEvent {
+    pub documents: Vec<kind::document::NodeDocument>,
     pub tab_id: String,
     pub version: u64,
-    pub nodes: Vec<pipeline::NodeDef>,
     pub edges: Vec<Edge>,
-    #[serde(default)]
-    pub widgets: Vec<WidgetRecord>,
-    #[serde(default)]
-    pub positions: HashMap<String, Position>,
 }
 
 /// 连线 op 结果 — 新 (或已存在的等价) 边 id
@@ -65,10 +61,7 @@ fn next_edge_id() -> String {
     )
 }
 
-/// 定位连线所属 tab: 显式 tab_id 优先; 否则优先取同时持有 source 与 target 的
-/// 字典序第一个 tab (全局节点存在于所有 tab, widget 节点只存在于归属 tab —
-/// 两端都在才是正确归属); 退而求其次取持有 source 的第一个 tab。
-/// 找不到 source 返回 `NodeNotFound`。
+/// 根据唯一节点归属定位连线页签，并明确拒绝跨页签连线。
 fn locate_tab(
     source_graphs: &SourceGraphs,
     tab_id: Option<&str>,
@@ -76,37 +69,46 @@ fn locate_tab(
     target: &str,
 ) -> Result<(String, TabSourceGraph)> {
     let store = source_graphs.lock();
-    if let Some(tid) = tab_id {
-        return Ok((tid.to_string(), store.get(tid).cloned().unwrap_or_default()));
-    }
     let has = |g: &TabSourceGraph, id: &str| g.nodes.iter().any(|n| n.id == id);
-    let mut both: Vec<&String> = store
-        .iter()
-        .filter(|(_, g)| has(g, source) && has(g, target))
-        .map(|(tid, _)| tid)
-        .collect();
-    both.sort();
-    let pick = both.into_iter().next().cloned().or_else(|| {
-        let mut either: Vec<&String> = store
+    let owner_of = |id: &str| {
+        store
             .iter()
-            .filter(|(_, g)| has(g, source))
-            .map(|(tid, _)| tid)
-            .collect();
-        either.sort();
-        either.first().map(|t| (*t).clone())
-    });
-    pick.map(|tid| {
-        let g = store[&tid].clone();
-        (tid, g)
-    })
-    .ok_or_else(|| {
+            .find(|(_, graph)| has(graph, id))
+            .map(|(tab, _)| tab.clone())
+    };
+    let source_tab = owner_of(source).ok_or_else(|| {
         Error::Config(ConfigError::NodeNotFound {
             node_id: source.to_string(),
         })
-    })
+    })?;
+    let target_tab = owner_of(target).ok_or_else(|| {
+        Error::Config(ConfigError::NodeNotFound {
+            node_id: target.to_string(),
+        })
+    })?;
+    if source_tab != target_tab {
+        return Err(Error::Config(ConfigError::CrossTabConnection {
+            source_tab,
+            target_tab,
+        }));
+    }
+    if let Some(expected) = tab_id {
+        if expected != source_tab {
+            return Err(Error::Config(ConfigError::NodeTabMismatch {
+                node_id: source.to_string(),
+                expected: expected.to_string(),
+                actual: source_tab,
+            }));
+        }
+    }
+    let graph = store
+        .get(&source_tab)
+        .cloned()
+        .expect("source owner was resolved from the same store");
+    Ok((source_tab, graph))
 }
 
-/// 解析源端口 handle: 显式指定 > 端口提示 > 按 NodeKind 兜底 (Transport rx / Protocol out)
+/// 解析源端口 handle: 显式指定 > 端口提示 > 按 NodeKind 兜底 (Protocol out)
 fn resolve_source_handle(
     node: &pipeline::NodeDef,
     hint: Option<&SourceNodeHint>,
@@ -119,7 +121,6 @@ fn resolve_source_handle(
         return Ok(h);
     }
     match &node.kind {
-        NodeKind::Transport { .. } => Ok("rx".to_string()),
         NodeKind::Protocol { .. } => Ok("out".to_string()),
         _ => Err(Error::Config(ConfigError::GraphPortUnresolved {
             node_id: node.id.clone(),
@@ -206,7 +207,7 @@ pub async fn apply_connect_edge(
         target_handle: th,
     });
     // 拓扑 op 不携带 widget 记录与位置 — 源图中现状保留 (None 语义)
-    apply_tab_graph_parts(
+    apply_document(
         graphs,
         graphs_version,
         data_plane,
@@ -214,11 +215,8 @@ pub async fn apply_connect_edge(
         workspace,
         app,
         tab,
-        graph.nodes,
+        graph.documents,
         edges,
-        graph.hints,
-        None,
-        None,
         None,
     )
     .await?;
@@ -264,7 +262,7 @@ pub async fn apply_disconnect_edge(
         .filter(|e| e.id != edge.id)
         .cloned()
         .collect();
-    apply_tab_graph_parts(
+    apply_document(
         graphs,
         graphs_version,
         data_plane,
@@ -272,11 +270,8 @@ pub async fn apply_disconnect_edge(
         workspace,
         app,
         tab,
-        graph.nodes,
+        graph.documents,
         edges,
-        graph.hints,
-        None,
-        None,
         None,
     )
     .await?;

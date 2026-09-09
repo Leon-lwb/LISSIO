@@ -6,10 +6,10 @@
 pub mod candle;
 pub mod slcan;
 
+use acquisition::{TransportBackend, TransportConnection};
 use async_trait::async_trait;
 use data_model::{Result, TransportConfig};
 use schema_types::TestDataLink;
-use transport::{TransportBackend, TransportConnection};
 
 /// CAN device adapter. SLCAN and candleLight differ only behind this factory;
 /// the manager and data plane consume an identical byte connection.
@@ -17,6 +17,20 @@ pub struct CanTransportBackend;
 
 #[async_trait]
 impl TransportBackend for CanTransportBackend {
+    fn supports_discovery(&self) -> bool {
+        true
+    }
+    fn discover(&self, config: &TransportConfig) -> Result<Vec<acquisition::DiscoveredEndpoint>> {
+        if matches!(config, TransportConfig::Slcan(_)) {
+            return acquisition::TransportBackend::discover(&serial::SerialBackend, config);
+        }
+        Ok(candle::list_devices()?.into_iter().map(|device| acquisition::DiscoveredEndpoint {
+            adapter_id: data_model::device::DriverId("candle-light".into()),
+            discovery_id: format!("{}:{}", device.bus, device.address),
+            display_name: device.product.unwrap_or_else(|| format!("USB {}:{}", device.bus, device.address)),
+            configuration_patch: serde_json::json!({ "bus": device.bus, "address": device.address }), metadata: std::collections::BTreeMap::new(),
+        }).collect())
+    }
     fn name(&self) -> &'static str {
         "can-device"
     }

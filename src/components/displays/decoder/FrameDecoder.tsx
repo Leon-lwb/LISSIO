@@ -423,7 +423,6 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               ['fdEnableFrameCount', 'enableFrameCount'],
               ['fdEnableLastTimestamp', 'enableLastTimestamp'],
               ['fdEnableFps', 'enableFps'],
-              ['fdLoopback', 'loopbackEnabled'],
             ] as const
           ).map(([labelKey, paramKey]) => {
             const on = params[paramKey] ?? false;
@@ -433,7 +432,6 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
                 <button
                   className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${on ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
                   onClick={() => updateParams({ [paramKey]: !on })}
-                  title={paramKey === 'loopbackEnabled' ? t(lang, 'fdLoopbackDesc') : undefined}
                 >
                   {on ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
                 </button>

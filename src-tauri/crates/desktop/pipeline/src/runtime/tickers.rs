@@ -300,7 +300,7 @@ pub async fn send_scheduler_ticker(
 /// 节奏重试并限频记日志。无 TextOut / 无变化时空转 (10ms tick)。
 pub async fn textout_sender_ticker(
     state: GraphEvalState,
-    transport: std::sync::Arc<tokio::sync::Mutex<transport::TransportManager>>,
+    transport: std::sync::Arc<acquisition::AcquisitionRuntime>,
 ) {
     use std::time::Instant;
 
@@ -373,7 +373,7 @@ pub async fn textout_sender_ticker(
             {
                 continue; // 未到窗口: 保持 dirty 待补发
             }
-            let send_result = transport.lock().await.send(&target, value.as_bytes());
+            let send_result = transport.send(&target, value.as_bytes());
             match send_result {
                 Ok(()) => {
                     entry.sent_value = value;

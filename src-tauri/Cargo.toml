@@ -16,8 +16,9 @@ name = "lissio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-default = ["modbus-tcp"]
+default = ["modbus-tcp", "modbus-rtu"]
 modbus-tcp = ["dep:modbus-adapter"]
+modbus-rtu = ["dep:modbus-adapter"]
 
 [profile.release]
 debug = true
@@ -187,8 +188,10 @@ async-trait = "0.1"
 bytes = { version = "1", features = ["serde"] }
 base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
-tokio-modbus = { version = "0.17", default-features = false, features = ["tcp"] }
+tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }
+tokio-serial = { version = "5.4.4", default-features = false }
 log = "0.4"
+libc = "0.2"
 thiserror = "1"
 regex = "1"
 glob = "0.3"
@@ -297,7 +300,9 @@ libautomotive = "0.1"
 tauri-build = { workspace = true }
 
 [dependencies]
+kind = { workspace = true }
 acquisition = { workspace = true }
+points = { workspace = true }
 async-trait = { workspace = true }
 buffer_graph = { workspace = true }
 bus = { workspace = true }
@@ -317,7 +322,6 @@ mcp-client = { workspace = true }
 mcp-server = { workspace = true }
 petgraph = { workspace = true }
 schema_types = { workspace = true }
-security-framework = { workspace = true }
 stream = { workspace = true }
 events = { workspace = true }
 app = { workspace = true }
@@ -347,6 +351,13 @@ semver = { workspace = true }
 reqwest = { workspace = true }
 window-vibrancy = { workspace = true }
 
+[dev-dependencies]
+graph_testkit = { workspace = true }
+
 # tauri-plugin-updater 仅桌面端支持, target 门控声明 (不在上方通用段重复登记)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { workspace = true }
+
+# security-framework 仅 keychain.rs 的 macOS 分支用于细分钥匙串授权拒绝错误码
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = { workspace = true }

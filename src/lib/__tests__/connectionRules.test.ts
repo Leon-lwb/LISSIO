@@ -10,9 +10,12 @@ import {
 
 const TRANSPORT: Node = {
   id: 'tp1',
-  type: 'transport',
+  type: 'acquisition',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'TestData', params: {} }, label: 'TestData' },
+  data: { tabId: 'default', label: 'Serial', ports: [
+    { id: 'tx', direction: 'input', domain: 'bytes' },
+    { id: 'rx', direction: 'output', domain: 'bytes' },
+  ], spec: { id: 'tp1', label: 'Serial' } },
 };
 
 const PROTOCOL: Node = {
@@ -20,7 +23,7 @@ const PROTOCOL: Node = {
   type: 'protocol',
   position: { x: 100, y: 0 },
   data: {
-    global: true,
+    tabId: 'default',
     config: { kind: 'JustFloat', channels: 2 },
     convertTo: null,
     channels: 2,
@@ -70,7 +73,7 @@ const RAWDATA_PROTOCOL: Node = {
   type: 'protocol',
   position: { x: 100, y: 100 },
   data: {
-    global: true,
+    tabId: 'default',
     config: { kind: 'RawData' },
     convertTo: null,
     channels: 4,
@@ -215,8 +218,8 @@ describe('edgeHandlesValid (悬空边判定)', () => {
     expect(edgeHandlesValid(CTX, { source: 'pt1', sourceHandle: 'ch0', target: 'w-raw', targetHandle: 'src:pt1:ch0' })).toBe(true);
   });
 
-  it('端点节点缺失时不判定 (交给节点删除逻辑)', () => {
-    expect(edgeHandlesValid(CTX, { source: 'gone', sourceHandle: 'x', target: 'w1', targetHandle: 'CH0' })).toBe(true);
+  it('端点节点缺失时拒绝悬空边', () => {
+    expect(edgeHandlesValid(CTX, { source: 'gone', sourceHandle: 'x', target: 'w1', targetHandle: 'CH0' })).toBe(false);
   });
 });
 
@@ -226,13 +229,13 @@ describe('resolvePortDomain (域解析)', () => {
     expect(resolvePortDomain(PROTOCOL, 'out', 'source', CTX)).toBe('bytes');
   });
 
-  it('FrameDecoder 旧版 loopbackIn 兼容为字节域', () => {
+  it('FrameDecoder 拒绝未声明的 loopbackIn 端口', () => {
     const decoder: Node = {
       id: 'w-dec',
       type: 'widget',
       position: { x: 0, y: 0 },
       data: { tabId: 'default', widget: { kind: 'FrameDecoder', params: { id: 'w-dec', blocks: [] } } },
     };
-    expect(resolvePortDomain(decoder, 'loopbackIn', 'target', {})).toBe('bytes');
+    expect(resolvePortDomain(decoder, 'loopbackIn', 'target', {})).toBeNull();
   });
 });

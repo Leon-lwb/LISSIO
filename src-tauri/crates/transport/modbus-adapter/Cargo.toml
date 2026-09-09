@@ -1,6 +1,6 @@
 [package]
 name = "modbus-adapter"
-description = "Modbus TCP client adapter for the typed acquisition plane"
+description = "Modbus TCP and RTU client adapters for the typed acquisition plane"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,20 +9,34 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+data_model = { workspace = true }
 acquisition = { workspace = true }
 async-trait = { workspace = true }
 flow = { workspace = true }
+parking_lot = { workspace = true }
 points = { workspace = true }
+serial = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tokio-modbus = { workspace = true }
+tokio-serial = { workspace = true }
 
 [dev-dependencies]
+criterion = { workspace = true }
+libc = { workspace = true }
 tokio = { workspace = true }
+
+[[bench]]
+name = "modbus_adapter"
+harness = false
+
+[[bench]]
+name = "modbus_load"
+harness = false
 
 [package.metadata.lissio]
 domain = "transport"
 layer = 4
-responsibility = "Modbus TCP client configuration, request planning, typed decoding, polling, writes, and error-quality mapping"
+responsibility = "Modbus TCP/RTU client configuration, request planning, typed decoding, polling, writes, and error-quality mapping"

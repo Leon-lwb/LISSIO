@@ -7,21 +7,21 @@ import { clampWidgetSize, widgetMinSize } from '../../../lib/utils/widgetSize';
 import { OptionalNumberField } from '../../ui/fields';
 
 /// 节点尺寸编辑节 — 宽/高 (空 = 随内容自适应) + 重置按钮;
-/// 保存到 rfNode 显式尺寸并随位置持久化到后端 (graph slice setWidgetNodeSize)
+/// 保存到 rfNode 显式尺寸并随位置持久化到后端
 export const SizeSection = memo(function SizeSection({ nodeId, kind }: {
   nodeId: string;
-  kind: WidgetConfig['kind'];
+  kind?: WidgetConfig['kind'];
 }) {
   const lang = useAppStore((s) => s.lang);
   const width = useAppStore((s) => s.rfNodes.find((n) => n.id === nodeId)?.width ?? null);
   const height = useAppStore((s) => s.rfNodes.find((n) => n.id === nodeId)?.height ?? null);
-  const setWidgetNodeSize = useAppStore((s) => s.setWidgetNodeSize);
+  const setNodeSize = useAppStore((s) => s.setNodeSize);
   const commitSize = (patch: { width?: number | null; height?: number | null }) => {
     const next = clampWidgetSize(kind, {
       width: patch.width !== undefined ? (patch.width ?? undefined) : (width ?? undefined),
       height: patch.height !== undefined ? (patch.height ?? undefined) : (height ?? undefined),
     });
-    setWidgetNodeSize(nodeId, next);
+    setNodeSize(nodeId, next);
   };
   const limits = widgetMinSize(kind);
   return (
@@ -37,7 +37,7 @@ export const SizeSection = memo(function SizeSection({ nodeId, kind }: {
         <span className="text-[10px] text-text-secondary">
           {t(lang, 'nodeSizeMinHint').replace('{w}', String(limits.minW)).replace('{h}', String(limits.minH))}
         </span>
-        <button type="button" onClick={() => setWidgetNodeSize(nodeId, {})}
+        <button type="button" onClick={() => setNodeSize(nodeId, {})}
           className="inline-flex items-center gap-1 text-[10px] text-text-secondary hover:text-text-primary rounded px-1.5 py-1 hover:bg-bg-hover transition-colors">
           <RotateCcw size={10} /> {t(lang, 'resetSize')}
         </button>

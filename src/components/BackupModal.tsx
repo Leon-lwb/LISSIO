@@ -23,11 +23,9 @@ interface BackupModalProps {
 }
 
 const SECTION_META: { id: BackupSection; labelKey: string; descKey: string }[] = [
-  { id: 'nodeGraph', labelKey: 'backupSectionNodeGraph', descKey: 'backupSectionNodeGraphDesc' },
+  { id: 'workspace', labelKey: 'backupSectionWorkspace', descKey: 'backupSectionWorkspaceDesc' },
   { id: 'windowLayout', labelKey: 'backupSectionWindowLayout', descKey: 'backupSectionWindowLayoutDesc' },
   { id: 'settings', labelKey: 'backupSectionSettings', descKey: 'backupSectionSettingsDesc' },
-  { id: 'transportProtocol', labelKey: 'backupSectionTransportProtocol', descKey: 'backupSectionTransportProtocolDesc' },
-  { id: 'widgetsTabs', labelKey: 'backupSectionWidgetsTabs', descKey: 'backupSectionWidgetsTabsDesc' },
 ];
 
 export function BackupModal({ isOpen, onClose }: BackupModalProps) {

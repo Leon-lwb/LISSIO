@@ -242,16 +242,12 @@ impl CompiledGraph {
             .map(|e| self.hir.id_of(e.source()).to_owned())
     }
 
-    /// 获取 FrameDecoder 节点的配置 (blocks + 附加端口开关 + loopback 标志)
+    /// 获取 FrameDecoder 节点的配置 (blocks + 附加端口开关)
     /// 用于 decoder_feed 在节点变更时重建 FrameParser
-    ///
-    /// 注意: 返回的 loopback 标志为 deprecated (见 NodeKind::FrameDecoder),
-    /// 新语义下字节来源完全由输入字节边决定 (见 byte_plan)。
-    #[allow(clippy::type_complexity)]
     pub fn decoder_config(
         &self,
         node_id: &str,
-    ) -> Option<(&[DecoderBlockDef], bool, bool, bool, bool, bool)> {
+    ) -> Option<(&[DecoderBlockDef], bool, bool, bool, bool)> {
         let node = self.value_def(node_id)?;
         if let NodeKind::FrameDecoder {
             blocks,
@@ -259,7 +255,6 @@ impl CompiledGraph {
             enable_frame_count,
             enable_last_timestamp,
             enable_fps,
-            loopback,
         } = &node.kind
         {
             Some((
@@ -268,7 +263,6 @@ impl CompiledGraph {
                 *enable_frame_count,
                 *enable_last_timestamp,
                 *enable_fps,
-                *loopback,
             ))
         } else {
             None

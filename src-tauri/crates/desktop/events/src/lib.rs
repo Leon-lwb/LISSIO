@@ -23,14 +23,14 @@ pub const GRAPH_COMPILE_EVENT: &str = "graph:compile";
 /// `workspace:run` 事件名 — 工作区运行状态广播 (state + epoch, 启动/暂停/停止)
 pub const WORKSPACE_RUN_EVENT: &str = "workspace:run";
 
-/// `transport:state` payload — 连接状态变化 (携带来源 Transport 节点 id)
+/// `transport:state` payload — 连接状态变化 (携带来源设备节点 id)
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct TransportStateEvent {
     pub node_id: String,
     pub state: ConnectionState,
 }
 
-/// `transport:rx` payload — 接收统计 (携带来源 Transport 节点 id)
+/// `transport:rx` payload — 接收统计 (携带来源设备节点 id)
 ///
 /// 注意: 不派生 PartialEq (TransportStats 未实现)。
 #[derive(Debug, Clone, Serialize)]

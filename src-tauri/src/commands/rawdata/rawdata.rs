@@ -28,7 +28,7 @@ pub async fn clear_raw_data_collector(
     Ok(())
 }
 
-/// 设置原始数据收集器容量 (字节, source = Transport 节点 id)
+/// 设置原始数据收集器容量 (字节, source = 字节设备节点 id)
 #[tauri::command]
 pub async fn set_rawdata_buffer_capacity(
     state: State<'_, AppState>,

@@ -155,8 +155,8 @@ describe('chrome store subscription granularity', () => {
       act(() => {
         useAppStore.setState({
           controlTabs: [
-            { id: 'tab-a', name: 'Tab A', widgets: [] },
-            { id: 'tab-b', name: 'Tab B', widgets: [] },
+            { id: 'tab-a', name: 'Tab A' },
+            { id: 'tab-b', name: 'Tab B' },
           ],
         });
         useDockStore.setState({

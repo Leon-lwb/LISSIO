@@ -15,8 +15,8 @@ pub use filter::DigitalFilter;
 pub use frame_decoder::FrameParser;
 pub use kind::{
     DecoderBlockDef, MathOp, NodeDef, NodeKind, PortDomain, StrNumParams, StrOp, StrResult,
-    FRAME_DECODER_IN_HANDLE, LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE,
-    PROTOCOL_OUT_HANDLE, RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
+    FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
+    RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
 };
 pub use spectrum::{IfftState, SpectrumOutput, WindowType};
 pub use trigger::{TriggerRuleDef, TriggerState};

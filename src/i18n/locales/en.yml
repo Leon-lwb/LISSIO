@@ -425,16 +425,12 @@ backupModalTitle: Split Backup
 backupSelectHint: Select sections to include
 backupSelectAll: Select all
 backupSelectNone: Clear
-backupSectionNodeGraph: Node Graph
-backupSectionNodeGraphDesc: Nodes and edges on the canvas
+backupSectionWorkspace: Workspace
+backupSectionWorkspaceDesc: Tab-owned node documents, connections, data tabs, and active views
 backupSectionWindowLayout: Window Layout
 backupSectionWindowLayoutDesc: Card split layout and sidebar dock position
 backupSectionSettings: Settings
 backupSectionSettingsDesc: Language, theme, appearance, data caches, etc.
-backupSectionTransportProtocol: Transport & Protocol
-backupSectionTransportProtocolDesc: Serial / CAN / network transport and protocol engine config
-backupSectionWidgetsTabs: Widgets & Tabs
-backupSectionWidgetsTabsDesc: Widgets, control tabs, data tabs and active tabs
 backupExportSelected: Export Selected
 backupImportFromFile: Import from File
 backupImportReady: File loaded. Select sections to restore, then confirm.
@@ -445,17 +441,17 @@ templateApply: Apply
 templateImportFile: Import template file…
 templateImportName: Imported template
 templateMath: Math
-templateMathDesc: Demonstrates sin / sum arithmetic nodes, runs with TestData (no hardware needed)
+templateMathDesc: Demonstrates sin / sum arithmetic nodes with a simulated Serial device attribute
 templateFilter: Filter
 templateFilterDesc: Lowpass filtering demo, compare raw vs filtered waveform
 templateFft: Spectrum
-templateFftDesc: FFT solver → spectrum view → IFFT back to time domain; shows time/freq port wiring (TestData, no hardware needed)
+templateFftDesc: FFT solver → spectrum view → IFFT back to time domain using a simulated Serial device attribute
 templateCan: CAN
 templateCanDesc: Slcan transport + CAN frame view, connect a CAN analyzer to send/receive
 templateSerial: Serial
 templateSerialDesc: Serial float stream + gauge / number display widgets
 templateCustomProtocol: Custom Protocol
-templateCustomProtocolDesc: Custom block protocol (named channels speed/temp) + multi-frame command sender; runs with TestData, no hardware needed
+templateCustomProtocolDesc: Custom block protocol (named channels speed/temp) plus command sender, using a simulated Serial device attribute
 templateDemo: Combined Demo
 templateDemoDesc: Full pipeline example with filter + math + waveform / gauge
 templateApplyTitle: Apply Template
@@ -1154,7 +1150,7 @@ opResizeNodes: Resize widget
 opRemoveNodes: Delete nodes
 opAddTransportNode: Add transport node
 opAddProtocolNode: Add protocol node
-opRemoveGlobalNode: Delete global node
+opRemoveNode: Delete node
 opUpdateTransportConfig: Update transport config
 opUpdateProtocolConfig: Update protocol config
 opConvertProtocolTo: Convert protocol
@@ -1220,8 +1216,6 @@ fdEnableValid: Output valid port
 fdEnableFrameCount: Output frame_count port
 fdEnableLastTimestamp: Output last_timestamp port
 fdEnableFps: Output fps port
-fdLoopback: Loopback mode
-fdLoopbackDesc: Show loopbackIn input port; only receive bytes injected via loopback edges instead of the live RX stream
 fdBlocksEmpty: No blocks yet, click below to add
 fdLiveOutputs: Live Outputs
 fdLiveHint: After connecting transport, parsed results appear in ports below
@@ -1414,3 +1408,8 @@ runStartHint: Start workspace (data processing & auto-send begin; also resumes f
 runPauseHint: Pause workspace (keeps connection, drops data while paused, no backlog)
 runStopHint: Stop workspace (clears execution state and pending send tasks)
 cmdSendRequiresRun: Workspace is not running — manual send requires running state, start it from the status bar
+capabilityVersionFallback: This interface cannot be connected with the current app version.
+capabilityDiscoveredEndpoint: Discovered endpoint
+capabilitySelectDiscovered: Select a discovered endpoint…
+capabilityLabel: Name
+capabilityUnavailable: This interface is not available in the current build.

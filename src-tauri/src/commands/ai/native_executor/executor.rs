@@ -92,7 +92,7 @@ impl NativeToolExecutor {
     async fn call_backend(&self, name: &str, args: &Value) -> Result<Option<String>> {
         let tb = &self.toolbox;
         let out = match name {
-            "list_transports" => tools::list_transports(tb).await,
+            "list_devices" => tools::list_devices(tb).await,
             "list_serial_ports" => shared(name, tools::list_serial_ports())?,
             "send_bytes" => {
                 let node_id = arg_str(name, args, "node_id")?;

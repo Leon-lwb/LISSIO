@@ -101,7 +101,7 @@ export function releaseRawDataNode(nodeId: string, filter?: RawDataFilterOptions
   nodeRegistry.release(nodeId, filter);
 }
 
-/// 获取指定 Transport 节点的原始数据 buffer (引用 +1; rx/tx 均入该收集器)
+/// 获取指定字节设备节点的原始数据 buffer (引用 +1；rx/tx 均入该收集器)
 export function acquireRawDataTransport(
   transportId: string,
   filter?: RawDataFilterOptions,
@@ -109,7 +109,7 @@ export function acquireRawDataTransport(
   return transportRegistry.acquire(transportId, filter);
 }
 
-/// 释放指定 Transport 节点的原始数据 buffer (引用 -1)
+/// 释放指定字节设备节点的原始数据 buffer (引用 -1)
 export function releaseRawDataTransport(transportId: string, filter?: RawDataFilterOptions): void {
   transportRegistry.release(transportId, filter);
 }

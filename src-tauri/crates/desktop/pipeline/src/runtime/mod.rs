@@ -9,6 +9,7 @@ pub use tickers::{
     textout_sender_ticker,
 };
 
+pub use acquisition::AcquisitionRuntime;
 pub use frame_decoder::FrameParser;
 pub use graph::{
     BytePlan, CompiledGraph, EdgeClass, HirNode, SourceFramesMap, SourceTextsMap, TypedGraph,
@@ -21,5 +22,4 @@ pub use kind::{
 pub use protocol::{detect_format, parse_ascii, parse_hex, InputFormat, ProtocolEngine};
 pub use schema::command_frame::{compute_frame_bytes, CommandFrameDto};
 pub use schema::{command_frame, frame_checksum, frame_field};
-pub use transport::TransportManager;
 pub use trigger::{TriggerMatchResult, TriggerMatcher, TriggerRuleDef};

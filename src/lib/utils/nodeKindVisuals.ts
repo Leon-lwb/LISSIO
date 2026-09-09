@@ -4,7 +4,7 @@
 //! 历史面板行首就用什么图标）；颜色沿用画布的分类主题色体系：
 //! - 控件按 getWidgetCategory 分类: input 蓝 / display 绿 / math 橙 /
 //!   string 红 / custom 紫（与 PaletteRow 的底色徽章完全一致）
-//! - Transport 节点黄色 Cable、Protocol 节点主题色 Binary
+//! - 设备节点黄色 Cable、Protocol 节点主题色 Binary
 //!   （与 TransportNode / ProtocolNode 头部一致）
 //!
 //! 消费方: 操作历史面板行首徽章；需要新增种类时只改本文件。
@@ -102,7 +102,7 @@ const CATEGORY_DOT_CLS: Record<WidgetCategory, string> = {
   custom: 'bg-purple',
 };
 
-// 全局节点（字节平面）固定主题 — 与 TransportNode / ProtocolNode 头部一致
+// 设备与协议等结构节点固定主题
 export const TRANSPORT_ICON = Cable;
 export const TRANSPORT_TILE_CLS = 'bg-yellow/15 text-yellow';
 export const TRANSPORT_DOT_CLS = 'bg-yellow';
@@ -167,14 +167,14 @@ export function nodeVisualOf(ref: NodeVisualRef): NodeVisual {
 /** 画布节点 → 视觉引用；无法归类 (异常节点) 返回 null */
 export function nodeRefOf(node: Node | undefined | null): NodeVisualRef | null {
   if (!node) return null;
-  if (node.type === 'transport') return { kind: 'transport' };
+  if (node.type === 'acquisition') return { kind: 'transport' };
   if (node.type === 'protocol') return { kind: 'protocol' };
   const widget = node.data?.widget as WidgetConfig | undefined;
   if (widget) return { kind: 'widget', widgetKind: widget.kind };
   return null;
 }
 
-/** 节点显示名: 全局节点用 data.label, 控件节点用参数 label → 类型名兜底 */
+/** 节点显示名: 结构节点用 data.label, 控件节点用参数 label → 类型名兜底 */
 export function nodeLabelOf(node: Node | undefined | null): string {
   if (!node) return '?';
   const label = node.data?.label;

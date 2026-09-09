@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use kind::NodeKind;
 use schema_types::{ProtocolConfig, SchemaPreset};
 use tauri::AppHandle;
 
@@ -38,7 +37,7 @@ pub(super) async fn feed_protocol(
     dec_cache: &mut DecoderFeedCache,
     summary: &mut RouteSummary,
     depth: usize,
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
 ) {
     let Some(st) = plane.protocol_states.lock().get(proto_id).cloned() else {
         log::debug!("协议节点无运行时状态, 跳过喂入: {proto_id}");
@@ -99,20 +98,11 @@ pub(super) async fn feed_protocol(
     // 或编译错误状态。TestData 使用明确采样率；串口按波特率、字符格式和本批
     // 实际字节/帧数估算线速。网络等无时钟信息的来源仍保留到达时间语义。
     // 读任务热路径经轻量句柄免全局锁; 命令注入路径 (loopback/mcp) 无句柄, 回退全局锁
-    let live_transport_config = match live {
-        Some(live) => live.config_of(source_id),
-        None => plane.transport.lock().await.config(source_id),
-    };
-    let graph_transport_config = || {
-        plane.global_nodes.lock().get(source_id).and_then(|node| {
-            if let NodeKind::Transport { config } = &node.kind {
-                Some(config.clone())
-            } else {
-                None
-            }
-        })
-    };
-    let clock_config = live_transport_config.or_else(graph_transport_config);
+    let live_transport_config = live.map_or_else(
+        || plane.transport.config(source_id),
+        |handle| handle.config_of(source_id),
+    );
+    let clock_config = live_transport_config;
     let clock_hint = clock_config.and_then(|config| match config {
         data_model::TransportConfig::TestData(config) => Some((
             super::SampleClockBasis::ExactRate,

@@ -16,9 +16,8 @@ import { createRunControlSlice, type RunControlSlice } from './slices/runControl
 
 export type { SidebarView } from './slices/sidebar';
 export {
-  createTransportNode,
   createProtocolNode,
-  isGlobalNode,
+  isStructuralNode,
   syncTabGraphToBackend,
   traceProtocolSource,
   downstreamProtocolOf,

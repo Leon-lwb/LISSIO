@@ -58,7 +58,7 @@ export function subscribeCanFramesFiltered(
   );
 }
 
-/// 发送 CAN 帧 (nodeId = 目标 Transport 节点 id; protocolNode = null 时后端沿字节平面自动解析下游 Protocol 节点)
+/// 发送 CAN 帧 (nodeId = 目标设备节点 id；protocolNode = null 时后端沿字节平面自动解析下游 Protocol 节点)
 export function sendCanFrame(
   nodeId: string,
   frame: CanFrame,

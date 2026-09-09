@@ -140,7 +140,7 @@ pub const fn op_weight(op: &CompiledOp) -> u32 {
 pub struct TextOutSpec {
     /// TextOut 节点 id (graph_string_outputs 的键)
     pub node_id: Box<str>,
-    /// 目标 Transport 全局节点 id
+    /// 目标设备节点 id
     pub target_transport: Box<str>,
     /// 换行后缀 (编译期从 [`NewlineMode`] 解出)
     pub newline_suffix: &'static str,

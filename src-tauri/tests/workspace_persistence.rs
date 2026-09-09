@@ -1,76 +1,104 @@
-//! 工作区持久化 (workspace.json) 回环与 widget 记录语义集成测试
-//!
-//! widget 配置模型与画布位置的后端权威存储契约:
-//! - 提交携带 widgets/positions 时落库, 收集快照落盘后可完整恢复
-//!   (含逐 tab 重编译, 恢复后图立即可求值);
-//! - 拓扑 op (connect_edge) 不携带 widget 记录时源图中现状保留;
-//! - tab 移除后其节点的孤儿位置条目被清理。
+//! 工作区持久化集成测试：每个页签只保存节点文档与连线。
 
-use std::collections::HashMap;
-
-use app::{collect_workspace_file, save_workspace, AppState, Position, WidgetRecord};
-use app::{NodeDef, NodeKind};
+use app::{collect_workspace_file, save_workspace, AppState};
 use buffer_graph::Edge;
-use graph_ops::{apply_connect_edge, apply_remove_tab_graph, apply_tab_graph};
+use graph_ops::{apply_connect_edge, apply_document, apply_remove_tab_graph};
+use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};
 use lissio_lib::restore_workspace;
+use serde_json::json;
 
-fn sink_node(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
+fn widget_document(
+    id: &str,
+    tab_id: &str,
+    widget_kind: &str,
+    params: serde_json::Value,
+    layout: NodeLayout,
+) -> NodeDocument {
+    NodeDocument {
         id: id.into(),
         tab_id: tab_id.into(),
-        kind: NodeKind::Sink,
-    }
-}
-
-fn math_node(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab_id.into(),
-        kind: NodeKind::Math {
-            op: app::MathOp::Add,
-            input_count: 1,
+        label: id.into(),
+        layout,
+        business: NodeBusiness::Widget {
+            widget_kind: widget_kind.into(),
+            params,
+            custom_ports: None,
         },
+        attributes: NodeAttributes::default(),
     }
 }
 
-fn gauge_record(id: &str) -> WidgetRecord {
-    serde_json::from_value(serde_json::json!({
-        "id": id,
-        "kind": "NumberDisplay",
-        "params": { "id": id, "label": "N", "min": 0.0, "max": 100.0 }
-    }))
-    .expect("widget 记录应可反序列化")
+fn auto_layout(x: f64, y: f64) -> NodeLayout {
+    NodeLayout {
+        x,
+        y,
+        width: None,
+        height: None,
+    }
+}
+
+async fn apply_documents(
+    state: &AppState,
+    tab_id: &str,
+    documents: Vec<NodeDocument>,
+    edges: Vec<Edge>,
+) {
+    apply_document(
+        &state.graphs,
+        &state.graphs_version,
+        &state.data_plane,
+        &state.source_graphs,
+        &state.workspace,
+        None,
+        tab_id.into(),
+        documents,
+        edges,
+        None,
+    )
+    .await
+    .expect("节点文档提交应成功");
 }
 
 fn temp_dir(tag: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("vofa-workspace-{tag}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("lissio-workspace-{tag}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).expect("创建临时目录");
     dir
 }
 
-/// 提交 → 落盘 → 新 AppState 恢复: 源图 / widget 记录 / 位置 / tab 元数据
-/// 完整还原, 且恢复后图已编译可求值 (提交的 Input 值立即出现在输出快照)
 #[tokio::test]
 async fn workspace_survives_save_and_restore_roundtrip() {
     let dir = temp_dir("roundtrip");
-
     let state = AppState::new();
     state.workspace.lock().tabs = vec![app::TabMeta {
         id: "tab1".into(),
         name: "Tab 1".into(),
-        widgets: vec!["w-gauge".into()],
     }];
-    state
-        .workspace
-        .lock()
-        .positions
-        .insert("w-gauge".into(), Position::new(12.5, 40.0));
-    apply_tab_graph(
+    let documents = vec![
+        widget_document(
+            "w-gauge",
+            "tab1",
+            "NumberDisplay",
+            json!({"min": 0.0, "max": 100.0}),
+            NodeLayout {
+                x: 12.5,
+                y: 40.0,
+                width: Some(240.0),
+                height: Some(160.0),
+            },
+        ),
+        widget_document(
+            "m1",
+            "tab1",
+            "Math",
+            json!({"op": "add", "inputCount": 1}),
+            auto_layout(1.0, 2.0),
+        ),
+    ];
+    apply_documents(
         &state,
-        None,
-        "tab1".into(),
-        vec![sink_node("w-gauge", "tab1"), math_node("m1", "tab1")],
+        "tab1",
+        documents,
         vec![Edge {
             id: "e1".into(),
             source: "m1".into(),
@@ -78,19 +106,13 @@ async fn workspace_survives_save_and_restore_roundtrip() {
             target: "w-gauge".into(),
             target_handle: "value".into(),
         }],
-        HashMap::new(),
-        Some(vec![gauge_record("w-gauge")]),
-        Some(HashMap::from([("m1".to_string(), Position::new(1.0, 2.0))])),
-        None,
     )
-    .await
-    .expect("提交图应成功");
+    .await;
 
     let file = collect_workspace_file(&state.workspace, &state.source_graphs);
     save_workspace(&dir, &file).expect("落盘应成功");
-    assert!(state.workspace.lock().dirty);
+    assert_eq!(file.graphs["tab1"].documents.len(), 2);
 
-    // 模拟重启: 全新 AppState + 从磁盘恢复
     let fresh = AppState::new();
     assert!(restore_workspace(&fresh, &dir).await, "应报告已恢复");
     {
@@ -98,53 +120,47 @@ async fn workspace_survives_save_and_restore_roundtrip() {
         assert!(ws.restored && !ws.dirty, "恢复后不应立即触发重写");
         assert_eq!(ws.tabs.len(), 1);
         assert_eq!(ws.tabs[0].name, "Tab 1");
-        assert_eq!(ws.positions.len(), 2, "两个节点的位置都应恢复");
     }
-
     let stored = fresh.source_graphs.lock().get("tab1").unwrap().clone();
-    assert_eq!(stored.nodes.len(), 2);
+    assert_eq!(stored.documents.len(), 2);
+    assert_eq!(stored.documents[0].layout.width, Some(240.0));
     assert_eq!(stored.edges.len(), 1);
-    assert_eq!(stored.widgets.len(), 1, "widget 配置记录应随源图恢复");
-    assert_eq!(stored.widgets[0].kind, "NumberDisplay");
-    assert!(
-        fresh.graphs.lock().contains_key("tab1"),
-        "恢复时应逐 tab 重编译"
-    );
+    assert_eq!(stored.widgets.len(), 2, "widget 投影应由文档恢复");
+    assert!(fresh.graphs.lock().contains_key("tab1"));
     assert!(
         fresh
             .graphs_version
             .load(std::sync::atomic::Ordering::Relaxed)
-            >= 1,
-        "恢复提交应推进版本号 (前端水合基线)"
+            >= 1
     );
 
-    // 文件不存在 → 全新安装语义
     let empty_dir = temp_dir("empty");
     let fresh2 = AppState::new();
     assert!(!restore_workspace(&fresh2, &empty_dir).await);
     assert!(!fresh2.workspace.lock().restored);
-
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&empty_dir);
 }
 
-/// 拓扑 op 不携带 widget 记录 (None) 时, 源图中的记录保留
 #[tokio::test]
-async fn connect_edge_op_preserves_widget_records() {
+async fn connect_edge_preserves_documents_and_widget_projection() {
     let state = AppState::new();
-    apply_tab_graph(
+    apply_documents(
         &state,
-        None,
-        "tab1".into(),
-        vec![sink_node("w-gauge", "tab1"), math_node("m1", "tab1")],
+        "tab1",
+        vec![
+            widget_document("in1", "tab1", "Slider", json!({}), auto_layout(0.0, 0.0)),
+            widget_document(
+                "m1",
+                "tab1",
+                "Math",
+                json!({"op": "add", "inputCount": 1}),
+                auto_layout(1.0, 2.0),
+            ),
+        ],
         vec![],
-        HashMap::new(),
-        Some(vec![gauge_record("w-gauge")]),
-        None,
-        None,
     )
-    .await
-    .expect("种子图应成功");
+    .await;
 
     apply_connect_edge(
         &state.graphs,
@@ -154,47 +170,42 @@ async fn connect_edge_op_preserves_widget_records() {
         &state.workspace,
         None,
         Some("tab1".into()),
+        "in1".into(),
         "m1".into(),
-        "w-gauge".into(),
-        Some("result".into()),
-        Some("value".into()),
+        None,
+        None,
     )
     .await
     .expect("连线应成功");
 
     let stored = state.source_graphs.lock().get("tab1").unwrap().clone();
+    assert_eq!(stored.documents.len(), 2);
+    assert_eq!(stored.widgets.len(), 2);
     assert_eq!(stored.edges.len(), 1);
-    assert_eq!(stored.widgets.len(), 1, "拓扑 op 不得清掉 widget 记录");
-    assert!(state.workspace.lock().dirty, "拓扑 op 提交应标记落盘脏");
+    assert!(state.workspace.lock().dirty);
 }
 
-/// tab 移除后, 其节点 (含跨 tab 独有的 widget) 的位置条目被清理
 #[tokio::test]
-async fn remove_tab_graph_prunes_orphan_positions() {
+async fn remove_tab_graph_discards_its_document() {
     let state = AppState::new();
-    apply_tab_graph(
+    apply_documents(
         &state,
-        None,
-        "tab1".into(),
-        vec![sink_node("w-gauge", "tab1")],
+        "tab1",
+        vec![widget_document(
+            "w-gauge",
+            "tab1",
+            "NumberDisplay",
+            json!({}),
+            auto_layout(3.0, 4.0),
+        )],
         vec![],
-        HashMap::new(),
-        None,
-        Some(HashMap::from([(
-            "w-gauge".to_string(),
-            Position::new(3.0, 4.0),
-        )])),
-        None,
     )
-    .await
-    .expect("提交图应成功");
-    assert!(state.workspace.lock().positions.contains_key("w-gauge"));
+    .await;
+    assert!(state.source_graphs.lock().contains_key("tab1"));
 
     apply_remove_tab_graph(&state, None, "tab1")
         .await
         .expect("移除图应成功");
-    assert!(
-        !state.workspace.lock().positions.contains_key("w-gauge"),
-        "孤儿位置条目应被清理"
-    );
+    assert!(!state.source_graphs.lock().contains_key("tab1"));
+    assert!(state.workspace.lock().dirty);
 }

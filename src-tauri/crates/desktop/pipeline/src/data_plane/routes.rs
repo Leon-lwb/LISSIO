@@ -15,7 +15,7 @@ use super::{
 };
 
 impl DataPlaneState {
-    /// 同步 protocol_states 与全局节点表中的 Protocol 节点 (图重编译后调用):
+    /// 同步 protocol_states 与运行时节点索引中的 Protocol 节点 (图重编译后调用):
     /// 新增/配置变更 → 重建引擎; 节点删除 → 移除状态并清理 source_frames/source_texts 对应项
     pub fn sync_protocol_states(&self) {
         let nodes = self.global_nodes.lock();
@@ -138,13 +138,13 @@ impl DataPlaneState {
         *self.buffer_aliases.lock() = aliases;
     }
 
-    /// 挂载 Transport 节点读任务 (open 成功后调用; 同 id 重复调用先 detach)
+    /// 挂载设备节点读任务 (open 成功后调用; 同 id 重复调用先 detach)
     pub async fn attach(&self, app: AppHandle, node_id: &str) {
         self.ensure_eval_worker();
         self.detach(node_id);
-        let rx = self.transport.lock().await.subscribe_flow(node_id);
+        let rx = self.transport.subscribe_flow(node_id);
         let Some(rx) = rx else {
-            log::warn!("读任务挂载失败: 传输节点未打开: {node_id}");
+            log::warn!("读任务挂载失败: 设备会话未打开: {node_id}");
             return;
         };
         // 确保按源 raw 收集器存在 (rx 方向)
@@ -155,7 +155,7 @@ impl DataPlaneState {
         self.read_tasks.lock().insert(id, handle);
     }
 
-    /// 卸载 Transport 节点读任务 (close 时调用)
+    /// 卸载设备节点读任务 (close 时调用)
     pub fn detach(&self, node_id: &str) {
         let handle = self.read_tasks.lock().remove(node_id);
         if let Some(h) = handle {

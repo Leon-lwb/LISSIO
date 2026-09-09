@@ -26,33 +26,26 @@ export function compileErrorMessage(err: CompileError, nodeId: string): string {
     }
     case 'node_not_found':
       return err.id === nodeId ? 'Node not found in compiled graph' : `Node "${err.id}" not found`;
+    case 'port_not_found':
+      return err.node_id === nodeId
+        ? `${err.output ? 'Output' : 'Input'} port "${err.port}" is not declared`
+        : `Port "${err.port}" is not declared by node "${err.node_id}"`;
     default:
       return 'Compile error';
   }
 }
 
 /// 节点命中错误时返回消息文本,否则 null
-/// tabId 为 undefined 时 (全局节点 — Transport/Protocol), 遍历任意 tab 错误集命中即报错
-export function useCanvasNodeError(nodeId: string, tabId: string | undefined): string | null {
+export function useCanvasNodeError(nodeId: string, tabId: string): string | null {
   const tabStates = useAppStore((s) => s.tabStates);
   const tabErrorNodes = useAppStore((s) => s.tabErrorNodes);
   const tabErrors = useAppStore((s) => s.tabErrors);
   return useMemo(() => {
-    if (tabId !== undefined) {
-      if (tabStates[tabId] !== 'error') return null;
-      const nodes = tabErrorNodes[tabId];
-      if (!nodes?.includes(nodeId)) return null;
-      const report = tabErrors[tabId];
-      if (!report) return null;
-      return compileErrorMessage(report.error, nodeId);
-    }
-    for (const [tId, nodes] of Object.entries(tabErrorNodes)) {
-      if (tabStates[tId] !== 'error') continue;
-      if (!nodes.includes(nodeId)) continue;
-      const report = tabErrors[tId];
-      if (report) return compileErrorMessage(report.error, nodeId);
-    }
-    return null;
+    if (tabStates[tabId] !== 'error') return null;
+    const nodes = tabErrorNodes[tabId];
+    if (!nodes?.includes(nodeId)) return null;
+    const report = tabErrors[tabId];
+    return report ? compileErrorMessage(report.error, nodeId) : null;
   }, [tabStates, tabErrorNodes, tabErrors, tabId, nodeId]);
 }
 

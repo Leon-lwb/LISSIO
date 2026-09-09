@@ -28,7 +28,7 @@ impl AppState {
     ) -> Result<()> {
         // 协议变化 → TestData 生成格式失效: 断开所有打开的 TestData 传输
         {
-            let mut manager = self.transport.lock().await;
+            let manager = &self.transport;
             let test_nodes: Vec<String> = manager
                 .list_open()
                 .into_iter()
@@ -37,7 +37,7 @@ impl AppState {
             if !test_nodes.is_empty() {
                 for id in &test_nodes {
                     self.data_plane.detach(id);
-                    manager.close(id);
+                    manager.close(id).await;
                     emit_transport_state(app, id, ConnectionState::Disconnected);
                 }
                 log::info!(

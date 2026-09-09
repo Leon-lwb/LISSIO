@@ -15,7 +15,7 @@ export type RawDataChannelKind = 'decoder-node' | 'byte-source' | 'string' | 'nu
 
 export interface RawDataChannelInfo {
   kind: RawDataChannelKind;
-  /// byte-source 通道的字节源 Transport 节点 id; 上溯失败为 null (通道显示为空, 不订阅)
+  /// byte-source 通道的字节设备节点 id；上溯失败为 null (通道显示为空, 不订阅)
   transportId: string | null;
 }
 
@@ -33,7 +33,7 @@ export function classifyRawDataChannel(
     return { kind: 'decoder-node', transportId: null };
   }
   const sourceNode = nodes.find((n) => n.id === channel.sourceId);
-  if (sourceNode?.type === 'transport') {
+  if (sourceNode?.type === 'acquisition') {
     return {
       kind: 'byte-source',
       transportId: traceTransportSource(channel.sourceId, edges, nodes),
@@ -84,7 +84,7 @@ export function resolveRawDataChannelKey(
 
 /// RawData 卡片状态提示用 — 解析当前生效输入对应的可观察 Transport
 ///
-/// 返回 Transport 节点 id (供读 `connectionStates` 显示 未连接/错误 状态), 以下情形返回 null:
+/// 返回字节设备节点 id (供读 `connectionStates` 显示未连接/错误状态)，以下情形返回 null:
 /// - 无任何连线 (空态, 视图已有专门引导)
 /// - 生效输入是 FrameDecoder 的 raw 口 (数据来自节点旁路收集器, 无固定连接语义)
 export function resolveRawDataStatusTransport(

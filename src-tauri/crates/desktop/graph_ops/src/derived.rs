@@ -15,6 +15,7 @@ use serde::Serialize;
 #[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "PascalCase")]
 pub enum DerivedPortDomain {
+    Points,
     F32,
     Bytes,
     String,
@@ -24,6 +25,7 @@ pub enum DerivedPortDomain {
 impl From<PortDomain> for DerivedPortDomain {
     fn from(d: PortDomain) -> Self {
         match d {
+            PortDomain::Points => Self::Points,
             PortDomain::F32 => Self::F32,
             PortDomain::Bytes => Self::Bytes,
             PortDomain::String => Self::String,
@@ -71,26 +73,48 @@ pub struct GraphDerived {
 /// - widget 节点 (Input/Math/Str/Custom/Filter/Fft/Ifft/FrameDecoder/Trigger/
 ///   TextInput/Sink/TextDisplay/TextOut/ProtocolSource): 由 [`kind_output_ports`]
 ///   按 [`pipeline::port_table`] 枚举 (固定端口种类), 动态端口种类返回空
-/// - Transport 节点:不参与数值平面图渲染,跳过 (字节平面节点由 `BytePlan` 路由)
 pub fn compute_derived(nodes: &[NodeDef]) -> Vec<NodeDerived> {
-    nodes
-        .iter()
-        .filter_map(|n| {
-            if matches!(n.kind, NodeKind::Transport { .. }) {
-                return None;
-            }
-            Some(derive_node(n))
-        })
-        .collect()
+    nodes.iter().map(derive_node).collect()
 }
 
 fn derive_node(n: &NodeDef) -> NodeDerived {
     match &n.kind {
+        NodeKind::Acquisition { ports, .. } => NodeDerived {
+            node_id: n.id.clone(),
+            ports: ports
+                .iter()
+                .filter(|port| {
+                    port.direction != data_model::device::DevicePortDirection::Input
+                        && port.domain != data_model::device::DevicePortDomain::Events
+                })
+                .map(|port| NodeDerivedPort {
+                    name: port.id.clone(),
+                    domain: match port.domain {
+                        data_model::device::DevicePortDomain::Bytes => DerivedPortDomain::Bytes,
+                        data_model::device::DevicePortDomain::Points => DerivedPortDomain::Points,
+                        data_model::device::DevicePortDomain::Numeric => DerivedPortDomain::F32,
+                        data_model::device::DevicePortDomain::Events => unreachable!(),
+                    },
+                })
+                .collect(),
+            effective_channels: None,
+        },
+        NodeKind::PointSelector { points } => NodeDerived {
+            node_id: n.id.clone(),
+            ports: points
+                .iter()
+                .map(|name| NodeDerivedPort {
+                    name: name.clone(),
+                    domain: DerivedPortDomain::F32,
+                })
+                .collect(),
+            effective_channels: Some(points.len()),
+        },
         NodeKind::Protocol { config, schema, .. } => {
             derive_protocol(n.id.clone(), config, schema.as_ref())
         }
         NodeKind::ProtocolSource { .. } => NodeDerived {
-            // 端口表与所引用的全局 Protocol 节点同源 — 渲染端按全局节点 id 读,
+            // 端口表与所引用的当前页签 Protocol 节点同源 — 渲染端按节点 id 读,
             // 此处重复一份便于初次派生到达前的占位查询
             node_id: n.id.clone(),
             ports: Vec::new(),
@@ -226,7 +250,12 @@ fn port(name: &str, domain: DerivedPortDomain) -> NodeDerivedPort {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use data_model::device::{
+        DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
+        EndpointSpec,
+    };
     use schema_types::{DecoderBlockDef, FieldType, SchemaPreset};
+    use serde_json::json;
 
     fn protocol_node(id: &str, config: ProtocolConfig, schema: Option<ProtocolSchema>) -> NodeDef {
         NodeDef {
@@ -363,17 +392,55 @@ mod tests {
     }
 
     #[test]
-    fn transport_nodes_are_skipped() {
-        let t = NodeDef {
-            id: "t1".into(),
+    fn acquisition_outputs_are_derived_from_capability_ports() {
+        let node = NodeDef {
+            id: "device-1".into(),
             tab_id: "tab1".into(),
-            kind: NodeKind::Transport {
-                config: data_model::config::TransportConfig::TestData(
-                    data_model::config::TestDataConfig::default(),
-                ),
+            kind: NodeKind::Acquisition {
+                spec: EndpointSpec {
+                    id: EndpointId("device-1".into()),
+                    label: "serial".into(),
+                    enabled: true,
+                    capability_endpoint_id: None,
+                    driver: DriverPayload {
+                        driver_id: DriverId("serial".into()),
+                        schema_version: 1,
+                        payload: json!({}),
+                    },
+                    simulation: None,
+                },
+                ports: vec![
+                    DevicePort {
+                        id: "tx".into(),
+                        direction: DevicePortDirection::Input,
+                        domain: DevicePortDomain::Bytes,
+                    },
+                    DevicePort {
+                        id: "rx".into(),
+                        direction: DevicePortDirection::Output,
+                        domain: DevicePortDomain::Bytes,
+                    },
+                    DevicePort {
+                        id: "points".into(),
+                        direction: DevicePortDirection::Bidirectional,
+                        domain: DevicePortDomain::Points,
+                    },
+                    DevicePort {
+                        id: "events".into(),
+                        direction: DevicePortDirection::Output,
+                        domain: DevicePortDomain::Events,
+                    },
+                ],
             },
         };
-        let derived = compute_derived(&[t]);
-        assert!(derived.is_empty());
+
+        let derived = compute_derived(&[node]);
+        assert_eq!(
+            derived[0].ports,
+            vec![
+                port("rx", DerivedPortDomain::Bytes),
+                port("points", DerivedPortDomain::Points),
+            ]
+        );
     }
 }

@@ -14,6 +14,7 @@ pub use error::{CompileError, CompileReport, PortDomain};
 /// 在 `CompileError::DomainMismatch` 构造处调用.
 pub const fn port_domain_event(d: kind::PortDomain) -> PortDomain {
     match d {
+        kind::PortDomain::Points => PortDomain::Points,
         kind::PortDomain::F32 => PortDomain::F32,
         kind::PortDomain::Bytes => PortDomain::Bytes,
         kind::PortDomain::String => PortDomain::String,

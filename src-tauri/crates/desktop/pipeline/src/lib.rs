@@ -2,7 +2,7 @@
 //!
 //! 两平面节点图重构下的核心层:
 //!
-//! - **字节平面** (全局, 事件驱动): 每个 open 的 Transport 节点一个读任务
+//! - **字节平面** (工作区共享, 事件驱动): 每个已连接设备节点一个读任务
 //!   ([`pipeline::read_task`]),`subscribe → record_rx → 按源 raw 收集 →
 //!   沿全局 [`BytePlan`] 推送 ([`pipeline::byte_router::route_bytes`]):
 //!   Protocol.in 解析 / FrameDecoder.in 喂入 / Transport.tx 发送;
@@ -58,3 +58,4 @@ pub use feed_parallel::{
 pub use graph_eval::{evaluate_snapshot_now, process_source_batch, EvalBreakdown};
 pub use run_control::{apply_run_action, StreamGroups};
 pub use runtime::*;
+pub mod point_projection;

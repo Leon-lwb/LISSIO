@@ -5,24 +5,24 @@
 
 ## 读现状 (先读后写)
 
-- get_workspace: 画布全量 JSON — tabs、active tab、widgets (id/kind/位置/配置/端口表)、
-  全局 transport/protocol 节点 (id/配置/端口表)、全部边。**编辑前必读**;
-  各节点 ports 字段含 inputs/outputs 及其 domain 标注,连线前用它核对端口与类型。
-- list_transports / list_serial_ports: 连接状态与可用串口。
+- get_workspace: 返回活跃页签，以及每页签的 `documents + edges`。文档统一使用
+  `id/tabId/label/layout/kind/config/attributes`，运行时端口在 `derived_ports` 中。
+  **编辑前必读**。
+- list_devices / list_serial_ports: 已打开设备会话与可用串口。
 - list_data_sources / get_buffer_info: 有哪些波形数据源及规模。
 - list_templates: 可用的工作区模板 id。
 
 ## 编辑节点 (前端托管)
 
-- add_node {type: transport|protocol|widget, kind, tab_id?, config?, position?}
-  → 返回 node_id。widget 省略 tab_id 时加入当前活跃 tab;config 给部分字段时
-  与默认配置深合并。
+- add_node {type: device|protocol|point-selector|widget, kind, tab_id?,
+  endpoint_id?, config?, position?} → 返回 node_id。device 的 kind 是能力目录中的
+  adapter ID；省略 tab_id 时加入当前活跃页。
 - update_node_config {node_id, config}: 更新配置 (widget 为 params 深合并;
-  transport/protocol 的 kind 可变 — kind 变化时配置整体替换,其余字段合并)。
-- remove_node {node_id}: 删除 widget 或全局节点 (自动清理其连线与连接)。
+  device 更新驱动 payload，protocol 更新解析配置)。
+- remove_node {node_id}: 删除页签内任意节点，自动清理连线并关闭对应设备会话。
 - move_node {node_id, x, y}: 调整画布位置 (纯视觉)。
 - create_tab {name?} / set_active_tab {tab_id}。
-- connect_transport / disconnect_transport {node_id}: 打开/关闭连接。
+- connect_device / disconnect_device {node_id}: 打开/关闭设备会话。
 - apply_template {template_id}。
 
 ## 连线 (后端权威, 编译校验)
@@ -56,3 +56,5 @@
   同一张图;本工具失败时返回的错误可直接用于自我修正。
 - 工具结果均为 JSON 字符串;节点 id 是主键,不要凭空捏造,一律来自 get_workspace 等读取结果。
 - 编辑操作会进入应用撤销历史,用户可 Ctrl+Z 回滚 AI 的修改。
+- “测试数据”是设备的唯一属性，不是独立节点；把属性拖到设备或应用到当前唯一
+  选中的设备，重新连接后启动模拟源。

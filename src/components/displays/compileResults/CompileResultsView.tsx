@@ -130,7 +130,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
   const getNodeName = (id: string): string => {
     const node = rfNodes.find((n) => n.id === id);
     if (!node) return id;
-    if (node.type === 'transport') return t(lang, 'nodeTypeTransport');
+    if (node.type === 'acquisition') return t(lang, 'nodeTypeTransport');
     if (node.type === 'protocol') return t(lang, 'nodeTypeProtocol');
     const widget = (node.data as { widget?: { params?: { label?: string }; kind?: string } } | undefined)?.widget;
     return (widget?.params?.label ?? widget?.kind) ?? id;

@@ -5,10 +5,11 @@ import { resetPortSampleStoresForSource } from '../../lib/data/dataClient';
 import { notify } from '../../lib/tauri/notifications';
 import { nodeError } from '../../lib/tauri/errorGuidance';
 import { t } from '../../i18n';
-import { downstreamProtocolOf, type TransportNodeData, type ProtocolNodeData } from '../appStoreHelpers';
-import { schemaFromProtocolConfig } from '../../lib/utils/protocolSchema';
+import { downstreamProtocolOf } from '../appStoreHelpers';
+import { resolveSimulation } from '../../lib/acquisition/simulation';
+import { refreshEndpointSnapshots } from '../../lib/acquisition/useEndpointSnapshot';
 import { useSettingsStore } from '../settingsStore';
-import type { ConnectionState, PortInfo, ProtocolConfig, TransportStats, WidgetBinding, WidgetConfig } from '../../types';
+import type { ConnectionState, PortInfo, TransportStats, WidgetBinding, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
 
 /// 节点统计 — rxDroppedWindow 为本窗口丢弃数 (随 transport:rx 覆盖)
@@ -26,9 +27,9 @@ export const EMPTY_NODE_STATS: NodeStats = {
 /// 节点错误通知文案 — 统一入口 (settings 开关在 errorGuidance 内读取)
 
 export interface ConnectionSlice {
-  /// 连接状态 — 按 Transport 节点 id
+  /// 连接状态 — 按设备节点 id
   connectionStates: Record<string, ConnectionState>;
-  /// 传输统计 — 按 Transport 节点 id
+  /// 传输统计 — 按设备节点 id
   nodeStats: Record<string, NodeStats>;
   ports: PortInfo[];
   refreshPorts: () => Promise<void>;
@@ -63,21 +64,9 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
     },
 
     connectNode: async (nodeId) => {
-      const node = get().rfNodes.find((n) => n.id === nodeId && n.type === 'transport');
+      const node = get().rfNodes.find((n) => n.id === nodeId && n.type === 'acquisition');
       if (!node) return;
-      const config = (node.data as TransportNodeData).config;
-      // TestData 生成器需要协议参数: 取字节边下游的 Protocol 节点配置, 缺省 JustFloat
       const downstreamId = downstreamProtocolOf(nodeId, get().rfEdges, get().rfNodes);
-      const protocolNode = downstreamId
-        ? get().rfNodes.find((n) => n.id === downstreamId)
-        : undefined;
-      const protocol: ProtocolConfig = protocolNode
-        ? (protocolNode.data as ProtocolNodeData).config
-        : { kind: 'JustFloat', channels: null };
-      // schema 一并下发 (旧数据缺 schema 时按 config 回退构造; 无下游协议节点 = null)
-      const schema = protocolNode
-        ? ((protocolNode.data as ProtocolNodeData).schema ?? schemaFromProtocolConfig(protocol))
-        : null;
       set((s) => ({
         connectionStates: { ...s.connectionStates, [nodeId]: 'Connecting' as ConnectionState },
       }));
@@ -93,7 +82,12 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         clearRawDataTransportBuffers(nodeId);
         if (downstreamId) resetPortSampleStoresForSource(downstreamId);
         waveformWindow.clear();
-        await api.openTransport(nodeId, config, protocol, schema);
+        const error = await get().syncTabGraph(node.data.tabId as string);
+        if (error) throw new Error(error);
+        resolveSimulation(node, get().rfNodes, get().rfEdges);
+        await api.openAcquisitionEndpoint(nodeId);
+        if (!get().rfNodes.some(n => n.id === nodeId)) { await api.closeAcquisitionEndpoint(nodeId); return; }
+        await refreshEndpointSnapshots();
         set((s) => ({
           connectionStates: { ...s.connectionStates, [nodeId]: 'Connected' as ConnectionState },
           nodeStats: { ...s.nodeStats, [nodeId]: { ...EMPTY_NODE_STATS } },

@@ -45,6 +45,7 @@ pub struct SourceNodeHint {
 /// 单 tab 源图 — 最近一次成功编译的节点 / 边 / 端口提示 / widget 配置记录
 #[derive(Debug, Clone, Default)]
 pub struct TabSourceGraph {
+    pub documents: Vec<kind::document::NodeDocument>,
     pub nodes: Vec<NodeDef>,
     pub edges: Vec<Edge>,
     pub hints: HashMap<String, SourceNodeHint>,

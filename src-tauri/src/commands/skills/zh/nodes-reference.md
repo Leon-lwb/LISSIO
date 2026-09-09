@@ -1,20 +1,21 @@
 # 节点与控件类型参考
 
-## 传输节点 (Transport, 全局)
+## 设备节点 (按页签归属，由能力目录驱动)
 
-| kind | 参数要点 |
+| adapter id | 配置要点 |
 |---|---|
 | Serial | port_name (先 list_serial_ports 查询)、baud_rate、data_bits、parity、stop_bits、flow_control |
 | Udp | local_addr/local_port (本端)、remote_addr/remote_port (对端) |
 | TcpClient | host、port |
 | TcpServer | listen_addr、listen_port |
-| TestData | channels、sample_rate、signal (Sine/Square/Triangle/Sawtooth/Random/Dc/Chirp/Steps/Noise/MultiTone) — 无硬件模拟数据源 |
 | Slcan | 串口参数 + can_bitrate (lawicel 协议适配器) |
 | CandleLight | bus、address、can_bitrate、channel (canable 等 USB-CAN) |
+| modbus-tcp / modbus-rtu | 端点、类型化点位、轮询与重连参数 |
 
-节点 id 规则:`transport-XXXXXXXX` (nanoid)。连接状态可用 list_transports 查询。
+用 `list_devices` 查询已打开会话。“测试数据”是设备的唯一属性；它保留真实配置与
+端口，启用时不打开真实硬件。
 
-## 协议节点 (Protocol, 全局)
+## 解析与编码节点 (按页签)
 
 | kind | 说明 |
 |---|---|
@@ -25,6 +26,11 @@
 | LogicDecode | 逻辑分析仪解码协议 (decoder 配置 UART/I2C/SPI) |
 
 节点 id 规则:`protocol-XXXXXXXX`。协议节点可配 convertTo (二次转换) 与自定义帧 schema。
+
+## 点位选择
+
+点位设备统一输出 `points` 流。点位选择节点只接收一个点位源，按稳定点位 ID
+生成具名数值输出；布尔映射为 0/1，坏质量与溢出不会伪装成有效数值。
 
 ## 控件 widget (按 tab)
 
@@ -50,19 +56,20 @@ widget 节点 id 规则:`widget-XXXXXXXX` (widget 内部 params.id 与节点 id 
 
 | 域 | 典型端口 |
 |---|---|
-| bytes (字节) | Transport.rx / Transport.tx、Protocol.in / Protocol.out、FrameDecoder.in、Command.loopbackOut |
-| time (时域数值) | Protocol 的 ch0..chN、Math.result、Filter.result、IFFT.out0、FrameDecoder 各字段口、各类输入控件 value、Waveform.CH0..N / Gauge.value 等显示输入 |
+| points (点位) | Device.points → PointSelector.points |
+| bytes (字节) | Device.rx / Device.tx、Protocol.in / Protocol.out、FrameDecoder.in、Command.loopbackOut |
+| f32 (数值) | PointSelector 具名输出、Protocol ch0..chN、Math.result、Filter.result、输入与显示端口 |
 | freq (频域) | FFT.spectrum (输出) → 仅 IFFT.spectrum / Spectrum.spectrum 输入口接受 |
 | string (字符串) | RawData 预设 Protocol 的 str、TextInput.str、Trigger.text、Str 的字符串口、TextDisplay.text、TextOut.text |
 
-典型链路:Transport.rx(bytes) → Protocol.in;Protocol.chN(time) → Waveform/Gauge/Math;
+典型链路:Device.rx(bytes) → Protocol.in;Device.points → PointSelector;具名数值输出 → Waveform/Gauge/Math;
 FFT.spectrum(freq) → IFFT 或 Spectrum;str 口(string) → TextDisplay / Str / TextOut。
 
 ### 其他规则
 
 - RawData 控件的输入口是动态派生的 (`src:<source>:<handle>`),连线时自动改写
   targetHandle,无需手工指定;它接受 bytes 与 time 源,仅拒绝 freq。
-- widget 只能与同 tab 的 widget 或全局节点相连 (跨 tab 会被拒绝)。
+- 所有连线必须留在同一 tab，跨页签直接拒绝。
 - 端口名与端口域用 get_workspace 返回中各节点的 ports 字段对照 (inputs/outputs
   均含 domain 标注,与画布渲染同源);连线前先读再连。
 - 连线由后端编译校验:域不匹配 / 成环 / 端口不存在会直接报错且不建边,

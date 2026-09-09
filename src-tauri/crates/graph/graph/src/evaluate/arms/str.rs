@@ -71,7 +71,7 @@ impl NodeArm for StrArm {
                     };
                     ni += 1;
                 }
-                PortDomain::Bytes | PortDomain::Spectrum => {}
+                PortDomain::Bytes | PortDomain::Spectrum | PortDomain::Points => {}
             }
         }
         match op.evaluate(str_inputs, num_inputs) {

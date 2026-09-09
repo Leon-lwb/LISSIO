@@ -360,7 +360,7 @@ errorGuideTransport: 传输层打开失败, 请检查线缆连接与驱动, 然�
 errorGuideProtocol: 协议引擎创建失败, 请检查协议配置与通道数是否正确
 errorGuidePortNotFound: 未找到该端口, 请确认设备已连接, 并点击刷新更新端口列表
 errorGuidePortAlreadyOpen: 该端口已被占用, 请关闭其他占用此端口的程序 (如串口助手) 后重试
-errorGuidePortNotOpen: 端口尚未打开, 请先连接该 Transport 节点再执行操作
+errorGuidePortNotOpen: 端口尚未打开，请先连接该设备节点再执行操作
 errorGuideIo: 系统 IO 错误, 请检查设备连接是否稳定, 以及当前用户是否有端口访问权限
 errorGuideConfig: 节点配置有误, 请检查节点参数 (端口/波特率/协议等) 是否完整合法
 errorGuideSerde: 数据序列化失败, 请检查发送内容或配置格式是否正确
@@ -425,16 +425,12 @@ backupModalTitle: 拆分备份
 backupSelectHint: 选择要包含的分区
 backupSelectAll: 全选
 backupSelectNone: 清空
-backupSectionNodeGraph: 节点图
-backupSectionNodeGraphDesc: 画布中的节点与连线
+backupSectionWorkspace: 工作区
+backupSectionWorkspaceDesc: 按页签保存的节点文档、连线、数据页与活动视图
 backupSectionWindowLayout: 窗口组织
 backupSectionWindowLayoutDesc: 卡片分栏布局与侧边栏停靠位置
 backupSectionSettings: 设置
 backupSectionSettingsDesc: 语言、主题、外观、数据缓存等应用设置
-backupSectionTransportProtocol: 传输与协议
-backupSectionTransportProtocolDesc: 串口 / CAN / 网络等传输配置与协议引擎设置
-backupSectionWidgetsTabs: 控件与标签页
-backupSectionWidgetsTabsDesc: 控件列表、控件标签页、数据标签页与活动页
 backupExportSelected: 导出所选内容
 backupImportFromFile: 从文件导入
 backupImportReady: 已加载文件，选择要恢复的分区后确认导入
@@ -445,17 +441,17 @@ templateApply: 应用
 templateImportFile: 导入模板文件…
 templateImportName: 导入的模板
 templateMath: 数学
-templateMathDesc: 演示 sin / 求和等算术节点，配 TestData 无需硬件即可运行
+templateMathDesc: 演示 sin / 求和等算术节点，串口设备附带测试属性，无需硬件即可运行
 templateFilter: 滤波器
 templateFilterDesc: 低通滤波演示，对比原始与滤波后波形
 templateFft: 频谱分析
-templateFftDesc: FFT 求解器 → 频谱仪 → IFFT 重建回时域，演示时域/频域端口连线（TestData 无需硬件）
+templateFftDesc: FFT 求解器 → 频谱仪 → IFFT 重建回时域，串口设备附带测试属性，无需硬件
 templateCan: CAN
 templateCanDesc: Slcan 传输 + CAN 帧视图，连接 CAN 分析仪即可收发
 templateSerial: 串口
 templateSerialDesc: 串口浮点数据流 + 仪表 / 数字显示控件
 templateCustomProtocol: 自定义协议
-templateCustomProtocolDesc: 自定义块协议（命名通道 speed/temp）+ 多帧命令发送器，TestData 无需硬件即可运行
+templateCustomProtocolDesc: 自定义块协议（命名通道 speed/temp）+ 多帧命令发送器，串口设备测试属性无需硬件
 templateDemo: 综合演示
 templateDemoDesc: 滤波 + 数学 + 波形 / 仪表的完整流水线示例
 templateApplyTitle: 应用模板
@@ -1155,7 +1151,7 @@ opResizeNodes: 调整控件大小
 opRemoveNodes: 删除节点
 opAddTransportNode: 添加传输节点
 opAddProtocolNode: 添加协议节点
-opRemoveGlobalNode: 删除全局节点
+opRemoveNode: 删除节点
 opUpdateTransportConfig: 修改传输配置
 opUpdateProtocolConfig: 修改协议配置
 opConvertProtocolTo: 协议转换
@@ -1220,8 +1216,6 @@ fdEnableValid: 输出 valid 端口
 fdEnableFrameCount: 输出 frame_count 端口
 fdEnableLastTimestamp: 输出 last_timestamp 端口
 fdEnableFps: 输出 fps 端口
-fdLoopback: 回环模式
-fdLoopbackDesc: 显示 loopbackIn 输入口, 只接收回环边注入的字节, 不再默认接收实时 RX
 fdBlocksEmpty: 暂无块, 点击下方按钮添加
 fdLiveOutputs: 实时输出
 fdLiveHint: 连接传输后, 解析结果将实时显示在下方端口
@@ -1414,3 +1408,8 @@ runStartHint: 启动工作区 (数据处理与自动发送开始; 暂停后恢�
 runPauseHint: 暂停工作区 (保持连接, 丢弃暂停期间数据, 不积压)
 runStopHint: 停止工作区 (清空执行状态与待发送任务)
 cmdSendRequiresRun: 工作区未运行 — 手动发送要求运行态, 请先在状态栏启动
+capabilityVersionFallback: 当前应用版本暂不支持连接该接口。
+capabilityDiscoveredEndpoint: 已发现的端点
+capabilitySelectDiscovered: 选择一个已发现的端点…
+capabilityLabel: 名称
+capabilityUnavailable: 当前构建中不可用该接口。

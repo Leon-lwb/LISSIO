@@ -26,13 +26,14 @@ export function useRawDataChannel(widgetId?: string) {
   const updateWidget = useAppStore((s) => s.updateWidget);
 
   // 通道选择: 该 widget 的入边 (source, sourceHandle) 组合 (去重)
-  // 字节平面源 (Transport/Protocol 全局节点) 附带节点标签, 避免多接口时选项同为 "rx"/"out" 无法区分
+  // 字节平面源附带节点标签, 避免多设备时选项同为 "rx"/"out" 无法区分
   const channelOptions = useMemo(() => {
     if (!widgetId) return [];
     const globalLabel = (id: string): string | null => {
       const n = rfNodes.find((n) => n.id === id);
       const cfg = (n?.data as { config?: { kind?: string } } | undefined)?.config;
-      if (n?.type === 'transport') return `${cfg?.kind ?? '?'} (${id.slice(-4)})`;
+      const spec = (n?.data as { spec?: { label?: string } } | undefined)?.spec;
+      if (n?.type === 'acquisition') return `${spec?.label ?? '?'} (${id.slice(-4)})`;
       if (n?.type === 'protocol') return cfg?.kind ?? 'Protocol';
       return null;
     };

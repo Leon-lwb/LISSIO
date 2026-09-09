@@ -57,7 +57,7 @@ async fn can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>)
     if let Some(value) = override_bps.filter(|value| *value > 0) {
         return value;
     }
-    let manager = state.transport.lock().await;
+    let manager = &state.transport;
     match manager.config(node_id) {
         Some(data_model::TransportConfig::Slcan(config)) => config.can_bitrate.bps(),
         Some(data_model::TransportConfig::CandleLight(config)) => config.can_bitrate.bps(),

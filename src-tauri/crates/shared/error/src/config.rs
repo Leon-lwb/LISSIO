@@ -9,6 +9,22 @@ pub enum ConfigError {
     #[error("节点 {node_id} 不存在")]
     NodeNotFound { node_id: String },
 
+    #[error("节点 {node_id} 已属于页签 {tab_id}")]
+    DuplicateNode { node_id: String, tab_id: String },
+
+    #[error("节点 {node_id} 的页签 {actual} 与提交页签 {expected} 不一致")]
+    NodeTabMismatch {
+        node_id: String,
+        expected: String,
+        actual: String,
+    },
+
+    #[error("禁止跨页签连线: {source_tab} → {target_tab}")]
+    CrossTabConnection {
+        source_tab: String,
+        target_tab: String,
+    },
+
     #[error("协议节点不存在: {node_id}")]
     ProtocolNodeNotFound { node_id: String },
 

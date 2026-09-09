@@ -24,7 +24,7 @@ export function BindingSection<K extends BindableKind>({ widget, update }: Bindi
   const edges = useAppStore((s) => s.rfEdges);
   const w = widget as AnyBindableWidget;
   const binding = w.params.binding;
-  const transports = nodes.filter((node) => node.type === 'transport');
+  const transports = nodes.filter((node) => node.type === 'acquisition');
   const transportId = binding.mode === 'Auto' || binding.mode === 'Manual' ? binding.params.transportId : '';
   const downstreamIds = new Set(edges.filter((edge) => edge.source === transportId).map((edge) => edge.target));
   const protocols = nodes.filter((node) => node.type === 'protocol' && downstreamIds.has(node.id));

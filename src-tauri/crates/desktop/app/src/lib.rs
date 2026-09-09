@@ -36,9 +36,8 @@ pub use measure::{
 pub use measurement::AutoSetSuggestion;
 pub use transport_ops::LoopbackResult;
 pub use workspace::{
-    collect_workspace_file, load_workspace, prune_positions, save_workspace, workspace_path,
-    DataTabMeta, Position, TabGraphFile, TabMeta, WorkspaceFile, WorkspaceInner, WorkspaceState,
-    WORKSPACE_FILE_NAME,
+    collect_workspace_file, load_workspace, save_workspace, workspace_path, DataTabMeta, Position,
+    TabGraphFile, TabMeta, WorkspaceFile, WorkspaceInner, WorkspaceState, WORKSPACE_FILE_NAME,
 };
 
 // ---- 源图数据模型 (权威定义在 L2 runtime, 此处转发保持既有公共路径) ----
@@ -47,10 +46,10 @@ pub use pipeline::{SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord};
 // ---- L1 类型统一转发 (来自 L2 runtime 门面) ----
 pub use pipeline::{
     command_frame, compute_frame_bytes, create_engine, detect_format, frame_checksum, frame_field,
-    parse_ascii, parse_hex, port_domain, protocol_source_port_names, BytePlan, CommandFrameDto,
-    CompiledGraph, DecoderBlockDef, EdgeClass, FieldType, FrameParser, HirNode, InputFormat,
-    MathOp, NodeDef, NodeKind, PortDomain, ProtocolEngine, SourceFramesMap, SourceTextsMap,
-    TransportManager, TriggerMatchResult, TriggerMatcher, TriggerRuleDef, TypedGraph, ValuesMap,
+    parse_ascii, parse_hex, port_domain, protocol_source_port_names, AcquisitionRuntime, BytePlan,
+    CommandFrameDto, CompiledGraph, DecoderBlockDef, EdgeClass, FieldType, FrameParser, HirNode,
+    InputFormat, MathOp, NodeDef, NodeKind, PortDomain, ProtocolEngine, SourceFramesMap,
+    SourceTextsMap, TriggerMatchResult, TriggerMatcher, TriggerRuleDef, TypedGraph, ValuesMap,
 };
 pub use pipeline::{
     resolve_widget_inputs, send_scheduler_ticker, spectrum_ticker, text_output_ticker,

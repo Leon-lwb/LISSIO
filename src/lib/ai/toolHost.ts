@@ -16,15 +16,18 @@ import { useAppStore } from '../../store/appStore';
 import type { Node } from '@xyflow/react';
 import { createWidget } from '../utils/widgetDefaults';
 import {
-  isGlobalNode,
+  isStructuralNode,
   type ProtocolNodeData,
-  type TransportNodeData,
 } from '../../store/appStoreHelpers';
-import { nodePortTable } from '../utils/connectionRules';
+import { addAcquisitionNode, updateAcquisitionNode, type AcquisitionNodeData } from '../acquisition/acquisitionNodes';
+import { loadAdapterCapabilities } from '../acquisition/capabilityCatalog';
+import { buildDeviceCards } from '../acquisition/deviceCardModel';
+import { nodeDocument } from '../nodes/document';
+import { addPointSelectorNode } from '../utils/paletteCreation';
 import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate, type TemplateApplyMode } from '../quickstart/applyTemplate';
 import { t } from '../../i18n';
-import type { ProtocolConfig, TransportConfig, WidgetConfig } from '../../types';
+import type { ProtocolConfig, WidgetConfig } from '../../types';
 
 /// 后端调用载荷 (`cmd_ai::native_executor` 同构)。
 interface AiToolInvoke {
@@ -42,7 +45,6 @@ export const WIDGET_KINDS = [
 ] as const;
 
 /// 合法 transport / protocol kind 清单。
-const TRANSPORT_KINDS = ['Serial', 'Udp', 'TcpClient', 'TcpServer', 'TestData', 'Slcan', 'CandleLight'] as const;
 const PROTOCOL_KINDS = ['JustFloat', 'FireWater', 'RawData', 'Slcan', 'CandleLight', 'LogicDecode'] as const;
 
 /** 工具 handler — 返回值作为工具结果回传 (JSON 序列化);抛错即工具失败。 */
@@ -112,27 +114,6 @@ function buildProtocolConfig(kind: string, config: unknown): ProtocolConfig {
   return { kind, ...c } as unknown as ProtocolConfig;
 }
 
-/** Transport 配置合并: kind 变化时整体替换, 否则 params 深合并。 */
-function mergeTransportConfig(
-  current: TransportConfig,
-  patch: Record<string, unknown>
-): TransportConfig {
-  if (typeof patch.kind === 'string' && patch.kind !== current.kind) {
-    return patch as unknown as TransportConfig;
-  }
-  const params = (patch.params ?? {}) as Record<string, unknown>;
-  return { ...current, params: deepMerge(current.params, params) } as TransportConfig;
-}
-
-/** 节点端口表 (供 get_workspace 暴露给 AI) — 与画布校验同一数据源。 */
-function portsOf(node: Node): unknown {
-  const s = useAppStore.getState();
-  return nodePortTable(node, {
-    derivedPorts: s.derivedPorts,
-    detectedChannels: s.detectedChannels,
-  });
-}
-
 // ============ Handlers ============
 
 /** 读取画布全量状态 — AI 了解当前工作区的唯一权威来源。 */
@@ -143,78 +124,44 @@ function getWorkspace(): unknown {
     tabs: s.controlTabs.map((tab) => ({
       id: tab.id,
       name: tab.name,
-      widget_count: tab.widgets.length,
-    })),
-    widgets: s.rfNodes
-      .filter((n) => !isGlobalNode(n) && n.data?.widget)
-      .map((n) => {
-        const widget = n.data.widget as WidgetConfig;
-        return {
-          id: n.id,
-          tab_id: n.data.tabId,
-          kind: widget.kind,
-          label: (widget.params as { label?: string }).label,
-          position: n.position,
-          config: widget.params,
-          ports: portsOf(n),
-        };
-      }),
-    global_nodes: s.rfNodes.filter(isGlobalNode).map((n) => {
-      if (n.type === 'transport') {
-        const data = n.data as unknown as TransportNodeData;
-        return {
-          id: n.id,
-          node_type: 'transport',
-          kind: data.config.kind,
-          config: data.config.params,
-          position: n.position,
-          connection: s.connectionStates[n.id] ?? 'Disconnected',
-          ports: portsOf(n),
-        };
-      }
-      const data = n.data as unknown as ProtocolNodeData;
-      return {
-        id: n.id,
-        node_type: 'protocol',
-        kind: data.config.kind,
-        config: data.config,
-        convert_to: data.convertTo,
-        channels: data.channels,
-        position: n.position,
-        ports: portsOf(n),
-      };
-    }),
-    edges: s.rfEdges.map((e) => ({
-      id: e.id,
-      source: e.source,
-      source_handle: e.sourceHandle,
-      target: e.target,
-      target_handle: e.targetHandle,
+      documents: s.rfNodes.filter(node => node.data.tabId === tab.id).map(nodeDocument),
+      edges: s.rfEdges.filter(edge => {
+        const source = s.rfNodes.find(node => node.id === edge.source);
+        const target = s.rfNodes.find(node => node.id === edge.target);
+        return source?.data.tabId === tab.id && target?.data.tabId === tab.id;
+      }).map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        source_handle: edge.sourceHandle,
+        target: edge.target,
+        target_handle: edge.targetHandle,
+      })),
     })),
     derived_ports: s.derivedPorts,
   };
 }
 
 /** 添加节点 (transport / protocol / widget)。 */
-function addNode(args: Record<string, unknown>): unknown {
+async function addNode(args: Record<string, unknown>): Promise<unknown> {
   const type = str(args, 'type');
   const kind = str(args, 'kind');
   const position = positionOf(args);
   const before = new Set(useAppStore.getState().rfNodes.map((n) => n.id));
 
-  if (type === 'transport') {
-    if (!(TRANSPORT_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(`未知传输类型 ${kind} (可选: ${TRANSPORT_KINDS.join('/')})`);
-    }
-    useAppStore.getState().addTransportNode(kind as TransportConfig['kind'], position);
+  if (type === 'device') {
+    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
+    const cards = buildDeviceCards(await loadAdapterCapabilities());
+    const endpointId = optStr(args, 'endpoint_id');
+    const card = cards.find(candidate => candidate.adapter.adapterId === kind &&
+      (!endpointId || candidate.endpoint.id === endpointId));
+    if (!card) throw new Error(`设备能力不存在: ${kind}`);
+    addAcquisitionNode(card, position, tabId);
     const created = useAppStore.getState().rfNodes.find((n) => !before.has(n.id));
     if (!created) throw new Error('节点创建失败');
     const patch = obj(args, 'config');
     if (Object.keys(patch).length > 0) {
-      const data = created.data as unknown as TransportNodeData;
-      useAppStore
-        .getState()
-        .setTransportNodeConfig(created.id, mergeTransportConfig(data.config, patch));
+      const { spec } = created.data as AcquisitionNodeData;
+      updateAcquisitionNode(created.id, { ...spec, driver: { ...spec.driver, payload: deepMerge(spec.driver.payload, patch) } });
     }
     return { node_id: created.id };
   }
@@ -223,11 +170,23 @@ function addNode(args: Record<string, unknown>): unknown {
     if (!(PROTOCOL_KINDS as readonly string[]).includes(kind)) {
       throw new Error(`未知协议类型 ${kind} (可选: ${PROTOCOL_KINDS.join('/')})`);
     }
+    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
+    if (!useAppStore.getState().controlTabs.some(tab => tab.id === tabId)) {
+      throw new Error(`tab 不存在: ${tabId}`);
+    }
     const config = buildProtocolConfig(kind, args.config);
-    useAppStore.getState().addProtocolNode(config, position);
+    useAppStore.getState().addProtocolNode(config, position, tabId);
     const created = useAppStore.getState().rfNodes.find((n) => !before.has(n.id));
     if (!created) throw new Error('节点创建失败');
     return { node_id: created.id };
+  }
+
+  if (type === 'point-selector') {
+    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
+    if (!useAppStore.getState().controlTabs.some(tab => tab.id === tabId)) {
+      throw new Error(`tab 不存在: ${tabId}`);
+    }
+    return { node_id: addPointSelectorNode(position ?? { x: 300, y: 60 }, tabId) };
   }
 
   if (type === 'widget') {
@@ -247,7 +206,7 @@ function addNode(args: Record<string, unknown>): unknown {
     return { node_id: widget.params.id };
   }
 
-  throw new Error(`未知节点类别 ${type} (可选: transport/protocol/widget)`);
+  throw new Error(`未知节点类别 ${type} (可选: device/protocol/point-selector/widget)`);
 }
 
 /** 更新节点配置 (widget 深合并 params; transport/protocol 更新 config)。 */
@@ -263,9 +222,12 @@ async function updateNodeConfig(args: Record<string, unknown>): Promise<unknown>
     useAppStore.getState().updateWidget(nodeId, next);
     return { ok: true };
   }
-  if (node.type === 'transport') {
-    const data = node.data as unknown as TransportNodeData;
-    useAppStore.getState().setTransportNodeConfig(nodeId, mergeTransportConfig(data.config, patch));
+  if (node.type === 'acquisition') {
+    const { spec } = node.data as AcquisitionNodeData;
+    updateAcquisitionNode(nodeId, {
+      ...spec,
+      driver: { ...spec.driver, payload: deepMerge(spec.driver.payload, patch) },
+    });
     return { ok: true };
   }
   if (node.type === 'protocol') {
@@ -288,17 +250,14 @@ async function updateNodeConfig(args: Record<string, unknown>): Promise<unknown>
   throw new Error(`节点 ${nodeId} 类型不支持配置更新`);
 }
 
-/** 删除节点 (widget 或全局节点)。 */
+/** 删除任意画布节点。 */
 function removeNode(args: Record<string, unknown>): unknown {
   const nodeId = str(args, 'node_id');
   const node = nodeOrThrow(nodeId);
-  if (isGlobalNode(node)) {
-    useAppStore.getState().removeGlobalNode(nodeId);
-  } else if (node.type === 'widget') {
-    useAppStore.getState().removeWidget(nodeId);
-  } else {
+  if (!isStructuralNode(node) && node.type !== 'widget') {
     throw new Error(`节点 ${nodeId} 类型不支持删除`);
   }
+  useAppStore.getState().removeNode(nodeId);
   return { ok: true };
 }
 
@@ -328,14 +287,14 @@ function createTab(args: Record<string, unknown>): unknown {
 }
 
 /** 连接 / 断开传输。 */
-async function connectTransport(args: Record<string, unknown>): Promise<unknown> {
+async function connectDevice(args: Record<string, unknown>): Promise<unknown> {
   const nodeId = str(args, 'node_id');
   nodeOrThrow(nodeId);
   await useAppStore.getState().connectNode(nodeId);
   return { node_id: nodeId, state: useAppStore.getState().connectionStates[nodeId] ?? 'Disconnected' };
 }
 
-async function disconnectTransport(args: Record<string, unknown>): Promise<unknown> {
+async function disconnectDevice(args: Record<string, unknown>): Promise<unknown> {
   const nodeId = str(args, 'node_id');
   nodeOrThrow(nodeId);
   await useAppStore.getState().disconnectNode(nodeId);
@@ -383,8 +342,8 @@ const HANDLERS: Record<string, ToolHandler> = {
     useAppStore.getState().setActiveControlTab(tabId);
     return { ok: true };
   },
-  connect_transport: (args) => connectTransport(args),
-  disconnect_transport: (args) => disconnectTransport(args),
+  connect_device: (args) => connectDevice(args),
+  disconnect_device: (args) => disconnectDevice(args),
   list_templates: () => listTemplates(),
   apply_template: (args) => applyTemplateTool(args),
 };

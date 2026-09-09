@@ -5,7 +5,6 @@
 //! serde 约定：`#[serde(tag = "kind", content = "params")]`，前端 TS 镜像见
 //! `src/lib/utils/nodeDef.ts`。
 
-use data_model::config::TransportConfig;
 use filter::FilterConfig;
 use schema_types::{DecoderBlockDef, ProtocolConfig, ProtocolSchema};
 use serde::{Deserialize, Serialize};
@@ -26,9 +25,13 @@ use crate::str_op::{StrNumParams, StrOp};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "params")]
 pub enum NodeKind {
-    /// 传输层节点（字节平面，全局）
-    /// 输出端口 "rx"（Bytes），输入端口 "tx"（Bytes）
-    Transport { config: TransportConfig },
+    /// Typed device source; the endpoint configuration owns its identity.
+    Acquisition {
+        spec: data_model::device::EndpointSpec,
+        ports: Vec<data_model::device::DevicePort>,
+    },
+    /// Explicit typed point-to-numeric projection.
+    PointSelector { points: Vec<String> },
     /// 协议引擎节点（字节平面，全局）
     /// 输入端口 "in"（Bytes），输出端口 "out"（Bytes）
     /// `convert_to`：可选的协议转换目标配置
@@ -91,10 +94,6 @@ pub enum NodeKind {
         enable_frame_count: bool,
         enable_last_timestamp: bool,
         enable_fps: bool,
-        /// Deprecated：旧版回环模式标志。新语义下字节来源完全由输入字节边决定，
-        /// 此字段不再影响编译/求值，仅为旧数据反序列化兼容保留。
-        #[serde(default)]
-        loopback: bool,
     },
     /// Sink 节点（Label/Gauge/LED/NumberDisplay/PieChart/Image/Waveform/Command）
     /// 无 f32 输出；Command 另有 "loopbackOut" 字节出口
@@ -121,7 +120,7 @@ pub enum NodeKind {
     /// `graph_string_outputs[node_id]["text"]`, 由 app_state 的 TextOut 发送 ticker
     /// 按 `min_interval_ms` 限速发往 `target_transport`（手动触发走 send_text_out_now 命令）。
     TextOut {
-        /// 目标 Transport 全局节点 id
+        /// 目标设备节点 id
         target_transport: String,
         /// 发送时附加的换行模式
         #[serde(default)]
@@ -202,13 +201,6 @@ mod tests {
             NodeKind::ProtocolSource { port_names, .. } => assert!(port_names.is_none()),
             other => panic!("expected ProtocolSource, got {other:?}"),
         }
-    }
-
-    #[test]
-    fn frame_decoder_loopback_default() {
-        let json = r#"{"kind":"FrameDecoder","params":{"blocks":[],"enable_valid":false,"enable_frame_count":false,"enable_last_timestamp":false,"enable_fps":false}}"#;
-        let kind: NodeKind = serde_json::from_str(json).expect("旧数据应反序列化成功");
-        assert!(matches!(kind, NodeKind::FrameDecoder { .. }));
     }
 
     #[test]

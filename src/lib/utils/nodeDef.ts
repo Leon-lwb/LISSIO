@@ -8,7 +8,7 @@
 /// - 数值平面 (每 tab): ProtocolSource 引用全局 Protocol 节点的最新帧, 输出 ch0..chN
 
 import type { WidgetConfig, MathOp, StrOp, WindowType, SpectrumOutput, DecoderBlock, ProtocolSchema } from '../../types';
-import type { TransportConfig, ProtocolConfig } from '../../types';
+import type { ProtocolConfig } from '../../types';
 import type { FilterConfig } from '../../types/common';
 import { isUnaryMathOp } from '../../types';
 import { evalCustomWidgetDef } from '../../components/widgets/custom/CustomWidget';
@@ -46,7 +46,8 @@ function toNodeFilterConfig(params: FilterConfig): NodeFilterConfig {
 /// Protocol.convert_to / schema 为 None 时序列化省略 (Rust 侧 default + skip_serializing_if)
 /// ProtocolSource.port_names 为 None 时省略 (缺省 ch0..chN)
 export type NodeKind =
-  | { kind: 'Transport'; params: { config: TransportConfig } }
+  | { kind: 'Acquisition'; params: { spec: import('../../types').EndpointSpec; ports: { id: string; direction: string; domain: string }[] } }
+  | { kind: 'PointSelector'; params: { points: string[] } }
   | { kind: 'Protocol'; params: { config: ProtocolConfig; convert_to?: ProtocolConfig | null; schema?: ProtocolSchema | null } }
   | { kind: 'ProtocolSource'; params: { node_id: string; channels: number; port_names?: string[] | null } }
   | { kind: 'Input' }
@@ -59,7 +60,7 @@ export type NodeKind =
   | { kind: 'Filter'; params: { config: NodeFilterConfig } }
   | { kind: 'Fft'; params: { window_size: number; hop_size: number; window_type: WindowType; output: SpectrumOutput; sample_rate: number } }
   | { kind: 'Ifft' }
-  | { kind: 'FrameDecoder'; params: { blocks: DecoderBlock[]; enable_valid: boolean; enable_frame_count: boolean; enable_last_timestamp: boolean; enable_fps: boolean; loopback: boolean } }
+  | { kind: 'FrameDecoder'; params: { blocks: DecoderBlock[]; enable_valid: boolean; enable_frame_count: boolean; enable_last_timestamp: boolean; enable_fps: boolean } }
   | {
       kind: 'Trigger';
       params: {
@@ -223,8 +224,6 @@ export function widgetToNodeKind(widget: WidgetConfig): NodeKind {
           enable_frame_count: widget.params.enableFrameCount,
           enable_last_timestamp: widget.params.enableLastTimestamp,
           enable_fps: widget.params.enableFps,
-          // 旧布局无该字段时按 false (默认接收实时 RX); 后端已忽略该字段, 仅为 serde 兼容保留
-          loopback: widget.params.loopbackEnabled ?? false,
         },
       };
     }
@@ -286,16 +285,7 @@ export function makeProtocolSourceNodeDef(
   };
 }
 
-/// 构造 Transport 全局节点的 NodeDef
-export function makeTransportNodeDef(tabId: string, nodeId: string, config: TransportConfig): NodeDef {
-  return {
-    id: nodeId,
-    tab_id: tabId,
-    kind: { kind: 'Transport', params: { config } },
-  };
-}
-
-/// 构造 Protocol 全局节点的 NodeDef (convertTo/schema 为 null 时省略序列化)
+/// 构造协议节点的 NodeDef (convertTo/schema 为 null 时省略序列化)
 ///
 /// schema 工厂下沉后端 (阶段二): preset 协议 (preset != 'custom') 不再下发 schema,
 /// 由后端 `compile_schema` 按 `config` 工厂构造引擎。custom 块仍由前端持有并下发

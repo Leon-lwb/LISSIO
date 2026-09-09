@@ -34,6 +34,10 @@ use trigger::lower_trigger;
 /// 按节点 kind 分派 lowering (输入: 值平面拓扑序中的节点)
 pub fn lower_node(node: &NodeDef, ctx: &mut LowerCtx) {
     match &node.kind {
+        NodeKind::PointSelector { points } => {
+            lower_protocol_source(node, &node.id, points.len(), Some(points), ctx);
+        }
+        NodeKind::Acquisition { .. } => {}
         NodeKind::ProtocolSource {
             node_id: source_id,
             channels,
@@ -70,7 +74,6 @@ pub fn lower_node(node: &NodeDef, ctx: &mut LowerCtx) {
         NodeKind::Sink
         | NodeKind::TextDisplay
         | NodeKind::Fft { .. }
-        | NodeKind::Transport { .. }
         | NodeKind::Protocol { .. } => {}
     }
 }

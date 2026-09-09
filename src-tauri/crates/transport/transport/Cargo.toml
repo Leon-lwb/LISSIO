@@ -1,6 +1,6 @@
 [package]
 name = "transport"
-description = "Lissio 传输编排层 — 后端扩展契约、连接生命周期与测试数据生成"
+description = "Lissio 字节设备适配层 — 后端扩展契约与确定性字节模拟"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,6 +9,8 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+serde_json = { workspace = true }
+acquisition = { workspace = true }
 flow = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
@@ -25,4 +27,4 @@ logic = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 2
-responsibility = "Transport backend ports, connection lifecycle, registry, and synthetic test source"
+responsibility = "Byte-device backend adapters and deterministic simulation encoding"

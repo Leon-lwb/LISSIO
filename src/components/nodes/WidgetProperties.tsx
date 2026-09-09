@@ -8,14 +8,10 @@ import { memo } from 'react';
 import type { Node } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import type { WidgetConfig } from '../../types';
-import { t } from '../../i18n';
 import { WIDGET_REGISTRY } from '../widgets/registry';
-import { TextField } from '../ui/fields';
-import { SizeSection } from '../widgets/shared/SizeSection';
 import { selectWidgets } from '../../store/appStoreHelpers';
 
 export const WidgetProperties = memo(function WidgetProperties({ node }: { node: Node }) {
-  const lang = useAppStore((s) => s.lang);
   const widget = useAppStore((s) => selectWidgets(s).find((item) => item.params.id === node.id));
   const updateWidget = useAppStore((s) => s.updateWidget);
   if (!widget) return null;
@@ -24,10 +20,8 @@ export const WidgetProperties = memo(function WidgetProperties({ node }: { node:
   const Properties = WIDGET_REGISTRY[widget.kind].Properties;
   return (
     <>
-      <TextField label={t(lang, 'widgetName')} value={widget.params.label}
-        onCommit={(label) => update({ ...widget, params: { ...widget.params, label } } as WidgetConfig)} />
+
       {Properties && <Properties widget={widget as never} update={update} />}
-      <SizeSection nodeId={widget.params.id} kind={widget.kind} />
     </>
   );
 });

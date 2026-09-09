@@ -1,33 +1,31 @@
-//! 全局节点查询 hooks — 多数据源并存时各视图取"主"节点 (第一个对应类型的全局节点)
 import { useAppStore } from '../../store/appStore';
-import { isGlobalNode, type ProtocolNodeData, type TransportNodeData } from '../../store/appStoreHelpers';
-import type { ProtocolConfig, TransportConfig } from '../../types';
+import type { ProtocolConfig, EndpointSpec } from '../../types';
+import type { ProtocolNodeData } from '../../store/appStoreHelpers';
+import type { AcquisitionNodeData } from '../acquisition/acquisitionNodes';
 
-/// 第一个全局 Protocol 节点的配置 (无 Protocol 节点时 null)
 export function usePrimaryProtocolConfig(): ProtocolConfig | null {
-  return useAppStore((s) => {
-    const n = s.rfNodes.find((x) => x.type === 'protocol' && isGlobalNode(x));
-    return n ? (n.data as unknown as ProtocolNodeData).config : null;
+  return useAppStore(state => {
+    const node = state.rfNodes.find(candidate =>
+      candidate.type === 'protocol' && candidate.data.tabId === state.activeControlTabId);
+    return node ? (node.data as ProtocolNodeData).config : null;
   });
 }
 
-/// 第一个全局 Transport 节点的配置 (无 Transport 节点时 null)
-export function usePrimaryTransportConfig(): TransportConfig | null {
-  return useAppStore((s) => {
-    const n = s.rfNodes.find((x) => x.type === 'transport' && isGlobalNode(x));
-    return n ? (n.data as unknown as TransportNodeData).config : null;
+export function usePrimaryDeviceSpec(): EndpointSpec | null {
+  return useAppStore(state => {
+    const node = state.rfNodes.find(candidate =>
+      candidate.type === 'acquisition' && candidate.data.tabId === state.activeControlTabId);
+    return node ? (node.data as AcquisitionNodeData).spec : null;
   });
 }
 
-/// 第一个 CAN 能力 Transport 节点 id (Slcan/CandleLight 优先, 否则第一个 Transport, 无则 null)
-/// 供 CAN 负载/比特率命令的 nodeId 参数使用
 export function usePrimaryCanTransportNodeId(): string | null {
-  return useAppStore((s) => {
-    const transports = s.rfNodes.filter((x) => x.type === 'transport' && isGlobalNode(x));
-    const canNode = transports.find((x) => {
-      const kind = (x.data as unknown as TransportNodeData).config?.kind;
-      return kind === 'Slcan' || kind === 'CandleLight';
-    });
-    return (canNode ?? transports[0])?.id ?? null;
+  return useAppStore(state => {
+    const devices = state.rfNodes.filter(candidate =>
+      candidate.type === 'acquisition' && candidate.data.tabId === state.activeControlTabId);
+    return (devices.find(candidate => {
+      const id = (candidate.data as AcquisitionNodeData).spec.driver.driverId;
+      return id === 'slcan' || id === 'candle-light';
+    }) ?? devices[0])?.id ?? null;
   });
 }

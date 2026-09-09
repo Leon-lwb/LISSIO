@@ -1,6 +1,6 @@
 //! FrameDecoder 状态同步与字节喂入 — 字节来源完全由 BytePlan 中指向该节点的
 //! 字节边决定 (Transport.rx / Protocol.out / CommandSender.loopbackOut 等,
-//! 可能多条); 旧版 "loopback=false 默认喂全局 RX" 逻辑已删除。
+//! 可能多条)。
 //!
 //! 喂入入口: [`feed_decoder_by_id`] (由字节路由在命中 FrameDecoder 下游时调用)。
 //! 配置缓存 ([`DecoderFeedCache`]) 按 graphs_version 失效的模式保留:
@@ -23,8 +23,6 @@ fn collect_decoder_configs(eval_state: &GraphEvalState) -> HashMap<String, Decod
     for (_, graph) in graphs.iter() {
         for dec_id in graph.decoder_node_ids() {
             if let Some(cfg) = graph.decoder_config(dec_id) {
-                // cfg.5 为 deprecated 的 loopback 标志, 新语义下忽略
-                // (字节来源完全由输入字节边决定)
                 configs.insert(dec_id.clone(), (cfg.0.to_vec(), cfg.1, cfg.2, cfg.3, cfg.4));
             }
         }

@@ -34,7 +34,7 @@ function resetStores(): void {
     rfNodes: [],
     rfEdges: [],
     inputPreviewValues: {},
-    controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
+    controlTabs: [{ id: 'default', name: 'Tab 1' }],
     activeControlTabId: 'default',
     dataTabs: FIXED_DATA_TABS.map((t) => ({ ...t })),
     activeDataTabId: FIXED_DATA_TABS[1].id,
@@ -193,7 +193,7 @@ describe('historyStore 撤销/重做核心', () => {
   it('清空历史回到仅含基线的单条状态', () => {
     const app = () => useAppStore.getState();
     app().addWidget(createWidget('Knob'), 'default');
-    app().addTransportNode('TestData');
+    app().addProtocolNode();
     expect(useHistoryStore.getState().entries.length).toBeGreaterThanOrEqual(3);
 
     useHistoryStore.getState().clearHistory();

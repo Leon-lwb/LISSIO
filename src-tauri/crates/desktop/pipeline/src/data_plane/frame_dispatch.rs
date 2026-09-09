@@ -149,7 +149,7 @@ pub fn on_frames(plane: &DataPlaneState, source_id: &str, frames: &[DataFrame]) 
     )
 }
 
-/// 帧分发主体 — 只依赖 eval 状态 + 全局节点表 + 该源 buffer (全部 Arc 可克隆)
+/// 帧分发主体 — 只依赖 eval 状态 + 工作区运行时节点索引 + 该源 buffer (全部 Arc 可克隆)
 ///
 /// 供把整段重型同步评估丢进 `tokio::task::spawn_blocking` 执行:
 /// 大批次 (700k 时可达 24ms+) 不再占住 tokio worker, await 侧保持同源批序。
@@ -170,7 +170,7 @@ pub fn on_frames_detached(
 }
 
 /// 把协议帧按真实端口写入 Topic。只有帧中实际存在的通道才产生样本。
-fn publish_protocol_samples(
+pub(crate) fn publish_protocol_samples(
     eval: &GraphEvalState,
     global_nodes: &Mutex<HashMap<String, NodeDef>>,
     source_id: &str,
@@ -181,6 +181,7 @@ fn publish_protocol_samples(
         .lock()
         .get(source_id)
         .and_then(|node| match &node.kind {
+            NodeKind::PointSelector { points } => Some(points.clone()),
             NodeKind::Protocol { schema, .. } => schema
                 .as_ref()
                 .map(schema_types::ProtocolSchema::port_names),

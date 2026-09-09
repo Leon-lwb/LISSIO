@@ -8,7 +8,7 @@ import { CanLoadAlarm } from './CanLoadAlarm';
 import { PipelineDropAlarm } from './PipelineDropAlarm';
 import { UpdateIndicator } from './UpdateIndicator';
 import { useSettingsStore } from '../../store/settingsStore';
-import { usePrimaryProtocolConfig, usePrimaryTransportConfig } from '../../lib/hooks/usePrimaryNodes';
+import { usePrimaryDeviceSpec, usePrimaryProtocolConfig } from '../../lib/hooks/usePrimaryNodes';
 import CompileStatusIndicator from './CompileStatusIndicator';
 import { RunControls } from './RunControls';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -47,9 +47,9 @@ const TIER_MAX = 3;
 
 export const StatusBar = memo(function StatusBar() {
   const lang = useAppStore((s) => s.lang);
-  // 多连接并存: 状态栏显示第一个 Transport 节点的状态; 统计为全部节点合计
+  // 多连接并存: 状态栏显示第一个设备节点的状态；统计为全部节点合计
   const connectionState = useAppStore((s) => {
-    const first = s.rfNodes.find((n) => n.type === 'transport' && n.data?.global === true);
+    const first = s.rfNodes.find((n) => n.type === 'acquisition' && n.data.tabId === s.activeControlTabId);
     return (first ? s.connectionStates[first.id] : undefined) ?? 'Disconnected';
   });
   // 单独订阅合计标量, 避免 transport:rx 每次创建新对象导致整个 StatusBar 重渲染
@@ -58,7 +58,7 @@ export const StatusBar = memo(function StatusBar() {
   const rxFrames = useAppStore((s) => Object.values(s.nodeStats).reduce((a, v) => a + v.rx_frames, 0));
   const txFrames = useAppStore((s) => Object.values(s.nodeStats).reduce((a, v) => a + v.tx_frames, 0));
   // 仅订阅 kind 标量 — 修改传输/协议参数 (如串口端口名) 不触发状态栏重渲染
-  const transportKind = usePrimaryTransportConfig()?.kind;
+  const transportKind = usePrimaryDeviceSpec()?.driver.driverId;
   const protocolKind = usePrimaryProtocolConfig()?.kind;
   const refreshPorts = useAppStore((s) => s.refreshPorts);
   const openSettings = useSettingsStore((s) => s.open);
@@ -138,11 +138,14 @@ export const StatusBar = memo(function StatusBar() {
   };
 
   const transportLabel: Record<string, string> = {
-    Serial: t(lang, 'serial'),
-    Udp: t(lang, 'udp'),
-    TcpClient: t(lang, 'tcpClient'),
-    TcpServer: t(lang, 'tcpServer'),
-    TestData: t(lang, 'testData'),
+    serial: t(lang, 'serial'),
+    udp: t(lang, 'udp'),
+    'tcp-client': t(lang, 'tcpClient'),
+    'tcp-server': t(lang, 'tcpServer'),
+    slcan: 'Slcan',
+    'candle-light': 'CandleLight',
+    'modbus-tcp': 'Modbus TCP',
+    'modbus-rtu': 'Modbus RTU',
   };
 
   const protocolLabel: Record<string, string> = {

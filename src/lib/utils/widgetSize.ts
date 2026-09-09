@@ -68,13 +68,13 @@ export const WIDGET_SIZE_LIMITS: Record<WidgetConfig['kind'], WidgetSizeLimits> 
   FrameDecoder: PLACEHOLDER_LIMITS,
 };
 
-export function widgetMinSize(kind: WidgetConfig['kind']): WidgetSizeLimits {
-  return WIDGET_SIZE_LIMITS[kind] ?? FALLBACK_LIMITS;
+export function widgetMinSize(kind?: WidgetConfig['kind']): WidgetSizeLimits {
+  return kind ? WIDGET_SIZE_LIMITS[kind] ?? FALLBACK_LIMITS : FALLBACK_LIMITS;
 }
 
 /// 把用户输入/拖拽的尺寸钳制进该控件的合法区间;
 /// undefined (自适应) 原样保留。
-export function clampWidgetSize(kind: WidgetConfig['kind'], size: WidgetSize): WidgetSize {
+export function clampWidgetSize(kind: WidgetConfig['kind'] | undefined, size: WidgetSize): WidgetSize {
   const { minW, minH } = widgetMinSize(kind);
   const clamp = (v: number | undefined, min: number, max: number) =>
     v === undefined ? undefined : Math.min(max, Math.max(min, Math.round(v)));

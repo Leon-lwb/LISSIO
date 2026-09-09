@@ -1,29 +1,15 @@
-//! remove_tab_graph 的全局节点归属语义集成测试
+//! 页签节点归属与删除语义集成测试。
 //!
-//! 后端全局节点表 (DataPlaneState.global_nodes) 中每个节点带 tab_id = 最后
-//! 提交它的 tab; remove_tab_graph 按 tab_id retain 清理。这些用例钉住该契约:
-//! - 被删 tab 名下的全局节点 (Transport/Protocol) 随其图一并移除,
-//!   对应 protocol_states 同步清除;
-//! - 其他 tab 名下的全局节点不受影响。
-//!
-//! 该契约同时是前端 removeControlTab / applySnapshot 顺序要求的后端依据:
-//! 先 sync 存活 tab (全局节点重新托管到存活 tab 名下), 再 remove 被删 tab。
+//! 每个节点只属于一个创建页签；删除页签会清理其节点和运行态，其他页签不受影响。
 
 use app::AppState;
 use app::{NodeDef, NodeKind};
-use data_model::config::{TestDataConfig, TransportConfig};
 use graph_ops::{apply_remove_tab_graph, apply_tab_graph};
 use schema_types::ProtocolConfig;
 use std::collections::HashMap;
 
-fn transport_node(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab_id.into(),
-        kind: NodeKind::Transport {
-            config: TransportConfig::TestData(TestDataConfig::default()),
-        },
-    }
+fn device_node(id: &str, tab_id: &str) -> NodeDef {
+    graph_testkit::make_device_in(id, tab_id)
 }
 
 fn protocol_node(id: &str, tab_id: &str) -> NodeDef {
@@ -38,8 +24,7 @@ fn protocol_node(id: &str, tab_id: &str) -> NodeDef {
     }
 }
 
-/// 被删 tab 名下的全局节点随图移除: Protocol 从全局表与 protocol_states 同时消失
-/// (前端轮询的 "协议节点不存在" 即源于此 — 前端必须先重同步存活 tab)
+/// 被删页签的节点从运行时索引与协议状态同时消失。
 #[tokio::test]
 async fn remove_tab_graph_removes_nodes_owned_by_that_tab() {
     let state = AppState::new();
@@ -47,10 +32,9 @@ async fn remove_tab_graph_removes_nodes_owned_by_that_tab() {
         &state,
         None,
         "tab1".into(),
-        vec![transport_node("tp", "tab1"), protocol_node("pt", "tab1")],
+        vec![device_node("tp", "tab1"), protocol_node("pt", "tab1")],
         vec![],
         HashMap::default(),
-        None,
         None,
         None,
     )
@@ -67,42 +51,37 @@ async fn remove_tab_graph_removes_nodes_owned_by_that_tab() {
 
     assert!(
         state.data_plane.global_nodes.lock().is_empty(),
-        "被删 tab 名下的全局节点应一并移除"
+        "被删页签的节点应一并移除"
     );
     assert!(
         state.data_plane.protocol_states.lock().is_empty(),
-        "Protocol 运行时状态应随全局节点清除"
+        "Protocol 运行时状态应随页签节点清除"
     );
 }
 
-/// 其他 tab 名下的全局节点存活: 存活 tab 重新提交同名节点后
-/// (tab_id 已改为存活 tab), remove 被删 tab 不再误伤全局节点
+/// 其他页签使用独立节点 id，删除页签不会误伤存活页签。
 #[tokio::test]
-async fn remove_tab_graph_keeps_nodes_rehosted_to_surviving_tab() {
+async fn remove_tab_graph_keeps_other_tab_nodes() {
     let state = AppState::new();
-    // tab1 最后提交全局节点 (归属 tab1)
     apply_tab_graph(
         &state,
         None,
         "tab1".into(),
-        vec![transport_node("tp", "tab1"), protocol_node("pt", "tab1")],
+        vec![device_node("tp", "tab1"), protocol_node("pt", "tab1")],
         vec![],
         HashMap::default(),
-        None,
         None,
         None,
     )
     .await
     .expect("提交 tab1 图应成功");
-    // 存活 tab2 重同步: 全局节点按 id 覆盖, tab_id 改挂 tab2
     apply_tab_graph(
         &state,
         None,
         "tab2".into(),
-        vec![transport_node("tp", "tab2"), protocol_node("pt", "tab2")],
+        vec![device_node("tp2", "tab2"), protocol_node("pt2", "tab2")],
         vec![],
         HashMap::default(),
-        None,
         None,
         None,
     )
@@ -115,17 +94,53 @@ async fn remove_tab_graph_keeps_nodes_rehosted_to_surviving_tab() {
 
     let nodes = state.data_plane.global_nodes.lock();
     assert!(
-        nodes.contains_key("tp") && nodes.contains_key("pt"),
-        "全局节点已重新托管到存活 tab, 不应被移除"
+        nodes.contains_key("tp2") && nodes.contains_key("pt2"),
+        "其他页签节点不应被移除"
     );
-    assert_eq!(nodes["pt"].tab_id, "tab2");
+    assert!(!nodes.contains_key("tp") && !nodes.contains_key("pt"));
+    assert_eq!(nodes["pt2"].tab_id, "tab2");
     drop(nodes);
     assert!(
-        state.data_plane.protocol_states.lock().contains_key("pt"),
+        state.data_plane.protocol_states.lock().contains_key("pt2"),
         "Protocol 运行时状态应保留"
     );
     assert!(
         state.graphs.lock().contains_key("tab2"),
         "存活 tab 的图不受影响"
     );
+}
+
+#[tokio::test]
+async fn duplicate_node_id_across_tabs_is_rejected() {
+    let state = AppState::new();
+    apply_tab_graph(
+        &state,
+        None,
+        "tab1".into(),
+        vec![device_node("device", "tab1")],
+        vec![],
+        HashMap::default(),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
+
+    let result = apply_tab_graph(
+        &state,
+        None,
+        "tab2".into(),
+        vec![device_node("device", "tab2")],
+        vec![],
+        HashMap::default(),
+        None,
+        None,
+    )
+    .await;
+    assert!(matches!(
+        result,
+        Err(data_model::Error::Config(
+            error::ConfigError::DuplicateNode { .. }
+        ))
+    ));
 }

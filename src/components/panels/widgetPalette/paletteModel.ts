@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import type { WidgetConfig, WidgetCategory, MathOp, StrOp, FilterPresetKind, TransportConfig } from '../../../types';
+import type { DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
+import type { WidgetConfig, WidgetCategory, MathOp, StrOp, FilterPresetKind } from '../../../types';
 
 /// 面板项统一模型 — 各分类项归一成同构条目, 渲染走同一套行样式
 export interface PaletteEntry {
@@ -10,14 +11,15 @@ export interface PaletteEntry {
   /// 操作变体 — Math 用 MathOp, Str 用 StrOp (按 kind 区分)
   op?: MathOp | StrOp;
   preset?: FilterPresetKind;
-  /// 全局节点条目: 数据接口 / 协议引擎 (拖入或点击创建全局节点)
-  globalNode?: 'transport' | 'protocol';
-  transportKind?: TransportConfig['kind'];
+  /// 结构节点条目: 设备 / 协议 / 点位选择
+  nodeType?: 'protocol' | 'acquisition' | 'point-selector';
+  attribute?: 'test-data';
+  acquisition?: DeviceCardModel;
   onAdd?: () => void;
   title: string;
 }
 
-export type SectionId = 'send' | 'input' | 'transport' | 'protocol' | 'display' | 'math' | 'filter' | 'fft' | 'string' | 'custom';
+export type SectionId = 'attributes' | 'send' | 'input' | 'transport' | 'protocol' | 'display' | 'math' | 'filter' | 'fft' | 'string' | 'custom';
 
 export interface PaletteSection {
   id: SectionId;

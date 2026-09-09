@@ -1,7 +1,7 @@
 import { api } from '../../lib/tauri/tauri';
 import { waveformWindow } from '../../lib/buffers/dataBuffer';
 import { clearAllRawDataPreviewBuffers } from '../../lib/buffers/rawDataPreviewRegistry';
-import { isGlobalNode } from '../appStoreHelpers';
+import { isStructuralNode } from '../appStoreHelpers';
 import { notify, formatError } from '../../lib/tauri/notifications';
 import { t } from '../../i18n';
 import type { AppSlice } from './types';
@@ -16,7 +16,7 @@ export const createDataSlice: AppSlice<DataSlice> = (_set, get) => {
       try {
         // 波形缓冲区按 Protocol 节点分实例 — 逐源清空
         const protocolIds: string[] = get().rfNodes
-          .filter((n) => n.type === 'protocol' && isGlobalNode(n))
+          .filter((n) => n.type === 'protocol' && isStructuralNode(n))
           .map((n) => n.id);
         await Promise.all(protocolIds.map((id) => api.clearBuffer(id)));
         // 缺省清空全部 Transport 源的原始数据收集器

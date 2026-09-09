@@ -4,7 +4,6 @@
 //! 统一返回 `Result<Value, String>`:rmcp 侧映射为 MCP 错误,原生执行器侧
 //! 映射为工具失败回填 (is_error),两侧零重复。
 
-use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 
 use can::CanFrame;
@@ -28,8 +27,8 @@ const MAX_RAW_BYTES: u32 = 64 * 1024;
 const RAW_DEFAULT_CHUNKS: usize = 32;
 
 /// 列出全部传输节点及其连接状态。
-pub async fn list_transports(tb: &Toolbox) -> Value {
-    let mgr = tb.transport.lock().await;
+pub async fn list_devices(tb: &Toolbox) -> Value {
+    let mgr = &tb.transport;
     let list: Vec<Value> = mgr
         .list_open()
         .into_iter()
@@ -40,15 +39,13 @@ pub async fn list_transports(tb: &Toolbox) -> Value {
             })
         })
         .collect();
-    json!({ "transports": list })
+    json!({ "devices": list })
 }
 
 /// 向传输节点发送原始字节,返回发送字节数。
 pub async fn send_bytes(tb: &Toolbox, node_id: &str, data: &[u8]) -> Result<Value, String> {
     let len = data.len();
     tb.transport
-        .lock()
-        .await
         .send(node_id, data)
         .map_err(|e| e.to_string())?;
     push_tx_raw(tb, node_id, data);
@@ -147,20 +144,17 @@ pub fn list_tabs(tb: &Toolbox) -> Value {
 
 /// 提交 (替换) 指定 tab 的节点图 — 与前端提交同一路径,返回派生端口表。
 ///
-/// `widgets` / `positions` 为可选的控件配置记录与画布位置 (widget 配置模型
-/// 的后端权威存储):提供时画布可完整渲染控件,缺省保留现状。
+/// 文档包含节点业务配置、属性与布局；运行时节点和端口由提交路径统一派生。
 pub async fn update_graph(
     tb: &Toolbox,
     app: &AppHandle,
     tab_id: &str,
-    nodes: Vec<Value>,
+    documents: Vec<Value>,
     edges: Vec<Value>,
-    widgets: Option<Vec<Value>>,
-    positions: Option<HashMap<String, Value>>,
 ) -> Result<Value, String> {
     #![allow(clippy::implicit_hasher)] // serde_json::Value 反序列化约定 std hasher, 仅内部工具入口
 
-    let nodes: Vec<pipeline::NodeDef> = nodes
+    let documents: Vec<kind::document::NodeDocument> = documents
         .into_iter()
         .map(serde_json::from_value)
         .collect::<std::result::Result<_, _>>()
@@ -170,27 +164,7 @@ pub async fn update_graph(
         .map(serde_json::from_value)
         .collect::<std::result::Result<_, _>>()
         .map_err(|e| format!("edges 反序列化失败: {e}"))?;
-    let widgets: Option<Vec<app::WidgetRecord>> = match widgets {
-        Some(items) => Some(
-            items
-                .into_iter()
-                .map(serde_json::from_value)
-                .collect::<std::result::Result<_, _>>()
-                .map_err(|e| format!("widgets 反序列化失败: {e}"))?,
-        ),
-        None => None,
-    };
-    let positions: Option<HashMap<String, app::Position>> = match positions {
-        Some(map) => Some(
-            map.into_iter()
-                .map(|(id, v)| serde_json::from_value::<app::Position>(v).map(|p| (id, p)))
-                .collect::<std::result::Result<_, _>>()
-                .map_err(|e| format!("positions 反序列化失败: {e}"))?,
-        ),
-        None => None,
-    };
-
-    let derived = graph_ops::apply_tab_graph_parts(
+    let derived = graph_ops::apply_document(
         &tb.graphs,
         &tb.graphs_version,
         &tb.data_plane,
@@ -198,11 +172,8 @@ pub async fn update_graph(
         &tb.workspace,
         Some(app),
         tab_id.to_string(),
-        nodes,
+        documents,
         edges,
-        HashMap::default(),
-        widgets,
-        positions,
         None,
     )
     .await
@@ -322,8 +293,6 @@ pub async fn send_can_frame(
         return Err("该 Protocol 节点不是 CAN 协议 (encode_can 为空)".to_string());
     }
     tb.transport
-        .lock()
-        .await
         .send(node_id, &data)
         .map_err(|e| e.to_string())?;
     Ok(json!({ "sent_bytes": data.len(), "protocol_node": proto_id }))

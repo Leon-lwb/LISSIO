@@ -9,6 +9,8 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+points = { workspace = true }
+acquisition = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
 logic = { workspace = true }

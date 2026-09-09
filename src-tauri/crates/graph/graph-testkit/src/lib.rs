@@ -1,7 +1,10 @@
 //! 测试共享辅助 — 各模块测试共用的节点/边/帧源构造器
 
 use buffer_graph::Edge;
-use data_model::config::TransportConfig;
+use data_model::device::{
+    DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
+    EndpointSpec,
+};
 use data_model::DataFrame;
 use filter::FilterConfig;
 use schema_types::ProtocolConfig;
@@ -43,12 +46,40 @@ pub fn make_protocol_source_named(
     }
 }
 
-pub fn make_transport(id: &str) -> NodeDef {
+pub fn make_device(id: &str) -> NodeDef {
+    make_device_in(id, "t1")
+}
+
+#[allow(clippy::default_trait_access)] // Keep the test helper free of a direct serde_json dependency.
+pub fn make_device_in(id: &str, tab_id: &str) -> NodeDef {
     NodeDef {
         id: id.to_string(),
-        tab_id: "t1".to_string(),
-        kind: NodeKind::Transport {
-            config: TransportConfig::TestData(data_model::config::TestDataConfig::default()),
+        tab_id: tab_id.to_string(),
+        kind: NodeKind::Acquisition {
+            spec: EndpointSpec {
+                id: EndpointId(id.into()),
+                label: "device".into(),
+                enabled: true,
+                capability_endpoint_id: None,
+                driver: DriverPayload {
+                    driver_id: DriverId("test-bytes".into()),
+                    schema_version: 1,
+                    payload: Default::default(),
+                },
+                simulation: None,
+            },
+            ports: vec![
+                DevicePort {
+                    id: "rx".into(),
+                    direction: DevicePortDirection::Output,
+                    domain: DevicePortDomain::Bytes,
+                },
+                DevicePort {
+                    id: "tx".into(),
+                    direction: DevicePortDirection::Input,
+                    domain: DevicePortDomain::Bytes,
+                },
+            ],
         },
     }
 }
@@ -75,7 +106,6 @@ pub fn make_decoder(id: &str, tab_id: &str) -> NodeDef {
             enable_frame_count: false,
             enable_last_timestamp: false,
             enable_fps: false,
-            loopback: false,
         },
     }
 }

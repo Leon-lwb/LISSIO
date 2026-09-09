@@ -8,9 +8,14 @@
 //! `pipeline::DataPlaneState` 与 `app_state` 经由 `data_plane` re-export 的 `DataPlaneState`
 //! 两个同源码类型, 测试编译失败 (E0308), 故以 tests/ 集成测试形式存在。
 
+use acquisition::{AcquisitionRuntime, ConnectionControl, SourceRegistry, TransportConnection};
 use app::AppState;
 use buffer_graph::Edge;
-use data_model::TransportConfig;
+use data_model::device::{
+    DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
+    EndpointSpec, SimulationConfig,
+};
+use data_model::{SerialConfig, TransportConfig};
 use graph::BytePlan;
 use kind::{DecoderBlockDef, FieldType, NodeDef, NodeKind};
 use pipeline::byte_router::route_bytes;
@@ -59,7 +64,6 @@ fn u8_decoder(id: &str) -> NodeDef {
             enable_frame_count: false,
             enable_last_timestamp: false,
             enable_fps: false,
-            loopback: false,
         },
     )
 }
@@ -72,9 +76,18 @@ const fn firewater(channels: Option<usize>) -> NodeKind {
     }
 }
 
-/// 内存构造数据平面: 全局节点表 + BytePlan + protocol_states 同步
+/// 内存构造数据平面: 工作区运行时节点索引 + BytePlan + protocol_states 同步
 fn setup_plane(nodes: Vec<NodeDef>, edges: Vec<Edge>) -> DataPlaneState {
-    let state = AppState::new();
+    let registry = std::sync::Arc::new(SourceRegistry::default());
+    registry.register(std::sync::Arc::new(
+        transport::device_factory::ByteDeviceFactory::new(
+            "serial",
+            "Serial",
+            TransportConfig::Serial(SerialConfig::default()),
+            std::sync::Arc::new(transport::test_data::TestDataBackend),
+        ),
+    ));
+    let state = AppState::with_acquisition(AcquisitionRuntime::new(registry));
     let plane = state.data_plane;
     {
         let mut g = plane.global_nodes.lock();
@@ -87,6 +100,75 @@ fn setup_plane(nodes: Vec<NodeDef>, edges: Vec<Edge>) -> DataPlaneState {
     }
     plane.sync_protocol_states();
     plane
+}
+
+fn simulated_serial(id: &str, sample_rate: u32, protocol: ProtocolConfig) -> EndpointSpec {
+    let defaults = serde_json::to_value(TransportConfig::Serial(SerialConfig::default())).unwrap();
+    EndpointSpec {
+        id: EndpointId(id.into()),
+        label: id.into(),
+        enabled: true,
+        capability_endpoint_id: Some("device".into()),
+        driver: DriverPayload {
+            driver_id: DriverId("serial".into()),
+            schema_version: 1,
+            payload: defaults["params"].clone(),
+        },
+        simulation: Some(SimulationConfig {
+            sample_rate,
+            channels: 1,
+            encoding: Some(serde_json::json!({ "protocol": protocol, "schema": null })),
+            ..Default::default()
+        }),
+    }
+}
+
+fn serial_spec(id: &str, baud_rate: u32) -> EndpointSpec {
+    let defaults = serde_json::to_value(TransportConfig::Serial(data_model::SerialConfig {
+        baud_rate,
+        ..Default::default()
+    }))
+    .unwrap();
+    EndpointSpec {
+        id: EndpointId(id.into()),
+        label: id.into(),
+        enabled: true,
+        capability_endpoint_id: Some("device".into()),
+        driver: DriverPayload {
+            driver_id: DriverId("serial".into()),
+            schema_version: 1,
+            payload: defaults["params"].clone(),
+        },
+        simulation: None,
+    }
+}
+
+fn device_kind(spec: EndpointSpec) -> NodeKind {
+    NodeKind::Acquisition {
+        spec,
+        ports: vec![
+            DevicePort {
+                id: "rx".into(),
+                direction: DevicePortDirection::Output,
+                domain: DevicePortDomain::Bytes,
+            },
+            DevicePort {
+                id: "tx".into(),
+                direction: DevicePortDirection::Input,
+                domain: DevicePortDomain::Bytes,
+            },
+        ],
+    }
+}
+
+fn byte_device(id: &str) -> NodeKind {
+    device_kind(simulated_serial(id, 100, ProtocolConfig::RawData))
+}
+
+struct NoopControl;
+
+impl ConnectionControl for NoopControl {
+    fn close(&self) {}
 }
 
 fn firewater_bytes(channels: &[f32]) -> Vec<u8> {
@@ -103,12 +185,7 @@ async fn transport_to_protocol_feeds_source_frames() {
     // tp.rx → pt.in (FireWater 3 通道)
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node("pt", firewater(Some(3))),
         ],
         vec![edge("tp", "rx", "pt", "in")],
@@ -134,24 +211,20 @@ async fn transport_to_protocol_feeds_source_frames() {
 }
 
 #[tokio::test]
-async fn test_data_frames_use_configured_sample_clock() {
-    let test_config = data_model::TestDataConfig {
-        channels: 1,
-        sample_rate: 700_000.0,
-        ..data_model::TestDataConfig::default()
-    };
+async fn simulation_session_updates_sample_clock_without_reanchoring() {
+    let spec = simulated_serial(
+        "tp",
+        700_000,
+        ProtocolConfig::FireWater { channels: Some(1) },
+    );
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(test_config),
-                },
-            ),
+            node("tp", device_kind(spec.clone())),
             node("pt", firewater(Some(1))),
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
+    plane.transport.open_endpoint(spec.clone()).await.unwrap();
     let mut cache = DecoderFeedCache::new();
     route_bytes(&plane, None, "tp", b"1\n2\n3\n4\n", 0, &mut cache, None).await;
     plane.flush_eval();
@@ -162,18 +235,10 @@ async fn test_data_frames_use_configured_sample_clock() {
     assert!((0.004..=0.005).contains(&-timestamps[0]));
     assert!(timestamps[3].abs() < f64::EPSILON);
 
-    // 热更新只替换后续采样间隔，不把采样时钟重新锚定到墙钟。
-    {
-        let mut nodes = plane.global_nodes.lock();
-        let transport = nodes.get_mut("tp").unwrap();
-        let NodeKind::Transport {
-            config: TransportConfig::TestData(config),
-        } = &mut transport.kind
-        else {
-            panic!("tp should remain TestData");
-        };
-        config.sample_rate = 350_000.0;
-    }
+    // 运行时参数热更新只替换后续采样间隔，不把采样时钟重新锚定到墙钟。
+    let mut updated = spec;
+    updated.simulation.as_mut().unwrap().sample_rate = 350_000;
+    assert!(plane.transport.reconcile(&[updated]).await.is_empty());
     route_bytes(&plane, None, "tp", b"5\n6\n7\n", 0, &mut cache, None).await;
     plane.flush_eval();
     let absolute = plane.buffer_for("pt").lock().get_window_raw(-1_000.0, 0.0);
@@ -191,43 +256,24 @@ async fn test_data_frames_use_configured_sample_clock() {
     assert!(timestamps[4..]
         .windows(2)
         .all(|pair| (2.0..=4.0).contains(&(pair[1] - pair[0]))));
+    plane.transport.close("tp").await;
 }
 
 #[tokio::test]
-async fn connected_test_data_runtime_clock_overrides_stale_graph_config() {
-    let stale_config = data_model::TestDataConfig {
-        channels: 1,
-        sample_rate: 1_000.0,
-        ..data_model::TestDataConfig::default()
-    };
+async fn connected_simulation_session_supplies_exact_clock() {
+    let spec = simulated_serial(
+        "tp",
+        700_000,
+        ProtocolConfig::FireWater { channels: Some(1) },
+    );
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(stale_config),
-                },
-            ),
+            node("tp", device_kind(spec.clone())),
             node("pt", firewater(Some(1))),
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
-    let runtime_config = data_model::TestDataConfig {
-        channels: 1,
-        sample_rate: 700_000.0,
-        ..data_model::TestDataConfig::default()
-    };
-    plane
-        .transport
-        .lock()
-        .await
-        .open(
-            "tp",
-            TransportConfig::TestData(runtime_config),
-            TestDataLink::new(ProtocolConfig::FireWater { channels: Some(1) }),
-        )
-        .await
-        .unwrap();
+    plane.transport.open_endpoint(spec).await.unwrap();
 
     let mut cache = DecoderFeedCache::new();
     route_bytes(&plane, None, "tp", b"1\n2\n3\n4\n", 0, &mut cache, None).await;
@@ -237,31 +283,45 @@ async fn connected_test_data_runtime_clock_overrides_stale_graph_config() {
     assert_eq!(timestamps.len(), 4);
     assert!(
         (0.004..=0.005).contains(&-timestamps[0]),
-        "必须使用连接运行时的 700 kHz，而不是图中的旧 1 kHz: {timestamps:?}"
+        "必须使用连接会话的 700 kHz: {timestamps:?}"
     );
-    plane.transport.lock().await.close("tp");
+    plane.transport.close("tp").await;
 }
 
 #[tokio::test]
 async fn serial_frames_are_spaced_by_wire_bitrate_instead_of_batch_arrival() {
+    let spec = serial_spec("serial", 115_200);
+    let config = TransportConfig::Serial(data_model::SerialConfig {
+        baud_rate: 115_200,
+        ..Default::default()
+    });
     let plane = setup_plane(
         vec![
-            node(
-                "serial",
-                NodeKind::Transport {
-                    config: TransportConfig::Serial(data_model::SerialConfig {
-                        baud_rate: 115_200,
-                        ..data_model::SerialConfig::default()
-                    }),
-                },
-            ),
+            node("serial", device_kind(spec.clone())),
             node("pt", firewater(Some(1))),
         ],
         vec![edge("serial", "rx", "pt", "in")],
     );
+    let (write, _writes) = tokio::sync::mpsc::channel(1);
+    let (data, _) = tokio::sync::broadcast::channel(1);
+    let handle = acquisition::handle::TransportHandle::new(
+        TransportConnection::new(write, data, std::sync::Arc::new(NoopControl)),
+        config,
+        1,
+    );
+    let live = handle.live("serial");
     let mut cache = DecoderFeedCache::new();
     // 8N1 下每帧 "N\n" 占 20 bit，115200 baud 对应 5760 frame/s。
-    route_bytes(&plane, None, "serial", b"1\n2\n3\n4\n", 0, &mut cache, None).await;
+    route_bytes(
+        &plane,
+        None,
+        "serial",
+        b"1\n2\n3\n4\n",
+        0,
+        &mut cache,
+        Some(&live),
+    )
+    .await;
     plane.flush_eval();
 
     let timestamps = plane.buffer_for("pt").lock().get_recent(4).timestamps;
@@ -279,12 +339,7 @@ async fn convert_to_chain_reencodes_downstream() {
     // pa 配置 convert_to = JustFloat: pa 解析出的帧按 JustFloat 重编码喂给 pb
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pa",
                 NodeKind::Protocol {
@@ -376,12 +431,7 @@ async fn rawdata_protocol_caches_text_and_passthrough_out() {
     // tp.rx → pr.in (RawData), pr.out → dec.in (FrameDecoder)
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pr",
                 NodeKind::Protocol {
@@ -431,16 +481,10 @@ async fn rawdata_protocol_caches_text_and_passthrough_out() {
 /// (修复点: 旧逻辑 convert_to 分支吞掉空产物后原文被静默丢弃)
 #[tokio::test]
 async fn rawdata_with_convert_to_still_passthrough_out() {
-    use data_model::config::TestDataConfig;
     // tp.rx → pr.in (RawData + convert_to=FireWater), pr.out → dec.in (FrameDecoder)
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pr",
                 NodeKind::Protocol {
@@ -478,12 +522,7 @@ async fn rawdata_custom_schema_no_text_cache_no_passthrough() {
     // tp.rx → pr.in (RawData + custom schema), pr.out → dec.in (FrameDecoder)
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pr",
                 NodeKind::Protocol {
@@ -535,15 +574,7 @@ async fn rawdata_custom_schema_no_text_cache_no_passthrough() {
 async fn auto_detection_applies_buffer_channels_on_change_only() {
     // tp.rx → pt.in (FireWater 自动检测)
     let plane = setup_plane(
-        vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
-            node("pt", firewater(None)),
-        ],
+        vec![node("tp", byte_device("tp")), node("pt", firewater(None))],
         vec![edge("tp", "rx", "pt", "in")],
     );
     // 节点创建即按默认通道数对齐 buffer (自动模式待检测)
@@ -595,15 +626,7 @@ async fn auto_detection_applies_buffer_channels_on_change_only() {
 async fn auto_detection_applies_buffer_channels_in_parallel_feed() {
     // tp.rx → pt.in (FireWater 自动检测)
     let plane = setup_plane(
-        vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
-            node("pt", firewater(None)),
-        ],
+        vec![node("tp", byte_device("tp")), node("pt", firewater(None))],
         vec![edge("tp", "rx", "pt", "in")],
     );
     // 触发并行: depth >= 8 且批次 >= 32KB → workers = 2
@@ -663,12 +686,7 @@ async fn manual_mode_does_not_emit_channels_detected_event() {
     // tp.rx → pt.in (FireWater 手动 2 通道)
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node("pt", firewater(Some(2))),
         ],
         vec![edge("tp", "rx", "pt", "in")],
@@ -739,12 +757,7 @@ async fn test_data_700k_full_pipeline_has_per_sample_timestamps() {
     };
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(test_config.clone()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node("pt", firewater(Some(4))),
         ],
         vec![edge("tp", "rx", "pt", "in")],
@@ -867,12 +880,7 @@ async fn run_stream_pressure_case(protocol: ProtocolConfig, channels: usize) {
     };
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(test_config.clone()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pt",
                 NodeKind::Protocol {
@@ -1014,16 +1022,7 @@ async fn sustained_justfloat_over_10mbps_keeps_waveform_timeline_stable() {
     };
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig {
-                        channels: CHANNELS,
-                        sample_rate: 700_000.0,
-                        signal: data_model::TestSignal::Sine,
-                    }),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node(
                 "pt",
                 NodeKind::Protocol {
@@ -1133,12 +1132,7 @@ async fn sustained_justfloat_over_10mbps_keeps_waveform_timeline_stable() {
 async fn frame_queue_overflow_keeps_newest_batches() {
     let plane = setup_plane(
         vec![
-            node(
-                "tp",
-                NodeKind::Transport {
-                    config: TransportConfig::TestData(data_model::TestDataConfig::default()),
-                },
-            ),
+            node("tp", byte_device("tp")),
             node("pt", firewater(Some(3))),
         ],
         vec![edge("tp", "rx", "pt", "in")],

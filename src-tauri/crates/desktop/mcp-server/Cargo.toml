@@ -9,6 +9,8 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+kind = { workspace = true }
+acquisition = { workspace = true }
 pipeline = { workspace = true }
 rmcp = { workspace = true }
 axum = { workspace = true }

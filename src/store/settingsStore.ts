@@ -115,18 +115,17 @@ interface SettingsStore {
 }
 
 /// 将 data 分类的缓存容量设置同步到后端与前端 buffer 实例
-/// v3: 波形/原始数据容量按源 (节点) 生效 — 对当前图中全部 Protocol/Transport 节点应用;
-/// 新建全局节点时由 capacitySync.applyCapacitiesForNode 单独补齐
+/// v3: 波形/原始数据容量按源 (节点) 生效 — 对当前图中全部 Protocol/设备节点应用;
+/// 新建节点时由 capacitySync.applyCapacitiesForNode 单独补齐
 function applyDataCapacity(settings: AppSettings) {
   const data = settings.data;
   const nodes = useAppStore.getState().rfNodes;
   for (const n of nodes) {
-    if (n.data?.global !== true) continue;
     if (n.type === 'protocol') {
       api.setWaveformBufferCapacity(n.id, data.waveformBufferPoints).catch((e: unknown) =>
         console.warn('[settings] 设置波形缓冲区容量失败:', e)
       );
-    } else if (n.type === 'transport') {
+    } else if (n.type === 'acquisition') {
       api.setRawDataBufferCapacity(n.id, data.rawDataBufferBytes).catch((e: unknown) =>
         console.warn('[settings] 设置原始数据缓冲区容量失败:', e)
       );

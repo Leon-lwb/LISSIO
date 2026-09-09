@@ -302,7 +302,7 @@ export type WidgetConfig =
 export interface TextOutConfig {
   id: string;
   label: string;
-  /// 目标 Transport 全局节点 id ('' = 未选择, 不发送)
+  /// 目标设备节点 id ('' = 未选择, 不发送)
   targetTransport: string;
   /// 发送时附加的换行后缀
   newline: 'none' | 'lf' | 'crlf' | 'cr';

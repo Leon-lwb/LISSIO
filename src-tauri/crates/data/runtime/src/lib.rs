@@ -31,7 +31,7 @@ pub use kind::{
 pub use protocol::{detect_format, parse_ascii, parse_hex, InputFormat, ProtocolEngine};
 pub use schema::command_frame::{compute_frame_bytes, CommandFrameDto};
 pub use schema::{command_frame, frame_checksum, frame_field};
-pub use transport::TransportManager;
+pub use acquisition::AcquisitionRuntime;
 pub use trigger::{TriggerMatchResult, TriggerMatcher, TriggerRuleDef};
 
 // ---- 本 crate 模块的核心 API ----

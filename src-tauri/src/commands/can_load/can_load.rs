@@ -3,11 +3,11 @@ use can::CanLoadSnapshot;
 use data_model::Result;
 use tauri::{AppHandle, Manager, State};
 
-/// 从指定 Transport 节点的 TransportConfig 提取 CAN 波特率 (bps)
+/// 从指定设备节点的传输配置提取 CAN 波特率 (bps)
 ///
 /// 仅 Slcan / CandleLight 配置携带 CAN 波特率; 其他传输方式返回 None。
 async fn extract_can_bitrate_from_transport(state: &AppState, node_id: &str) -> Option<u32> {
-    let manager = state.transport.lock().await;
+    let manager = &state.transport;
     match manager.config(node_id) {
         Some(data_model::TransportConfig::Slcan(s)) => Some(s.can_bitrate.bps()),
         Some(data_model::TransportConfig::CandleLight(c)) => Some(c.can_bitrate.bps()),
@@ -30,7 +30,7 @@ fn resolve_can_bitrate_choice(override_bps: Option<u32>, transport_bps: Option<u
 /// 计算有效 CAN 波特率 (bps)
 ///
 /// - 若 `override_bps` 为 Some(n) 且 n > 0, 使用 n (手动覆盖)
-/// - 否则尝试从指定 Transport 节点的配置读取
+/// - 否则尝试从指定设备节点的配置读取
 /// - 都没有则返回 500_000 (默认值, 避免前端传 0 导致除零)
 async fn resolve_can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>) -> u32 {
     let transport_bps = extract_can_bitrate_from_transport(state, node_id).await;
@@ -39,7 +39,7 @@ async fn resolve_can_bitrate(state: &AppState, node_id: &str, override_bps: Opti
 
 /// 获取 CAN 负载统计快照
 ///
-/// `node_id`: 用于自动解析波特率的 Transport 节点 id
+/// `node_id`: 用于自动解析波特率的设备节点 id
 /// `bitrate_bps`: 可选手动覆盖波特率; None/0 = 自动从 TransportConfig 读取
 #[tauri::command]
 pub async fn get_can_load_stats(
@@ -68,7 +68,7 @@ pub async fn clear_can_load_stats(state: State<'_, AppState>) -> Result<()> {
     Ok(())
 }
 
-/// 获取指定 Transport 节点的当前 CAN 波特率 (从 TransportConfig 提取, 用于前端 UI 默认值)
+/// 获取指定设备节点的当前 CAN 波特率 (从会话配置提取, 用于前端 UI 默认值)
 ///
 /// 返回 (bps, source) — source 描述来源 ("slcan" / "candle" / "default")
 #[tauri::command]
@@ -76,7 +76,7 @@ pub async fn get_current_can_bitrate(
     state: State<'_, AppState>,
     node_id: String,
 ) -> Result<(u32, String)> {
-    let manager = state.transport.lock().await;
+    let manager = &state.transport;
     if let Some(cfg) = manager.config(&node_id) {
         match cfg {
             data_model::TransportConfig::Slcan(s) => {

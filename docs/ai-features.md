@@ -100,14 +100,14 @@ rmcp handler 只做参数包装——内置原生工具执行器调用同一批�
 
 | 工具 | 能力 |
 |---|---|
-| `list_transports` / `list_serial_ports` | 传输节点与连接状态 / 系统可用串口 |
+| `list_devices` / `list_serial_ports` | 已打开设备会话与连接状态 / 系统可用串口 |
 | `send_bytes` / `send_string` / `send_can_frame` | 向设备发送字节 / UTF-8 文本 / CAN 帧 |
 | `inject_bytes` | 字节注入(沿全局字节平面路由,喂协议 / FrameDecoder / 回环) |
 | `set_input_value` | 设置节点图输入控件值 |
 | `get_graph_outputs` | 读取节点图输出快照 |
 | `get_recent_waveform` / `get_waveform_window` / `get_buffer_info` / `list_data_sources` | 最近波形 / 时间窗波形 / 缓冲信息 / 数据源清单 |
 | `get_can_frames` / `get_logic_data` / `get_raw_data` | 最近 CAN 帧 + 负载 / 逻辑采样与解码事件 / 原始字节(TX/RX, hex) |
-| `list_tabs` / `update_graph` | 列出图 tab / 提交替换节点图(复用 `apply_tab_graph_parts`;可选 `widgets` 配置记录 + `positions` 位置,画布可完整渲染控件) |
+| `list_tabs` / `update_graph` | 列出图 tab / 原子替换页签的 `documents + edges` |
 | `connect_edge` / `disconnect_edge` | 增量连线 / 删线(后端编译校验,失败返回真实原因且不建边) |
 
 外部客户端接入示例(Claude Desktop connectors / 任意 MCP 客户端):
@@ -123,7 +123,7 @@ rmcp handler 只做参数包装——内置原生工具执行器调用同一批�
 `builtinToolsEnabled` / `mcpToolsEnabled`)。工具分两类执行路径:
 
 - **后端直连**(数据读取 / 设备发送 / 知识库 / **连线拓扑**):直接调用
-  `mcp_server::tools` 共享函数,与对外 MCP server 同一路径。包括 `list_transports`、
+  `mcp_server::tools` 共享函数,与对外 MCP server 同一路径。包括 `list_devices`、
   `send_bytes` / `send_string` / `send_can_frame`、`set_input_value`、
   `inject_bytes`、`get_graph_outputs`、`get_recent_waveform` /
   `get_waveform_window` / `get_buffer_info` / `list_data_sources`、
@@ -135,33 +135,31 @@ rmcp handler 只做参数包装——内置原生工具执行器调用同一批�
   历史)在前端 zustand store,后端无法直接变更。执行器经事件桥调用前端:
   emit `ai_tool_invoke {call_id, name, arguments}` → 前端 `toolHost.ts`
   分发 handler(全部走 `useAppStore` 现有 action:`addWidget` /
-  `setTransportNodeConfig` …,画布实时刷新、撤销历史可用、tab 图自动同步
+  统一节点 action,画布实时刷新、撤销历史可用、tab 图自动同步
   后端)→ `ai_tool_resolve {call_id, ok, result}` 回执;15s 超时兜底。包括
   `get_workspace`(读画布全量状态,含各节点端口表与 domain,编辑前必读)、
   `add_node` / `update_node_config` / `remove_node` / `move_node`、
-  `create_tab` / `set_active_tab`、`connect_transport` / `disconnect_transport`、
+  `create_tab` / `set_active_tab`、`connect_device` / `disconnect_device`、
   `list_templates` / `apply_template`(默认 merge 模式,不破坏用户现有工作区)。
 
-### 节点图与 widget 配置:后端权威
+### 节点文档:后端权威
 
-节点图的全部状态 — 连线拓扑 (NodeDef/Edge)、widget 配置记录 (kind + params)、
-画布位置、tab 元数据 — 所有权都在后端,前端画布是权威状态的投影:
+节点图的全部可编辑状态由每页签唯一的 `NodeDocument + Edge` 表达。文档公共字段为
+`id/tabId/label/layout/kind/config/attributes`,运行时节点、端口与控件投影均由它派生:
 
-- **源图存储** (`AppState.source_graphs`,每 tab 的 NodeDef + Edge + 端口提示 +
-  widget 配置记录):整图提交 (前端 sync / MCP `update_graph`) 与拓扑 op
+- **源图存储** (`AppState.source_graphs`,每 tab 的文档 + Edge，以及派生运行态):整图提交
+  (前端 sync / MCP `update_graph`) 与拓扑 op
   (`connect_nodes` / `connect_edge` / `disconnect_edge`) 共用
   `apply_tab_graph_parts` 同一编译提交入口;
-- **工作区存储** (`AppState.workspace`):控件 tab 清单 (id/名称/widget 顺序)、
-  数据面板 tab 元数据、全部节点画布位置,随图提交在同一事务里更新
+- **工作区存储** (`AppState.workspace`):只保存 tab 与数据面板元数据；节点布局已经是
+  文档的一部分，不维护位置表或 widget ID 清单
   (编译失败则一切不变);
 - **编译失败 (端口域不匹配 / 成环) 返回真实 `CompileError` 且源图不变** ——
   不再回退占位 Cycle 假错误;错误边结构上不可能存在,模型收到错误后可自我修正;
 - 默认 handle 与 RawData `src:` 端口改写依据前端 sync 附带的端口提示
   (`SourceNodeHint` — widget 端口表形状由前端参数派生,后端经提示解析);
-- 提交成功后 emit **`graph:source` {tab_id, version, nodes, edges, widgets,
-  positions}**,前端画布按此收敛 (`adoptSourceGraph`:边替换为权威集、补建缺失
-  全局节点、widget 节点集合收敛到配置记录 — 外部提交的**纯 widget 图可完整
-  渲染**,外部删除同样生效);
+- 提交成功后 emit **`graph:source` {tab_id, version, documents, edges}**，前端画布按
+  文档重建；外部新增、更新和删除均走同一契约
 - **画布是纯投影, 前端不做连线有效性判断** — 后端编译认可的连线画布逐字
   保留, 不存在"前端认为悬空就删除"的路径;未知 widget kind 的记录落为
   占位控件 (通用卡片 + 默认端口) 而非丢弃;本 tab 提交在途期间的 graph:source
@@ -169,21 +167,20 @@ rmcp handler 只做参数包装——内置原生工具执行器调用同一批�
 - 前端整图提交携带 `base_version` 乐观并发基线,版本被其他写入方推进时后端
   返回 `GraphVersionConflict`,前端拉取权威源图合并后重试一次(多写入方防互踩);
 - `update_tab_graph` 成功响应与 `graph:derived` 事件携带新版本号;
-- 拖拽结束 (`dragging=false` 收尾批) 经 `set_node_positions` 轻量上报最终位置
-  (不触发编译);
-- widget 配置记录的 schema 语义仍由前端类型定义 (后端以 `Value` 透传,
-  不复刻 28 类控件 schema),未知 kind 在画布水合/采纳时剔除 —— 后端是
-  **存储与分发权威**,配置形状校验发生在前端。
+- 拖拽或缩放结束经 `set_node_positions` 轻量更新 `NodeDocument.layout`
+  (不触发编译)，完整提交仍走统一文档入口;
+- widget 业务配置在 `NodeDocument.config` 中保存，后端只负责按注册定义派生图语义，
+  不再维护平行配置清单。
 
-外部 MCP 客户端的 `update_graph`(可选 `widgets` / `positions` 参数)、
+外部 MCP 客户端的 `update_graph`(`documents + edges`)、
 `connect_edge` / `disconnect_edge` 走同一后端入口,画布经 `graph:source`
 实时同步。
 
 ## 工作区持久化 (workspace.json)
 
 工作区整体持久化在 app config dir 的 `workspace.json`(形态与
-`ai_chat_sessions.json` / `mcp_servers.json` 一致):控件 tab + 数据面板元数据、
-各 tab 源图 (NodeDef/Edge/端口提示/widget 记录) 与画布位置。
+`ai_chat_sessions.json` / `mcp_servers.json` 一致):控件 tab + 数据面板元数据，
+以及各 tab 的节点文档与连线。
 
 - **写入**:图提交 / 位置上报 / tab 元数据变更置 dirty,后台任务 800ms 防抖
   整体覆盖写;应用退出时 flush 一次,不丢最后一次编辑;

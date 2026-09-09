@@ -21,7 +21,7 @@ use hir::{CompileError, EdgeClass, TypedGraph};
 pub struct ByteRoute {
     /// 下游节点 id
     pub target: String,
-    /// 下游节点的字节输入 handle (如 "in" / "loopbackIn" / "tx")
+    /// 下游节点的字节输入 handle (如 "in" / "tx")
     pub target_handle: String,
 }
 
@@ -94,7 +94,7 @@ mod tests {
         // transport.rx → protocol.in, protocol.out → decoder.in
         let g = TypedGraph::build(
             vec![
-                make_transport("tp"),
+                make_device("tp"),
                 make_protocol("pt"),
                 make_decoder("dec", "t1"),
             ],
@@ -142,9 +142,9 @@ mod tests {
     }
 
     #[test]
-    fn test_byte_plan_includes_isolated_transport() {
-        // 无字节边的 Transport 节点也应在字节平面内 (事件驱动 dispatch 的起点)
-        let g = TypedGraph::build(vec![make_transport("tp")], vec![]).unwrap();
+    fn test_byte_plan_includes_isolated_device() {
+        // 无字节边的设备节点也应在字节平面内 (事件驱动 dispatch 的起点)
+        let g = TypedGraph::build(vec![make_device("tp")], vec![]).unwrap();
         let plan = BytePlan::build(&g).expect("应编译成功");
         assert!(plan.contains("tp"));
         assert!(plan.routes_for("tp").is_empty());
@@ -153,7 +153,7 @@ mod tests {
     #[test]
     fn test_byte_plan_does_not_route_raw_data_marker() {
         let g = TypedGraph::build(
-            vec![make_transport("tp"), make_sink("raw", "t1")],
+            vec![make_device("tp"), make_sink("raw", "t1")],
             vec![edge("raw-view", "tp", "rx", "raw", "src:tp:rx")],
         )
         .unwrap();

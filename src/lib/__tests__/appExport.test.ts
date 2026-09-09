@@ -1,170 +1,85 @@
-import { describe, expect, it, afterEach, vi } from 'vitest';
-import {
-  applySnapshot,
-  collectPartialSnapshot,
-  detectPresentSections,
-  parseSnapshot,
-  serializeSnapshot,
-  type AppSnapshot,
-} from '../tauri/appExport';
-import { useAppStore } from '../../store/appStore';
-import { tauriMock } from '../../test/setup';
+import { afterEach, describe, expect, it } from 'vitest';
+import { vi } from 'vitest';
 
-describe('appExport 拆分备份', () => {
-  afterEach(() => {
-    // 复位图状态, 避免跨用例污染
-    useAppStore.setState({ rfNodes: [], rfEdges: [] } as never);
-  });
-
-  it('collectPartialSnapshot 仅包含所选分区字段', () => {
-    const snap = collectPartialSnapshot(['nodeGraph', 'windowLayout']);
-    expect(snap.sections).toEqual(['nodeGraph', 'windowLayout']);
-    expect(snap.rfNodes).toBeDefined();
-    expect(snap.rfEdges).toBeDefined();
-    expect(snap.dockRoot).toBeDefined();
-    expect(snap.dockCards).toBeDefined();
-    expect(snap.sidebarDock).toBeDefined();
-    // 未选分区应为 undefined
-    expect(snap.settings).toBeUndefined();
-    expect(snap.widgets).toBeUndefined();
-    expect(snap.controlTabs).toBeUndefined();
-    expect(snap.dataTabs).toBeUndefined();
-  });
-
-  it('serialize + parse 往返保留分区标记', () => {
-    // 预置一对全局节点, transportProtocol 分区才有内容
-    useAppStore.setState({
-      rfNodes: [
-        {
-          id: 'transport-1',
-          type: 'transport',
-          position: { x: 0, y: 0 },
-          data: {
-            global: true,
-            config: { kind: 'Serial', params: { port_name: '', baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', flow_control: 'none' } },
-            label: 'Serial',
-          },
-        },
-        {
-          id: 'protocol-1',
-          type: 'protocol',
-          position: { x: 200, y: 0 },
-          data: { global: true, config: { kind: 'JustFloat', channels: 4 }, convertTo: null, channels: 4, label: 'JustFloat' },
-        },
-      ],
-      rfEdges: [
-        { id: 'e-tp', source: 'transport-1', sourceHandle: 'rx', target: 'protocol-1', targetHandle: 'in' },
-      ],
-    } as never);
-    const snap = collectPartialSnapshot(['settings', 'transportProtocol']);
-    const parsed = parseSnapshot(serializeSnapshot(snap));
-    expect(parsed.version).toBe(3);
-    expect(detectPresentSections(parsed)).toEqual(['settings', 'transportProtocol']);
-  });
-
-  it('parseSnapshot 拒绝非法 JSON 与不支持版本', () => {
-    expect(() => parseSnapshot('{oops')).toThrow();
-    expect(() => parseSnapshot(JSON.stringify({ version: 99, rfNodes: [] }))).toThrow();
-    expect(() => parseSnapshot(JSON.stringify({ version: 3 }))).toThrow();
-  });
-
-  it('parseSnapshot 明确拒绝 v1/v2 旧版备份 (不再自动迁移)', () => {
-    for (const version of [1, 2]) {
-      expect(() => parseSnapshot(JSON.stringify({ version, rfNodes: [] })))
-        .toThrow(/版本过旧/);
-    }
-  });
-
-  it('v3 快照往返保留内容', () => {
-    const snap: AppSnapshot = {
-      version: 3,
-      exportedAt: '',
-      rfNodes: [
-        { id: 'transport-1', type: 'transport', position: { x: 0, y: 0 }, data: { global: true, config: { kind: 'Serial', params: { port_name: '', baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', flow_control: 'none' } }, label: 'Serial' } },
-      ],
-      rfEdges: [],
-    };
-    const parsed = parseSnapshot(serializeSnapshot(snap));
-    expect(parsed.version).toBe(3);
-    expect(parsed.rfNodes?.length).toBe(1);
-    expect(parsed.rfEdges?.length).toBe(0);
-  });
-
-  it('detectPresentSections 正确识别含有的分区', () => {
-    const snap: AppSnapshot = {
-      version: 3,
-      exportedAt: '',
-      rfNodes: [
-        { id: 'transport-1', type: 'transport', position: { x: 0, y: 0 }, data: { global: true, config: { kind: 'Serial', params: { port_name: '', baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', flow_control: 'none' } }, label: 'Serial' } },
-      ],
-      rfEdges: [],
-    };
-    expect(detectPresentSections(snap)).toEqual(['transportProtocol']);
+vi.hoisted(() => {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => void values.set(key, value),
+      removeItem: (key: string) => void values.delete(key),
+      clear: () => values.clear(),
+      key: (index: number) => [...values.keys()][index] ?? null,
+      get length() { return values.size; },
+    },
   });
 });
+import { applySnapshot, collectPartialSnapshot, detectPresentSections, parseSnapshot, serializeSnapshot, type AppSnapshot } from '../tauri/appExport';
+import { useAppStore } from '../../store/appStore';
+import { tauriMock } from '../../test/setup';
+import { deviceDocument, protocolDocument } from '../../test/nodeDocuments';
 
-describe('applySnapshot 后端图清理', () => {
-  afterEach(() => {
-    useAppStore.setState({
-      controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
-      activeControlTabId: 'default',
-      rfNodes: [],
-      rfEdges: [],
-    } as never);
+function snapshot(): AppSnapshot {
+  return {
+    version: 4, exportedAt: '', sections: ['workspace'],
+    workspace: {
+      tabs: [{ id: 'default', name: 'Tab 1' }],
+      graphs: [{ tab_id: 'default', documents: [deviceDocument(), protocolDocument()],
+        edges: [{ id: 'wire', source: 'device', source_handle: 'rx', target: 'parser', target_handle: 'in' }] }],
+      dataTabs: [], activeDataTabId: '', activeControlTabId: 'default', rawDataViewPrefs: {},
+    },
+  };
+}
+
+describe('atomic workspace export', () => {
+  afterEach(() => useAppStore.setState({ rfNodes: [], rfEdges: [] } as never));
+
+  it('exports the workspace as one indivisible document section', () => {
+    const part = collectPartialSnapshot(['workspace', 'windowLayout']);
+    expect(part.sections).toEqual(['workspace', 'windowLayout']);
+    expect(part.workspace).toBeDefined();
+    expect(part.settings).toBeUndefined();
+    expect(part.dockRoot).toBeDefined();
   });
 
-  it('替换 controlTabs 后对消失的 tab 调 remove_tab_graph (在存活 tab sync 之后)', async () => {
-    tauriMock.invoke.mockClear();
-    useAppStore.setState({
-      controlTabs: [
-        { id: 'default', name: 'Tab 1', widgets: [] },
-        { id: 'tab-old', name: 'Old', widgets: [] },
-      ],
-      activeControlTabId: 'default',
-      rfNodes: [],
-      rfEdges: [],
-    } as never);
-
-    await applySnapshot({
-      version: 3,
-      exportedAt: '',
-      sections: ['widgetsTabs'],
-      controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
-    });
-
-    await vi.waitFor(() => {
-      expect(tauriMock.invoke).toHaveBeenCalledWith('remove_tab_graph', { tabId: 'tab-old' });
-    });
-    const calls = tauriMock.invoke.mock.calls as unknown as [string, unknown][];
-    const syncIdx = calls.findIndex(
-      ([cmd, args]) => cmd === 'update_tab_graph' && (args as { tabId: string }).tabId === 'default'
-    );
-    const removeIdx = calls.findIndex(([cmd]) => cmd === 'remove_tab_graph');
-    // 先同步存活 tab (全局节点重新托管), 再移除消失的 tab
-    expect(syncIdx).toBeGreaterThanOrEqual(0);
-    expect(removeIdx).toBeGreaterThan(syncIdx);
+  it('round-trips only the new document contract', () => {
+    const parsed = parseSnapshot(serializeSnapshot(snapshot()));
+    expect(parsed.version).toBe(4);
+    expect(parsed.workspace?.graphs[0].documents).toHaveLength(2);
+    expect(detectPresentSections(parsed)).toEqual(['workspace']);
   });
 
-  it('controlTabs 未变化时不调 remove_tab_graph', async () => {
+  it('rejects old, empty, cross-tab and dangling documents', () => {
+    expect(() => parseSnapshot('{oops')).toThrow();
+    expect(() => parseSnapshot(JSON.stringify({ version: 3, rfNodes: [] }))).toThrow(/不支持/);
+    expect(() => parseSnapshot(JSON.stringify({ version: 4 }))).toThrow(/为空/);
+    const invalid = snapshot();
+    invalid.workspace!.graphs[0].documents[0].tabId = 'elsewhere';
+    expect(() => parseSnapshot(serializeSnapshot(invalid))).toThrow(/页签/);
+    const dangling = snapshot();
+    dangling.workspace!.graphs[0].edges[0].target = 'missing';
+    expect(() => parseSnapshot(serializeSnapshot(dangling))).toThrow(/悬空/);
+  });
+
+  it('restore closes devices, replaces documents and never reconnects', async () => {
     tauriMock.invoke.mockClear();
     useAppStore.setState({
-      controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
-      activeControlTabId: 'default',
-      rfNodes: [],
+      controlTabs: [{ id: 'old', name: 'Old' }], activeControlTabId: 'old',
+      rfNodes: [{ id: 'old-device', type: 'acquisition', position: { x: 0, y: 0 }, data: { tabId: 'old' } }],
       rfEdges: [],
     } as never);
+    await applySnapshot(snapshot(), { sections: ['workspace'] });
+    expect(tauriMock.invoke).toHaveBeenCalledWith('close_transport', { nodeId: 'old-device' });
+    expect(tauriMock.invoke).toHaveBeenCalledWith('remove_tab_graph', { tabId: 'old' });
+    expect(tauriMock.invoke).not.toHaveBeenCalledWith('open_acquisition_endpoint', expect.anything());
+    expect(useAppStore.getState().rfNodes.map(node => node.id)).toEqual(['device', 'parser']);
+  });
 
-    await applySnapshot({
-      version: 3,
-      exportedAt: '',
-      sections: ['widgetsTabs'],
-      controlTabs: [{ id: 'default', name: 'Tab 1', widgets: [] }],
-    });
-
-    await vi.waitFor(() => {
-      expect(tauriMock.invoke).toHaveBeenCalledWith('update_tab_graph', expect.anything());
-    });
-    const calls = tauriMock.invoke.mock.calls as unknown as [string, unknown][];
-    expect(calls.some(([cmd]) => cmd === 'remove_tab_graph')).toBe(false);
+  it('does not remove a retained tab', async () => {
+    tauriMock.invoke.mockClear();
+    useAppStore.setState({ controlTabs: [{ id: 'default', name: 'Tab 1' }] } as never);
+    await applySnapshot(snapshot(), { sections: ['workspace'] });
+    expect((tauriMock.invoke.mock.calls as unknown as [string, unknown][]).some(([command]) => command === 'remove_tab_graph')).toBe(false);
   });
 });

@@ -5,12 +5,13 @@
 //! `port_domain` 只是表查找 + 动态端口回落，不再按 handle 字面量逐个匹配。
 
 use crate::kind::NodeKind;
+use data_model::device::{DevicePortDirection, DevicePortDomain};
 
 // ============ 端口 handle 命名约定 ============
 
-/// Transport 节点的字节输出口（RX 字节流出口）
+/// 字节设备节点的输出口（RX 字节流出口）
 pub const TRANSPORT_RX_HANDLE: &str = "rx";
-/// Transport 节点的字节输入口（TX 字节流入口）
+/// 字节设备节点的输入口（TX 字节流入口）
 pub const TRANSPORT_TX_HANDLE: &str = "tx";
 /// Protocol 节点的字节输入口
 pub const PROTOCOL_IN_HANDLE: &str = "in";
@@ -18,8 +19,6 @@ pub const PROTOCOL_IN_HANDLE: &str = "in";
 pub const PROTOCOL_OUT_HANDLE: &str = "out";
 /// FrameDecoder 节点的字节输入口（新语义：字节来源完全由输入字节边决定）
 pub const FRAME_DECODER_IN_HANDLE: &str = "in";
-/// FrameDecoder 旧版回环字节输入口（保留兼容旧图数据）
-pub const LOOPBACK_IN_HANDLE: &str = "loopbackIn";
 /// widget 节点（CommandSender 等）的命令字节出口
 pub const LOOPBACK_OUT_HANDLE: &str = "loopbackOut";
 /// RawData 控件动态输入端口 id 前缀（`src:<sourceId>:<sourceHandle>`）
@@ -33,6 +32,7 @@ pub const RAW_DATA_PORT_PREFIX: &str = "src:";
 /// 端口域 — 边两端端口域必须一致，否则编译报 DomainMismatch
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PortDomain {
+    Points,
     /// 数值平面（f32 槽位模型）
     F32,
     /// 字节平面（`Vec<u8>`，事件驱动）
@@ -70,13 +70,10 @@ pub struct PortTable {
 }
 
 const NO_PORTS: &[PortSpec] = &[];
+const POINT_PORTS: &[PortSpec] = &[PortSpec::new("points", PortDomain::Points)];
 const RESULT_F32: &[PortSpec] = &[PortSpec::new("result", PortDomain::F32)];
 const RESULT_STRING: &[PortSpec] = &[PortSpec::new("result", PortDomain::String)];
 
-const TRANSPORT_PORTS: PortTable = PortTable {
-    inputs: &[PortSpec::new(TRANSPORT_TX_HANDLE, PortDomain::Bytes)],
-    outputs: &[PortSpec::new(TRANSPORT_RX_HANDLE, PortDomain::Bytes)],
-};
 const PROTOCOL_PORTS: PortTable = PortTable {
     inputs: &[PortSpec::new(PROTOCOL_IN_HANDLE, PortDomain::Bytes)],
     outputs: &[PortSpec::new(PROTOCOL_OUT_HANDLE, PortDomain::Bytes)],
@@ -109,10 +106,7 @@ const IFFT_PORTS: PortTable = PortTable {
 };
 /// FrameDecoder 输出口由 blocks 派生（回落 F32）；字节输入口固定
 const FRAME_DECODER_PORTS: PortTable = PortTable {
-    inputs: &[
-        PortSpec::new(FRAME_DECODER_IN_HANDLE, PortDomain::Bytes),
-        PortSpec::new(LOOPBACK_IN_HANDLE, PortDomain::Bytes),
-    ],
+    inputs: &[PortSpec::new(FRAME_DECODER_IN_HANDLE, PortDomain::Bytes)],
     outputs: NO_PORTS,
 };
 /// Sink 展示控件：Spectrum 控件经 "spectrum" 口消费频谱平面；Command 另有
@@ -152,7 +146,16 @@ const TEXT_DISPLAY_PORTS: PortTable = PortTable {
 /// 节点固定端口表 — 域分类与端口枚举（`graph_ops::derived`）共用本表
 pub const fn port_table(kind: &NodeKind) -> PortTable {
     match kind {
-        NodeKind::Transport { .. } => TRANSPORT_PORTS,
+        // Device ports are capability-derived and therefore never represented
+        // by a static fallback table. `port_domain` handles them explicitly.
+        NodeKind::Acquisition { .. } => PortTable {
+            inputs: NO_PORTS,
+            outputs: NO_PORTS,
+        },
+        NodeKind::PointSelector { .. } => PortTable {
+            inputs: POINT_PORTS,
+            outputs: NO_PORTS,
+        },
         NodeKind::Protocol { .. } => PROTOCOL_PORTS,
         NodeKind::ProtocolSource { .. } => PROTOCOL_SOURCE_PORTS,
         NodeKind::Input => INPUT_PORTS,
@@ -163,7 +166,7 @@ pub const fn port_table(kind: &NodeKind) -> PortTable {
                 PortDomain::F32 => RESULT_F32,
                 PortDomain::String => RESULT_STRING,
                 // StrOp 输出域仅 F32/String（见 output_domain_for）
-                PortDomain::Bytes | PortDomain::Spectrum => RESULT_F32,
+                PortDomain::Bytes | PortDomain::Spectrum | PortDomain::Points => RESULT_F32,
             },
         },
         NodeKind::Custom { .. } => CUSTOM_PORTS,
@@ -182,6 +185,25 @@ pub const fn port_table(kind: &NodeKind) -> PortTable {
 /// 查询节点某个端口的域 — 端口表查找；表外动态端口回落 F32
 /// （方向仅用于区分输入/输出子表；动态端口清单见 [`PortTable`] 文档）
 pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain {
+    if let NodeKind::Acquisition { ports, .. } = kind {
+        return ports
+            .iter()
+            .find(|port| {
+                port.id == handle
+                    && (port.direction == DevicePortDirection::Bidirectional
+                        || port.direction
+                            == if is_output {
+                                DevicePortDirection::Output
+                            } else {
+                                DevicePortDirection::Input
+                            })
+            })
+            .map_or(PortDomain::Points, |port| match port.domain {
+                DevicePortDomain::Bytes => PortDomain::Bytes,
+                DevicePortDomain::Points => PortDomain::Points,
+                DevicePortDomain::Events | DevicePortDomain::Numeric => PortDomain::F32,
+            });
+    }
     let table = port_table(kind);
     let ports = if is_output {
         table.outputs
@@ -197,15 +219,42 @@ pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data_model::config::TestDataConfig;
+    use data_model::device::{
+        DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
+        EndpointSpec,
+    };
+    use serde_json::json;
 
     use crate::kind::NodeKind;
     use crate::math_op::MathOp;
     use crate::str_op::{StrNumParams, StrOp};
 
-    fn transport_test_data() -> NodeKind {
-        NodeKind::Transport {
-            config: data_model::config::TransportConfig::TestData(TestDataConfig::default()),
+    fn device() -> NodeKind {
+        NodeKind::Acquisition {
+            spec: EndpointSpec {
+                id: EndpointId("device".into()),
+                label: "device".into(),
+                enabled: true,
+                capability_endpoint_id: None,
+                driver: DriverPayload {
+                    driver_id: DriverId("serial".into()),
+                    schema_version: 1,
+                    payload: json!({}),
+                },
+                simulation: None,
+            },
+            ports: vec![
+                DevicePort {
+                    id: "rx".into(),
+                    direction: DevicePortDirection::Output,
+                    domain: DevicePortDomain::Bytes,
+                },
+                DevicePort {
+                    id: "tx".into(),
+                    direction: DevicePortDirection::Input,
+                    domain: DevicePortDomain::Bytes,
+                },
+            ],
         }
     }
 
@@ -224,7 +273,6 @@ mod tests {
             enable_frame_count: false,
             enable_last_timestamp: false,
             enable_fps: false,
-            loopback: false,
         }
     }
 
@@ -262,8 +310,8 @@ mod tests {
     }
 
     #[test]
-    fn transport_handles() {
-        let k = transport_test_data();
+    fn device_handles() {
+        let k = device();
         assert_eq!(
             port_domain(&k, TRANSPORT_RX_HANDLE, true),
             PortDomain::Bytes
@@ -292,10 +340,6 @@ mod tests {
         let k = decoder();
         assert_eq!(
             port_domain(&k, FRAME_DECODER_IN_HANDLE, false),
-            PortDomain::Bytes
-        );
-        assert_eq!(
-            port_domain(&k, LOOPBACK_IN_HANDLE, false),
             PortDomain::Bytes
         );
         assert_eq!(port_domain(&k, "value", true), PortDomain::F32);

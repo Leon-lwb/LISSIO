@@ -84,8 +84,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   const sendTargetLabel = sendTargetId
     ? (() => {
         const n = rfNodes.find((n) => n.id === sendTargetId);
-        const cfg = (n?.data as { config?: { kind?: string } } | undefined)?.config;
-        return n ? `${cfg?.kind ?? '?'} (${sendTargetId.slice(-4)})` : null;
+        const spec = (n?.data as { spec?: { label?: string } } | undefined)?.spec;
+        return n ? `${spec?.label ?? '?'} (${sendTargetId.slice(-4)})` : null;
       })()
     : null;
 

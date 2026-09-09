@@ -67,7 +67,7 @@ export function QuickStartPanel() {
   const requestImport = async () => {
     const snap = await readSnapshotFromFile();
     if (!snap) return;
-    const name = snap.controlTabs?.[0]?.name ?? t(lang, 'templateImportName');
+    const name = snap.workspace?.tabs[0]?.name ?? t(lang, 'templateImportName');
     await chooseAndApply(snap, name);
   };
 

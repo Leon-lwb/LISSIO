@@ -7,9 +7,12 @@ name = "acquisition"
 version = "0.1.2"
 dependencies = [
  "async-trait",
+ "data-model",
+ "error",
  "flow",
  "parking_lot",
  "points",
+ "schema_types",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -114,6 +117,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 name = "app"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "buffer_graph",
  "bus",
  "can",
@@ -124,11 +128,13 @@ dependencies = [
  "events",
  "filter",
  "gpu",
+ "kind",
  "log",
  "logic",
  "measurement",
  "parking_lot",
  "pipeline",
+ "points",
  "raw-data",
  "recording",
  "rustc-hash 2.1.3",
@@ -530,6 +536,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 name = "automotive"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "can",
  "data-model",
@@ -546,6 +553,7 @@ dependencies = [
 name = "automotive_diag"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "data-model",
  "libautomotive",
 ]
@@ -554,6 +562,7 @@ dependencies = [
 name = "automotive_isotp"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "can",
  "data-model",
@@ -868,6 +877,7 @@ dependencies = [
 name = "can-transport"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "can",
  "data-model",
@@ -875,6 +885,7 @@ dependencies = [
  "log",
  "nusb",
  "schema_types",
+ "serde_json",
  "serial",
  "thiserror 1.0.69",
  "tokio",
@@ -2604,6 +2615,7 @@ dependencies = [
 name = "graph_ops"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "app",
  "buffer_graph",
  "criterion",
@@ -2611,13 +2623,16 @@ dependencies = [
  "error",
  "evaluator",
  "events",
+ "flow",
  "graph-testkit",
+ "kind",
  "log",
  "parking_lot",
  "pipeline",
  "recording",
  "schema_types",
  "serde",
+ "serde_json",
  "tauri",
  "tokio",
 ]
@@ -2787,11 +2802,13 @@ name = "hir"
 version = "0.1.2"
 dependencies = [
  "buffer_graph",
+ "data-model",
  "error",
  "graph-testkit",
  "kind",
  "petgraph",
  "rustc-hash 2.1.3",
+ "serde_json",
 ]
 
 [[package]]
@@ -3623,8 +3640,10 @@ dependencies = [
  "error",
  "evaluator",
  "events",
+ "graph-testkit",
  "graph_ops",
  "keyring",
+ "kind",
  "llm",
  "log",
  "logic",
@@ -3636,6 +3655,7 @@ dependencies = [
  "parking_lot",
  "petgraph",
  "pipeline",
+ "points",
  "recording",
  "reqwest",
  "schema_types",
@@ -3817,6 +3837,7 @@ dependencies = [
 name = "mcp-server"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "app",
  "async-trait",
  "axum",
@@ -3825,6 +3846,7 @@ dependencies = [
  "data-model",
  "error",
  "graph_ops",
+ "kind",
  "log",
  "logic",
  "parking_lot",
@@ -3927,7 +3949,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4b18443e9c262bfe8fa82f51666e2642c53393f7e5c27b3e1aeab922cff5b9d8"
 dependencies = [
  "libc",
+ "log",
  "wasi",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "mio-serial"
+version = "5.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d4ba3f20276f21b7cad3f1b54c97489cf096a3894fd627cc6951cb3abdd4c60"
+dependencies = [
+ "log",
+ "mio",
+ "nix 0.31.3",
+ "serialport",
  "windows-sys 0.61.2",
 ]
 
@@ -3937,13 +3973,19 @@ version = "0.1.2"
 dependencies = [
  "acquisition",
  "async-trait",
+ "criterion",
+ "data-model",
  "flow",
+ "libc",
+ "parking_lot",
  "points",
  "serde",
  "serde_json",
+ "serial",
  "thiserror 1.0.69",
  "tokio",
  "tokio-modbus",
+ "tokio-serial",
 ]
 
 [[package]]
@@ -4051,6 +4093,7 @@ dependencies = [
 name = "network"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "data-model",
  "error",
@@ -4648,6 +4691,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 name = "pipeline"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "app",
  "buffer_graph",
  "bus",
@@ -4667,6 +4711,7 @@ dependencies = [
  "logic_decoder",
  "lower",
  "parking_lot",
+ "points",
  "protocol",
  "protocol_can_bridge",
  "protocol_float",
@@ -5971,11 +6016,13 @@ dependencies = [
 name = "serial"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "data-model",
  "error",
  "log",
  "schema_types",
+ "serde_json",
  "serialport",
  "thiserror 1.0.69",
  "tokio",
@@ -7089,6 +7136,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "log",
+ "smallvec",
  "thiserror 2.0.20",
  "tokio",
  "tokio-util",
@@ -7101,6 +7149,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1729aa945f29d91ba541258c8df89027d5792d85a8841fb65e8bf0f4ede4ef61"
 dependencies = [
  "rustls",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-serial"
+version = "5.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dd00f5f8b1e01c3e5afccd9e42ed80c2ad2df6d007877f29f8592c62e69cd116"
+dependencies = [
+ "cfg-if",
+ "futures-core",
+ "futures-sink",
+ "log",
+ "mio-serial",
+ "serialport",
  "tokio",
 ]
 
@@ -7334,6 +7397,7 @@ dependencies = [
 name = "transport"
 version = "0.1.2"
 dependencies = [
+ "acquisition",
  "async-trait",
  "can",
  "data-model",
@@ -7343,6 +7407,7 @@ dependencies = [
  "logic",
  "parking_lot",
  "schema_types",
+ "serde_json",
  "tokio",
 ]
 

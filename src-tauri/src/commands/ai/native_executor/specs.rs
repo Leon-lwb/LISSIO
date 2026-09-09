@@ -26,8 +26,8 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
     vec![
         // ---- 后端直连: 设备交互 ----
         spec(
-            "list_transports",
-            "列出全部传输节点 (串口/TCP/UDP/CAN 等) 及连接状态 [{node_id, state}]",
+            "list_devices",
+            "列出全部已打开设备会话及连接状态 [{node_id, state}]",
             json!({}),
             &[],
         ),
@@ -59,7 +59,7 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
             "send_can_frame",
             "发送 CAN 帧 (经 CAN 协议节点 encode_can 编码)",
             json!({
-                "node_id": {"type": "string", "description": "目标 Transport 节点 id"},
+                "node_id": {"type": "string", "description": "目标设备节点 id"},
                 "protocol_node": {"type": "string", "description": "编码用 Protocol 节点 id, 缺省自动溯源"},
                 "frame": {
                     "type": "object",
@@ -168,17 +168,17 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
         // ---- 前端托管: 节点编辑与 UI 操作 ----
         spec(
             "get_workspace",
-            "读取画布全量状态: tabs、活跃 tab、全部 widget (id/kind/位置/配置/端口表)、全局 transport/protocol 节点 (id/配置/端口表)、全部连线。编辑节点前必读; 连线前对照各节点 ports 的 domain (同域才可连)",
+            "读取统一工作区文档: 活跃 tab，以及每个 tab 的 documents 与 edges。documents 使用 id/tabId/label/layout/kind/config/attributes 公共节点契约；运行时派生端口单独返回",
             json!({}),
             &[],
         ),
         spec(
             "add_node",
-            "添加节点: transport (传输) / protocol (协议) / widget (控件)。返回新节点 id",
+            "向指定 tab 添加 device / protocol / point-selector / widget 节点。返回新节点 id",
             json!({
-                "type": {"type": "string", "enum": ["transport", "protocol", "widget"], "description": "节点类别"},
-                "kind": {"type": "string", "description": "类型: transport=Serial/Udp/TcpClient/TcpServer/TestData/Slcan/CandleLight; protocol=JustFloat/FireWater/RawData/Slcan/CandleLight/LogicDecode; widget=Knob/Slider/Button/Waveform/Math/FrameDecoder/..."},
-                "tab_id": {"type": "string", "description": "widget 归属 tab, 缺省当前活跃 tab"},
+                "type": {"type": "string", "enum": ["device", "protocol", "point-selector", "widget"], "description": "节点类别"},
+                "kind": {"type": "string", "description": "device 使用能力目录 adapter id；protocol=JustFloat/FireWater/RawData/Slcan/CandleLight/LogicDecode；widget=Knob/Slider/Button/Waveform/Math/FrameDecoder/...；point-selector 可填任意非空占位值"},
+                "tab_id": {"type": "string", "description": "节点归属 tab, 缺省当前活跃 tab"},
                 "config": {"type": "object", "description": "配置 (可选, 与默认配置深合并)"},
                 "position": {"type": "object", "description": "画布位置 {x, y}, 缺省自动排布", "properties": {"x": {"type": "number"}, "y": {"type": "number"}}}
             }),
@@ -186,7 +186,7 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
         ),
         spec(
             "update_node_config",
-            "更新节点配置 (widget 为 params 深合并; transport/protocol: kind 可变 — kind 变化时配置整体替换, 其余字段深合并/重建)",
+            "更新节点业务配置；device 更新驱动 payload，widget 更新 params，protocol 更新解析配置",
             json!({
                 "node_id": {"type": "string", "description": "目标节点 id"},
                 "config": {"type": "object", "description": "新配置 (部分或完整)"}
@@ -195,7 +195,7 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
         ),
         spec(
             "remove_node",
-            "删除节点 (widget 或全局 transport/protocol), 自动清理其连线并关闭连接",
+            "删除页签内节点，自动清理其连线；设备节点会关闭会话",
             json!({"node_id": {"type": "string", "description": "目标节点 id"}}),
             &["node_id"],
         ),
@@ -243,15 +243,15 @@ pub fn native_tool_specs() -> Vec<ToolSpecDto> {
             &["tab_id"],
         ),
         spec(
-            "connect_transport",
-            "打开传输连接 (串口/TCP/UDP/CAN/TestData)。连接后即可收发数据",
-            json!({"node_id": {"type": "string", "description": "传输节点 id"}}),
+            "connect_device",
+            "打开设备节点会话；带测试属性时启动模拟源且不访问真实硬件",
+            json!({"node_id": {"type": "string", "description": "设备节点 id"}}),
             &["node_id"],
         ),
         spec(
-            "disconnect_transport",
-            "关闭传输连接",
-            json!({"node_id": {"type": "string", "description": "传输节点 id"}}),
+            "disconnect_device",
+            "关闭设备节点会话",
+            json!({"node_id": {"type": "string", "description": "设备节点 id"}}),
             &["node_id"],
         ),
         spec(
@@ -278,15 +278,15 @@ pub(super) const FRONTEND_TOOLS: &[&str] = &[
     "move_node",
     "create_tab",
     "set_active_tab",
-    "connect_transport",
-    "disconnect_transport",
+    "connect_device",
+    "disconnect_device",
     "list_templates",
     "apply_template",
 ];
 
 /// 后端直连工具名集合 (与 `call_backend` 的 match 分支一一对应)。
 pub(super) const BACKEND_TOOLS: &[&str] = &[
-    "list_transports",
+    "list_devices",
     "list_serial_ports",
     "send_bytes",
     "send_string",

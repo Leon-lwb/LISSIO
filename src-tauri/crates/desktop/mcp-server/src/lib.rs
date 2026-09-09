@@ -5,7 +5,7 @@
 //! 节点图编辑、波形读取等工具,实现 "AI 控制仪器"。
 //!
 //! 复用现有能力路径:
-//! - 发送走 `TransportManager` (与 `send_raw` 命令同路径)
+//! - 发送走 `AcquisitionRuntime` (与 `send_raw` 命令同路径)
 //! - 图编辑复用 [`graph_ops::apply_tab_graph`] (解耦 Tauri State;带 `AppHandle`
 //!   时 emit `graph:derived`,前端界面实时同步)
 //! - 波形读取走 `DataPlaneState::buffer_for` (与 `get_recent_waveform` 同路径)

@@ -36,13 +36,13 @@ pub(super) fn lower_str(
                 num_inputs.push(ctx.f32_in(&node.id, spec.handle));
                 num_defaults.push(str_num_default(num, spec.handle));
             }
-            PortDomain::Bytes | PortDomain::Spectrum => {}
+            PortDomain::Bytes | PortDomain::Spectrum | PortDomain::Points => {}
         }
     }
     let (text_out, num_out) = match op.output_domain() {
         PortDomain::String => (Some(ctx.str_slots.alloc(&node.id, "result")), None),
         PortDomain::F32 => (None, Some(ctx.f32_slots.alloc(&node.id, "result"))),
-        PortDomain::Bytes | PortDomain::Spectrum => (None, None),
+        PortDomain::Bytes | PortDomain::Spectrum | PortDomain::Points => (None, None),
     };
     ctx.push_op(CompiledOp::Str {
         op,

@@ -6,28 +6,25 @@ the app UI so the canvas updates live and edits enter undo history).
 
 ## Read Current State (read before write)
 
-- get_workspace: full canvas JSON — tabs, active tab, widgets (id/kind/
-  position/config/port table), global transport/protocol nodes (id/config/
-  port table), all edges. **Required reading before any edit**; each node's
-  `ports` field lists inputs/outputs with domain annotations (same source as
-  the canvas) — use it to verify port names and types before wiring.
-- list_transports / list_serial_ports: connection state and available ports.
+- get_workspace: the active tab plus each tab's `documents + edges`. Documents
+  share `id/tabId/label/layout/kind/config/attributes`; `derived_ports` contains
+  runtime port contracts. **Required reading before any edit**.
+- list_devices / list_serial_ports: open device sessions and available ports.
 - list_data_sources / get_buffer_info: waveform sources and sizes.
 - list_templates: available workspace template ids.
 
 ## Node Editing (frontend-hosted)
 
-- add_node {type: transport|protocol|widget, kind, tab_id?, config?, position?}
-  → returns node_id. Widgets without tab_id go to the active tab; partial
-  config is deep-merged into defaults.
+- add_node {type: device|protocol|point-selector|widget, kind, tab_id?,
+  endpoint_id?, config?, position?} → returns node_id. `device.kind` is an
+  adapter ID from the capability catalog; omitted tab_id means the active tab.
 - update_node_config {node_id, config}: update config (widgets: params
-  deep-merge; transport/protocol: kind is mutable — changing kind replaces
-  the config wholesale, other fields merge).
-- remove_node {node_id}: delete a widget or global node (cascades edges and
-  closes connections).
+  deep-merge; device updates driver payload; protocol updates parser config).
+- remove_node {node_id}: delete any node in its tab, cascade edges, and close a
+  device session when applicable.
 - move_node {node_id, x, y}: canvas position (visual only).
 - create_tab {name?} / set_active_tab {tab_id}.
-- connect_transport / disconnect_transport {node_id}.
+- connect_device / disconnect_device {node_id}.
 - apply_template {template_id}.
 
 ## Wiring (backend-authoritative, compile-checked)
@@ -66,3 +63,5 @@ the app UI so the canvas updates live and edits enter undo history).
 - Tool results are JSON strings; node ids are primary keys — never invent
   them, always source from read tools.
 - Edits enter the app's undo history; the user can Ctrl+Z your changes.
+- Test Data is a unique device attribute, not a node. Apply it from the
+  Attributes palette to a selected device; reconnect to start simulation.

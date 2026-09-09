@@ -23,16 +23,16 @@ import type { WidgetConfig } from '../../../types';
 
 const TRANSPORT_NODE: Node = {
   id: 'transport-1',
-  type: 'transport',
+  type: 'acquisition',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'Serial', params: {} }, label: 'Serial' },
+  data: { tabId: 'default', label: 'Serial', spec: { label: 'Serial' } },
 };
 
 const PROTOCOL_NODE: Node = {
   id: 'protocol-1',
   type: 'protocol',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'RawData' }, convertTo: null, label: 'RawData' },
+  data: { tabId: 'default', config: { kind: 'RawData' }, convertTo: null, label: 'RawData' },
 };
 
 const DECODER_WIDGET = {

@@ -1,148 +1,86 @@
+use crate::descriptor::{capability_set, point_descriptor};
+use crate::read::{read_points, reconnect_delay};
 use crate::{
-    decode_registers, encode_registers, plan_reads, ModbusArea, ModbusConfig, ModbusPoint,
-    DRIVER_ID, SCHEMA_VERSION,
+    ModbusConfig, ModbusPoint, ModbusRtuConfig, ReconnectConfig, SerialDataBits, SerialFlowControl,
+    SerialParity, SerialStopBits,
 };
 use acquisition::{
-    AcquisitionError, AcquisitionResult, CapabilitySet, DriverContext, DriverId, DriverManifest,
-    DriverPayload, DriverSchema, EffectiveSubscription, ReadCapability, SessionCapabilities,
-    SourceFactory, SourceSession, SubscribeCapability, SubscriptionIntent, ValidatedConfig,
-    WriteCapability,
+    AcquisitionError, AcquisitionResult, DriverContext, EffectiveSubscription, ReadCapability,
+    SessionCapabilities, SourceSession, SubscribeCapability, SubscriptionIntent, WriteCapability,
 };
 use async_trait::async_trait;
-use flow::{Direction, FlowEnvelope, PayloadKind, SourceId};
-use points::{
-    quality_flags, AccessLevel, DeliveryClass, NativeAddress, NativeStatus, PointBatch,
-    PointDataType, PointDescriptor, PointId, PointQuality, PointSample, PointValue, ReadRequest,
-    ReadResult, WriteItemResult, WriteRequest, WriteResult,
-};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use flow::SourceId;
+use points::{PointDescriptor, PointId, ReadRequest, ReadResult};
+use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::{watch, Mutex};
-use tokio_modbus::client::{Context, Reader, Writer};
+use tokio_modbus::client::Context;
 use tokio_modbus::Slave;
+use tokio_serial::SerialPortBuilderExt;
 
-pub struct ModbusFactory {
-    manifest: DriverManifest,
+#[derive(Clone)]
+pub enum RuntimeConfig {
+    Tcp(ModbusConfig),
+    Rtu(ModbusRtuConfig),
 }
 
-impl Default for ModbusFactory {
-    fn default() -> Self {
-        Self {
-            manifest: DriverManifest {
-                id: DriverId(DRIVER_ID.into()),
-                display_name: "Modbus TCP client".into(),
-                payload_kinds: BTreeSet::from([PayloadKind::Points]),
-                capabilities: capability_set(),
-            },
-        }
-    }
-}
-
-#[async_trait]
-impl SourceFactory for ModbusFactory {
-    fn manifest(&self) -> &DriverManifest {
-        &self.manifest
-    }
-
-    fn config_schema(&self) -> DriverSchema {
-        DriverSchema {
-            schema_version: SCHEMA_VERSION,
-            json_schema: schema(),
-            ui_hints: serde_json::json!({"host": {"order": 0}, "port": {"order": 1}}),
+impl RuntimeConfig {
+    pub(crate) const fn timeout_ms(&self) -> u64 {
+        match self {
+            Self::Tcp(config) => config.timeout_ms,
+            Self::Rtu(config) => config.timeout_ms,
         }
     }
 
-    fn migrate(&self, input: DriverPayload) -> AcquisitionResult<DriverPayload> {
-        if input.driver_id.0 != DRIVER_ID {
-            return Err(AcquisitionError::DriverMismatch {
-                expected: DRIVER_ID.into(),
-                actual: input.driver_id.0,
-            });
+    pub(crate) const fn reconnect(&self) -> &ReconnectConfig {
+        match self {
+            Self::Tcp(config) => &config.reconnect,
+            Self::Rtu(config) => &config.reconnect,
         }
-        if input.schema_version != SCHEMA_VERSION {
-            return Err(AcquisitionError::InvalidConfig(format!(
-                "unsupported Modbus schema version {}",
-                input.schema_version
-            )));
-        }
-        Ok(input)
     }
 
-    fn validate(&self, input: &DriverPayload) -> AcquisitionResult<ValidatedConfig> {
-        if input.driver_id.0 != DRIVER_ID {
-            return Err(AcquisitionError::DriverMismatch {
-                expected: DRIVER_ID.into(),
-                actual: input.driver_id.0.clone(),
-            });
+    fn points(&self) -> &[ModbusPoint] {
+        match self {
+            Self::Tcp(config) => &config.points,
+            Self::Rtu(config) => &config.points,
         }
-        let config: ModbusConfig = serde_json::from_value(input.payload.clone())
-            .map_err(|error| AcquisitionError::InvalidConfig(error.to_string()))?;
-        config
-            .validate()
-            .map_err(|error| AcquisitionError::InvalidConfig(error.to_string()))?;
-        Ok(ValidatedConfig::new(
-            DriverId(DRIVER_ID.into()),
-            move |context| {
-                Box::pin(async move {
-                    let session = ModbusSession::connect(config, context).await?;
-                    Ok(Box::new(session) as Box<dyn SourceSession>)
-                })
-            },
-        ))
     }
 }
 
-fn capability_set() -> CapabilitySet {
-    CapabilitySet {
-        read: true,
-        subscribe: true,
-        write: true,
-        ..CapabilitySet::default()
-    }
+pub fn descriptors(points: &[ModbusPoint]) -> Vec<PointDescriptor> {
+    points.iter().map(point_descriptor).collect()
 }
 
-fn schema() -> serde_json::Value {
-    serde_json::json!({
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "type": "object",
-        "required": ["host", "points"],
-        "properties": {
-            "host": {"type": "string", "minLength": 1},
-            "port": {"type": "integer", "minimum": 1, "maximum": 65535, "default": 502},
-            "unitId": {"type": "integer", "minimum": 0, "maximum": 255, "default": 1},
-            "timeoutMs": {"type": "integer", "minimum": 1, "default": 2000},
-            "points": {"type": "array", "items": {"type": "object"}}
-        }
-    })
-}
-
-struct Runtime {
-    config: ModbusConfig,
-    points: HashMap<PointId, ModbusPoint>,
-    context: Mutex<Option<Context>>,
-    source_id: SourceId,
-    sequence: AtomicU64,
-    closed: watch::Sender<bool>,
+pub struct Runtime {
+    pub(crate) config: RuntimeConfig,
+    pub(crate) points: HashMap<PointId, ModbusPoint>,
+    pub(crate) context: Mutex<Option<Context>>,
+    pub(crate) source_id: SourceId,
+    pub(crate) sequence: AtomicU64,
+    pub(crate) connection_epoch: AtomicU64,
+    pub(crate) subscription: AtomicU64,
+    pub(crate) execution: acquisition::ExecutionGate,
+    pub(crate) state: parking_lot::RwLock<acquisition::SourceState>,
+    pub(crate) closed: watch::Sender<bool>,
 }
 
 pub struct ModbusSession {
     runtime: Arc<Runtime>,
     capabilities: SessionCapabilities,
-    epoch: u64,
 }
 
 impl ModbusSession {
-    async fn connect(
-        config: ModbusConfig,
+    pub(crate) async fn connect(
+        config: RuntimeConfig,
         driver_context: DriverContext,
     ) -> AcquisitionResult<Self> {
         let (closed, _) = watch::channel(false);
         let runtime = Arc::new(Runtime {
             points: config
-                .points
+                .points()
                 .iter()
                 .cloned()
                 .map(|point| (point.id.clone(), point))
@@ -150,6 +88,10 @@ impl ModbusSession {
             context: Mutex::new(None),
             source_id: driver_context.source_id,
             sequence: AtomicU64::new(0),
+            connection_epoch: AtomicU64::new(driver_context.connection_epoch.saturating_sub(1)),
+            subscription: AtomicU64::new(0),
+            execution: driver_context.execution,
+            state: parking_lot::RwLock::new(acquisition::SourceState::Connecting),
             closed,
             config,
         });
@@ -166,22 +108,20 @@ impl ModbusSession {
                 server_timestamps: false,
                 idempotent_writes: false,
             },
-            epoch: 1,
         })
-    }
-
-    pub fn descriptors(config: &ModbusConfig) -> Vec<PointDescriptor> {
-        config.points.iter().map(descriptor).collect()
     }
 }
 
 #[async_trait]
 impl SourceSession for ModbusSession {
     fn epoch(&self) -> u64 {
-        self.epoch
+        self.runtime.connection_epoch.load(Ordering::Acquire)
     }
     fn capabilities(&self) -> &SessionCapabilities {
         &self.capabilities
+    }
+    fn state(&self) -> acquisition::SourceState {
+        self.runtime.state.read().clone()
     }
     fn reader(&self) -> Option<&dyn ReadCapability> {
         Some(self)
@@ -205,6 +145,7 @@ impl SourceSession for ModbusSession {
     }
 
     async fn close(&self) -> AcquisitionResult<()> {
+        *self.runtime.state.write() = acquisition::SourceState::Closing;
         let _ = self.runtime.closed.send(true);
         // 先释放 context 锁再 await 断连, 避免 tokio MutexGuard 跨 await 点存活
         let context = self.runtime.context.lock().await.take();
@@ -213,6 +154,7 @@ impl SourceSession for ModbusSession {
                 .await
                 .map_err(|error| AcquisitionError::Driver(error.to_string()))?;
         }
+        *self.runtime.state.write() = acquisition::SourceState::Closed;
         Ok(())
     }
 }
@@ -220,7 +162,7 @@ impl SourceSession for ModbusSession {
 #[async_trait]
 impl ReadCapability for ModbusSession {
     async fn read(&self, request: ReadRequest) -> AcquisitionResult<ReadResult> {
-        read_points(&self.runtime, &request.points, self.epoch).await
+        read_points(&self.runtime, &request.points).await
     }
 }
 
@@ -262,17 +204,51 @@ impl SubscribeCapability for ModbusSession {
         if !accepted.is_empty() {
             let runtime = Arc::clone(&self.runtime);
             let points = accepted.clone();
-            let epoch = self.epoch;
+            let generation = runtime
+                .subscription
+                .fetch_add(1, Ordering::AcqRel)
+                .saturating_add(1);
             tokio::spawn(async move {
                 let mut interval = tokio::time::interval(Duration::from_millis(period));
+                let mut execution = runtime.execution.subscribe();
                 loop {
-                    interval.tick().await;
-                    if *runtime.closed.borrow() {
+                    if *runtime.closed.borrow()
+                        || generation != runtime.subscription.load(Ordering::Acquire)
+                    {
                         break;
                     }
-                    if let Ok(result) = read_points(&runtime, &points, epoch).await {
-                        if sink.send(result.batch).await.is_err() {
-                            break;
+                    let execution_state = *execution.borrow();
+                    match execution_state {
+                        acquisition::AcquisitionRunState::Stopped => break,
+                        acquisition::AcquisitionRunState::Paused => {
+                            if execution.changed().await.is_err() {
+                                break;
+                            }
+                            continue;
+                        }
+                        acquisition::AcquisitionRunState::Running => {}
+                    }
+                    tokio::select! {
+                        _ = interval.tick() => {}
+                        changed = execution.changed() => {
+                            if changed.is_err() { break; }
+                            continue;
+                        }
+                    }
+                    let execution_epoch = runtime.execution.epoch();
+                    if let Ok(result) = read_points(&runtime, &points).await {
+                        if runtime.execution.state() != acquisition::AcquisitionRunState::Running
+                            || runtime.execution.epoch() != execution_epoch
+                        {
+                            continue;
+                        }
+                        tokio::select! {
+                            changed = execution.changed() => {
+                                if changed.is_err() { break; }
+                            }
+                            result = sink.send(result.batch) => {
+                                if result.is_err() { break; }
+                            }
                         }
                     }
                 }
@@ -290,145 +266,20 @@ impl SubscribeCapability for ModbusSession {
 
 #[async_trait]
 impl WriteCapability for ModbusSession {
-    async fn write(&self, request: WriteRequest) -> AcquisitionResult<WriteResult> {
-        if request.deadline_unix_ns <= now_unix_ns() {
-            return Err(AcquisitionError::Timeout);
-        }
-        let mut results = Vec::with_capacity(request.items.len());
-        for item in request.items {
-            let quality = match self.runtime.points.get(&item.point_id) {
-                Some(point) if point.area.writable() => {
-                    write_point(&self.runtime, point, &item.value).await
-                }
-                Some(_) => Err(OperationError::new(
-                    "readOnly",
-                    "Modbus area is read-only",
-                    false,
-                )),
-                None => Err(OperationError::new(
-                    "unknownPoint",
-                    "point is not configured",
-                    false,
-                )),
-            }
-            .map_or_else(error_quality, |()| PointQuality::GOOD);
-            results.push(WriteItemResult {
-                point_id: item.point_id,
-                quality,
-            });
-        }
-        Ok(WriteResult {
-            correlation_id: request.correlation_id,
-            items: results,
-        })
+    async fn write(&self, request: points::WriteRequest) -> AcquisitionResult<points::WriteResult> {
+        crate::write::write_request(&self.runtime, request).await
     }
-}
-
-async fn read_points(
-    runtime: &Arc<Runtime>,
-    requested: &[PointId],
-    epoch: u64,
-) -> AcquisitionResult<ReadResult> {
-    let selected: Vec<&ModbusPoint> = requested
-        .iter()
-        .map(|id| {
-            runtime
-                .points
-                .get(id)
-                .ok_or_else(|| AcquisitionError::InvalidConfig(format!("unknown point: {}", id.0)))
-        })
-        .collect::<AcquisitionResult<_>>()?;
-    let plans = plan_reads(selected.iter().copied())
-        .map_err(|error| AcquisitionError::InvalidConfig(error.to_string()))?;
-    let mut samples = Vec::with_capacity(selected.len());
-    for plan in plans {
-        match read_plan(runtime, plan.area, plan.start, plan.quantity).await {
-            Ok(ReadPayload::Bits(values)) => {
-                for planned in plan.points {
-                    let point = runtime
-                        .points
-                        .get(&planned.point_id)
-                        .expect("validated read plan");
-                    let value = values
-                        .get(usize::from(planned.offset))
-                        .copied()
-                        .map(PointValue::Bool);
-                    samples.push(sample(runtime, point, value, PointQuality::GOOD));
-                }
-            }
-            Ok(ReadPayload::Registers(values)) => {
-                for planned in plan.points {
-                    let point = runtime
-                        .points
-                        .get(&planned.point_id)
-                        .expect("validated read plan");
-                    let registers = values
-                        .get(usize::from(planned.offset)..)
-                        .unwrap_or_default();
-                    match decode_registers(point, registers) {
-                        Ok(value) => {
-                            samples.push(sample(runtime, point, Some(value), PointQuality::GOOD));
-                        }
-                        Err(error) => samples.push(sample(
-                            runtime,
-                            point,
-                            None,
-                            error_quality(OperationError::new("decode", &error.to_string(), false)),
-                        )),
-                    }
-                }
-            }
-            Err(error) => {
-                for planned in plan.points {
-                    let point = runtime
-                        .points
-                        .get(&planned.point_id)
-                        .expect("validated read plan");
-                    samples.push(sample(runtime, point, None, error_quality(error.clone())));
-                }
-            }
-        }
-    }
-    let by_id: HashMap<_, _> = samples
-        .into_iter()
-        .map(|sample| (sample.key.point_id.clone(), sample))
-        .collect();
-    let samples = requested
-        .iter()
-        .filter_map(|point_id| by_id.get(point_id).cloned())
-        .collect();
-    let sequence = runtime.sequence.fetch_add(1, Ordering::Relaxed);
-    Ok(ReadResult {
-        batch: FlowEnvelope {
-            source_id: runtime.source_id.clone(),
-            connection_epoch: epoch,
-            first_sequence: sequence,
-            last_sequence: sequence,
-            observed_time_unix_ns: now_unix_ns(),
-            direction: Direction::Receive,
-            gap_before: None,
-            payload: PointBatch {
-                delivery: DeliveryClass::State,
-                samples,
-            },
-        },
-    })
-}
-
-enum ReadPayload {
-    Bits(Vec<bool>),
-    Registers(Vec<u16>),
 }
 
 #[derive(Clone)]
-struct OperationError {
-    code: String,
-    detail: String,
-    disconnect: bool,
+pub struct OperationError {
+    pub(crate) code: String,
+    pub(crate) detail: String,
+    pub(crate) disconnect: bool,
 }
 
 impl OperationError {
-    fn new(code: &str, detail: &str, disconnect: bool) -> Self {
+    pub(crate) fn new(code: &str, detail: &str, disconnect: bool) -> Self {
         Self {
             code: code.into(),
             detail: detail.into(),
@@ -437,131 +288,7 @@ impl OperationError {
     }
 }
 
-async fn read_plan(
-    runtime: &Arc<Runtime>,
-    area: ModbusArea,
-    start: u16,
-    quantity: u16,
-) -> Result<ReadPayload, OperationError> {
-    let mut attempt = 0_u32;
-    loop {
-        ensure_connected(runtime)
-            .await
-            .map_err(|error| OperationError::new("connect", &error.to_string(), true))?;
-        let timeout = Duration::from_millis(runtime.config.timeout_ms);
-        let result = {
-            let mut guard = runtime.context.lock().await;
-            let context = guard
-                .as_mut()
-                .ok_or_else(|| OperationError::new("closed", "connection unavailable", true))?;
-            tokio::time::timeout(timeout, async {
-                match area {
-                    ModbusArea::Coils => context
-                        .read_coils(start, quantity)
-                        .await
-                        .map(|inner| inner.map(ReadPayload::Bits)),
-                    ModbusArea::DiscreteInputs => context
-                        .read_discrete_inputs(start, quantity)
-                        .await
-                        .map(|inner| inner.map(ReadPayload::Bits)),
-                    ModbusArea::InputRegisters => context
-                        .read_input_registers(start, quantity)
-                        .await
-                        .map(|inner| inner.map(ReadPayload::Registers)),
-                    ModbusArea::HoldingRegisters => context
-                        .read_holding_registers(start, quantity)
-                        .await
-                        .map(|inner| inner.map(ReadPayload::Registers)),
-                }
-            })
-            .await
-        };
-        match normalize(result) {
-            Ok(value) => return Ok(value),
-            Err(error) if !error.disconnect => return Err(error),
-            Err(error) => {
-                runtime.context.lock().await.take();
-                if attempt >= runtime.config.reconnect.max_attempts {
-                    return Err(error);
-                }
-                attempt = attempt.saturating_add(1);
-                tokio::time::sleep(reconnect_delay(&runtime.config, attempt)).await;
-            }
-        }
-    }
-}
-
-async fn write_point(
-    runtime: &Arc<Runtime>,
-    point: &ModbusPoint,
-    value: &PointValue,
-) -> Result<(), OperationError> {
-    let coil = if point.area == ModbusArea::Coils {
-        Some(match value {
-            PointValue::Bool(value) => *value,
-            _ => {
-                return Err(OperationError::new(
-                    "typeMismatch",
-                    "coil writes require a bool",
-                    false,
-                ))
-            }
-        })
-    } else {
-        None
-    };
-    let words = if point.area == ModbusArea::HoldingRegisters {
-        Some(
-            encode_registers(point, value)
-                .map_err(|error| OperationError::new("encode", &error.to_string(), false))?,
-        )
-    } else {
-        None
-    };
-    ensure_connected(runtime)
-        .await
-        .map_err(|error| OperationError::new("connect", &error.to_string(), true))?;
-    let timeout = Duration::from_millis(runtime.config.timeout_ms);
-    let result = {
-        let mut guard = runtime.context.lock().await;
-        let context = guard
-            .as_mut()
-            .ok_or_else(|| OperationError::new("closed", "connection unavailable", true))?;
-        tokio::time::timeout(timeout, async {
-            match point.area {
-                ModbusArea::Coils => {
-                    context
-                        .write_single_coil(point.address, coil.expect("validated coil"))
-                        .await
-                }
-                ModbusArea::HoldingRegisters => {
-                    let words = words.as_ref().expect("validated registers");
-                    if words.len() == 1 {
-                        context.write_single_register(point.address, words[0]).await
-                    } else {
-                        context
-                            .write_multiple_registers(point.address, words.as_slice())
-                            .await
-                    }
-                }
-                ModbusArea::DiscreteInputs | ModbusArea::InputRegisters => {
-                    unreachable!("writable checked before dispatch")
-                }
-            }
-        })
-        .await
-    };
-    normalize(result).inspect_err(|error| {
-        if error.disconnect {
-            let runtime = Arc::clone(runtime);
-            tokio::spawn(async move {
-                runtime.context.lock().await.take();
-            });
-        }
-    })
-}
-
-fn normalize<T>(
+pub fn normalize<T>(
     result: Result<tokio_modbus::Result<T>, tokio::time::error::Elapsed>,
 ) -> Result<T, OperationError> {
     match result {
@@ -580,27 +307,69 @@ fn normalize<T>(
     }
 }
 
-async fn ensure_connected(runtime: &Arc<Runtime>) -> AcquisitionResult<()> {
+pub async fn ensure_connected(runtime: &Arc<Runtime>) -> AcquisitionResult<()> {
+    if *runtime.closed.borrow() {
+        return Err(AcquisitionError::Closed);
+    }
     if runtime.context.lock().await.is_some() {
         return Ok(());
     }
     let mut attempt = 0_u32;
     loop {
-        match connect_context(&runtime.config).await {
+        *runtime.state.write() = acquisition::SourceState::Connecting;
+        let mut closed = runtime.closed.subscribe();
+        let connected = tokio::select! {
+            _ = closed.changed() => return Err(AcquisitionError::Closed),
+            result = connect_context(&runtime.config) => result,
+        };
+        match connected {
             Ok(context) => {
                 *runtime.context.lock().await = Some(context);
+                runtime.sequence.store(0, Ordering::Release);
+                let epoch = runtime.connection_epoch.fetch_add(1, Ordering::AcqRel) + 1;
+                *runtime.state.write() = acquisition::SourceState::Online {
+                    connection_epoch: epoch,
+                };
                 return Ok(());
             }
-            Err(error) if attempt >= runtime.config.reconnect.max_attempts => return Err(error),
-            Err(_) => {
+            Err(error) if attempt >= runtime.config.reconnect().max_attempts => {
+                mark_degraded(runtime, &error.to_string());
+                return Err(error);
+            }
+            Err(error) => {
+                mark_degraded(runtime, &error.to_string());
                 attempt = attempt.saturating_add(1);
-                tokio::time::sleep(reconnect_delay(&runtime.config, attempt)).await;
+                *runtime.state.write() = acquisition::SourceState::Backoff { attempt };
+                let mut closed = runtime.closed.subscribe();
+                tokio::select! {
+                    () = tokio::time::sleep(reconnect_delay(runtime.config.reconnect(), attempt)) => {}
+                    _ = closed.changed() => return Err(AcquisitionError::Closed),
+                }
             }
         }
     }
 }
 
-async fn connect_context(config: &ModbusConfig) -> AcquisitionResult<Context> {
+pub fn mark_degraded(runtime: &Runtime, detail: &str) {
+    *runtime.state.write() = acquisition::SourceState::Degraded {
+        detail: detail.into(),
+    };
+}
+
+pub fn mark_online(runtime: &Runtime) {
+    *runtime.state.write() = acquisition::SourceState::Online {
+        connection_epoch: runtime.connection_epoch.load(Ordering::Acquire),
+    };
+}
+
+async fn connect_context(config: &RuntimeConfig) -> AcquisitionResult<Context> {
+    match config {
+        RuntimeConfig::Tcp(config) => connect_tcp(config).await,
+        RuntimeConfig::Rtu(config) => connect_rtu(config).await,
+    }
+}
+
+async fn connect_tcp(config: &ModbusConfig) -> AcquisitionResult<Context> {
     let timeout = Duration::from_millis(config.timeout_ms);
     let mut addresses = tokio::time::timeout(
         timeout,
@@ -621,86 +390,36 @@ async fn connect_context(config: &ModbusConfig) -> AcquisitionResult<Context> {
     .map_err(|error| AcquisitionError::Driver(error.to_string()))
 }
 
-fn reconnect_delay(config: &ModbusConfig, attempt: u32) -> Duration {
-    let factor = 1_u64
-        .checked_shl(attempt.saturating_sub(1))
-        .unwrap_or(u64::MAX);
-    Duration::from_millis(
-        config
-            .reconnect
-            .initial_delay_ms
-            .saturating_mul(factor)
-            .min(config.reconnect.max_delay_ms),
-    )
+async fn connect_rtu(config: &ModbusRtuConfig) -> AcquisitionResult<Context> {
+    let builder = tokio_serial::new(&config.port_name, config.baud_rate)
+        .data_bits(match config.data_bits {
+            SerialDataBits::Seven => tokio_serial::DataBits::Seven,
+            SerialDataBits::Eight => tokio_serial::DataBits::Eight,
+        })
+        .parity(match config.parity {
+            SerialParity::None => tokio_serial::Parity::None,
+            SerialParity::Odd => tokio_serial::Parity::Odd,
+            SerialParity::Even => tokio_serial::Parity::Even,
+        })
+        .stop_bits(match config.stop_bits {
+            SerialStopBits::One => tokio_serial::StopBits::One,
+            SerialStopBits::Two => tokio_serial::StopBits::Two,
+        })
+        .flow_control(match config.flow_control {
+            SerialFlowControl::None => tokio_serial::FlowControl::None,
+            SerialFlowControl::Software => tokio_serial::FlowControl::Software,
+            SerialFlowControl::Hardware => tokio_serial::FlowControl::Hardware,
+        });
+    let serial = builder
+        .open_native_async()
+        .map_err(|error| AcquisitionError::Driver(error.to_string()))?;
+    Ok(tokio_modbus::client::rtu::attach_slave(
+        serial,
+        Slave(config.unit_id),
+    ))
 }
 
-fn sample(
-    runtime: &Runtime,
-    point: &ModbusPoint,
-    value: Option<PointValue>,
-    quality: PointQuality,
-) -> PointSample {
-    PointSample {
-        key: points::PointKey {
-            source_id: runtime.source_id.clone(),
-            point_id: point.id.clone(),
-        },
-        value,
-        quality,
-        source_time_unix_ns: None,
-        server_time_unix_ns: None,
-        received_time_unix_ns: now_unix_ns(),
-    }
-}
-
-fn error_quality(error: OperationError) -> PointQuality {
-    let flags = if error.disconnect {
-        quality_flags::COMM_FAILURE
-    } else {
-        0
-    };
-    PointQuality::bad(
-        flags,
-        NativeStatus {
-            domain: "modbus".into(),
-            code: error.code,
-            detail: Some(error.detail),
-        },
-    )
-}
-
-fn descriptor(point: &ModbusPoint) -> PointDescriptor {
-    let data_type = match point.data_type {
-        crate::ModbusDataType::Bool => PointDataType::Bool,
-        crate::ModbusDataType::U16 => PointDataType::U16,
-        crate::ModbusDataType::I16 => PointDataType::I16,
-        crate::ModbusDataType::U32 => PointDataType::U32,
-        crate::ModbusDataType::I32 => PointDataType::I32,
-        crate::ModbusDataType::U64 => PointDataType::U64,
-        crate::ModbusDataType::I64 => PointDataType::I64,
-        crate::ModbusDataType::F32 => PointDataType::F32,
-        crate::ModbusDataType::F64 => PointDataType::F64,
-    };
-    PointDescriptor {
-        id: point.id.clone(),
-        path: vec![format!("{:?}", point.area)],
-        name: point.id.0.clone(),
-        data_type,
-        access: if point.area.writable() {
-            AccessLevel::ReadWrite
-        } else {
-            AccessLevel::ReadOnly
-        },
-        engineering_unit: None,
-        semantic: BTreeMap::new(),
-        native_address: NativeAddress {
-            domain: "modbus".into(),
-            value: serde_json::json!({"area": point.area, "address": point.address}),
-        },
-    }
-}
-
-fn now_unix_ns() -> i64 {
+pub fn now_unix_ns() -> i64 {
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_or(0, |duration| duration.as_nanos());

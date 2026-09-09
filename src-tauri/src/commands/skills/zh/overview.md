@@ -4,19 +4,18 @@ Lissio 是一款数据采集与调试上位机 (VOFA+ 的下一代),面向嵌入
 串口 / TCP / UDP / CAN / 逻辑分析仪调试场景。核心能力:设备连接、协议解析、
 波形显示、控件交互面板、CAN 总线分析、逻辑解码。
 
-## 双平面数据架构
+## 类型化数据架构
 
-- **字节平面 (全局)**:Transport (传输) 与 Protocol (协议) 节点组成的事件驱动字节流网络。
-  设备字节从 Transport.rx 流出,进入 Protocol.in 解析;Protocol.out 产出数值通道。
-- **数值平面 (每 tab)**:每个控件页 (tab) 是一张独立编译的节点图 (DAG)。
-  ProtocolSource 引用全局 Protocol 节点的最新帧,输出 ch0..chN 数值通道,
-  供波形、仪表等下游节点消费。求值由后端编译后的 CompiledGraph 执行。
+- **字节设备**暴露类型化 `rx/tx` 端口,连接解析与编码节点。
+- **点位设备**暴露 `points` 端口；点位选择节点按稳定点位 ID 生成具名数值输出，
+  原始值与质量一直保留到显式投影边界。
+- 每个控件页独立编译，设备、解析器和控件都归属该页；跨页签连线直接拒绝。
 
 ## 画布与节点
 
-- **控制页 (tab)**:用户可建多个页签,每页是一张画布,承载若干 widget 节点。
-- **全局节点**:Transport / Protocol 节点不属于任何 tab,渲染在所有画布上。
-  这是字节平面的组成部分。
+- **控制页 (tab)**:用户可建多个页签,每页是一张完整画布,拥有其全部节点。
+- **设备节点**:串口、TCP、UDP、Slcan、CandleLight 与 Modbus 都来自统一能力目录，
+  使用同一会话生命周期。
 - **widget 节点**:输入控件 (Knob/Slider/Button/...)、显示控件 (Waveform/Gauge/...)、
   计算节点 (Math/Filter/FFT/FrameDecoder/Trigger/...) 都以 widget 形式放在某 tab 内。
 - **边**:字节边 (Vec<u8>,Transport→Protocol 等) 与数值边 (f32,控件间)。
@@ -27,7 +26,7 @@ Lissio 是一款数据采集与调试上位机 (VOFA+ 的下一代),面向嵌入
 - 节点图读写:get_workspace 读画布全量状态;add_node / remove_node /
   update_node_config / connect_nodes / disconnect_edge / move_node 增量编辑
   (与手工编辑等效:画布实时刷新,进撤销历史)。
-- 传输:list_serial_ports 查串口;connect_transport / disconnect_transport 连接;
+- 设备:list_devices / list_serial_ports 查询;connect_device / disconnect_device 连接;
   send_bytes / send_string / send_can_frame 发送。
 - 数据读取:get_graph_outputs (全部输出端口最新值)、get_recent_waveform /
   get_waveform_window (波形)、get_can_frames (CAN)、get_logic_data (逻辑解码)、
@@ -36,6 +35,6 @@ Lissio 是一款数据采集与调试上位机 (VOFA+ 的下一代),面向嵌入
 
 ## 数据流示例
 
-TestData (模拟设备) → Protocol(JustFloat) → Waveform:
-连接 Transport 与 Protocol 的字节边 (transport.rx → protocol.in),再连数值边
-(protocol.out → waveform.data),connect_transport 后即可看到波形。
+带“测试数据”属性的串口设备 → Protocol(JustFloat) → Waveform:
+连接 `device.rx → protocol.in`,再把协议数值通道连到显示控件，调用
+`connect_device` 后启动模拟会话，真实串口不会被打开。

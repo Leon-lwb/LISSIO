@@ -39,7 +39,7 @@ pub struct LiveNodeHandle {
 impl LiveNodeHandle {
     /// 本节点运行态配置 — 仅当查询节点与绑定节点一致时返回。
     /// (协议转换链递归时 source 会变成 Protocol 节点 id, 此时无运行态配置,
-    /// 与 `TransportManager::config` 对非传输节点返回 None 的语义一致)
+    /// 与 `AcquisitionRuntime::config` 对非传输节点返回 None 的语义一致)
     pub fn config_of(&self, node_id: &str) -> Option<TransportConfig> {
         if node_id == &*self.node_id {
             Some(self.config.read().clone())
@@ -57,6 +57,16 @@ impl LiveNodeHandle {
 }
 
 impl TransportHandle {
+    #[allow(clippy::cast_precision_loss)] // Runtime rates are bounded to 700 kHz.
+    pub fn set_sample_rate(&self, sample_rate: u32) {
+        if let TransportConfig::TestData(config) = &mut *self.config.write() {
+            config.sample_rate = sample_rate as f32;
+        }
+    }
+    pub fn close(&self) {
+        self.control.close();
+        *self.state.lock() = ConnectionState::Disconnected;
+    }
     pub fn new(
         connection: TransportConnection,
         config: TransportConfig,

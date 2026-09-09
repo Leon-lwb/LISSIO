@@ -22,7 +22,6 @@ impl NodeArm for FrameDecoderArm {
             enable_frame_count,
             enable_last_timestamp,
             enable_fps,
-            loopback: _,
         } = &node.kind
         else {
             return;

@@ -194,9 +194,6 @@ export interface FrameDecoderConfig {
   enableFps: boolean;          // 输出 fps 端口 (滑动窗口帧率)
   /// 数据模式: 'live' = 实时数据流, 'manual' = 手动测试
   mode: 'live' | 'manual';
-  /// 回环模式: 显示 loopbackIn 字节输入口, 只接收回环边 (CommandSender loopbackOut)
-  /// 注入的字节, 不再默认接收实时 RX (与 mode 无关的独立开关)
-  loopbackEnabled: boolean;
 }
 
 /// 帧解码器手动测试结果 (与 Rust FrameDecoderParseResult 对应)

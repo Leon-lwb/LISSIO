@@ -244,10 +244,10 @@ export function CommandSender({ widget }: CommandSenderProps) {
       if (params.loopbackEnabled) {
         // 回环历史: 用第一个 Transport + 其下游 Protocol 做即时解析对照 (尽力而为)
         const st = useAppStore.getState();
-        const transport = st.rfNodes.find((n) => n.type === 'transport' && n.data?.global === true);
+        const transport = st.rfNodes.find((n) => n.type === 'acquisition' && n.data.tabId === st.activeControlTabId);
         const protocolId = transport
           ? downstreamProtocolOf(transport.id, st.rfEdges, st.rfNodes) ??
-            st.rfNodes.find((n) => n.type === 'protocol' && n.data?.global === true)?.id
+            st.rfNodes.find((n) => n.type === 'protocol' && n.data.tabId === st.activeControlTabId)?.id
           : undefined;
         if (transport && protocolId) {
           await sendAndCapture(transport.id, protocolId, bytes);

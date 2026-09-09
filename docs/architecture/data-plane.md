@@ -1,8 +1,8 @@
 # 数据平面架构 (2026-09 重设计)
 
 > 本文是数据平面 (byte plane / record plane / eval plane) 的设计权威说明,
-> 对应 crate: `pipeline/data_plane`、`foundation/buffer_databuffer`、
-> `transport/transport_core` (TestData)、`node/plane` (BytePlan)。
+> 对应 crate: `pipeline`、`waveform`、`acquisition`、`transport` 与 `plane`。
+> 节点配置来自各页签的统一文档；工作区运行图只保存其派生索引。
 
 ## 1. 问题背景 (为什么重设计)
 
@@ -17,7 +17,7 @@
 ## 2. 目标数据流
 
 ```
-Transport (声明时钟: TestData=精确采样率 / 串口=波特率名义线速)
+设备会话 (声明时钟: 测试属性=精确采样率 / 串口=波特率名义线速)
  ▼ 读任务: 合批 — 字节目标 与 "样本时长 ≤ 50ms" 取小 (C2, 防批失控)
  ▼ BytePlan 去重组: 同 (字节源, 协议配置等价) 只喂一个引擎 ── 一次解析 (C1)
  ▼ 采样时钟定案 (A1): ts = 锚点 + 逻辑推进, 域锁定, 到达时间不参与
@@ -44,9 +44,9 @@ Transport (声明时钟: TestData=精确采样率 / 串口=波特率名义线速
 每类历史问题对应一条**结构上不可能再发生**的约束:
 
 1. **单一时钟域** — 每源一个逻辑时钟, 首批锁定 (Source/Arrival 二选一),
-   流内不切换; 帧时间戳 = 锚点 + 逻辑推进 (TestData: 帧×1/速率; 串口: 字节×位时间),
+   流内不切换; 帧时间戳 = 锚点 + 逻辑推进 (测试属性: 帧×1/速率; 串口: 字节×位时间),
    到达时间只在首批锚点出现。hint 中途缺失沿用已锁定速率外推, 绝不落入到达域。
-   TestData 的 broadcast `Lagged(n)` 按生成器消息契约换算为丢失帧数, 下一批逻辑
+   模拟字节会话的 broadcast `Lagged(n)` 按生成器消息契约换算为丢失帧数, 下一批逻辑
    时钟显式跨过缺口, 不把缺口两侧静默拼接。实现: `ProtocolNodeState::restamp_frames`。
    数值平面/显示端**不加工时间戳** (`spread_batch_timestamps` 已删除)。
 2. **容量自洽** — L0 容量由 `速率 × 2.5s` 自动整定
@@ -108,9 +108,9 @@ allocator 元数据或其他源，不是进程级内存上限。
   或单批过大；消费者读取缺口时复位有状态算子。通过 `eval_diagnostics` 的
   排队、blocking 调度和服务最大耗时区分等待环节，不能只看平均求值耗时;
 - `缓冲降载` warn → 窗口超出原始层容量, 前端出现降载徽标;
-- `Lagged 丢弃 > 0` → 解析前真实丢失；TestData 时间轴保留对应空洞，不再发生
+- `Lagged 丢弃 > 0` → 解析前真实丢失；测试属性时间轴保留对应空洞，不再发生
   随丢包累计的整体时间压缩；数据本身无法恢复，仍需降低源速率或减少负载;
-- `产帧≈` 与 TestData 名义速率的比值反映系统实际吞吐。生成器约 5ms 固定批量，
+- `产帧≈` 与测试属性名义速率的比值反映系统实际吞吐。生成器约 5ms 固定批量，
   保持截止相位补齐短时调度迟到；暂停期间不补账。
 
 ## 7. 关键位置索引
@@ -126,7 +126,7 @@ allocator 元数据或其他源，不是进程级内存上限。
 | 容量整定 | `mod.rs` (`tune_buffer_capacity`), `data_buffer.rs` (`ensure_capacity_for_rate`) |
 | WWB1 v2 | `cmd/display/src/waveform_binary.rs`, 前端 `src/lib/data/waveformProtocol.ts` |
 | 降载徽标 | `src/components/displays/waveform/WaveformChart.tsx` |
-| 合批上限/生成器补速 | `data_plane/src/data_plane/read_task.rs`, `transport_core/src/test_data.rs` |
+| 合批上限/生成器补速 | `pipeline/src/data_plane/read_task.rs`, `transport/src/byte_simulation.rs` |
 
 ## 8. 性能基准
 

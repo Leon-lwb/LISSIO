@@ -5,8 +5,6 @@ import { createWidget } from '../../../lib/utils/widgetDefaults';
 import { t } from '../../../i18n';
 import {
   Square,
-  LineChart,
-  Code2,
   Plus,
   Minus,
   Divide,
@@ -15,12 +13,10 @@ import {
   ArrowUpToLine,
   ArrowRightLeft,
   Ban,
-  Send,
   Cable,
   Binary,
   Search,
   X,
-  Type,
   Ruler,
   TextSearch,
   ArrowLeftToLine,
@@ -37,7 +33,7 @@ import {
   Braces,
   ListOrdered,
 } from 'lucide-react';
-import type { WidgetConfig, TransportConfig, MathOp, StrOp } from '../../../types';
+import type { WidgetConfig, MathOp, StrOp } from '../../../types';
 import { isUnaryMathOp, WIDGET_CATEGORY_COLORS } from '../../../types';
 import { WIDGET_REGISTRY } from '../../widgets/registry';
 import type { WidgetKind } from '../../widgets/registryTypes';
@@ -46,6 +42,10 @@ import type { PaletteEntry, PaletteSection, SectionId } from './paletteModel';
 import { flattenSections, filterSections, sectionAnchors, sectionAtScroll, totalSizeOf, HEADER_SIZE, ROW_SIZE } from './paletteModel';
 import { JumpBar, type JumpTarget } from './JumpBar';
 import { PaletteRow, SectionHeader } from './PaletteRow';
+import { loadAdapterCapabilities } from '../../../lib/acquisition/capabilityCatalog';
+import { buildDeviceCards, type DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
+import { applyTestAttribute } from '../../../lib/acquisition/simulation';
+import { addPaletteNode } from '../../../lib/utils/paletteCreation';
 
 /// 控件面板 — 虚拟列表 + 可折叠分组 + 顶部分类跳转条
 ///
@@ -64,7 +64,7 @@ const EXIT_MS = 150;
 const ENTER_MS = 200;
 
 /// 由注册表派生普通控件条目 — label/icon 单一权威在 widget def
-/// (op/preset 变体与全局节点条目仍在本文件手工列出)
+/// (op/preset 变体与结构节点条目仍在本文件手工列出)
 function entriesForKinds(lang: Lang, kinds: readonly WidgetKind[]): PaletteEntry[] {
   return kinds.map((kind) => {
     const def = WIDGET_REGISTRY[kind];
@@ -81,8 +81,6 @@ function entriesForKinds(lang: Lang, kinds: readonly WidgetKind[]): PaletteEntry
 export function WidgetPalette() {
   const lang = useAppStore((s) => s.lang);
   const addWidget = useAppStore((s) => s.addWidget);
-  const addTransportNode = useAppStore((s) => s.addTransportNode);
-  const addProtocolNode = useAppStore((s) => s.addProtocolNode);
   const activeControlTabId = useAppStore((s) => s.activeControlTabId);
   const openCustomEditor = useAppStore((s) => s.openCustomEditor);
 
@@ -94,6 +92,7 @@ export function WidgetPalette() {
   const [enteringSection, setEnteringSection] = useState<SectionId | null>(null);
   /// 当前可视分组 (跳转条高亮)
   const [activeSection, setActiveSection] = useState<SectionId>('transport');
+  const [capabilityCards, setCapabilityCards] = useState<DeviceCardModel[]>([]);
 
   const listRef = useRef<HTMLDivElement>(null);
   /// 进行中的跳转目标 (截断后的滚动偏移) — 平滑滚动到位或用户接管时结束;
@@ -108,6 +107,19 @@ export function WidgetPalette() {
   const [searchQuery, setSearchQuery] = useState('');
   const trimmedQuery = searchQuery.trim().toLowerCase();
   const isSearching = trimmedQuery.length > 0;
+
+  /// 后端每发布一个 endpoint capability，左侧自动追加一个与内置接口同形的单行入口。
+  useEffect(() => {
+    let active = true;
+    void loadAdapterCapabilities()
+      .then((capabilities) => {
+        if (active) setCapabilityCards(buildDeviceCards(capabilities));
+      })
+      .catch(() => {
+        if (active) setCapabilityCards([]);
+      });
+    return () => { active = false; };
+  }, []);
 
   const sections = useMemo<PaletteSection[]>(() => {
     const inputItems = entriesForKinds(lang, ['Knob', 'Button', 'Radio', 'Checkbox', 'Slider', 'Trigger', 'TextInput']);
@@ -170,31 +182,20 @@ export function WidgetPalette() {
       onAdd: () => openCustomEditor(),
     }));
 
-    /// 数据接口子项 — 每种传输类型一个全局节点入口
-    const transportItems: PaletteEntry[] = (
-      [
-        ['Serial', 'serial'],
-        ['Udp', 'udp'],
-        ['TcpClient', 'tcpClient'],
-        ['TcpServer', 'tcpServer'],
-        ['TestData', 'testData'],
-        ['Slcan', 'slcan'],
-        ['CandleLight', 'candleLight'],
-      ] as [TransportConfig['kind'], Parameters<typeof t>[1]][]
-    ).map(([kind, key]) => ({
-      key: `transport-${kind}`,
-      globalNode: 'transport' as const,
-      transportKind: kind,
+    const capabilityItems: PaletteEntry[] = capabilityCards.map((card) => ({
+      key: `acquisition-${card.key}`,
       icon: <Cable size={14} />,
-      label: t(lang, key),
-      title: `${t(lang, 'dataInterface')}: ${t(lang, key)}`,
+      label: card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName,
+      title: card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName,
+      nodeType: 'acquisition',
+      acquisition: card,
     }));
 
-    /// 协议引擎子项 — 全局节点入口
+    /// 协议引擎子项
     const protocolItems: PaletteEntry[] = [
       {
         key: 'protocol',
-        globalNode: 'protocol' as const,
+        nodeType: 'protocol' as const,
         icon: <Binary size={14} />,
         label: t(lang, 'protocolEngine'),
         title: t(lang, 'protocolEngine'),
@@ -202,29 +203,25 @@ export function WidgetPalette() {
     ];
 
     return [
-      { id: 'transport', header: t(lang, 'catConnections'), category: 'transport', entries: transportItems },
-      { id: 'protocol', header: t(lang, 'catCodecs'), category: 'protocol', entries: [...protocolItems, ...entriesForKinds(lang, ['FrameDecoder'])] },
+      { id: 'transport', header: t(lang, 'catConnections'), category: 'transport', entries: capabilityItems },
+      { id: 'protocol', header: t(lang, 'catCodecs'), category: 'protocol', entries: [...protocolItems, ...entriesForKinds(lang, ['FrameDecoder']), { key: 'point-selector', nodeType: 'point-selector', icon: <ListOrdered size={14} />, label: lang === 'zh' ? '点位选择' : 'Point selector', title: lang === 'zh' ? '点位选择' : 'Point selector' }] },
       { id: 'send', header: t(lang, 'catSending'), category: 'send', entries: entriesForKinds(lang, ['Command', 'TextOut']) },
       { id: 'math', header: t(lang, 'catSignalProcessing'), category: 'math', entries: [...mathItems, ...filterItems, ...fftItems] },
       { id: 'string', header: t(lang, 'catTextProcessing'), category: 'string', entries: strItems },
-      { id: 'display', header: t(lang, 'catDisplayInteraction'), category: 'display', entries: [...displayItems, ...inputItems] },
+      { id: 'display', header: t(lang, 'catDisplay'), category: 'display', entries: displayItems },
+      { id: 'input', header: lang === 'zh' ? '交互输入' : 'Interactive inputs', category: 'input', entries: inputItems },
+      { id: 'attributes', header: lang === 'zh' ? '属性' : 'Attributes', category: 'custom', entries: [
+        { key: 'test-data', attribute: 'test-data', icon: <Sigma size={14} />, label: t(lang, 'testData'), title: t(lang, 'testData') },
+      ] },
       { id: 'custom', header: t(lang, 'catCustom'), category: 'custom', entries: customItems },
     ];
-  }, [lang, openCustomEditor]);
+  }, [lang, openCustomEditor, capabilityCards]);
 
   /// 顶部跳转条 — 算术/滤波器/频域合并为一个「算术」跳转入口
-  const jumpTargets = useMemo<JumpTarget[]>(
-    () => [
-      { id: 'transport', label: t(lang, 'catConnections'), color: WIDGET_CATEGORY_COLORS.transport, icon: <Cable size={14} /> },
-      { id: 'protocol', label: t(lang, 'catCodecs'), color: WIDGET_CATEGORY_COLORS.protocol, icon: <Binary size={14} /> },
-      { id: 'send', label: t(lang, 'catSending'), color: WIDGET_CATEGORY_COLORS.send, icon: <Send size={14} /> },
-      { id: 'math', label: t(lang, 'catSignalProcessing'), color: WIDGET_CATEGORY_COLORS.math, icon: <Sigma size={14} /> },
-      { id: 'string', label: t(lang, 'catTextProcessing'), color: WIDGET_CATEGORY_COLORS.string, icon: <Type size={14} /> },
-      { id: 'display', label: t(lang, 'catDisplayInteraction'), color: WIDGET_CATEGORY_COLORS.display, icon: <LineChart size={14} /> },
-      { id: 'custom', label: t(lang, 'catCustom'), color: WIDGET_CATEGORY_COLORS.custom, icon: <Code2 size={14} /> },
-    ],
-    [lang],
-  );
+  const jumpTargets = useMemo<JumpTarget[]>(() => sections.map(section => ({
+    id: section.id, label: section.header, color: WIDGET_CATEGORY_COLORS[section.category],
+    icon: section.entries[0]?.icon ?? <Square size={14} />,
+  })), [sections]);
 
   /// 搜索过滤后的 sections — 搜索时清空分组内的非匹配条目, 空分组整体剔除;
   /// 非搜索态直接返回原 sections, 保留折叠/展开状态
@@ -352,21 +349,15 @@ export function WidgetPalette() {
     });
   };
 
-  /// 点击/落放添加控件 — 全局节点 (数据接口/协议引擎) 与画布控件分流
+  /// 点击/落放添加节点
   const handleActivate = useCallback(
     (item: PaletteEntry) => {
+      if (item.attribute === 'test-data') { applyTestAttribute(); return; }
       if (item.onAdd) {
         item.onAdd();
         return;
       }
-      if (item.globalNode === 'transport') {
-        addTransportNode(item.transportKind ?? 'Serial', { x: 60, y: 60 + Math.random() * 60 });
-        return;
-      }
-      if (item.globalNode === 'protocol') {
-        addProtocolNode(undefined, { x: 300, y: 60 + Math.random() * 60 });
-        return;
-      }
+      if (addPaletteNode(item, { x: item.nodeType === 'protocol' ? 300 : 60, y: 60 + Math.random() * 60 })) return;
       if (!item.kind) return;
       const kind = item.kind;
       const widget = createWidget(kind);
@@ -393,7 +384,7 @@ export function WidgetPalette() {
       }
       addWidget(widget, activeControlTabId, { x: 280, y: 80 + Math.random() * 100 });
     },
-    [addWidget, addTransportNode, addProtocolNode, activeControlTabId],
+    [addWidget, activeControlTabId],
   );
 
   /// 跳转条高亮归属 — 滤波器/频域归入「算术」入口
@@ -452,14 +443,17 @@ export function WidgetPalette() {
               {virtualItems.map((vi) => {
                 const item = items[vi.index];
                 if (!item) return null;
-                return item.type === 'header' ? (
-                  <SectionHeader
-                    key={vi.key}
-                    header={item.header}
-                    collapsed={isSearching ? false : (collapsed[item.sectionId] ?? false) || collapsing === item.sectionId}
-                    onToggle={() => toggleSection(item.sectionId)}
-                  />
-                ) : (
+                if (item.type === 'header') {
+                  return (
+                    <SectionHeader
+                      key={vi.key}
+                      header={item.header}
+                      collapsed={isSearching ? false : (collapsed[item.sectionId] ?? false) || collapsing === item.sectionId}
+                      onToggle={() => toggleSection(item.sectionId)}
+                    />
+                  );
+                }
+                return (
                   <PaletteRow
                     key={vi.key}
                     entry={item.entry}

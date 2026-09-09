@@ -3,10 +3,10 @@
 //! 层级: L3 app (app_state)。open+attach 配对、断连事件、TX 旁路收集等
 //! 编排不变量属于应用核心; L4 cmd/can_transport 只保留 IPC 薄壳。
 //!
-//! L1 类型 (TransportManager) 经 [`runtime`] 门面引用, 不直连 transport crate。
+//! L1 类型 (AcquisitionRuntime) 经 [`runtime`] 门面引用, 不直连 transport crate。
 
 use can::CanFrame;
-use data_model::{ConnectionState, Error, Result, TransportConfig, WidgetBinding};
+use data_model::{ConnectionState, Error, Result, WidgetBinding};
 use error::ConfigError;
 use events::{emit_transport_state, notify};
 use schema_types::{ProtocolConfig, ProtocolSchema, TestDataLink};
@@ -16,52 +16,79 @@ use tauri::AppHandle;
 use crate::app_state::AppState;
 
 impl AppState {
-    /// 打开传输连接 (node_id = 图中 Transport 节点 id)
+    /// Open a device session and attach its byte stream when available.
     ///
     /// `protocol` 与 `schema` 仅被 TestData 用作生成数据的线缆格式参考, 其他传输类型忽略。
     /// 成功后挂载数据平面读任务 (subscribe → 字节路由 → 数值平面)。
-    pub async fn open_transport(
+    pub async fn open_device(
         &self,
         app: &AppHandle,
-        node_id: &str,
-        config: TransportConfig,
-        protocol: ProtocolConfig,
-        schema: Option<ProtocolSchema>,
-    ) -> Result<()> {
-        let kind = notify::transport_kind_str(&config);
+        spec: data_model::device::EndpointSpec,
+    ) -> std::result::Result<acquisition::EndpointSnapshot, String> {
+        let id = spec.id.0.clone();
+        let snapshot = self
+            .transport
+            .open_endpoint(spec)
+            .await
+            .map_err(|e| e.to_string())?;
+        if snapshot
+            .capabilities
+            .as_ref()
+            .is_some_and(|c| c.available.byte_source)
         {
-            let mut manager = self.transport.lock().await;
-            let link = TestDataLink { protocol, schema };
-            if let Err(e) = manager.open(node_id, config, link).await {
-                log::error!("连接失败 ({node_id}): {e}");
-                notify::error(app, format!("连接失败: {e}"));
-                return Err(e);
+            self.data_plane.attach(app.clone(), &id).await;
+        }
+        if snapshot
+            .capabilities
+            .as_ref()
+            .is_some_and(|c| c.available.subscribe)
+        {
+            let points = snapshot
+                .points
+                .iter()
+                .filter(|p| p.access != points::AccessLevel::WriteOnly)
+                .map(|p| p.id.clone())
+                .collect::<Vec<_>>();
+            if !points.is_empty() {
+                let intent = acquisition::SubscriptionIntent {
+                    points,
+                    acquisition: points::AcquisitionIntent {
+                        mode: points::AcquisitionMode::Auto,
+                        requested_period_ms: None,
+                        deadband: None,
+                        priority: points::Priority::Normal,
+                        delivery: points::DeliveryClass::State,
+                    },
+                };
+                if let Err(error) = self
+                    .transport
+                    .subscribe(&data_model::device::EndpointId(id.clone()), intent)
+                    .await
+                {
+                    self.data_plane.detach(&id);
+                    self.transport.close(&id).await;
+                    return Err(error.to_string());
+                }
             }
         }
-
-        emit_transport_state(app, node_id, ConnectionState::Connected);
-        log::info!("连接已建立: {kind} ({node_id})");
-        notify::connected(app, kind);
-
-        // 挂载数据平面读任务 (每 Transport 节点一个)
-        self.data_plane.attach(app.clone(), node_id).await;
-        Ok(())
+        emit_transport_state(app, &id, ConnectionState::Connected);
+        Ok(snapshot)
     }
 
-    /// 关闭传输连接 (node_id = 图中 Transport 节点 id)
+    /// 关闭设备连接 (node_id = 图中设备节点 id)
     pub async fn close_transport(&self, app: &AppHandle, node_id: &str) -> Result<()> {
         self.data_plane.mark_source_disconnected(node_id);
         self.data_plane.detach(node_id);
-        self.transport.lock().await.close(node_id);
+        self.transport.close(node_id).await;
         emit_transport_state(app, node_id, ConnectionState::Disconnected);
         log::info!("连接已关闭: {node_id}");
         notify::disconnected(app);
         Ok(())
     }
 
-    /// 发送原始字节 (node_id = 目标 Transport 节点 id)
+    /// 发送原始字节 (node_id = 目标设备节点 id)
     pub async fn send_raw(&self, node_id: &str, data: Vec<u8>) -> Result<()> {
-        self.transport.lock().await.send(node_id, &data)?;
+        self.transport.send(node_id, &data)?;
         // TX 方向字节进该源的 raw 收集器 (收集器在 attach 时已建; 未打开时上面的 send 已报错)
         self.data_plane
             .raw_collector_for(node_id)
@@ -109,16 +136,13 @@ impl AppState {
         let mut payload = text;
         payload.push_str(spec.newline_suffix);
         let target = spec.target_transport.to_string();
-        self.transport
-            .lock()
-            .await
-            .send(&target, payload.as_bytes())?;
+        self.transport.send(&target, payload.as_bytes())?;
         Ok(())
     }
 
     /// 发送控件值 (根据绑定模式自动编码)
     ///
-    /// - `node_id`: 目标 Transport 节点 id
+    /// - `node_id`: 目标设备节点 id
     /// - `protocol_node`: Auto 编码所用的 Protocol 节点 id (Manual 模式可传 None)
     pub async fn send_widget_value(
         &self,
@@ -161,7 +185,7 @@ impl AppState {
     /// 通过指定 Protocol 节点引擎的 encode_can 编码为字节, 再经传输注册表发送。
     /// 若该协议不是 CAN 协议 (encode_can 返回空), 直接返回 Ok。
     ///
-    /// - `node_id`: 目标 Transport 节点 id
+    /// - `node_id`: 目标设备节点 id
     /// - `protocol_node`: 编码用 Protocol 节点 id; None 时沿全局 BytePlan
     ///   查找该 Transport 下游的第一个 Protocol 节点
     pub async fn send_can_frame(
@@ -207,7 +231,7 @@ impl AppState {
         if data.is_empty() {
             return Ok(()); // 非 CAN 协议, 忽略
         }
-        self.transport.lock().await.send(node_id, &data)
+        self.transport.send(node_id, &data)
     }
 
     /// 运行时热更新传输节点的链路配置 (图连接/协议配置变化后由前端推送)
@@ -221,11 +245,8 @@ impl AppState {
         schema: Option<ProtocolSchema>,
         test_data_config: Option<data_model::TestDataConfig>,
     ) -> Result<()> {
-        self.transport.lock().await.update_link(
-            node_id,
-            TestDataLink { protocol, schema },
-            test_data_config,
-        )
+        self.transport
+            .update_link(node_id, TestDataLink { protocol, schema }, test_data_config)
     }
 }
 
@@ -258,7 +279,7 @@ impl AppState {
         // 1. 发送到 transport (TestData 模式下回环)
         //    回环与串口开关无关: 未连接时跳过发送, 仅做本地解析对照
         {
-            let manager = self.transport.lock().await;
+            let manager = &self.transport;
             if manager.state(node_id) == Some(ConnectionState::Connected) {
                 manager.send(node_id, &data)?;
             }

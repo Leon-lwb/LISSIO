@@ -4,21 +4,21 @@ import { traceTransportSource } from '../appStoreHelpers';
 
 const TRANSPORT_A: Node = {
   id: 'transport-a',
-  type: 'transport',
+  type: 'acquisition',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'TestData' }, label: 'A' },
+  data: { tabId: 'default', label: 'A' },
 };
 const TRANSPORT_B: Node = {
   id: 'transport-b',
-  type: 'transport',
+  type: 'acquisition',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'Serial' }, label: 'B' },
+  data: { tabId: 'default', label: 'B' },
 };
 const PROTOCOL: Node = {
   id: 'protocol-1',
   type: 'protocol',
   position: { x: 0, y: 0 },
-  data: { global: true, config: { kind: 'JustFloat' }, convertTo: null, channels: 2, label: 'P' },
+  data: { tabId: 'default', config: { kind: 'JustFloat' }, convertTo: null, channels: 2, label: 'P' },
 };
 const FRAME_DECODER: Node = {
   id: 'w-fd',

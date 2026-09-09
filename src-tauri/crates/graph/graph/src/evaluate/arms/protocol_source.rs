@@ -15,17 +15,17 @@ impl NodeArm for ProtocolSourceArm {
         let Some(node) = graph.value_def(node_id) else {
             return;
         };
-        let NodeKind::ProtocolSource {
-            node_id: source_id,
-            channels,
-            port_names,
-        } = &node.kind
-        else {
-            return;
+        let (source_id, channels, port_names) = match &node.kind {
+            NodeKind::ProtocolSource {
+                node_id,
+                channels,
+                port_names,
+            } => (node_id.as_str(), *channels, port_names.as_deref()),
+            NodeKind::PointSelector { points } => (node_id, points.len(), Some(points.as_slice())),
+            _ => return,
         };
-        let source_id = source_id.as_str();
         let frame = ctx.source_frames.get(source_id);
-        let names = protocol_source_port_names(port_names.as_deref(), *channels);
+        let names = protocol_source_port_names(port_names, channels);
         for (i, name) in names.iter().enumerate() {
             if name == "str" {
                 if let Some(text) = ctx.source_texts.get(source_id) {

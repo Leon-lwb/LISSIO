@@ -33,8 +33,8 @@ describe('CompileErrorsView', () => {
       tabErrors: {},
       tabStates: {},
       controlTabs: [
-        { id: 'tab-1', name: 'Control Tab 1', widgets: [] },
-        { id: 'tab-2', name: 'Control Tab 2', widgets: [] },
+        { id: 'tab-1', name: 'Control Tab 1' },
+        { id: 'tab-2', name: 'Control Tab 2' },
       ],
     });
 

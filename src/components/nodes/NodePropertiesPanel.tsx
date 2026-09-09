@@ -11,16 +11,20 @@ import { X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { t, type Lang } from '../../i18n';
 import type { WidgetConfig } from '../../types';
-import { WidgetProperties } from './WidgetProperties';
-import { GlobalNodeProperties } from './GlobalNodeProperties';
+import { SimulationProperties } from '../acquisition/SimulationProperties';
+import { TextField } from '../ui/fields';
+import { SizeSection } from '../widgets/shared/SizeSection';
+import { nodeDefinition } from './registry';
 
-/// 面板标题 — 控件节点显示 kind, 全局节点显示 数据接口/协议引擎
+/// 面板标题 — 控件节点显示 kind，结构节点显示设备/协议/点位选择
 function panelTitle(lang: Lang, node: Node): string {
   if (node.type === 'widget') {
     const widget = node.data.widget as WidgetConfig | undefined;
     return widget?.kind ?? 'Widget';
   }
-  return node.type === 'transport' ? t(lang, 'dataInterface') : t(lang, 'protocolEngine');
+  if (node.type === 'acquisition') return t(lang, 'dataInterface');
+  if (node.type === 'point-selector') return 'Point Selector';
+  return t(lang, 'protocolEngine');
 }
 
 /// 面板副标题 — 控件节点的用户命名 label
@@ -33,13 +37,12 @@ function panelSubtitle(node: Node): string | undefined {
 
 export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
   const lang = useAppStore((s) => s.lang);
-  // 与 NodeEditor 的画布过滤一致: 全局节点跨 tab 可见, widget 节点按活跃控制页签
+  // 与 NodeEditor 一致，只选择当前页签节点。
   const node = useAppStore((s) =>
     s.rfNodes.find(
       (n) =>
         n.selected &&
-        (n.data?.global === true ||
-          (n.type === 'widget' && n.data?.tabId === s.activeControlTabId)),
+        n.data?.tabId === s.activeControlTabId,
     ),
   );
   // 关闭按钮 = 取消选中 (select change 不入撤销历史); tab 本体由 tab 条 X 关闭
@@ -52,6 +55,7 @@ export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
       );
     }
   }, []);
+  const Properties = node ? nodeDefinition(node).properties : null;
 
   return (
     <div className="flex h-full w-full flex-col bg-bg-sidebar">
@@ -80,7 +84,14 @@ export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
             </button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-3">
-            {node.type === 'widget' ? <WidgetProperties node={node} /> : <GlobalNodeProperties node={node} />}
+            <h3 className="text-xs text-text-secondary mb-2">通用</h3>
+            <TextField label={t(lang, 'widgetName')} value={(node.data.widget as WidgetConfig | undefined)?.params.label ?? node.data.label as string ?? ''}
+              onCommit={(label) => useAppStore.getState().renameNode(node.id, label)} />
+            <SizeSection nodeId={node.id} kind={(node.data.widget as WidgetConfig | undefined)?.kind} />
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">业务配置</h3>
+            {Properties && <Properties node={node} />}
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">附加属性</h3>
+            {node.type === 'acquisition' ? <SimulationProperties node={node} /> : <span className="text-xs text-text-secondary">暂无可用属性</span>}
           </div>
         </>
       ) : (

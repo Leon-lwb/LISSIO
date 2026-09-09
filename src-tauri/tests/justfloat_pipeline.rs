@@ -1,6 +1,6 @@
 //! JustFloat 全链路数据流测试
 //!
-//! 钉住契约: Transport(TestData) → Protocol(JustFloat) →
+//! 钉住契约: 设备字节源 → Protocol(JustFloat) →
 //! RawData 控件 (ch0 数值边 + 另一直连 rx 字节边);
 //! 字节边 (rx → protocol.in) 必须进 BytePlan, 喂入 JustFloat 帧后
 //! 协议解码产帧、数值平面求值, ch0 出现在输出快照 (RawData 数值通道的数据源)。
@@ -16,18 +16,11 @@ use app::DecoderFeedCache;
 use app::TopicKey;
 use app::{MathOp, NodeDef, NodeKind};
 use buffer_graph::Edge;
-use data_model::config::{TestDataConfig, TransportConfig};
 use graph_ops::apply_tab_graph;
 use schema_types::ProtocolConfig;
 
-fn transport_node(id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: "default".into(),
-        kind: NodeKind::Transport {
-            config: TransportConfig::TestData(TestDataConfig::default()),
-        },
-    }
+fn device_node(id: &str) -> NodeDef {
+    graph_testkit::make_device_in(id, "default")
 }
 
 fn protocol_node(id: &str) -> NodeDef {
@@ -68,7 +61,7 @@ async fn justfloat_chain_decodes_frames_into_value_plane() {
         None,
         "default".into(),
         vec![
-            transport_node("transport-tp"),
+            device_node("transport-tp"),
             protocol_node("protocol-jf"),
             sink_node("w-raw"),
         ],
@@ -89,7 +82,6 @@ async fn justfloat_chain_decodes_frames_into_value_plane() {
             },
         ],
         HashMap::new(),
-        None,
         None,
         None,
     )
@@ -149,7 +141,7 @@ async fn auto_channels_above_four_flow_through_math_topic() {
         None,
         "default".into(),
         vec![
-            transport_node("transport-tp"),
+            device_node("transport-tp"),
             protocol_node("protocol-jf"),
             NodeDef {
                 id: "math-high".into(),
@@ -185,7 +177,6 @@ async fn auto_channels_above_four_flow_through_math_topic() {
             },
         ],
         HashMap::new(),
-        None,
         None,
         None,
     )

@@ -9,6 +9,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+kind = { workspace = true }
+acquisition = { workspace = true }
+serde_json = { workspace = true }
 pipeline = { workspace = true }
 recording = { workspace = true }
 evaluator = { workspace = true }
@@ -22,6 +25,7 @@ serde = { workspace = true }
 tauri = { workspace = true }
 tokio = { workspace = true }
 data_model = { workspace = true }
+flow = { workspace = true }
 log = { workspace = true }
 
 [dev-dependencies]

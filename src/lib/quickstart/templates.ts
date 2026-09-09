@@ -1,22 +1,25 @@
-//! 快速开始模板 — 内置节点图 + 窗口组织 + 传输/协议配置
+//! 快速开始模板 — 内置节点文档 + 窗口组织 + 设备/协议配置
 //!
 //! 每个模板返回一份「类快照」(AppSnapshot), 应用时:
 //!   - 替换: 清空工作区后按分区应用 (不含设置)
 //!   - 合并: 作为新控件标签页追加 (见 applyTemplate.ts 的 ID 重映射)
 //!
-//! 内置模板: 数学 / 滤波器 / 频谱分析 / CAN / 串口 / 综合演示 (TestData, 无硬件可跑)。
+//! 内置模板: 数学 / 滤波器 / 频谱分析 / CAN / 串口 / 综合演示。
 
+import { defaultSimulation } from '../acquisition/simulation';
 import { type Node, type Edge } from '@xyflow/react';
 import { createWidget } from '../utils/widgetDefaults';
 import { WIDGET_DEFAULT_WIDTH } from '../utils/widgetSize';
+import { nodeDocument } from '../nodes/document';
+import { edgeToGraphEdge } from '../utils/nodeDef';
 import { ALL_BACKUP_SECTIONS, type AppSnapshot } from '../tauri/appExport';
 import { schemaFromProtocolConfig } from '../utils/protocolSchema';
 import { rawDataPortId } from '../utils/nodeDef';
 import type { DockNode, DockCard } from '../../store/dockStore';
-import type { WidgetConfig, DataTab, ControlTab, TransportConfig, ProtocolConfig, ProtocolSchema } from '../../types';
+import type { WidgetConfig, DataTab, ControlTab, EndpointSpec, ProtocolConfig, ProtocolSchema, SimulationConfig } from '../../types';
 
 const TAB = 'default';
-/// 模板内全局节点 id (应用时由 applySnapshot/mergeTemplate 处理)
+/// 模板内结构节点 id (应用时由 applySnapshot/mergeTemplate 处理)
 const TRANSPORT_ID = 'template-transport';
 const PROTOCOL_ID = 'template-protocol';
 
@@ -53,17 +56,30 @@ function edge(
   return { id, source, sourceHandle, target, targetHandle };
 }
 
-/// 全局 Transport / Protocol 节点 (内联实现, 避免引入 appStoreHelpers 造成循环依赖)
-function transportNode(config: TransportConfig): Node {
+type TemplateDevice = Pick<EndpointSpec, 'label' | 'driver'> & { simulation?: SimulationConfig };
+
+function simulatedSerial(channels: number, sampleRate: number): TemplateDevice {
   return {
-    id: TRANSPORT_ID,
-    type: 'transport',
-    position: { x: 40, y: 40 },
-    data: { global: true, config, label: config.kind },
+    label: 'Serial',
+    driver: { driverId: 'serial', schemaVersion: 1, payload: {
+      port_name: '', baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', flow_control: 'none',
+    } },
+    simulation: { ...defaultSimulation(), channels, sampleRate },
   };
 }
 
-/// 全局 Protocol 节点 — schema 模型: 预设经 schemaFromProtocolConfig 生成,
+function deviceNode(device: TemplateDevice): Node {
+  return {
+    id: TRANSPORT_ID, type: 'acquisition', position: { x: 40, y: 40 }, width: 200,
+    data: { tabId: TAB, label: device.label,
+      spec: { id: TRANSPORT_ID, label: device.label, enabled: true, capabilityEndpointId: 'device', simulation: device.simulation ?? null,
+        driver: device.driver },
+      ports: [{ id: 'tx', direction: 'input', domain: 'bytes' }, { id: 'rx', direction: 'output', domain: 'bytes' }],
+    },
+  };
+}
+
+/// Protocol 节点 — schema 模型: 预设经 schemaFromProtocolConfig 生成,
 /// 自定义模板可经 schema 参数传 preset='custom' 的帧定义
 function protocolNode(config: ProtocolConfig, channels = 4, schema?: ProtocolSchema): Node {
   return {
@@ -71,7 +87,7 @@ function protocolNode(config: ProtocolConfig, channels = 4, schema?: ProtocolSch
     type: 'protocol',
     position: { x: 260, y: 40 },
     data: {
-      global: true,
+      tabId: TAB,
       config,
       convertTo: null,
       channels,
@@ -170,7 +186,7 @@ const TEMPLATE_DEFAULT_ACTIVE_DATA_TAB = 'compile-results-fixed';
 function buildSnapshot(opts: {
   name: string;
   protocol: ProtocolConfig;
-  transport: TransportConfig;
+  device: TemplateDevice;
   widgetNodes: Node[];
   edges: Edge[];
   extraDataTabs?: DataTab[];
@@ -180,7 +196,7 @@ function buildSnapshot(opts: {
 }): AppSnapshot {
   const widgets = opts.widgetNodes.map((n) => n.data.widget as WidgetConfig);
   const controlTabs: ControlTab[] = [
-    { id: TAB, name: opts.name, widgets: opts.widgetNodes.map((n) => n.id) },
+    { id: TAB, name: opts.name },
   ];
   const derivedTabs: DataTab[] = [];
   for (const w of widgets) {
@@ -198,21 +214,21 @@ function buildSnapshot(opts: {
   );
 
   return {
-    version: 3,
+    version: 4,
     exportedAt: new Date().toISOString(),
     sections: ALL_BACKUP_SECTIONS,
     // 模板不含设置 — 应用时保留用户当前设置
-    widgets,
-    controlTabs,
+    workspace: {
+    tabs: controlTabs.map(({ id, name }) => ({ id, name })),
     dataTabs,
     activeDataTabId,
     activeControlTabId: TAB,
-    rfNodes: [
-      transportNode(opts.transport),
+    graphs: [{ tab_id: TAB, documents: [
+      deviceNode(opts.device),
       protocolNode(opts.protocol, opts.sourceChannels ?? 4, opts.protocolSchema),
       ...opts.widgetNodes,
-    ],
-    rfEdges: [
+    ].map(nodeDocument),
+    edges: [
       // Transport.rx → Protocol.in 字节边
       {
         id: 'edge-transport-protocol',
@@ -222,8 +238,9 @@ function buildSnapshot(opts: {
         targetHandle: 'in',
       },
       ...opts.edges,
-    ],
+    ].map(edgeToGraphEdge) }],
     rawDataViewPrefs: {},
+    },
     dockRoot,
     dockCards,
     sidebarDock: 'left',
@@ -247,7 +264,7 @@ function mathTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'Math',
     protocol: { kind: 'JustFloat', channels: 4 },
-    transport: { kind: 'TestData', params: { channels: 4, sample_rate: 1000, signal: 'Sine' } },
+    device: simulatedSerial(4, 1000),
     widgetNodes: [
       wnode('m-sin', mSin, 300, 80),
       wnode('nd-sin', ndSin, 560, 80),
@@ -271,7 +288,7 @@ function filterTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'Filter',
     protocol: { kind: 'JustFloat', channels: 4 },
-    transport: { kind: 'TestData', params: { channels: 4, sample_rate: 1000, signal: 'MultiTone' } },
+    device: simulatedSerial(4, 1000),
     widgetNodes: [
       wnode('f-lp', fLp, 300, 80),
       wnode('nd-lp', ndLp, 560, 80),
@@ -290,10 +307,8 @@ function canTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'CAN',
     protocol: { kind: 'Slcan' },
-    transport: {
-      kind: 'Slcan',
-      params: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' },
-    },
+    device: { label: 'Slcan', driver: { driverId: 'slcan', schemaVersion: 1,
+      payload: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } } },
     widgetNodes: [],
     edges: [],
     extraDataTabs: [{ id: 'can-main', type: 'can', name: 'CAN', closable: true }],
@@ -308,17 +323,7 @@ function serialTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'Serial',
     protocol: { kind: 'JustFloat', channels: null },
-    transport: {
-      kind: 'Serial',
-      params: {
-        port_name: '',
-        baud_rate: 115200,
-        data_bits: 8,
-        parity: 'none',
-        stop_bits: 'one',
-        flow_control: 'none',
-      },
-    },
+    device: simulatedSerial(4, 100),
     widgetNodes: [
       wnode('g-ch0', g0, 300, 60),
       wnode('g-ch1', g1, 560, 60),
@@ -343,7 +348,7 @@ function demoTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'Demo',
     protocol: { kind: 'JustFloat', channels: 4 },
-    transport: { kind: 'TestData', params: { channels: 4, sample_rate: 1000, signal: 'Sine' } },
+    device: simulatedSerial(4, 1000),
     widgetNodes: [
       wnode('f-lp', fLp, 300, 60),
       wnode('nd-lp', ndLp, 560, 60),
@@ -375,7 +380,7 @@ function fftTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'FFT',
     protocol: { kind: 'JustFloat', channels: 4 },
-    transport: { kind: 'TestData', params: { channels: 4, sample_rate: 1000, signal: 'MultiTone' } },
+    device: simulatedSerial(4, 1000),
     widgetNodes: [
       wnode('fft-main', fft, 300, 60),
       wnode('spec-main', spec, 600, 60),
@@ -393,8 +398,7 @@ function fftTemplate(): AppSnapshot {
 }
 
 /// 自定义协议演示: custom 块协议 (命名端口) + 多帧 CommandSender
-/// 帧布局与 TestData 的 JustFloat 线缆格式一致 (2×float32LE + 帧尾),
-/// 因此连接 TestData 即可看到 speed/temp 命名通道数据
+/// 帧布局与测试属性生成的 JustFloat 线缆格式一致 (2×float32LE + 帧尾)。
 function customProtocolTemplate(): AppSnapshot {
   const customSchema: ProtocolSchema = {
     preset: 'custom',
@@ -402,6 +406,11 @@ function customProtocolTemplate(): AppSnapshot {
       { id: 'cp-f0', type: 'field', fieldType: 'float32LE', portName: 'speed' },
       { id: 'cp-f1', type: 'field', fieldType: 'float32LE', portName: 'temp' },
       { id: 'cp-tail', type: 'tail', hex: '00 00 80 7F' },
+    ],
+    encode: [
+      { type: 'varRef', params: { portName: 'speed', fieldType: 'float32LE' } },
+      { type: 'varRef', params: { portName: 'temp', fieldType: 'float32LE' } },
+      { type: 'constHex', params: { hex: '00 00 80 7F' } },
     ],
   };
   const cmd = widget('Command', 'cmd-main', 'Command', {
@@ -435,11 +444,11 @@ function customProtocolTemplate(): AppSnapshot {
   const raw = widget('RawData', 'raw-custom', 'RawData');
   return buildSnapshot({
     name: 'Custom Protocol',
-    // config 保留 JustFloat(2ch): TestData 按 legacy 格式生成字节流, custom decode 负责解析
+    // 测试属性按自定义 schema 的编码块生成字节流，custom decode 负责解析。
     protocol: { kind: 'JustFloat', channels: 2 },
     protocolSchema: customSchema,
     sourceChannels: 2,
-    transport: { kind: 'TestData', params: { channels: 2, sample_rate: 1000, signal: 'Sine' } },
+    device: simulatedSerial(2, 1000),
     widgetNodes: [
       wnode('wf-custom', wf, 560, 60),
       wnode('g-temp', gTemp, 560, 260),

@@ -1,4 +1,7 @@
-use acquisition::{DriverContext, DriverId, DriverPayload, SourceFactory, SubscriptionIntent};
+use acquisition::{
+    AcquisitionRuntime, DriverContext, SourceFactory, SourceRegistry, SubscriptionIntent,
+};
+use data_model::device::{DriverId, DriverPayload, EndpointId, EndpointSpec};
 use flow::SourceId;
 use modbus_adapter::{
     ByteOrder, ModbusArea, ModbusConfig, ModbusDataType, ModbusFactory, ModbusPoint,
@@ -8,8 +11,9 @@ use points::{
     AcquisitionIntent, AcquisitionMode, DeliveryClass, PointId, PointValue, Priority, ReadRequest,
     WriteItem, WriteRequest,
 };
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex};
@@ -31,6 +35,36 @@ async fn spawn_mock() -> (u16, Arc<Mutex<Vec<RequestRecord>>>) {
         serve(stream, captured).await;
     });
     (port, records)
+}
+
+async fn spawn_timeout_mock() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = [0_u8; 12];
+        let _ = stream.read_exact(&mut request).await;
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    });
+    port
+}
+
+async fn spawn_reconnect_mock() -> (u16, Arc<AtomicUsize>) {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let connections = Arc::new(AtomicUsize::new(0));
+    let observed = Arc::clone(&connections);
+    tokio::spawn(async move {
+        let (mut first, _) = listener.accept().await.unwrap();
+        observed.fetch_add(1, Ordering::Relaxed);
+        let mut request = [0_u8; 12];
+        let _ = first.read_exact(&mut request).await;
+        drop(first);
+        let (second, _) = listener.accept().await.unwrap();
+        observed.fetch_add(1, Ordering::Relaxed);
+        serve(second, Arc::new(Mutex::new(Vec::new()))).await;
+    });
+    (port, connections)
 }
 
 async fn serve(mut stream: TcpStream, records: Arc<Mutex<Vec<RequestRecord>>>) {
@@ -99,6 +133,29 @@ fn point(id: &str, area: ModbusArea, address: u16, data_type: ModbusDataType) ->
 }
 
 async fn open_session(port: u16) -> Box<dyn acquisition::SourceSession> {
+    let payload = driver_payload(port);
+    let factory = ModbusFactory::default();
+    let validated = factory.validate(&payload).unwrap();
+    let (state_sink, _) = mpsc::channel(8);
+    let (event_sink, _) = mpsc::channel(8);
+    factory
+        .open(
+            validated,
+            DriverContext {
+                connection_epoch: 1,
+                source_id: SourceId::new("plc").unwrap(),
+                state_sink,
+                event_sink,
+                execution: acquisition::ExecutionGate::new(
+                    acquisition::AcquisitionRunState::Running,
+                ),
+            },
+        )
+        .await
+        .unwrap()
+}
+
+fn driver_payload(port: u16) -> DriverPayload {
     let config = ModbusConfig {
         host: "127.0.0.1".into(),
         port,
@@ -138,26 +195,11 @@ async fn open_session(port: u16) -> Box<dyn acquisition::SourceSession> {
             ),
         ],
     };
-    let payload = DriverPayload {
+    DriverPayload {
         driver_id: DriverId(DRIVER_ID.into()),
         schema_version: SCHEMA_VERSION,
         payload: serde_json::to_value(config).unwrap(),
-    };
-    let factory = ModbusFactory::default();
-    let validated = factory.validate(&payload).unwrap();
-    let (state_sink, _) = mpsc::channel(8);
-    let (event_sink, _) = mpsc::channel(8);
-    factory
-        .open(
-            validated,
-            DriverContext {
-                source_id: SourceId::new("plc").unwrap(),
-                state_sink,
-                event_sink,
-            },
-        )
-        .await
-        .unwrap()
+    }
 }
 
 #[tokio::test]
@@ -295,6 +337,281 @@ async fn polling_subscription_uses_a_bounded_typed_sink() {
     assert_eq!(
         batch.payload.samples[0].value,
         Some(PointValue::U64(0x1234))
+    );
+    session.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn polling_obeys_pause_resume_and_stop_epochs() {
+    let (port, _) = spawn_mock().await;
+    let factory = ModbusFactory::default();
+    let validated = factory.validate(&driver_payload(port)).unwrap();
+    let (state_sink, _) = mpsc::channel(8);
+    let (event_sink, _) = mpsc::channel(8);
+    let execution = acquisition::ExecutionGate::new(acquisition::AcquisitionRunState::Paused);
+    let session = factory
+        .open(
+            validated,
+            DriverContext {
+                connection_epoch: 1,
+                source_id: SourceId::new("lifecycle-plc").unwrap(),
+                state_sink,
+                event_sink,
+                execution: execution.clone(),
+            },
+        )
+        .await
+        .unwrap();
+    let (sink, mut receiver) = mpsc::channel(2);
+    session
+        .subscriber()
+        .unwrap()
+        .subscribe(
+            SubscriptionIntent {
+                points: vec![PointId("holding_u16".into())],
+                acquisition: AcquisitionIntent {
+                    mode: AcquisitionMode::Poll,
+                    requested_period_ms: Some(10),
+                    deadband: None,
+                    priority: Priority::Normal,
+                    delivery: DeliveryClass::State,
+                },
+            },
+            sink,
+        )
+        .await
+        .unwrap();
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
+            .await
+            .is_err()
+    );
+    let paused_epoch = execution.epoch();
+    execution.set(acquisition::AcquisitionRunState::Running);
+    assert!(execution.epoch() > paused_epoch);
+    let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(batch.payload.samples.len(), 1);
+
+    execution.set(acquisition::AcquisitionRunState::Paused);
+    while receiver.try_recv().is_ok() {}
+    assert!(
+        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
+            .await
+            .is_err()
+    );
+    execution.set(acquisition::AcquisitionRunState::Stopped);
+    session.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn acquisition_runtime_opens_reads_caches_and_closes_the_adapter() {
+    let (port, _) = spawn_mock().await;
+    let registry = Arc::new(SourceRegistry::default());
+    registry.register(Arc::new(ModbusFactory::default()));
+    let runtime = AcquisitionRuntime::new(registry);
+    let endpoint_id = EndpointId("plc-runtime".into());
+    let snapshot = runtime
+        .open_endpoint(EndpointSpec {
+            simulation: None,
+            id: endpoint_id.clone(),
+            label: "PLC runtime".into(),
+            enabled: true,
+            capability_endpoint_id: Some("client".into()),
+            driver: driver_payload(port),
+        })
+        .await
+        .unwrap();
+    assert_eq!(snapshot.points.len(), 6);
+    assert!(snapshot.capabilities.unwrap().available.read);
+
+    let result = runtime
+        .read(&endpoint_id, vec![PointId("holding_u16".into())])
+        .await
+        .unwrap();
+    assert_eq!(
+        result.batch.payload.samples[0].value,
+        Some(PointValue::U64(0x1234))
+    );
+    assert_eq!(runtime.latest_samples(&endpoint_id).unwrap().len(), 1);
+
+    let duplicate = runtime
+        .open_endpoint(EndpointSpec {
+            simulation: None,
+            id: endpoint_id.clone(),
+            label: "duplicate".into(),
+            enabled: true,
+            capability_endpoint_id: Some("client".into()),
+            driver: driver_payload(port),
+        })
+        .await;
+    assert!(matches!(
+        duplicate,
+        Err(acquisition::AcquisitionError::Busy)
+    ));
+
+    runtime.close_endpoint(&endpoint_id).await.unwrap();
+    assert!(matches!(
+        runtime.snapshot(&endpoint_id),
+        Err(acquisition::AcquisitionError::UnknownEndpoint(_))
+    ));
+}
+
+#[tokio::test]
+async fn timeout_is_reported_as_bad_communication_quality() {
+    let port = spawn_timeout_mock().await;
+    let mut payload = driver_payload(port);
+    payload.payload["timeoutMs"] = serde_json::json!(20);
+    payload.payload["reconnect"]["maxAttempts"] = serde_json::json!(0);
+    let factory = ModbusFactory::default();
+    let validated = factory.validate(&payload).unwrap();
+    let (sink, _) = mpsc::channel(1);
+    let session = factory
+        .open(
+            validated,
+            DriverContext {
+                connection_epoch: 1,
+                source_id: SourceId::new("timeout-plc").unwrap(),
+                state_sink: sink.clone(),
+                event_sink: sink,
+                execution: acquisition::ExecutionGate::new(
+                    acquisition::AcquisitionRunState::Running,
+                ),
+            },
+        )
+        .await
+        .unwrap();
+    let result = session
+        .reader()
+        .unwrap()
+        .read(ReadRequest {
+            points: vec![PointId("holding_u16".into())],
+        })
+        .await
+        .unwrap();
+    let quality = &result.batch.payload.samples[0].quality;
+    assert_eq!(quality.validity, points::Validity::Bad);
+    assert_ne!(quality.flags & points::quality_flags::COMM_FAILURE, 0);
+    assert_eq!(quality.native.as_ref().unwrap().code, "timeout");
+    session.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn close_cancels_an_in_flight_read_before_its_timeout() {
+    let port = spawn_timeout_mock().await;
+    let mut payload = driver_payload(port);
+    payload.payload["timeoutMs"] = serde_json::json!(2_000);
+    payload.payload["reconnect"]["maxAttempts"] = serde_json::json!(0);
+    let factory = ModbusFactory::default();
+    let validated = factory.validate(&payload).unwrap();
+    let (sink, _) = mpsc::channel(1);
+    let session = factory
+        .open(
+            validated,
+            DriverContext {
+                connection_epoch: 1,
+                source_id: SourceId::new("cancel-plc").unwrap(),
+                state_sink: sink.clone(),
+                event_sink: sink,
+                execution: acquisition::ExecutionGate::new(
+                    acquisition::AcquisitionRunState::Running,
+                ),
+            },
+        )
+        .await
+        .unwrap();
+    let started = tokio::time::Instant::now();
+    let read = session.reader().unwrap().read(ReadRequest {
+        points: vec![PointId("holding_u16".into())],
+    });
+    let close = async {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        session.close().await
+    };
+    let (read_result, close_result) = tokio::join!(read, close);
+    close_result.unwrap();
+    let quality = &read_result.unwrap().batch.payload.samples[0].quality;
+    assert_eq!(quality.native.as_ref().unwrap().code, "cancelled");
+    assert!(started.elapsed() < Duration::from_millis(500));
+}
+
+#[tokio::test]
+async fn disconnected_read_reconnects_before_returning_a_sample() {
+    let (port, connections) = spawn_reconnect_mock().await;
+    let session = open_session(port).await;
+    let result = session
+        .reader()
+        .unwrap()
+        .read(ReadRequest {
+            points: vec![PointId("holding_u16".into())],
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        result.batch.payload.samples[0].value,
+        Some(PointValue::U64(0x1234))
+    );
+    assert_eq!(connections.load(Ordering::Relaxed), 2);
+    assert_eq!(session.epoch(), 2);
+    assert_eq!(
+        session.state(),
+        acquisition::SourceState::Online {
+            connection_epoch: 2,
+        }
+    );
+    session.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn writes_enforce_deadlines_access_and_native_types() {
+    let (port, _) = spawn_mock().await;
+    let session = open_session(port).await;
+    let expired = session
+        .writer()
+        .unwrap()
+        .write(WriteRequest {
+            correlation_id: "expired".into(),
+            deadline_unix_ns: 0,
+            idempotency_key: None,
+            items: Vec::new(),
+        })
+        .await;
+    assert!(matches!(
+        expired,
+        Err(acquisition::AcquisitionError::Timeout)
+    ));
+
+    let deadline = i64::MAX;
+    let result = session
+        .writer()
+        .unwrap()
+        .write(WriteRequest {
+            correlation_id: "invalid-writes".into(),
+            deadline_unix_ns: deadline,
+            idempotency_key: None,
+            items: vec![
+                WriteItem {
+                    point_id: PointId("input".into()),
+                    value: PointValue::U64(1),
+                },
+                WriteItem {
+                    point_id: PointId("coil".into()),
+                    value: PointValue::U64(1),
+                },
+            ],
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        result.items[0].quality.native.as_ref().unwrap().code,
+        "readOnly"
+    );
+    assert_eq!(
+        result.items[1].quality.native.as_ref().unwrap().code,
+        "typeMismatch"
     );
     session.close().await.unwrap();
 }

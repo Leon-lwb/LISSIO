@@ -58,16 +58,7 @@ impl SourceSupervisor {
                     break;
                 }
                 let _ = state_tx.send(SourceState::Validating);
-                let migrated = match factory.migrate(payload.clone()) {
-                    Ok(value) => value,
-                    Err(error) => {
-                        let _ = state_tx.send(SourceState::Degraded {
-                            detail: error.to_string(),
-                        });
-                        break;
-                    }
-                };
-                let validated = match factory.validate(&migrated) {
+                let validated = match factory.validate(&payload) {
                     Ok(value) => value,
                     Err(error) => {
                         let _ = state_tx.send(SourceState::Degraded {

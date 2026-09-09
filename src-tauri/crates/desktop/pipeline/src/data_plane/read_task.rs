@@ -1,4 +1,4 @@
-//! Transport 节点读任务 — 每个 open 的 Transport 节点一个
+//! 设备节点读任务 — 每个已连接字节设备节点一个
 //!
 //! 循环: subscribe 收字节 → 合批 (try_recv 排空, 上限取配置快照) → raw 收集 → raw 收集 →
 //! 沿全局 BytePlan 路由 (协议解析/帧解码喂入/回注发送) → 统计节流 emit。
@@ -94,7 +94,7 @@ const MAX_BATCH_SAMPLE_SECONDS: f64 = 0.05;
 /// 传输名义字节速率 (C2: 合批样本时长上限的换算基准)
 /// TestData = 帧率 × 每帧字节数; 串口 = 波特率线速 (字节/s)
 fn nominal_bytes_per_sec(
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
     node_id: &str,
     avg_bytes_per_frame: f64,
 ) -> Option<f64> {
@@ -121,7 +121,7 @@ fn nominal_bytes_per_sec(
 fn record_lagged(
     plane: &DataPlaneState,
     node_id: &str,
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
     messages: u64,
 ) {
     plane.metrics.lagged.fetch_add(messages, Ordering::Relaxed);
@@ -131,7 +131,7 @@ fn record_lagged(
 fn note_test_data_gap(
     plane: &DataPlaneState,
     node_id: &str,
-    live: Option<&transport::LiveNodeHandle>,
+    live: Option<&acquisition::LiveNodeHandle>,
     messages: u64,
 ) {
     if let Some(data_model::TransportConfig::TestData(config)) =
@@ -141,12 +141,12 @@ fn note_test_data_gap(
     }
 }
 
-/// Transport 节点读任务
+/// 设备节点读任务
 pub(super) async fn read_task(
     app: AppHandle,
     plane: DataPlaneState,
     node_id: String,
-    mut rx: transport::LegacyFlowReceiver,
+    mut rx: acquisition::LegacyFlowReceiver,
 ) {
     log::debug!("数据读任务已启动: {node_id}");
     let mut dec_cache = crate::decoder_feed::DecoderFeedCache::new();
@@ -159,7 +159,7 @@ pub(super) async fn read_task(
     let mut avg_bytes_per_frame = 16.0_f64;
     // 启动时取一次轻量句柄: 每批的运行态配置 (采样时钟) / rx 统计上报
     // 都免 manager 全局锁 (逐批锁会与 open/close/其他传输串行化)
-    let live = plane.transport.lock().await.live_handle(&node_id);
+    let live = plane.transport.live_handle(&node_id);
     let mut pending = None;
 
     loop {
@@ -168,7 +168,7 @@ pub(super) async fn read_task(
         } else {
             match rx.recv().await {
                 Ok(envelope) => envelope,
-                Err(transport::FlowRecvError::Closed) => break,
+                Err(acquisition::FlowRecvError::Closed) => break,
             }
         };
 
@@ -216,9 +216,9 @@ pub(super) async fn read_task(
                     pending = Some(next);
                     break;
                 }
-                Err(transport::FlowTryRecvError::Empty | transport::FlowTryRecvError::Closed) => {
-                    break
-                }
+                Err(
+                    acquisition::FlowTryRecvError::Empty | acquisition::FlowTryRecvError::Closed,
+                ) => break,
             }
         }
         plane.metrics.rx_msgs.fetch_add(

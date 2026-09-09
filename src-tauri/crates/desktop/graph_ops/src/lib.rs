@@ -35,3 +35,6 @@ pub use source_graph::{
 
 /// `graph:compile` 事件名 — re-export 自 `events`, 方便调用方统一取用
 pub use events::GRAPH_COMPILE_EVENT;
+mod document;
+pub use document::apply_document;
+mod simulation;

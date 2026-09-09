@@ -1,14 +1,33 @@
 //! Stateful orchestration contracts for typed acquisition sources.
 
+pub mod backend;
+mod capabilities;
+pub mod handle;
+mod point_simulation;
+pub mod simulation;
+pub use backend::{
+    ConnectionControl, FlowRecvError, FlowTryRecvError, LegacyFlowReceiver, TransportBackend,
+    TransportConnection,
+};
+pub use handle::LiveNodeHandle;
 mod lanes;
+mod runtime;
 mod stores;
 mod supervisor;
 
+pub use capabilities::{
+    AdapterCapability, AddressRegion, AddressSpaceDescriptor, ConfigurationSchema,
+    DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor, EndpointDirection, PortDescriptor,
+    PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
+    CAPABILITY_CONTRACT_VERSION,
+};
 pub use lanes::{CommandLane, EventLane, EventLaneReceiver, LaneError, StateLane, StateLaneStats};
+pub use runtime::{AcquisitionRuntime, EndpointConnectionState, EndpointSnapshot};
 pub use stores::{CommandLedger, CommandStatus, EventLog, PointStore};
 pub use supervisor::{SourceState, SourceSupervisor, SupervisorHandle};
 
 use async_trait::async_trait;
+use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
 use points::{
     AcquisitionIntent, PointEnvelope, PointId, ReadRequest, ReadResult, WriteRequest, WriteResult,
@@ -19,6 +38,8 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 pub type AcquisitionResult<T> = Result<T, AcquisitionError>;
@@ -29,6 +50,10 @@ pub enum AcquisitionError {
     InvalidConfig(String),
     #[error("driver mismatch: expected {expected}, got {actual}")]
     DriverMismatch { expected: String, actual: String },
+    #[error("unknown driver: {0}")]
+    UnknownDriver(String),
+    #[error("unknown endpoint: {0}")]
+    UnknownEndpoint(String),
     #[error("source is busy")]
     Busy,
     #[error("source is closed")]
@@ -39,18 +64,6 @@ pub enum AcquisitionError {
     Unsupported(&'static str),
     #[error("driver operation failed: {0}")]
     Driver(String),
-}
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct DriverId(pub String);
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DriverPayload {
-    pub driver_id: DriverId,
-    pub schema_version: u32,
-    pub payload: Value,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -102,12 +115,64 @@ pub struct SessionCapabilities {
 /// Context supplied by the composition root to an opened source.
 #[derive(Clone)]
 pub struct DriverContext {
+    pub connection_epoch: u64,
     pub source_id: flow::SourceId,
     pub state_sink: SampleSink,
     pub event_sink: SampleSink,
+    pub execution: ExecutionGate,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum AcquisitionRunState {
+    #[default]
+    Stopped,
+    Running,
+    Paused,
+}
+
+#[derive(Clone)]
+pub struct ExecutionGate {
+    state: tokio::sync::watch::Sender<AcquisitionRunState>,
+    epoch: Arc<AtomicU64>,
+}
+
+impl ExecutionGate {
+    pub fn new(state: AcquisitionRunState) -> Self {
+        let (state, _) = tokio::sync::watch::channel(state);
+        Self {
+            state,
+            epoch: Arc::new(AtomicU64::new(0)),
+        }
+    }
+
+    pub fn set(&self, state: AcquisitionRunState) -> u64 {
+        if *self.state.borrow() != state {
+            self.epoch.fetch_add(1, Ordering::AcqRel);
+            self.state.send_replace(state);
+        }
+        self.epoch()
+    }
+
+    pub fn state(&self) -> AcquisitionRunState {
+        *self.state.borrow()
+    }
+
+    pub fn epoch(&self) -> u64 {
+        self.epoch.load(Ordering::Acquire)
+    }
+
+    pub fn subscribe(&self) -> tokio::sync::watch::Receiver<AcquisitionRunState> {
+        self.state.subscribe()
+    }
 }
 
 pub type SampleSink = mpsc::Sender<PointEnvelope>;
+
+/// Composition-root hook for routing typed point batches into product data
+/// planes without coupling this protocol crate to desktop storage.
+pub trait PointBatchObserver: Send + Sync {
+    fn observe(&self, envelope: &PointEnvelope);
+}
 
 type OpenFuture = Pin<Box<dyn Future<Output = AcquisitionResult<Box<dyn SourceSession>>> + Send>>;
 
@@ -140,10 +205,28 @@ impl ValidatedConfig {
 
 #[async_trait]
 pub trait SourceFactory: Send + Sync {
+    async fn simulate(
+        &self,
+        input: &DriverPayload,
+        config: &data_model::device::SimulationConfig,
+        context: DriverContext,
+    ) -> AcquisitionResult<Box<dyn SourceSession>> {
+        simulation::validate(config)?;
+        crate::point_simulation::open(self.point_descriptors(input)?, config.clone(), context)
+    }
     fn manifest(&self) -> &DriverManifest;
     fn config_schema(&self) -> DriverSchema;
-    fn migrate(&self, input: DriverPayload) -> AcquisitionResult<DriverPayload>;
+    fn adapter_capability(&self) -> AdapterCapability;
+    fn discover(&self) -> AcquisitionResult<Vec<DiscoveredEndpoint>> {
+        Ok(Vec::new())
+    }
     fn validate(&self, input: &DriverPayload) -> AcquisitionResult<ValidatedConfig>;
+    fn point_descriptors(
+        &self,
+        _input: &DriverPayload,
+    ) -> AcquisitionResult<Vec<points::PointDescriptor>> {
+        Ok(Vec::new())
+    }
 
     async fn open(
         &self,
@@ -163,8 +246,22 @@ pub trait SourceFactory: Send + Sync {
 
 #[async_trait]
 pub trait SourceSession: Send + Sync {
+    fn update_simulation(
+        &self,
+        _config: data_model::device::SimulationConfig,
+    ) -> AcquisitionResult<()> {
+        Err(AcquisitionError::Unsupported("simulation update"))
+    }
+    fn byte_stream(&self) -> Option<&handle::TransportHandle> {
+        None
+    }
     fn epoch(&self) -> u64;
     fn capabilities(&self) -> &SessionCapabilities;
+    fn state(&self) -> SourceState {
+        SourceState::Online {
+            connection_epoch: self.epoch(),
+        }
+    }
     fn reader(&self) -> Option<&dyn ReadCapability> {
         None
     }
@@ -267,5 +364,19 @@ impl SourceRegistry {
             .values()
             .map(|factory| factory.manifest().clone())
             .collect()
+    }
+
+    pub fn adapter_capabilities(&self) -> Vec<AdapterCapability> {
+        self.factories
+            .read()
+            .values()
+            .map(|factory| factory.adapter_capability())
+            .collect()
+    }
+
+    pub fn discover(&self, driver_id: &DriverId) -> AcquisitionResult<Vec<DiscoveredEndpoint>> {
+        self.factory(driver_id)
+            .ok_or_else(|| AcquisitionError::UnknownDriver(driver_id.0.clone()))?
+            .discover()
     }
 }

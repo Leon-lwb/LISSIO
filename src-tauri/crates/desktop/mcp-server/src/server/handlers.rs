@@ -38,12 +38,10 @@ impl VofaMcpServer {
         Self { toolbox, app }
     }
 
-    /// 列出全部传输节点及其连接状态。
-    #[rmcp::tool(
-        description = "列出全部传输节点 (串口/TCP/UDP 等) 及其连接状态。返回 [{node_id, state}] 数组"
-    )]
-    async fn list_transports(&self) -> Result<CallToolResult, rmcp::ErrorData> {
-        tool_result(tools::list_transports(&self.toolbox).await)
+    /// 列出全部已打开设备会话及其连接状态。
+    #[rmcp::tool(description = "列出全部已打开设备会话及其连接状态。返回 [{node_id, state}] 数组")]
+    async fn list_devices(&self) -> Result<CallToolResult, rmcp::ErrorData> {
+        tool_result(tools::list_devices(&self.toolbox).await)
     }
 
     /// 列出可用串口。
@@ -180,7 +178,7 @@ impl VofaMcpServer {
 
     /// 提交 (替换) 指定 tab 的节点图 — 与前端提交同一路径, 界面实时同步。
     #[rmcp::tool(
-        description = "替换指定 tab 的节点图。nodes/edges 与前端 NodeDef/Edge 格式一致;widgets 可选, 为控件配置记录数组 [{id, kind, params}] (提供时画布可完整渲染控件), positions 可选为节点画布位置 {node_id: {x, y}}。提交成功后前端界面实时刷新。返回派生端口表。编译失败 (环/端口域不匹配) 返回错误, 旧图保留"
+        description = "原子替换指定 tab 的节点文档和连线。documents 使用 id/tabId/label/layout/kind/config/attributes 公共契约。提交成功后画布、运行图和持久化同时更新；编译失败时旧文档保留"
     )]
     async fn update_graph(
         &self,
@@ -190,10 +188,8 @@ impl VofaMcpServer {
             &self.toolbox,
             &self.app,
             &params.tab_id,
-            params.nodes,
+            params.documents,
             params.edges,
-            params.widgets,
-            params.positions,
         )
         .await
         .map_err(internal)
@@ -312,7 +308,7 @@ impl ServerHandler for VofaMcpServer {
                 "Lissio 串口/波形调试上位机。可发送指令到设备 (send_string/send_bytes/send_can_frame)、\
                  读取波形与图输出 (get_recent_waveform/get_graph_outputs)、\
                  修改节点图 (update_graph 整图替换 / connect_edge+disconnect_edge 增量连线, \
-                 编译校验失败会返回真实原因)。先用 list_transports/list_data_sources/list_tabs 了解可用资源。",
+                 编译校验失败会返回真实原因)。先用 list_devices/list_data_sources/list_tabs 了解可用资源。",
             )
     }
 }

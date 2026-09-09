@@ -13,7 +13,7 @@ import {
   getPrimaryWaveformSource,
   cleanupSourceManagers,
 } from '../../lib/buffers/sourceManagers';
-import { isGlobalNode, adoptSourceGraph, isSyncInFlight, hydrateWorkspaceFromBackend, syncWorkspaceMeta } from '../appStoreHelpers';
+import { isStructuralNode, adoptSourceGraph, isSyncInFlight, hydrateWorkspaceFromBackend, syncWorkspaceMeta } from '../appStoreHelpers';
 import { useAppStore } from '../appStore';
 import type {
   GraphSourceEventPayload,
@@ -118,14 +118,14 @@ function parseGraphCompileEvent(
 }
 
 /// graph:source payload 解析 — tab 权威源图 (前端画布收敛依据)。
-/// 契约为 `{ tab_id, version, nodes: NodeDef[], edges: Edge[] }` (snake_case)。
+/// 契约为 `{ tab_id, version, documents: NodeDocument[], edges: Edge[] }` (snake_case)。
 function parseGraphSourceEvent(payload: unknown): GraphSourceEventPayload | null {
   if (
     payload &&
     typeof payload === 'object' &&
     'tab_id' in payload &&
     'version' in payload &&
-    'nodes' in payload &&
+    'documents' in payload &&
     'edges' in payload &&
     Array.isArray((payload as { edges: unknown }).edges)
   ) {
@@ -143,7 +143,7 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
   /// 数据源对账: 主波形源 = 第一个 Protocol 节点。RawData 由可见视图自行订阅。
   const reconcileSources = () => {
     const nodes = get().rfNodes;
-    const firstProtocol = nodes.find((n) => n.type === 'protocol' && isGlobalNode(n));
+    const firstProtocol = nodes.find((n) => n.type === 'protocol' && isStructuralNode(n));
     const primary = firstProtocol?.id ?? null;
     if (primary !== getPrimaryWaveformSource()) setPrimaryWaveformSource(primary);
   };
@@ -231,7 +231,7 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
       });
 
       // graph:source — 后端权威源图回推 (拓扑 op / MCP / 其他写入方提交成功后);
-      // 画布按此收敛边与缺失的全局节点。提交在途时暂缓 (在途提交的响应/冲突路径已覆盖)
+      // 画布按此收敛边与缺失节点。提交在途时暂缓 (在途提交的响应/冲突路径已覆盖)
       const unlistenSource = await listen<unknown>('graph:source', (event) => {
         const parsed = parseGraphSourceEvent(event.payload);
         if (!parsed) return;

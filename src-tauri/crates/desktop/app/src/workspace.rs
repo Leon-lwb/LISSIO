@@ -1,17 +1,9 @@
-//! 工作区存储 — widget 配置模型与 tab 元数据的后端权威
+//! 工作区存储 — 页签元数据与节点文档的后端权威
 //!
-//! 与 [`crate::SourceGraphs`](连线拓扑) 同级:源图存 NodeDef/Edge/端口提示,
-//! 这里存 widget 配置记录 (kind + params 透传, schema 语义仍由前端类型定义)、
-//! 画布位置与 tab 元数据。三者在 `apply_tab_graph_parts` 编译提交时原子更新,
-//! 并整体落盘到 app config dir 的 `workspace.json` (防抖 + 退出 flush)。
-//!
-//! widget params 以 `serde_json::Value` 透传:后端是存储与分发权威
-//! (持久化 / `graph:source` 分发 / 外部写入方提交),配置形状的校验发生在
-//! 前端水合时 (未知 kind 剔除) — 避免在后端复刻 28 类控件的 schema。
+//! 每个页签在 [`crate::SourceGraphs`] 中只保存一份 `NodeDocument + Edge`；
+//! 运行时 `NodeDef`、端口提示与 widget 投影均由文档派生，不单独持久化。
 
 use buffer_graph::Edge;
-use pipeline::NodeDef;
-use pipeline::WidgetRecord;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -21,10 +13,7 @@ use std::sync::Arc;
 /// 工作区文件名 (位于 app config dir)。
 pub const WORKSPACE_FILE_NAME: &str = "workspace.json";
 
-/// 画布坐标 — 与前端 React Flow `node.position` 同形。
-///
-/// `width`/`height` 是用户显式调整后的节点尺寸 (None = 随内容自适应)。
-/// serde 默认值保证旧 `workspace.json` (仅 x/y) 与旧命令载荷完全兼容。
+/// 画布布局更新命令的载荷；权威值写入 `NodeDocument.layout`。
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Position {
     pub x: f64,
@@ -47,13 +36,11 @@ impl Position {
     }
 }
 
-/// 控件 tab 元数据 — 名称与 widget 顺序 (配置本体在各 tab 源图的 `widgets`)。
+/// 控件 tab 元数据。节点归属和顺序由对应页签的文档决定。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TabMeta {
     pub id: String,
     pub name: String,
-    #[serde(default)]
-    pub widgets: Vec<String>,
 }
 
 /// 数据面板 tab 元数据 — 透传存储 (面板类型校验在前端水合时做)。
@@ -83,8 +70,6 @@ const fn default_true() -> bool {
 pub struct WorkspaceInner {
     pub tabs: Vec<TabMeta>,
     pub data_tabs: Vec<DataTabMeta>,
-    /// 全部节点的画布位置 (widget 节点按 tab 隔离, 全局节点跨 tab 共享 — 平铺按 id 索引)
-    pub positions: HashMap<String, Position>,
     pub restored: bool,
     /// 自上次落盘后是否有变更 (防抖写入任务 / 退出 flush 的依据)
     pub dirty: bool,
@@ -96,12 +81,8 @@ pub type WorkspaceState = Arc<parking_lot::Mutex<WorkspaceInner>>;
 /// 单 tab 源图的落盘形态 (源图存储的序列化投影)。
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TabGraphFile {
-    pub nodes: Vec<NodeDef>,
+    pub documents: Vec<kind::document::NodeDocument>,
     pub edges: Vec<Edge>,
-    #[serde(default)]
-    pub hints: HashMap<String, crate::SourceNodeHint>,
-    #[serde(default)]
-    pub widgets: Vec<WidgetRecord>,
 }
 
 /// `workspace.json` 完整形态。
@@ -113,8 +94,6 @@ pub struct WorkspaceFile {
     pub data_tabs: Vec<DataTabMeta>,
     #[serde(default)]
     pub graphs: HashMap<String, TabGraphFile>,
-    #[serde(default)]
-    pub positions: HashMap<String, Position>,
 }
 
 /// 工作区文件完整路径。
@@ -165,9 +144,9 @@ pub fn collect_workspace_file(
     ws: &WorkspaceState,
     source_graphs: &crate::SourceGraphs,
 ) -> WorkspaceFile {
-    let (tabs, data_tabs, positions) = {
+    let (tabs, data_tabs) = {
         let ws = ws.lock();
-        (ws.tabs.clone(), ws.data_tabs.clone(), ws.positions.clone())
+        (ws.tabs.clone(), ws.data_tabs.clone())
     };
     let graphs = source_graphs
         .lock()
@@ -176,10 +155,8 @@ pub fn collect_workspace_file(
             (
                 tab_id.clone(),
                 TabGraphFile {
-                    nodes: g.nodes.clone(),
+                    documents: g.documents.clone(),
                     edges: g.edges.clone(),
-                    hints: g.hints.clone(),
-                    widgets: g.widgets.clone(),
                 },
             )
         })
@@ -188,23 +165,6 @@ pub fn collect_workspace_file(
         tabs,
         data_tabs,
         graphs,
-        positions,
-    }
-}
-
-/// 清理已不存在节点的位置条目 (存活集合 = 全部 tab 源图节点),
-/// 并在 `changed` 时标记落盘脏。
-pub fn prune_positions(ws: &WorkspaceState, source_graphs: &crate::SourceGraphs) {
-    let alive: std::collections::HashSet<String> = source_graphs
-        .lock()
-        .values()
-        .flat_map(|g| g.nodes.iter().map(|n| n.id.clone()))
-        .collect();
-    let mut ws = ws.lock();
-    let before = ws.positions.len();
-    ws.positions.retain(|id, _| alive.contains(id));
-    if ws.positions.len() != before {
-        ws.dirty = true;
     }
 }
 
@@ -212,17 +172,7 @@ pub fn prune_positions(ws: &WorkspaceState, source_graphs: &crate::SourceGraphs)
 mod tests {
     use super::*;
 
-    /// 旧版 workspace.json 的位置条目只有 x/y — 必须继续可反序列化 (None 兜底)。
-    #[test]
-    fn position_deserializes_legacy_xy_only_json() {
-        let p: Position = serde_json::from_str(r#"{"x": 12.5, "y": -3}"#).expect("旧格式应可解析");
-        assert_eq!(p, Position::new(12.5, -3.0));
-        assert_eq!(p.width, None);
-        assert_eq!(p.height, None);
-    }
-
-    /// 未调整尺寸时序列化省略 width/height (不膨胀 workspace.json);
-    /// 显式尺寸回环无损。
+    /// 布局命令载荷可同时表达自适应与显式尺寸。
     #[test]
     fn position_size_roundtrip() {
         let auto = serde_json::to_value(Position::new(1.0, 2.0)).expect("序列化应成功");

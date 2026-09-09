@@ -5,10 +5,10 @@
 pub mod tcp;
 pub mod udp;
 
+use acquisition::{TransportBackend, TransportConnection};
 use async_trait::async_trait;
 use data_model::{Result, TransportConfig};
 use schema_types::TestDataLink;
-use transport::{TransportBackend, TransportConnection};
 
 /// TCP/UDP adapter. All network variants expose the same byte connection.
 pub struct NetworkBackend;

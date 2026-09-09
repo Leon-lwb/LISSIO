@@ -1,6 +1,6 @@
 # 工业协议接入架构方案
 
-> 状态：提案
+> 状态：部分落地（Modbus TCP/RTU、能力描述符、采集运行时与自动设备卡片已实现；其余协议仍为提案）
 >
 > 复核日期：2026-09-08
 >
@@ -36,7 +36,7 @@ FlowHub ── 生命周期、epoch、typed lanes、有界队列、序列/缺口
                    现有波形缓冲与节点图求值
 ```
 
-首个生产候选仍是 `tokio-modbus` 的 Modbus TCP 客户端。它验证统一平面的直接点位源；现有 Serial/TCP/TestData 验证字节源，现有 Protocol/FrameDecoder 则成为 Bytes 到 Points/Numeric 的 transform。抽象不能只按寄存器轮询设计；OPC UA 的浏览/订阅/方法、MQTT 的 QoS/保留消息、IEC 104 的事件/控制语义必须能通过可选能力自然表达。
+首个实现是 `tokio-modbus` 的 Modbus TCP 与 RTU 客户端。它们验证统一平面的直接点位源；Serial/TCP 等设备验证字节源，Protocol/FrameDecoder 则成为 Bytes 到 Points/Numeric 的 transform。测试数据通过设备属性切换会话实现，不再伪装成独立设备类型。抽象不能只按寄存器轮询设计；OPC UA 的浏览/订阅/方法、MQTT 的 QoS/保留消息、IEC 104 的事件/控制语义必须能通过可选能力自然表达。
 
 ## 现有字节平面如何并入
 
@@ -76,7 +76,7 @@ FlowHub ── 生命周期、epoch、typed lanes、有界队列、序列/缺口
 
 | 协议 / crate | 决策 | 经核验的边界与引入方式 |
 |---|---|---|
-| Modbus / `tokio-modbus` 0.17 | **首选** | MIT OR Apache-2.0；Tokio TCP/RTU，客户端/服务端按 feature 分离。实际 feature 列表没有 ASCII，原清单的 ASCII 说法删除。首版使用 `default-features = false, features = ["tcp"]`，不开 sync/server。[文档](https://docs.rs/crate/tokio-modbus/latest) |
+| Modbus / `tokio-modbus` 0.17 | **已实现** | MIT OR Apache-2.0；启用异步 TCP/RTU client，不启用 sync/server。TCP 使用回环测试服务，RTU 使用受控字节流验证；实际 feature 列表没有 ASCII。[文档](https://docs.rs/crate/tokio-modbus/latest) |
 | Modbus / `rodbus` | **排除** | 免费许可仅覆盖非商业、非生产用途，不符合永久开源产品的可再分发承诺。[厂商许可](https://stepfunc.io/products/libraries/) |
 | OPC UA / `async-opcua` | **第二优先，验证后引入** | MPL-2.0、纯 Rust、Tokio；client event loop 需要持续驱动，正好由端点 task 独占。仅启用 client 所需 feature，不引入 server/XML/JSON；0.x API 和互操作仍需锁版本验证。[上游](https://github.com/FreeOpcUa/async-opcua) |
 | OPC UA / `open62541` | **互操作回退** | 安全高层绑定加成熟 C 栈，MPL-2.0 许可可接受；代价是 C/CMake、FFI 生命周期和三平台打包。[绑定](https://github.com/HMIProject/open62541) |
@@ -103,7 +103,7 @@ Stars 和下载量只用于发现候选，不是发布证据。最终门槛是�
 
 ### 当前推荐顺序
 
-1. `tokio-modbus` TCP client：建立统一流平面的直接点位源和完整测试基线。
+1. `tokio-modbus` TCP/RTU client：已建立统一流平面的直接点位源和自动能力卡片基线。
 2. `async-opcua` client：验证富类型、浏览、订阅、质量、时间和方法能力。
 3. MQTT 技术验证：同一套合同测试比较 `rumqttc` 与 `mqtt5`，不预先承诺胜者。
 4. EtherNet/IP、IEC 104、S7、MELSEC、CoAP：只按明确用户需求和可用硬件接入。
@@ -415,15 +415,17 @@ IPC 命令保持薄：注册/打开/关闭端点、读取 manifest/schema、浏�
 
 ### Modbus TCP
 
-- `tokio-modbus = { version = "0.17", default-features = false, features = ["tcp"] }`。
-- 客户端角色；coil、discrete input、input/holding register 读，单/多 coil/register 写。
+- `tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }`。
+- 客户端角色；coil、discrete input、input/holding register 读，单 coil、单/多 register 写；批量 `WriteRequest` 可包含多个点位。
 - bool、16/32/64 位整数、f32/f64；byte/word order、scale/offset 全部显式。
 - unit、功能码、周期和连续地址共同决定请求组，遵守 PDU 长度限制。
 - exception、超时、断线转成通用质量并保留原始 exception code。
 - 自定义 function 只通过受限扩展能力提供，不污染通用 Read trait。
 - 不宣称 ASCII。泛型 transport 可用于 TLS 包装不等于自动实现 Modbus Security。
 
-RTU 后续在同一适配器 feature 中加入，并由适配器独占 `tokio-serial`。先实现串口资源仲裁，覆盖 Windows COM、macOS `/dev/cu.*`、Linux 权限、热拔插、静默间隔及与现有 Serial/Slcan 节点的冲突。
+### Modbus RTU
+
+RTU 与 TCP 共用点位、批量规划、质量、重连和取消语义；连接参数包含串口名、波特率、数据位、校验、停止位、流控、unit、超时与重连策略。发现只枚举本机串口，不主动扫描 unit ID。适配器直接独占打开串口，冲突由操作系统的独占打开错误报告；物理热拔插、不同 USB/RS-485 转换器的静默间隔和与 Serial/Slcan 的跨管理器仲裁仍需真实硬件验证。
 
 ### OPC UA
 
@@ -483,9 +485,9 @@ crate 自测或与一台设备通信只能证明有限互操作，不能证明�
 3. 新增 `points`，确定富类型、质量、时间、事件和命令契约。
 4. 新增 `acquisition`，实现 SourceFactory/能力 traits、mock source、来源监督器、typed lanes 和合同测试。
 5. 实现 `PointStore`、`EventLog`、`CommandLedger` 与显式数值投影。
-6. 新增只开启 TCP client 的 `modbus-adapter`，完成请求规划和 mock server 测试。
-7. 在 `lissio` 组合根静态注册来源，补薄 IPC、批量订阅与 Endpoint/PointSource UI。
-8. 完成工作区迁移、三平台构建、真实设备互操作和 24 小时 soak 证据。
+6. 已新增 TCP/RTU client `modbus-adapter`，完成请求规划、回环服务和受控 RTU 帧测试。
+7. 已在 `lissio` 组合根静态注册来源，并加入薄 IPC、批量订阅、能力驱动设备卡片和通用 schema 回退。
+8. 已完成工作区兼容迁移和本机门禁；三平台构建、真实设备互操作和 24 小时 soak 仍需发布流水线与硬件实验室证据。
 
 一个变更集不同时引入多个外部协议 SDK。公共合同用 mock 与 Modbus 走通后，OPC UA 用来证明抽象没有被寄存器模型绑死；MQTT 候选则先完成同合同对比再落锁。
 

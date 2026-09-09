@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum PortDomain {
+    Points,
     F32,
     Bytes,
     String,
@@ -32,6 +33,7 @@ impl PortDomain {
     /// 字符串化 (诊断 / 日志)
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::Points => "points",
             Self::F32 => "f32",
             Self::Bytes => "bytes",
             Self::String => "string",
@@ -67,6 +69,14 @@ pub enum CompileError {
 
     /// 节点未找到 — 边引用的目标节点 id 不存在
     NodeNotFound { id: String },
+
+    /// 边引用了节点并未声明的端口。
+    PortNotFound {
+        edge_id: Box<str>,
+        node_id: Box<str>,
+        port: Box<str>,
+        output: bool,
+    },
 }
 
 impl CompileError {
@@ -80,13 +90,16 @@ impl CompileError {
                 ..
             } => dedup(&[source_node.to_string(), target.to_string()]),
             Self::NodeNotFound { id } => vec![id.clone()],
+            Self::PortNotFound { node_id, .. } => vec![node_id.to_string()],
         }
     }
 
     /// 涉及的边 id — 供前端画布红边 + hover tooltip
     pub fn affects_edges(&self) -> Vec<String> {
         match self {
-            Self::DomainMismatch { edge_id, .. } => vec![edge_id.to_string()],
+            Self::DomainMismatch { edge_id, .. } | Self::PortNotFound { edge_id, .. } => {
+                vec![edge_id.to_string()]
+            }
             _ => vec![],
         }
     }
@@ -98,6 +111,7 @@ impl CompileError {
             Self::ByteCycle { .. } => "ByteCycle",
             Self::DomainMismatch { .. } => "DomainMismatch",
             Self::NodeNotFound { .. } => "NodeNotFound",
+            Self::PortNotFound { .. } => "PortNotFound",
         }
     }
 
@@ -125,6 +139,15 @@ impl CompileError {
                 tgt_domain.as_str()
             ),
             Self::NodeNotFound { id } => format!("节点 {id} 不存在于图中"),
+            Self::PortNotFound {
+                edge_id,
+                node_id,
+                port,
+                output,
+            } => format!(
+                "边 {edge_id} 引用了节点 {node_id} 未声明的{}端口 {port}",
+                if *output { "输出" } else { "输入" }
+            ),
         }
     }
 }

@@ -5,22 +5,20 @@ VOFA+) for embedded development with serial / TCP / UDP / CAN / logic-analyzer
 scenarios. Core capabilities: device connection, protocol parsing, waveform
 display, interactive control panels, CAN bus analysis, logic decoding.
 
-## Dual-plane Data Architecture
+## Typed Data Architecture
 
-- **Byte plane (global)**: an event-driven byte-stream network of Transport and
-  Protocol nodes. Device bytes flow out of Transport.rx into Protocol.in;
-  Protocol.out produces numeric channels.
-- **Value plane (per tab)**: each control tab is an independently compiled node
-  graph (DAG). A ProtocolSource references the latest frame of a global Protocol
-  node and outputs ch0..chN channels for downstream widgets (waveform, gauge,
-  ...). Evaluation runs on the backend-compiled CompiledGraph.
+- **Byte devices** expose typed `rx`/`tx` ports and feed parser/encoder nodes.
+- **Point devices** expose a `points` port. Point Selector converts selected,
+  stable point IDs into named numeric outputs while preserving native values
+  and quality until that explicit projection.
+- Every control tab owns an independently compiled graph. Direct cross-tab
+  connections are rejected.
 
 ## Canvas & Nodes
 
-- **Control tabs**: users create multiple tabs; each tab is a canvas holding
-  widget nodes.
-- **Global nodes**: Transport / Protocol nodes belong to no tab and render on
-  every canvas. They form the byte plane.
+- **Control tabs**: each canvas owns all of its device, parser and widget nodes.
+- **Device nodes**: Serial, TCP, UDP, Slcan, CandleLight and Modbus devices are
+  created from one capability catalog and share one session lifecycle.
 - **Widget nodes**: input controls (Knob/Slider/Button/...), display widgets
   (Waveform/Gauge/...), and compute nodes (Math/Filter/FFT/FrameDecoder/
   Trigger/...) live inside a tab as widgets.
@@ -34,7 +32,7 @@ display, interactive control panels, CAN bus analysis, logic decoding.
   remove_node / update_node_config / connect_nodes / disconnect_edge /
   move_node edit incrementally (equivalent to manual editing: canvas updates
   live and changes enter undo history).
-- Transports: list_serial_ports, connect_transport / disconnect_transport,
+- Devices: list_devices / list_serial_ports, connect_device / disconnect_device,
   send_bytes / send_string / send_can_frame.
 - Data reads: get_graph_outputs (latest values of all output ports),
   get_recent_waveform / get_waveform_window, get_can_frames, get_logic_data,
@@ -44,6 +42,6 @@ display, interactive control panels, CAN bus analysis, logic decoding.
 
 ## Example Data Flow
 
-TestData (simulated device) → Protocol(JustFloat) → Waveform: connect a byte
-edge transport.rx → protocol.in, then a value edge protocol channel →
-waveform.data; connect_transport and the waveform appears.
+Serial device with a Test Data attribute → Protocol(JustFloat) → Waveform:
+connect `device.rx → protocol.in`, then a protocol channel to the display, and
+call `connect_device`. The simulated session never opens the real serial port.

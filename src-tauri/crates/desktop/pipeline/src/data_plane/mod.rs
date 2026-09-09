@@ -1,9 +1,9 @@
 //! # data_plane — 数据平面执行器 (取代旧 data_loop)
 //!
 //! 架构 (两平面节点图重构):
-//! - **字节平面** (全局, 事件驱动): 每个 open 的 Transport 节点一个读任务,
-//!   subscribe → record_rx → 按源 raw 收集 → 沿全局 [`BytePlan`] 推送
-//!   (见 [`byte_router`]): Protocol.in 解析 / FrameDecoder.in 喂入 / Transport.tx 发送;
+//! - **字节平面** (工作区共享, 事件驱动): 每个已连接设备节点一个读任务,
+//!   subscribe → record_rx → 按源 raw 收集 → 沿合并 [`BytePlan`] 推送
+//!   (见 [`byte_router`]): Protocol.in 解析 / FrameDecoder.in 喂入 / 设备 tx 发送;
 //!   Protocol 节点的 convert_to 输出引擎把帧重编码为字节继续沿 `out` 边下推。
 //! - **数值平面** (每 tab f32 槽位): Protocol 节点产帧 → [`frame_dispatch`]
 //!   写 source_frames 缓存 + 触发引用该源的 tab 图评估 (见 [`graph_eval`])。
@@ -26,6 +26,7 @@ pub mod read_task;
 pub mod reconcile;
 mod routes;
 
+use acquisition::AcquisitionRuntime;
 use can::{CanBuffer, CanLoadStats};
 use data_model::{DataFrame, PipelineConfig};
 use graph::{BytePlan, SourceFramesMap, SourceTextsMap};
@@ -37,7 +38,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::task::JoinHandle;
-use transport::TransportManager;
 use waveform::DataBuffer;
 
 use crate::eval_state::GraphEvalState;
@@ -68,11 +68,11 @@ pub(crate) const MAX_RAW_POINTS: usize = 16_000_000;
 /// 由 AppState::new 构建, 各字段为 Arc 克隆; 读任务/命令通过 clone 持有。
 #[derive(Clone)]
 pub struct DataPlaneState {
-    /// 传输注册表 (node_id → 连接实例)
-    pub transport: Arc<tokio::sync::Mutex<TransportManager>>,
-    /// 全局节点表 (所有 tab 合并, 按 id 覆盖; 全局 BytePlan 重建的依据)
+    /// 统一设备会话运行时 (node_id → 会话实例)
+    pub transport: Arc<AcquisitionRuntime>,
+    /// 工作区运行时节点索引 (所有页签文档合并；BytePlan 重建的依据)
     pub global_nodes: Arc<Mutex<HashMap<String, NodeDef>>>,
-    /// 全局字节平面 (所有 tab byte_edges 合并重算)
+    /// 工作区合并字节平面 (所有页签 byte_edges 合并重算)
     pub byte_plan: Arc<Mutex<BytePlan>>,
     /// Protocol 节点运行时状态 (key = Protocol 节点 id)
     pub protocol_states: Arc<Mutex<HashMap<String, Arc<Mutex<ProtocolNodeState>>>>>,
@@ -83,7 +83,7 @@ pub struct DataPlaneState {
     pub source_texts: Arc<Mutex<SourceTextsMap>>,
     /// 每源数据缓冲区 (key = Protocol 节点 id; 派生键随实例隔离)
     pub buffers: Arc<Mutex<HashMap<String, Arc<Mutex<DataBuffer>>>>>,
-    /// 每 Transport 节点 rx 的原始字节收集器
+    /// 每个字节设备节点 rx 的原始字节收集器
     pub raw_collectors: Arc<Mutex<HashMap<String, Arc<Mutex<RawDataCollector>>>>>,
     /// 每源待评估帧批队列 (字节平面 → 数值平面解耦点; key = Protocol 节点 id;
     /// 元素 Arc 共享 — 去重组 fan-out 零拷贝, 不变量 4)
@@ -101,7 +101,7 @@ pub struct DataPlaneState {
     eval_cursor: Arc<AtomicU64>,
     /// 评估 worker 是否已启动 (单实例)
     eval_worker_started: Arc<AtomicBool>,
-    /// Transport 读任务句柄表 (key = Transport 节点 id)
+    /// 设备读任务句柄表 (key = 设备节点 id)
     read_tasks: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     /// 最近一次已对悬空 ProtocolSource 发出警告的 graphs_version (reconcile 去重)
     pub(crate) reconcile_warn_version: Arc<AtomicU64>,
@@ -119,7 +119,7 @@ pub struct DataPlaneState {
 impl DataPlaneState {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        transport: Arc<tokio::sync::Mutex<TransportManager>>,
+        transport: Arc<AcquisitionRuntime>,
         eval: GraphEvalState,
         source_frames: Arc<Mutex<SourceFramesMap>>,
         source_texts: Arc<Mutex<SourceTextsMap>>,
@@ -178,7 +178,7 @@ impl DataPlaneState {
             .clone()
     }
 
-    /// 取指定 Transport 节点的原始字节收集器 (不存在则创建)
+    /// 取指定字节设备节点的原始字节收集器 (不存在则创建)
     pub fn raw_collector_for(&self, source: &str) -> Arc<Mutex<RawDataCollector>> {
         self.raw_collectors
             .lock()

@@ -167,7 +167,7 @@ function App() {
       st.addWidget(rawWidget, 'default', { x: 560, y: 120 });
       // 空图时再给出 设备→协议解析→RawData 初始连线, 新用户开箱即有完整数据通路
       const fresh = useAppStore.getState();
-      if (!fresh.rfNodes.some((n) => n.data?.global === true)) {
+      if (!fresh.rfNodes.some((n) => n.type === 'acquisition' || n.type === 'protocol')) {
         fresh.seedInitialGraph(rawWidget.params.id);
       }
     }

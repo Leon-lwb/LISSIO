@@ -186,6 +186,14 @@ pub trait TransportBackend: Send + Sync {
     /// Stable diagnostic name used in errors and logs.
     fn name(&self) -> &'static str;
 
+    fn supports_discovery(&self) -> bool {
+        false
+    }
+
+    fn discover(&self, _config: &TransportConfig) -> Result<Vec<crate::DiscoveredEndpoint>> {
+        Ok(Vec::new())
+    }
+
     /// Whether this backend owns the supplied configuration variant.
     fn accepts(&self, config: &TransportConfig) -> bool;
 

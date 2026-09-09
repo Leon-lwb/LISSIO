@@ -9,6 +9,9 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+error = { workspace = true }
+schema_types = { workspace = true }
+data_model = { workspace = true }
 async-trait = { workspace = true }
 flow = { workspace = true }
 parking_lot = { workspace = true }

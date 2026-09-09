@@ -1,13 +1,12 @@
 //! 孤儿资源清理 — 图重编译 (update_tab_graph / remove_tab_graph) 提交后调用
 //!
-//! 全局节点表是所有 tab 的合并视图: 节点仍被任一 tab 引用时保留,
-//! 只有所有 tab 都不再引用时 (键从全局表消失) 才清理运行时资源:
-//! - Transport 节点: registry 仍 is_open 但全局表已不存在 → detach 读任务 + close 连接
+//! 运行时节点索引是所有页签文档的合并视图；节点从其所属页签删除后才清理资源:
+//! - 设备节点: 会话仍打开但运行时索引已不存在 → detach 读任务 + close 连接
 //! - Protocol 节点: protocol_states / source_frames 由 `sync_protocol_states` 清理,
 //!   本模块补清 buffers (key = Protocol 节点 id)
-//! - raw_collectors (key = Transport 节点 id): 无对应 Transport 节点的键移除
+//! - raw_collectors (key = 设备节点 id): 无对应设备节点的键移除
 //! - trigger_states (key = Trigger 节点 id): 已不存在于任一 tab 图的键移除
-//! - 悬空 ProtocolSource (引用的 node_id 不是全局表中的 Protocol 节点):
+//! - 悬空 ProtocolSource (引用的 node_id 不是运行时索引中的 Protocol 节点):
 //!   不编译失败, 仅 log::warn (按 graphs_version 去重, 每个图版本最多警告一次)
 
 use std::collections::HashSet;
@@ -17,40 +16,40 @@ use kind::NodeKind;
 
 use super::DataPlaneState;
 
-/// 全局节点表快照: Transport 节点 id 集 / Protocol 节点 id 集 /
+/// 运行时节点索引快照: 设备节点 id 集 / Protocol 节点 id 集 /
 /// 悬空 ProtocolSource 列表 (ProtocolSource 节点 id, 引用的 node_id) /
 /// 存活 Trigger 节点 id 集 (trigger_states 清理依据)
 struct NodeSets {
-    transports: HashSet<String>,
+    devices: HashSet<String>,
     protocols: HashSet<String>,
     dangling_sources: Vec<(String, String)>,
     triggers: HashSet<String>,
 }
 
 /// 提取 reconcile 所需的键集 (锁内一次性快照):
-/// Transport/Protocol 集合来自全局节点表; ProtocolSource 是 tab 数值平面的
-/// 帧源引用 (不进全局表), 悬空检测扫描各 tab 编译图的节点表;
+/// 设备/Protocol 集合来自运行时节点索引；ProtocolSource 是页签数值平面的
+/// 帧源引用 (不进运行时索引)，悬空检测扫描各页签编译图的节点表；
 /// Trigger 同为 tab 数值平面节点, 存活集一并从编译图收集。
 fn snapshot_node_sets(plane: &DataPlaneState) -> NodeSets {
     let nodes = plane.global_nodes.lock();
     let mut sets = NodeSets {
-        transports: HashSet::new(),
+        devices: HashSet::new(),
         protocols: HashSet::new(),
         dangling_sources: Vec::new(),
         triggers: HashSet::new(),
     };
     for n in nodes.values() {
         match &n.kind {
-            NodeKind::Transport { .. } => {
-                sets.transports.insert(n.id.clone());
+            NodeKind::Acquisition { .. } => {
+                sets.devices.insert(n.id.clone());
             }
-            NodeKind::Protocol { .. } => {
+            NodeKind::Protocol { .. } | NodeKind::PointSelector { .. } => {
                 sets.protocols.insert(n.id.clone());
             }
             _ => {}
         }
     }
-    // 悬空 ProtocolSource: 引用的 node_id 不是全局表中的 Protocol 节点
+    // 悬空 ProtocolSource: 引用的 node_id 不是运行时索引中的 Protocol 节点
     for g in plane.eval.graphs.lock().values() {
         for n in g.value_nodes() {
             match &n.kind {
@@ -79,6 +78,19 @@ impl DataPlaneState {
     /// 调用前应先执行 `sync_protocol_states` (protocol_states / source_frames 清理)。
     pub async fn reconcile(&self) {
         let sets = snapshot_node_sets(self);
+        let specs = self
+            .global_nodes
+            .lock()
+            .values()
+            .filter_map(|node| match &node.kind {
+                NodeKind::Acquisition { spec, .. } => Some(spec.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        for id in self.transport.reconcile(&specs).await {
+            self.detach(&id);
+            self.mark_source_disconnected(&id);
+        }
 
         // 悬空 ProtocolSource 警告 (不编译失败; 按 graphs_version 去重避免刷屏)
         if !sets.dangling_sources.is_empty() {
@@ -92,22 +104,22 @@ impl DataPlaneState {
             }
         }
 
-        // 孤儿 Transport: registry 仍 open 但全局表已无该 Transport 节点
-        // (所有 tab 都不再引用) → detach 读任务 + close 连接
+        // 孤儿设备: 会话仍 open 但运行时索引已无该设备节点
+        // → detach 读任务 + close 连接
         let orphans: Vec<String> = {
-            let manager = self.transport.lock().await;
+            let manager = &self.transport;
             manager
                 .list_open()
                 .into_iter()
-                .filter(|id| !sets.transports.contains(id))
+                .filter(|id| !sets.devices.contains(id))
                 .collect()
         };
         if !orphans.is_empty() {
-            let mut manager = self.transport.lock().await;
+            let manager = &self.transport;
             for id in orphans {
                 self.detach(&id);
-                manager.close(&id);
-                log::info!("图重编译: 清理孤儿传输连接 {id}");
+                manager.close(&id).await;
+                log::info!("图重编译: 清理孤儿设备会话 {id}");
             }
         }
 
@@ -115,10 +127,10 @@ impl DataPlaneState {
         self.buffers
             .lock()
             .retain(|id, _| sets.protocols.contains(id));
-        // raw_collectors: 仅保留仍存在的 Transport 节点键
+        // raw_collectors: 仅保留仍存在的设备节点键
         self.raw_collectors
             .lock()
-            .retain(|id, _| sets.transports.contains(id));
+            .retain(|id, _| sets.devices.contains(id));
         // trigger_states: 仅保留仍存在于任一 tab 图的 Trigger 节点键 (节点删除清理)
         self.eval
             .trigger_states

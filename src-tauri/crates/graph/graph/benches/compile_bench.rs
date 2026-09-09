@@ -22,7 +22,7 @@ use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criteri
 use filter::FilterConfig;
 use graph::CompiledGraph;
 use graph_testkit::{
-    edge, make_filter, make_input, make_math, make_protocol, make_protocol_source, make_transport,
+    edge, make_device, make_filter, make_input, make_math, make_protocol, make_protocol_source,
 };
 use hir::TypedGraph;
 use kind::{MathOp, NodeDef};
@@ -102,7 +102,7 @@ fn filter_heavy(chains: usize) -> (Vec<NodeDef>, Vec<Edge>) {
 fn byte_chain() -> (Vec<NodeDef>, Vec<Edge>) {
     (
         vec![
-            make_transport("tp1"),
+            make_device("tp1"),
             make_protocol("pt1"),
             make_protocol_source("ps1", "t0", "pt1", 4),
             make_math("m1", "t0", MathOp::Mul, 1),

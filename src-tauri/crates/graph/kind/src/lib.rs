@@ -28,8 +28,8 @@ pub use kind::{is_protocol_source, is_raw_data_handle, NewlineMode, NodeKind};
 pub use math_op::MathOp;
 pub use ports::{
     port_domain, port_table, PortDomain, PortSpec, PortTable, FRAME_DECODER_IN_HANDLE,
-    LOOPBACK_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
-    RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
+    LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE, RAW_DATA_PORT_PREFIX,
+    TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
 };
 pub use spec::{protocol_source_port_names, NodeDef};
 pub use str_op::{str_num_default, StrNumParams, StrOp, StrResult};
@@ -39,3 +39,5 @@ pub use str_op::{str_num_default, StrNumParams, StrOp, StrResult};
 pub fn uses_str_inline_text(op: StrOp, port: &str) -> bool {
     op.uses_inline_text_default(port)
 }
+pub mod document;
+mod widget_document;

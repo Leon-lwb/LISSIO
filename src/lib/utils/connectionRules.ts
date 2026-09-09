@@ -2,7 +2,7 @@
 //!
 //! 消费方 (层级自上而下, 全部同源):
 //! - `NodeEditor.isValidConnection` — 手动拖拽的交互校验 (toast 提示)
-//! - `toolHost.get_workspace` — 暴露给 AI 的节点端口表 (含 domain)
+//! - `toolHost.get_workspace` — 暴露给 AI 的运行时派生端口表
 //! - `adoptSourceGraph` — 画布收敛时的边 handle 存在性校验
 //!
 //! 校验的最终权威是后端编译器 (DomainMismatch);本模块是同域规则的前端
@@ -10,9 +10,7 @@
 
 import type { Node } from '@xyflow/react';
 import type { DomainType, WidgetConfig } from '../../types';
-import { getWidgetPorts, type WidgetPort } from '../../components/nodes/WidgetPorts';
-import { isRawDataPreset, protocolPortNames } from './protocolSchema';
-import type { ProtocolNodeData } from '../../store/appStoreHelpers';
+import { nodeDefinition } from '../../components/nodes/registry';
 
 /// 端口信息 — id + 域 (与 WidgetPort 对齐, 供 get_workspace 直接序列化)
 export interface PortInfo {
@@ -29,30 +27,13 @@ export interface NodePortTable {
 /// 后端派生端口 (graph:derived 单一权威) 的前端形态
 export interface DerivedPort {
   name: string;
-  domain: 'F32' | 'Bytes' | 'String' | 'Spectrum';
-}
-
-/** 后端派生域 → 前端 DomainType (F32 即时域) */
-function derivedDomain(d: DerivedPort['domain']): DomainType {
-  return d === 'Spectrum' ? 'freq' : d === 'Bytes' ? 'bytes' : d === 'String' ? 'string' : 'time';
-}
-
-/** Protocol 节点数值/字符串端口表 (derivedPorts 优先, protocolPortNames 兜底) */
-function protocolValuePorts(data: ProtocolNodeData, derived: DerivedPort[] | undefined, detectedChannels: number | null): PortInfo[] {
-  if (derived && derived.length > 0) {
-    return derived.map((p) => ({ id: p.name, domain: derivedDomain(p.domain) }));
-  }
-  const rawData = isRawDataPreset(data);
-  return protocolPortNames(data, detectedChannels).map((name) => ({
-    id: name,
-    domain: rawData && name === 'str' ? 'string' : 'time',
-  }));
+  domain: 'Points' | 'F32' | 'Bytes' | 'String' | 'Spectrum';
 }
 
 /**
  * 任意节点的统一端口表 (连线校验与 AI 端口暴露的同一数据源)
  *
- * - transport: rx (输出/字节) / tx (输入/字节)
+ * - device: 由后端能力目录派生输入/输出端口
  * - protocol: in (输入/字节) / out (输出/字节) + 数值口 ch0..chN (时域) 或
  *   RawData 预设的 str (字符串域) — 数值口读 derivedPorts, 兜底 protocolPortNames
  * - widget: getWidgetPorts 静态表; RawData 的动态 `src:` 输入口不在表中
@@ -62,30 +43,7 @@ export function nodePortTable(
   node: Node,
   ctx: { derivedPorts?: Record<string, { ports?: DerivedPort[] }>; detectedChannels?: Record<string, number | null> }
 ): NodePortTable {
-  if (node.type === 'transport') {
-    return {
-      inputs: [{ id: 'tx', domain: 'bytes' }],
-      outputs: [{ id: 'rx', domain: 'bytes' }],
-    };
-  }
-  if (node.type === 'protocol') {
-    const data = node.data as unknown as ProtocolNodeData;
-    const derived = ctx.derivedPorts?.[node.id]?.ports;
-    const detected = ctx.detectedChannels?.[node.id] ?? null;
-    return {
-      inputs: [{ id: 'in', domain: 'bytes' }],
-      outputs: [{ id: 'out', domain: 'bytes' }, ...protocolValuePorts(data, derived, detected)],
-    };
-  }
-  const widget = node.data?.widget as WidgetConfig | undefined;
-  if (!widget) return { inputs: [], outputs: [] };
-  if (widget.kind === 'RawData') {
-    // 动态派生口不可静态枚举 — 输出空表; 校验走 RawData 特判 (接收 bytes/time, 拒 freq)
-    return { inputs: [], outputs: [] };
-  }
-  const ports = getWidgetPorts(widget);
-  const of = (list: WidgetPort[]): PortInfo[] => list.map((p) => ({ id: p.id, domain: p.domain }));
-  return { inputs: of(ports.inputs), outputs: of(ports.outputs) };
+  return nodeDefinition(node).ports(node, ctx);
 }
 
 /**
@@ -100,11 +58,6 @@ export function resolvePortDomain(
 ): DomainType | null {
   if (!handleId) return null;
   if (node.type === 'protocol' && (handleId === 'in' || handleId === 'out')) {
-    return 'bytes';
-  }
-  const widget = node.data?.widget as WidgetConfig | undefined;
-  // FrameDecoder 旧版回环字节输入口 (兼容旧图数据; 不入端口表 — 新图不再渲染)
-  if (widget?.kind === 'FrameDecoder' && direction === 'target' && handleId === 'loopbackIn') {
     return 'bytes';
   }
   const table = nodePortTable(node, ctx);
@@ -135,7 +88,7 @@ export interface ConnectionContext {
 /**
  * 连线校验 (单一权威的前端同构实现):
  * 1. 两端节点存在
- * 2. widget 节点必须同 tab (全局节点无 tab 约束)
+ * 2. 所有节点必须属于同一 tab
  * 3. 端口存在 (RawData 目标除外 — 动态 `src:` 口自动改写)
  * 4. 域匹配 (时域/频域/字节域/字符串同域; RawData 是 bytes/time 双域 Sink, 仅拒 freq)
  */
@@ -149,11 +102,11 @@ export function validateConnection(ctx: ConnectionContext, conn: ConnectionCandi
     return { ok: false, message: `节点不存在: ${conn.target} (先 get_workspace 查询有效 id)` };
   }
 
-  // widget 必须同 tab (全局节点渲染在所有画布, 无 tab 归属)
+  // 所有节点都归属页签，连线不得越过页签边界。
   const srcTab = source.data?.tabId as string | undefined;
   const tgtTab = target.data?.tabId as string | undefined;
   if (srcTab && tgtTab && srcTab !== tgtTab) {
-    return { ok: false, message: `跨 tab 连线: 源在 ${srcTab}, 目标在 ${tgtTab} (控件只能与同页控件或全局节点相连)` };
+    return { ok: false, message: `跨 tab 连线: 源在 ${srcTab}, 目标在 ${tgtTab} (节点只能与同页节点相连)` };
   }
 
   const sourceDomain = resolvePortDomain(source, conn.sourceHandle, 'source', ctx);
@@ -183,7 +136,7 @@ export function validateConnection(ctx: ConnectionContext, conn: ConnectionCandi
         message: `端口域不匹配: ${conn.source}.${conn.sourceHandle} (${sourceDomain}) → ${conn.target}.${conn.targetHandle} (${targetDomain})。同域端口才能相连 (time/freq/bytes/string)`,
       };
     }
-  } else if (sourceDomain === 'freq') {
+  } else if (sourceDomain === 'freq' || sourceDomain === 'points') {
     // RawData 是 bytes/time 双域 Sink (通道显示原始字节流), 仅频域源被拒
     return {
       ok: false,
@@ -201,7 +154,7 @@ export function validateConnection(ctx: ConnectionContext, conn: ConnectionCandi
 export function edgeHandlesValid(ctx: ConnectionContext, edge: { source: string; sourceHandle?: string | null; target: string; targetHandle?: string | null }): boolean {
   const source = ctx.nodes.find((n) => n.id === edge.source);
   const target = ctx.nodes.find((n) => n.id === edge.target);
-  if (!source || !target) return true; // 端点不存在交给节点删除逻辑, 不在此判定
+  if (!source || !target) return false;
   if (resolvePortDomain(source, edge.sourceHandle, 'source', ctx) === null) return false;
   const targetWidget = target.data?.widget as WidgetConfig | undefined;
   if (targetWidget?.kind === 'RawData' && (edge.targetHandle ?? '').startsWith('src:')) return true;

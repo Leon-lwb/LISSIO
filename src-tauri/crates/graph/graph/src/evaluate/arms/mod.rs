@@ -42,14 +42,16 @@ pub fn arm_for(kind: &NodeKind) -> Option<&'static dyn NodeArm> {
         NodeKind::Ifft => Some(&IfftArm),
         NodeKind::Str { .. } => Some(&StrArm),
         NodeKind::Trigger { .. } => Some(&TriggerArm),
-        NodeKind::ProtocolSource { .. } => Some(&ProtocolSourceArm),
+        NodeKind::ProtocolSource { .. } | NodeKind::PointSelector { .. } => {
+            Some(&ProtocolSourceArm)
+        }
         NodeKind::TextInput { .. } => Some(&TextInputArm),
         NodeKind::TextOut { .. } => Some(&TextOutArm),
         // 纯展示/字节平面节点无求值臂 (TextDisplay 为字符串平面展示消费端)
         NodeKind::Sink
+        | NodeKind::Acquisition { .. }
         | NodeKind::TextDisplay
         | NodeKind::Fft { .. }
-        | NodeKind::Transport { .. }
         | NodeKind::Protocol { .. } => None,
     }
 }

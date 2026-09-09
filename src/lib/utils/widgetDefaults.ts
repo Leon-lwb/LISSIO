@@ -279,7 +279,6 @@ export function createWidget(kind: WidgetConfig['kind']): WidgetConfig {
           enableLastTimestamp: false,
           enableFps: false,
           mode: 'live',
-          loopbackEnabled: false,
         },
       };
     case 'RawData':

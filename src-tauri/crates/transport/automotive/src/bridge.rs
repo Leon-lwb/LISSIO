@@ -1,4 +1,4 @@
-//! `BridgeCanBackend` — 把 `TransportManager` 的字节流与 `ProtocolEngine` 包装成
+//! `BridgeCanBackend` — 把 `AcquisitionRuntime` 的字节流与 `ProtocolEngine` 包装成
 //! 统一的 `CanBackend` trait。
 
 use async_trait::async_trait;
@@ -40,8 +40,8 @@ pub struct BridgeCanBackend {
 impl BridgeCanBackend {
     /// 创建新的桥接器并 spawn 后台解码任务
     ///
-    /// `byte_rx`: 从 `TransportManager::subscribe()` 获取的字节流订阅
-    /// `write_tx`: `TransportManager::write_tx` 的克隆 (用于发送)
+    /// `byte_rx`: 从 `AcquisitionRuntime::subscribe()` 获取的字节流订阅
+    /// `write_tx`: `AcquisitionRuntime::write_tx` 的克隆 (用于发送)
     /// `kind`: 选择 Slcan / CandleLight 编解码
     pub fn spawn(
         write_tx: mpsc::Sender<Vec<u8>>,

@@ -152,6 +152,63 @@ pub struct ModbusConfig {
     pub points: Vec<ModbusPoint>,
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SerialDataBits {
+    Seven,
+    #[default]
+    Eight,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SerialParity {
+    #[default]
+    None,
+    Odd,
+    Even,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SerialStopBits {
+    #[default]
+    One,
+    Two,
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SerialFlowControl {
+    #[default]
+    None,
+    Software,
+    Hardware,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModbusRtuConfig {
+    pub port_name: String,
+    #[serde(default = "default_baud_rate")]
+    pub baud_rate: u32,
+    #[serde(default)]
+    pub data_bits: SerialDataBits,
+    #[serde(default)]
+    pub parity: SerialParity,
+    #[serde(default)]
+    pub stop_bits: SerialStopBits,
+    #[serde(default)]
+    pub flow_control: SerialFlowControl,
+    #[serde(default = "default_unit")]
+    pub unit_id: u8,
+    #[serde(default = "default_timeout_ms")]
+    pub timeout_ms: u64,
+    #[serde(default)]
+    pub reconnect: ReconnectConfig,
+    pub points: Vec<ModbusPoint>,
+}
+
 const fn default_port() -> u16 {
     502
 }
@@ -160,6 +217,9 @@ const fn default_unit() -> u8 {
 }
 const fn default_timeout_ms() -> u64 {
     2_000
+}
+const fn default_baud_rate() -> u32 {
+    9_600
 }
 
 impl ModbusConfig {
@@ -172,38 +232,64 @@ impl ModbusConfig {
                 "port and timeout must be non-zero".into(),
             ));
         }
-        if self.reconnect.initial_delay_ms > self.reconnect.max_delay_ms {
+        validate_reconnect(&self.reconnect)?;
+        validate_points(&self.points)
+    }
+}
+
+impl ModbusRtuConfig {
+    pub fn validate(&self) -> Result<(), PlanError> {
+        if self.port_name.trim().is_empty() {
             return Err(PlanError::InvalidConfig(
-                "initial reconnect delay exceeds maximum".into(),
+                "serial port name must not be empty".into(),
             ));
         }
-        let mut ids = HashSet::new();
-        for point in &self.points {
-            if point.id.0.trim().is_empty() || !ids.insert(point.id.clone()) {
-                return Err(PlanError::InvalidConfig(format!(
-                    "empty or duplicate point id: {}",
-                    point.id.0
-                )));
-            }
-            if point.poll_period_ms == 0 || !point.scale.is_finite() || !point.offset.is_finite() {
-                return Err(PlanError::InvalidConfig(format!(
-                    "invalid timing or scale for {}",
-                    point.id.0
-                )));
-            }
-            if point.area.is_bits() && point.data_type != ModbusDataType::Bool {
-                return Err(PlanError::InvalidConfig(format!(
-                    "bit area point {} must be bool",
-                    point.id.0
-                )));
-            }
-            point
-                .address
-                .checked_add(point.quantity().saturating_sub(1))
-                .ok_or_else(|| {
-                    PlanError::InvalidConfig(format!("address range overflows for {}", point.id.0))
-                })?;
+        if self.baud_rate == 0 || self.timeout_ms == 0 {
+            return Err(PlanError::InvalidConfig(
+                "baud rate and timeout must be non-zero".into(),
+            ));
         }
-        Ok(())
+        validate_reconnect(&self.reconnect)?;
+        validate_points(&self.points)
     }
+}
+
+fn validate_reconnect(reconnect: &ReconnectConfig) -> Result<(), PlanError> {
+    if reconnect.initial_delay_ms > reconnect.max_delay_ms {
+        return Err(PlanError::InvalidConfig(
+            "initial reconnect delay exceeds maximum".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn validate_points(points: &[ModbusPoint]) -> Result<(), PlanError> {
+    let mut ids = HashSet::new();
+    for point in points {
+        if point.id.0.trim().is_empty() || !ids.insert(point.id.clone()) {
+            return Err(PlanError::InvalidConfig(format!(
+                "empty or duplicate point id: {}",
+                point.id.0
+            )));
+        }
+        if point.poll_period_ms == 0 || !point.scale.is_finite() || !point.offset.is_finite() {
+            return Err(PlanError::InvalidConfig(format!(
+                "invalid timing or scale for {}",
+                point.id.0
+            )));
+        }
+        if point.area.is_bits() && point.data_type != ModbusDataType::Bool {
+            return Err(PlanError::InvalidConfig(format!(
+                "bit area point {} must be bool",
+                point.id.0
+            )));
+        }
+        point
+            .address
+            .checked_add(point.quantity().saturating_sub(1))
+            .ok_or_else(|| {
+                PlanError::InvalidConfig(format!("address range overflows for {}", point.id.0))
+            })?;
+    }
+    Ok(())
 }

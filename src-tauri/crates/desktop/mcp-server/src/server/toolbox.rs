@@ -13,7 +13,7 @@ pub const MCP_ENDPOINT_PATH: &str = "/mcp";
 #[derive(Clone)]
 pub struct Toolbox {
     /// 传输注册表 (与 `AppState::transport` 同一实例)。
-    pub transport: Arc<tokio::sync::Mutex<pipeline::TransportManager>>,
+    pub transport: Arc<acquisition::AcquisitionRuntime>,
     /// 数据平面 (字节路由 / 缓冲 / 输出快照)。
     pub data_plane: pipeline::DataPlaneState,
     /// 控件输入值表。

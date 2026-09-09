@@ -1,8 +1,7 @@
-// Re-export all types from domain-specific sub-modules.
-// This file exists only for backwards compatibility — all consumers
-// should import from 'types' (this file) as before.
+// Public type barrel for domain-specific sub-modules.
 
 export * from './common';
+export * from './acquisition';
 export * from './ai';
 export * from './transport';
 export * from './errors';

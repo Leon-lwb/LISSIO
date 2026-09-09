@@ -4,11 +4,16 @@
 
 use std::collections::HashMap;
 
-use app::{AppState, SourceNodeHint};
+use app::AppState;
 use buffer_graph::Edge;
+use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};
 use pipeline::{NodeDef, NodeKind};
+use serde_json::json;
 
-use crate::{apply_connect_edge, apply_disconnect_edge, apply_remove_tab_graph, apply_tab_graph};
+use crate::{
+    apply_connect_edge, apply_disconnect_edge, apply_document, apply_remove_tab_graph,
+    apply_tab_graph,
+};
 
 fn input_node(id: &str, tab_id: &str) -> NodeDef {
     NodeDef {
@@ -33,7 +38,6 @@ async fn update_tab_graph_refreshes_snapshot() {
         vec![input_node("in1", "tab1")],
         vec![],
         HashMap::new(),
-        None,
         None,
         None,
     )
@@ -65,7 +69,6 @@ async fn remove_tab_graph_refreshes_snapshot() {
         vec![input_node("in1", "tab1")],
         vec![],
         HashMap::new(),
-        None,
         None,
         None,
     )
@@ -125,14 +128,6 @@ fn math_node(id: &str, tab_id: &str) -> NodeDef {
     }
 }
 
-fn sink_node(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab_id.into(),
-        kind: NodeKind::Sink,
-    }
-}
-
 fn edge(id: &str, source: &str, sh: &str, target: &str, th: &str) -> Edge {
     Edge {
         id: id.into(),
@@ -141,6 +136,79 @@ fn edge(id: &str, source: &str, sh: &str, target: &str, th: &str) -> Edge {
         target: target.into(),
         target_handle: th.into(),
     }
+}
+
+fn widget_document(
+    id: &str,
+    tab_id: &str,
+    widget_kind: &str,
+    params: serde_json::Value,
+) -> NodeDocument {
+    NodeDocument {
+        id: id.into(),
+        tab_id: tab_id.into(),
+        label: id.into(),
+        layout: NodeLayout {
+            x: 0.0,
+            y: 0.0,
+            width: None,
+            height: None,
+        },
+        business: NodeBusiness::Widget {
+            widget_kind: widget_kind.into(),
+            params,
+            custom_ports: None,
+        },
+        attributes: NodeAttributes::default(),
+    }
+}
+
+fn protocol_document(id: &str, tab_id: &str) -> NodeDocument {
+    let protocol = schema_types::ProtocolConfig::JustFloat { channels: None };
+    NodeDocument {
+        id: id.into(),
+        tab_id: tab_id.into(),
+        label: id.into(),
+        layout: NodeLayout {
+            x: 0.0,
+            y: 0.0,
+            width: None,
+            height: None,
+        },
+        business: NodeBusiness::Protocol {
+            protocol: protocol.clone(),
+            convert_to: None,
+            schema: schema_types::ProtocolSchema {
+                preset: schema_types::SchemaPreset::JustFloat,
+                legacy_config: Some(protocol),
+                decode: Vec::new(),
+                encode: None,
+            },
+        },
+        attributes: NodeAttributes::default(),
+    }
+}
+
+async fn apply_documents(
+    state: &AppState,
+    tab_id: &str,
+    documents: Vec<NodeDocument>,
+    edges: Vec<Edge>,
+) {
+    apply_document(
+        &state.graphs,
+        &state.graphs_version,
+        &state.data_plane,
+        &state.source_graphs,
+        &state.workspace,
+        None,
+        tab_id.into(),
+        documents,
+        edges,
+        None,
+    )
+    .await
+    .expect("节点文档提交应成功");
 }
 
 /// 提交成功写入源图存储 + 版本号递增; base_version 过期返回版本冲突
@@ -154,7 +222,6 @@ async fn update_tab_graph_writes_source_store_and_checks_version() {
         vec![input_node("in1", "tab1")],
         vec![],
         HashMap::new(),
-        None,
         None,
         None,
     )
@@ -180,7 +247,6 @@ async fn update_tab_graph_writes_source_store_and_checks_version() {
         vec![],
         HashMap::new(),
         None,
-        None,
         Some(0),
     )
     .await
@@ -198,7 +264,6 @@ async fn update_tab_graph_writes_source_store_and_checks_version() {
         vec![input_node("in1", "tab1")],
         vec![],
         HashMap::new(),
-        None,
         None,
         Some(1),
     )
@@ -221,7 +286,6 @@ async fn update_tab_graph_returns_real_compile_error() {
         HashMap::new(),
         None,
         None,
-        None,
     )
     .await
     .expect_err("Protocol.out(bytes) → Math.in0(f32) 应域不匹配");
@@ -239,36 +303,16 @@ async fn update_tab_graph_returns_real_compile_error() {
 #[tokio::test]
 async fn connect_edge_op_validates_and_persists() {
     let state = AppState::new();
-    let mut hints = HashMap::new();
-    hints.insert(
-        "in1".to_string(),
-        SourceNodeHint {
-            default_input: None,
-            default_output: Some("value".into()),
-            raw_data: false,
-        },
-    );
-    hints.insert(
-        "m1".to_string(),
-        SourceNodeHint {
-            default_input: Some("in0".into()),
-            default_output: Some("result".into()),
-            raw_data: false,
-        },
-    );
-    apply_tab_graph(
+    apply_documents(
         &state,
-        None,
-        "tab1".into(),
-        vec![input_node("in1", "tab1"), math_node("m1", "tab1")],
+        "tab1",
+        vec![
+            widget_document("in1", "tab1", "Slider", json!({})),
+            widget_document("m1", "tab1", "Math", json!({"op": "add", "inputCount": 1})),
+        ],
         vec![],
-        hints,
-        None,
-        None,
-        None,
     )
-    .await
-    .expect("种子图应成功");
+    .await;
 
     // 默认 handle: in1.value → m1.in0
     let out = apply_connect_edge(
@@ -315,28 +359,16 @@ async fn connect_edge_op_validates_and_persists() {
 
     // 域不匹配: m1.result (f32) → in1 (Input 无输入口, 端口域回退 f32 → 可编译)。
     // 改用明确的域冲突: 新建 protocol + math 再连 out → in0
-    let mut hints2 = HashMap::new();
-    hints2.insert(
-        "pt".to_string(),
-        SourceNodeHint {
-            default_input: Some("in".into()),
-            default_output: Some("out".into()),
-            raw_data: false,
-        },
-    );
-    apply_tab_graph(
+    apply_documents(
         &state,
-        None,
-        "tab2".into(),
-        vec![protocol_node("pt", "tab2"), math_node("m2", "tab2")],
+        "tab2",
+        vec![
+            protocol_document("pt", "tab2"),
+            widget_document("m2", "tab2", "Math", json!({"op": "add", "inputCount": 1})),
+        ],
         vec![],
-        hints2,
-        None,
-        None,
-        None,
     )
-    .await
-    .expect("tab2 种子图应成功");
+    .await;
     let err = apply_connect_edge(
         &state.graphs,
         &state.graphs_version,
@@ -362,38 +394,7 @@ async fn connect_edge_op_validates_and_persists() {
         "编译失败源图不得改变"
     );
 
-    // RawData 目标: 端口提示 raw_data=true → target_handle 改写为 src:<source>:<handle>
-    let mut hints3 = HashMap::new();
-    hints3.insert(
-        "in1".to_string(),
-        SourceNodeHint {
-            default_input: None,
-            default_output: Some("value".into()),
-            raw_data: false,
-        },
-    );
-    hints3.insert(
-        "raw1".to_string(),
-        SourceNodeHint {
-            default_input: Some("data".into()),
-            default_output: None,
-            raw_data: true,
-        },
-    );
-    apply_tab_graph(
-        &state,
-        None,
-        "tab3".into(),
-        vec![input_node("in1", "tab3"), sink_node("raw1", "tab3")],
-        vec![],
-        hints3,
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("tab3 种子图应成功");
-    apply_connect_edge(
+    let cross_tab = apply_connect_edge(
         &state.graphs,
         &state.graphs_version,
         &state.data_plane,
@@ -402,6 +403,34 @@ async fn connect_edge_op_validates_and_persists() {
         None,
         None,
         "in1".into(),
+        "m2".into(),
+        None,
+        None,
+    )
+    .await
+    .expect_err("跨页签连线必须被拒绝");
+    assert!(cross_tab.to_string().contains("禁止跨页签连线"));
+
+    // RawData 目标: 端口提示 raw_data=true → target_handle 改写为 src:<source>:<handle>
+    apply_documents(
+        &state,
+        "tab3",
+        vec![
+            widget_document("in3", "tab3", "Slider", json!({})),
+            widget_document("raw1", "tab3", "RawData", json!({})),
+        ],
+        vec![],
+    )
+    .await;
+    apply_connect_edge(
+        &state.graphs,
+        &state.graphs_version,
+        &state.data_plane,
+        &state.source_graphs,
+        &state.workspace,
+        None,
+        None,
+        "in3".into(),
         "raw1".into(),
         None,
         None,
@@ -409,26 +438,23 @@ async fn connect_edge_op_validates_and_persists() {
     .await
     .expect("RawData 连线应成功");
     let stored3 = state.source_graphs.lock().get("tab3").unwrap().clone();
-    assert_eq!(stored3.edges[0].target_handle, "src:in1:value");
+    assert_eq!(stored3.edges[0].target_handle, "src:in3:value");
 }
 
 /// disconnect_edge op: 按 edge_id 删除并重编译; 未命中返回 GraphEdgeNotFound
 #[tokio::test]
 async fn disconnect_edge_op_removes_and_reports_miss() {
     let state = AppState::new();
-    apply_tab_graph(
+    apply_documents(
         &state,
-        None,
-        "tab1".into(),
-        vec![input_node("in1", "tab1"), math_node("m1", "tab1")],
+        "tab1",
+        vec![
+            widget_document("in1", "tab1", "Slider", json!({})),
+            widget_document("m1", "tab1", "Math", json!({"op": "add", "inputCount": 1})),
+        ],
         vec![edge("e1", "in1", "value", "m1", "in0")],
-        HashMap::new(),
-        None,
-        None,
-        None,
     )
-    .await
-    .expect("种子图应成功");
+    .await;
 
     let out = apply_disconnect_edge(
         &state.graphs,

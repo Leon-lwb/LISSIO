@@ -29,9 +29,19 @@ import type {
   WaveformSeriesSelection,
   AutoSetSuggestion,
   SourceMeasurementsPayload,
+  AdapterCapability,
+  DriverPayload,
+  DiscoveredEndpoint,
+  EndpointSnapshot,
+  AcquisitionIntent,
+  EffectiveSubscription,
+  PointReadResult,
+  PointSample,
+  PointWriteRequest,
+  PointWriteResult,
 } from '../../types';
 import { normalizeWaveformWindow } from '../buffers/dataBuffer';
-import type { NodeDef, GraphEdge } from '../utils/nodeDef';
+import type { GraphEdge } from '../utils/nodeDef';
 import type { GraphDerivedPayload } from '../../store/slices/derived';
 import { clearRawDataBuffer } from '../buffers/rawDataSubscription';
 import { subscribeDisplay } from '../buffers/displaySubscription';
@@ -67,19 +77,16 @@ export interface WidgetRecordPayload {
 /// `graph:source` 事件 / get_source_graph 响应 — tab 权威源图
 /// (含 widget 配置记录与画布位置: 画布据此重建该 tab 完整视图)
 export interface GraphSourceEventPayload {
+  documents: import('../nodes/document').NodeDocument[];
   tab_id: string;
   version: number;
-  nodes: NodeDef[];
   edges: GraphEdge[];
-  widgets?: WidgetRecordPayload[];
-  positions?: Record<string, PositionPayload>;
 }
 
 /// 控件 tab 元数据 — 与后端 `app_state::TabMeta` 同形
 export interface TabMetaPayload {
   id: string;
   name: string;
-  widgets: string[];
 }
 
 /// 数据面板 tab 元数据 — 与后端 `app_state::DataTabMeta` 同形
@@ -98,11 +105,9 @@ export interface WorkspaceSnapshotPayload {
   data_tabs: DataTabMetaPayload[];
   graphs: {
     tab_id: string;
-    nodes: NodeDef[];
+    documents: import('../nodes/document').NodeDocument[];
     edges: GraphEdge[];
-    widgets: WidgetRecordPayload[];
   }[];
-  positions: Record<string, PositionPayload>;
 }
 
 /// 关闭 Tauri Channel 的完整流程:
@@ -200,24 +205,51 @@ export interface TransportRxEvent {
 }
 
 export const api = {
-  // ===== 传输 (nodeId = 图中 Transport 节点 id) =====
+  // ===== 类型化采集适配器 =====
+  describeAcquisitionPoints: (payload: DriverPayload) =>
+    invoke<import('../../types').PointDescriptor[]>('describe_acquisition_points', { payload }),
+
+  listAdapterCapabilities: () =>
+    invoke<AdapterCapability[]>('list_adapter_capabilities'),
+
+  discoverAcquisitionEndpoints: (adapterId: string) =>
+    invoke<DiscoveredEndpoint[]>('discover_acquisition_endpoints', { adapterId }),
+
+  validateAdapterConfiguration: (payload: DriverPayload) =>
+    invoke<DriverPayload>('validate_adapter_configuration', { payload }),
+
+  openAcquisitionEndpoint: (nodeId: string) =>
+    invoke<EndpointSnapshot>('open_acquisition_endpoint', { nodeId }),
+
+  closeAcquisitionEndpoint: (endpointId: string) =>
+    invoke<void>('close_acquisition_endpoint', { endpointId }),
+
+  listAcquisitionEndpoints: () =>
+    invoke<EndpointSnapshot[]>('list_acquisition_endpoints'),
+
+  readAcquisitionPoints: (endpointId: string, pointIds: string[]) =>
+    invoke<PointReadResult>('read_acquisition_points', { endpointId, pointIds }),
+
+  subscribeAcquisitionPoints: (
+    endpointId: string,
+    pointIds: string[],
+    acquisition: AcquisitionIntent,
+  ) => invoke<EffectiveSubscription>('subscribe_acquisition_points', {
+    endpointId,
+    intent: { points: pointIds, acquisition },
+  }),
+
+  writeAcquisitionPoints: (endpointId: string, request: PointWriteRequest) =>
+    invoke<PointWriteResult>('write_acquisition_points', { endpointId, request }),
+
+  latestAcquisitionSamples: (endpointId: string) =>
+    invoke<PointSample[]>('latest_acquisition_samples', { endpointId }),
+
+  // ===== 设备传输 (nodeId = 图中设备节点 id) =====
   listPorts: () => invoke<PortInfo[]>('list_ports'),
 
   /// 打开传输连接; protocol 仅被 TestData 用作生成数据的线缆格式参考
   /// schema: 可选帧 schema (custom 且带 encode 块时 TestData 按 schema 编码)
-  openTransport: (
-    nodeId: string,
-    config: TransportConfig,
-    protocol: ProtocolConfig,
-    schema?: ProtocolSchema | null,
-  ) =>
-    invoke<void>('open_transport', {
-      nodeId,
-      config,
-      protocol,
-      schema: schema ?? null,
-    }),
-
   closeTransport: (nodeId: string) =>
     invoke<void>('close_transport', { nodeId }),
 
@@ -445,7 +477,7 @@ export const api = {
   setLogicBufferCapacity: (capacity: number) =>
     invoke<void>('set_logic_buffer_capacity', { capacity }),
 
-  /// 清空后端原始数据收集器 (source = Transport 节点 id; 缺省清空全部源)
+  /// 清空后端原始数据收集器 (source = 字节设备节点 id；缺省清空全部源)
   clearRawDataBuffer: (source?: string) => clearRawDataBuffer(source),
 
   // ===== 节点图 (后端化重构) =====
@@ -456,24 +488,8 @@ export const api = {
   /// baseVersion: 乐观并发基线 (期间被其他写入方推进则返回 GraphVersionConflict)
   /// 编译失败 (循环/域不匹配等) 返回真实原因, 旧图保留
   /// 返回 `GraphDerivedPayload` — 本次图变化涉及的全部节点派生端口表 / 通道数 + 新版本号
-  updateTabGraph: (
-    tabId: string,
-    nodes: NodeDef[],
-    edges: GraphEdge[],
-    nodeHints?: Record<string, SourceNodeHintPayload>,
-    baseVersion?: number | null,
-    widgetRecords?: WidgetRecordPayload[],
-    positions?: Record<string, PositionPayload>,
-  ) =>
-    invoke<GraphDerivedPayload>('update_tab_graph', {
-      tabId,
-      nodes,
-      edges,
-      nodeHints: nodeHints ?? {},
-      widgets: widgetRecords ?? null,
-      positions: positions ?? null,
-      baseVersion: baseVersion ?? null,
-    }),
+  updateTabGraph: (tabId: string, documents: import('../nodes/document').NodeDocument[], edges: GraphEdge[], baseVersion?: number | null) =>
+    invoke<GraphDerivedPayload>('update_tab_graph', { tabId, documents, edges, baseVersion: baseVersion ?? null }),
 
   /// 上报节点画布位置 (拖拽结束时批量提交) — 轻量路径, 不触发编译
   setNodePositions: (positions: Record<string, PositionPayload>) =>
@@ -491,13 +507,13 @@ export const api = {
     invoke<GraphSourceEventPayload | null>('get_source_graph', { tabId }),
 
   /// 移除指定 tab 的节点图 (tab 删除时调用)
-  /// 返回 `GraphDerivedPayload` — 删除后剩余全局节点的派生数据 (供前端 derivedPorts 对账)
+  /// 返回 `GraphDerivedPayload` — 删除后工作区剩余节点的派生数据 (供前端 derivedPorts 对账)
   removeTabGraph: (tabId: string) =>
     invoke<GraphDerivedPayload>('remove_tab_graph', { tabId }),
 
   // ===== CAN 负载分析 =====
   /// 获取 CAN 负载统计快照
-  /// nodeId: 用于自动解析波特率的 Transport 节点 id
+  /// nodeId: 用于自动解析波特率的设备节点 id
   /// bitrateBps: 可选手动覆盖波特率; null/0 = 自动从 TransportConfig 读取
   getCanLoadStats: (nodeId: string, bitrateBps?: number | null) =>
     invoke<CanLoadSnapshot>('get_can_load_stats', {
@@ -518,7 +534,7 @@ export const api = {
     invoke<[number, string]>('get_current_can_bitrate', { nodeId }),
 
   /// 订阅 CAN 负载统计推送 — 周期性推送 CanLoadSnapshot
-  /// nodeId: 用于自动解析波特率的 Transport 节点 id
+  /// nodeId: 用于自动解析波特率的设备节点 id
   /// intervalMs: 推送间隔 (默认 500ms)
   /// bitrateBps: 可选手动覆盖波特率; null/0 = 自动从 TransportConfig 读取
   subscribeCanLoad: (
@@ -543,7 +559,7 @@ export const api = {
   },
 
   /// 导出 CAN 负载统计为 CSV (自动保存到下载目录, 返回完整文件路径)
-  /// nodeId: 用于自动解析波特率的 Transport 节点 id
+  /// nodeId: 用于自动解析波特率的设备节点 id
   /// bitrateBps: 可选手动覆盖波特率; null/0 = 自动从 TransportConfig 读取
   exportCanLoadCsv: (nodeId: string, bitrateBps?: number | null) =>
     invoke<string>('export_can_load_csv', {

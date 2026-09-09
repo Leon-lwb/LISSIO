@@ -40,13 +40,25 @@ impl From<RunSnapshot> for WorkspaceRunEvent {
 pub async fn workspace_run(
     app: AppHandle,
     state: State<'_, AppState>,
+    acquisition: State<'_, std::sync::Arc<acquisition::AcquisitionRuntime>>,
     action: RunAction,
 ) -> Result<WorkspaceRunEvent> {
+    let acquisition_state = match action {
+        RunAction::Start => acquisition::AcquisitionRunState::Running,
+        RunAction::Pause => acquisition::AcquisitionRunState::Paused,
+        RunAction::Stop => acquisition::AcquisitionRunState::Stopped,
+    };
+    if !matches!(action, RunAction::Start) {
+        acquisition.set_run_state(acquisition_state);
+    }
     let (plane, groups) = {
         let s = state.inner();
         (s.data_plane.clone(), s.stream_groups.clone())
     };
     let snapshot = apply_run_action(&plane, &groups, action).await;
+    if matches!(action, RunAction::Start) {
+        acquisition.set_run_state(acquisition_state);
+    }
     emit_workspace_run(&app, &WorkspaceRunEvent::from(snapshot));
     Ok(snapshot.into())
 }

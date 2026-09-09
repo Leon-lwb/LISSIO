@@ -9,6 +9,7 @@ mod config_migration;
 // 必须 glob 导入: `#[tauri::command]` 生成的 `__cmd__*` / `__tauri_command_name_*`
 // 宏 (`#[macro_export]`, doc-hidden) 只在 glob 导入时进入本 crate 宏命名空间,
 // `generate_handler!` 展开时需要它们在作用域内。
+pub use commands::acquisition::*;
 pub use commands::ai::*;
 pub use commands::buffer::*;
 pub use commands::can_load::*;
@@ -27,24 +28,72 @@ pub use update_flow::*;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
-fn transport_manager() -> transport::TransportManager {
-    transport::TransportManager::with_backends([
-        std::sync::Arc::new(serial::SerialBackend)
-            as std::sync::Arc<dyn transport::TransportBackend>,
-        std::sync::Arc::new(network::NetworkBackend),
-        std::sync::Arc::new(can_transport::CanTransportBackend),
-    ])
-}
-
-fn acquisition_registry() -> acquisition::SourceRegistry {
-    let registry = acquisition::SourceRegistry::default();
+fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
+    use data_model::TransportConfig;
+    use std::sync::Arc;
+    use transport::device_factory::ByteDeviceFactory;
+    let registry = Arc::new(acquisition::SourceRegistry::default());
+    let serial = Arc::new(serial::SerialBackend) as Arc<dyn acquisition::TransportBackend>;
+    let network = Arc::new(network::NetworkBackend) as Arc<dyn acquisition::TransportBackend>;
+    let can =
+        Arc::new(can_transport::CanTransportBackend) as Arc<dyn acquisition::TransportBackend>;
+    for (id, label, config, backend) in [
+        (
+            "serial",
+            "Serial",
+            TransportConfig::Serial(Default::default()),
+            serial,
+        ),
+        (
+            "tcp-client",
+            "TCP Client",
+            TransportConfig::TcpClient(Default::default()),
+            network.clone(),
+        ),
+        (
+            "tcp-server",
+            "TCP Server",
+            TransportConfig::TcpServer(Default::default()),
+            network.clone(),
+        ),
+        (
+            "udp",
+            "UDP",
+            TransportConfig::Udp(Default::default()),
+            network,
+        ),
+        (
+            "slcan",
+            "Slcan",
+            TransportConfig::Slcan(Default::default()),
+            can.clone(),
+        ),
+        (
+            "candle-light",
+            "CandleLight",
+            TransportConfig::CandleLight(Default::default()),
+            can,
+        ),
+    ] {
+        registry.register(Arc::new(ByteDeviceFactory::new(id, label, config, backend)));
+    }
     #[cfg(feature = "modbus-tcp")]
-    registry.register(std::sync::Arc::new(modbus_adapter::ModbusFactory::default()));
-    registry
+    registry.register(Arc::new(modbus_adapter::ModbusFactory::default()));
+    #[cfg(feature = "modbus-rtu")]
+    registry.register(Arc::new(modbus_adapter::ModbusRtuFactory::default()));
+    acquisition::AcquisitionRuntime::new(registry)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let app_state = AppState::with_acquisition(acquisition_runtime());
+    let acquisition = app_state.transport.clone();
+    acquisition.set_observer(std::sync::Arc::new(
+        commands::acquisition::FourDomainPointObserver::new(
+            &app_state.data_plane,
+            app_state.source_graphs.clone(),
+        ),
+    ));
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -69,8 +118,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState::with_transport_manager(transport_manager()))
-        .manage(acquisition_registry())
+        .manage(app_state)
+        .manage(acquisition)
         .manage(PendingUpdate(Default::default()))
         .setup(|app| {
             // 构建原生菜单栏。
@@ -98,7 +147,7 @@ pub fn run() {
             }
             app.manage(commands::ai::AiState::new(ai_config_dir.clone()));
 
-            // 工作区启动恢复: widget 配置 + 画布位置 + tab 元数据 + 各 tab 源图
+            // 工作区启动恢复: tab 元数据 + 各 tab 节点文档与连线
             // 落盘在 app config dir 的 workspace.json; 恢复在后台任务执行 (不阻塞
             // 主线程 — 事件循环可立即绘制启动页, 否则 setup 期间整段"无窗口"),
             // workspace_get / 落盘任务 await 恢复完成门保持原时序
@@ -122,9 +171,20 @@ pub fn run() {
         })
         .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
         .invoke_handler(tauri::generate_handler![
+            // 类型化采集端点与适配器能力
+            list_adapter_capabilities,
+            describe_acquisition_points,
+            discover_acquisition_endpoints,
+            validate_adapter_configuration,
+            open_acquisition_endpoint,
+            close_acquisition_endpoint,
+            list_acquisition_endpoints,
+            read_acquisition_points,
+            subscribe_acquisition_points,
+            write_acquisition_points,
+            latest_acquisition_samples,
             // 传输
             list_ports,
-            open_transport,
             close_transport,
             send_raw,
             send_string,

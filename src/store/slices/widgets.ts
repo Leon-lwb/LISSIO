@@ -53,9 +53,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
             };
             return {
               rfNodes: [...s.rfNodes, newNode],
-              controlTabs: s.controlTabs.map((t) =>
-                t.id === tabId ? { ...t, widgets: [...t.widgets, widget.params.id] } : t
-              ),
               customEditorState: { open: true, widgetId: widget.params.id },
             };
           }
@@ -92,9 +89,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
               newState.dataTabs = [...s.dataTabs, tab];
               newState.activeDataTabId = widget.params.id;
             }
-            newState.controlTabs = s.controlTabs.map((t) =>
-              t.id === tabId ? { ...t, widgets: [...t.widgets, widget.params.id] } : t
-            );
             return newState;
           });
           const inputValue = widgetInputValue(widget);
@@ -136,10 +130,6 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
                 newState.activeDataTabId = remaining[0]?.id ?? 'waveform-fixed';
               }
             }
-            newState.controlTabs = s.controlTabs.map((t) => ({
-              ...t,
-              widgets: t.widgets.filter((w: string) => w !== id),
-            }));
             return newState;
           });
           affectedTabs.forEach((tabId) => { void get().syncTabGraph(tabId); });

@@ -3,7 +3,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useCanLoadAlarmStore } from '../../../store/canLoadAlarmStore';
 import { api } from '../../../lib/tauri/tauri';
 import { notify, formatError } from '../../../lib/tauri/notifications';
-import { usePrimaryTransportConfig, usePrimaryCanTransportNodeId } from '../../../lib/hooks/usePrimaryNodes';
+import { usePrimaryCanTransportNodeId } from '../../../lib/hooks/usePrimaryNodes';
 import { t } from '../../../i18n';
 import { Trash2, Activity, Download, Bell, BellOff } from 'lucide-react';
 import type { CanLoadSnapshot, CanIdLoadHistory } from '../../../types';
@@ -27,8 +27,7 @@ import {
 /// - 窗口大小 / 波特率选择器
 export function CanLoadView() {
   const lang = useAppStore((s) => s.lang);
-  const transportConfig = usePrimaryTransportConfig();
-  /// CAN 负载命令的目标 Transport 节点 (Slcan/CandleLight 优先); null = 图中无 Transport 节点
+  /// CAN 负载命令的目标设备节点 (Slcan/CandleLight 优先)；null = 图中无设备节点
   const canNodeId = usePrimaryCanTransportNodeId();
   const threshold = useCanLoadAlarmStore((s) => s.threshold);
   const setThreshold = useCanLoadAlarmStore((s) => s.setThreshold);
@@ -54,7 +53,7 @@ export function CanLoadView() {
       .getCurrentCanBitrate(canNodeId)
       .then(([bps, source]) => setDetectedBitrate({ bps, source }))
       .catch(() => { return undefined; });
-  }, [transportConfig, canNodeId]);
+  }, [canNodeId]);
 
   // 设置窗口大小时同步后端
   useEffect(() => {
