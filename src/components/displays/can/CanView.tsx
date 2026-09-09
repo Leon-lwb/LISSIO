@@ -17,7 +17,7 @@ type ViewMode = 'list' | 'send' | 'chart' | 'load';
 export function CanView() {
   const lang = useAppStore((s) => s.lang);
   const protocolConfig = usePrimaryProtocolConfig();
-  const setSidebarView = useAppStore((s) => s.setSidebarView);
+  const openCategory = useAppStore((s) => s.openCategory);
   const [mode, setMode] = useState<ViewMode>('list');
 
   const tabs = [
@@ -37,7 +37,7 @@ export function CanView() {
           message={t(lang, 'canHintMessage')}
           action={{
             label: t(lang, 'canHintAction'),
-            onClick: () => setSidebarView('widgets'),
+            onClick: () => openCategory('protocol'),
           }}
         />
       )}

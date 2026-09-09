@@ -27,6 +27,7 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
   const lang = useAppStore((s) => s.lang);
   const card = useDockStore((s) => s.cards[cardId]);
   const addControlTab = useAppStore((s) => s.addControlTab);
+  const addDefaultCanvas = useAppStore((s) => s.addDefaultCanvas);
   const removeControlTab = useAppStore((s) => s.removeControlTab);
   const renameControlTab = useAppStore((s) => s.renameControlTab);
   const removeDataTab = useAppStore((s) => s.removeDataTab);
@@ -117,7 +118,10 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
 
   const tabBarContextMenu = useContextMenu(
     kind === 'control'
-      ? [{ id: 'new-tab', label: t(lang, 'newTab'), icon: <Plus />, onClick: () => addControlTab() }]
+      ? [
+        { id: 'new-tab', label: t(lang, 'newTab'), icon: <Plus />, onClick: () => addControlTab() },
+        { id: 'default-canvas', label: t(lang, 'addDefaultCanvas'), icon: <Plus />, onClick: () => { void addDefaultCanvas(); } },
+      ]
       : []
   );
 
@@ -128,6 +132,7 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
         const canCloseTab = allControlTabs.length > 1;
         const otherTabs = allControlTabs.filter((tab) => tab.id !== tabId);
         return [
+          { id: 'default-canvas', label: t(lang, 'addDefaultCanvas'), icon: <Plus />, onClick: () => { void addDefaultCanvas(); } },
           { id: 'rename', label: t(lang, 'contextMenuRename'), icon: <Type />, onClick: () => handleStartRename(tabId, currentName) },
           { id: 'duplicate', label: t(lang, 'contextMenuDuplicate'), icon: <Copy />, onClick: () => addControlTab(currentName) },
           { kind: 'separator' as const },
@@ -156,7 +161,7 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
         },
       ];
     },
-    [kind, lang, addControlTab, removeControlTab, removeDataTab, handleStartRename]
+    [kind, lang, addControlTab, addDefaultCanvas, removeControlTab, removeDataTab, handleStartRename]
   );
 
   const closable = (tabId: string) =>

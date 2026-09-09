@@ -22,12 +22,13 @@ import {
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards } from '../../lib/acquisition/deviceCardModel';
 import { createAcquisitionNode } from '../../lib/acquisition/acquisitionNodes';
-import { defaultSimulation } from '../../lib/acquisition/simulation';
+import { useDockStore } from '../dockStore';
+import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { rawDataPortId } from '../../lib/utils/nodeDef';
 import { withHistoryOp } from '../historyStore';
 import type { HistoryTarget, NodeOpRef } from '../historyStore';
 import { nodeLabelOf, nodeRefOf } from '../../lib/utils/nodeKindVisuals';
-import type { ProtocolConfig, WidgetConfig } from '../../types';
+import type { EndpointSpec, ProtocolConfig, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
 
 export interface GraphSlice {
@@ -56,8 +57,8 @@ export interface GraphSlice {
   removeNode: (nodeId: string) => void;
   /// 设置节点显式尺寸 (属性面板数字输入; undefined = 恢复内容自适应)
   setNodeSize: (nodeId: string, size: { width?: number; height?: number }) => void;
-  /// 初始图种子: 串口设备+测试属性 → JustFloat → RawData
-  seedInitialGraph: (rawDataWidgetId: string) => void;
+  /// 初始图种子: Serial → JustFloat → RawData，选中 Serial 并打开数据/属性窗口
+  seedInitialGraph: (rawDataWidgetId: string, source?: 'startup' | 'user') => Promise<void>;
 }
 
 export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
@@ -104,7 +105,7 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
         set((s) => ({ rfNodes: s.rfNodes.map((node) => {
           if (node.id !== nodeId) return node;
           const widget = node.data.widget as WidgetConfig | undefined;
-          const spec = node.data.spec as import('../../types').EndpointSpec | undefined;
+          const spec = node.data.spec as EndpointSpec | undefined;
           return { ...node, data: { ...node.data, label: label.trim(),
             ...(widget ? { widget: { ...widget, params: { ...widget.params, label: label.trim() } } } : {}),
             ...(spec ? { spec: { ...spec, label: label.trim() } } : {}),
@@ -205,21 +206,40 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
         { coalesceKey: `node.size.${nodeId}` }
       ),
 
-    seedInitialGraph: (rawDataWidgetId) => {
-      const tabId = get().rfNodes.find(n => n.id === rawDataWidgetId)?.data.tabId as string;
-      void loadAdapterCapabilities().then(adapters => {
-        if (!get().rfNodes.some(n => n.id === rawDataWidgetId)) return;
+    seedInitialGraph: async (rawDataWidgetId, source = 'startup') => {
+      try {
+        const adapters = await loadAdapterCapabilities();
+        const state = get();
+        const rawNode = state.rfNodes.find(n => n.id === rawDataWidgetId);
+        if (!rawNode || (source === 'startup' && state.workspaceRestored)) return;
+        const tabId = rawNode.data.tabId as string;
+        // Async catalog loading must not duplicate nodes or overwrite work started meanwhile.
+        if (state.rfNodes.some(n => n.data.tabId === tabId && n.id !== rawDataWidgetId)) return;
         const card = buildDeviceCards(adapters).find(c => c.adapter.adapterId === 'serial');
         if (!card) return;
-        const device = createAcquisitionNode(card, { x: 60, y: 100 });
-        device.data.tabId = tabId;
-        device.data.spec.simulation = defaultSimulation();
+        const device = createAcquisitionNode(card, { x: 60, y: 100 }, tabId);
+        device.selected = true;
         const protocol = createProtocolNode(DEFAULT_PROTOCOL_CONFIG, { x: 320, y: 100 });
         protocol.data.tabId = tabId;
-        set(s => ({ rfNodes: [...s.rfNodes, device, protocol] }));
+        set(s => ({
+          rfNodes: [...s.rfNodes.map(n => ({ ...n, selected: false })), device, protocol],
+          activeControlTabId: tabId,
+        }));
         get().onConnect({ source: device.id, sourceHandle: 'rx', target: protocol.id, targetHandle: 'in' });
         get().onConnect({ source: protocol.id, sourceHandle: 'out', target: rawDataWidgetId, targetHandle: 'data' });
-      }).catch(error => console.warn('[workspace] initial device catalog unavailable', error));
+        get().addNodePropertiesTab();
+        get().setActiveDataTab(rawDataWidgetId);
+        const dock = useDockStore.getState();
+        dock.reconcile('control', get().controlTabs.map(tab => tab.id));
+        dock.reconcile('data', get().dataTabs.map(tab => tab.id));
+        dock.dockPropertiesTab(NODE_PROPERTIES_TAB_ID);
+        const controlCard = Object.values(useDockStore.getState().cards).find(c => c.kind === 'control' && c.tabIds.includes(tabId));
+        if (controlCard) dock.setActiveTab(controlCard.id, tabId);
+        const dataCard = Object.values(useDockStore.getState().cards).find(c => c.tabIds.includes(rawDataWidgetId));
+        if (dataCard) dock.setActiveTab(dataCard.id, rawDataWidgetId);
+      } catch (error) {
+        console.warn('[workspace] initial device catalog unavailable', error);
+      }
     },
 
     onNodesChange: (changes) => {

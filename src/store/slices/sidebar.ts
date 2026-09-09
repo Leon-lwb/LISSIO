@@ -1,14 +1,18 @@
 import type { Lang } from '../../i18n';
+import type { PaletteCategoryId } from '../../types';
 import type { AppSlice } from './types';
 
-export type SidebarView = 'widgets' | 'quickstart' | 'panels';
+export type SidebarView = 'category' | 'quickstart' | 'panels';
 
 export interface SidebarSlice {
   lang: Lang;
   setLang: (lang: Lang) => void;
   sidebarView: SidebarView;
   sidebarVisible: boolean;
+  activeCategory: PaletteCategoryId;
   setSidebarView: (view: SidebarView) => void;
+  openCategory: (category: PaletteCategoryId) => void;
+  selectCategory: (category: PaletteCategoryId) => void;
   toggleSidebar: (view: SidebarView) => void;
 }
 
@@ -17,13 +21,22 @@ export const createSidebarSlice: AppSlice<SidebarSlice> = (set, get) => {
     lang: 'zh',
     setLang: (lang) => set({ lang }),
 
-    sidebarView: 'widgets',
+    sidebarView: 'category',
     sidebarVisible: true,
+    activeCategory: 'transport',
     setSidebarView: (view) => set({ sidebarView: view, sidebarVisible: true }),
+    openCategory: (category) =>
+      set({ sidebarView: 'category', activeCategory: category, sidebarVisible: true }),
+    selectCategory: (category) => {
+      const { sidebarView, sidebarVisible, activeCategory } = get();
+      if (sidebarView === 'category' && activeCategory === category && sidebarVisible) {
+        set({ sidebarVisible: false });
+      } else {
+        set({ sidebarView: 'category', activeCategory: category, sidebarVisible: true });
+      }
+    },
     toggleSidebar: (view) => {
       const { sidebarView, sidebarVisible } = get();
-      // 若点击的 view 与当前相同且可见 → 收起; 否则切换到该 view 并展开。
-      // 「panels」 与其他 view 同等对待, 不影响原逻辑。
       if (sidebarView === view && sidebarVisible) {
         set({ sidebarVisible: false });
       } else {

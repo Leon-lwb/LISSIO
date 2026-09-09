@@ -1,1 +1,1 @@
-export { WidgetPalette } from './WidgetPalette';
+export { CategoryPanel } from './CategoryPanel';

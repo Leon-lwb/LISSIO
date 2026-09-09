@@ -10,7 +10,7 @@ import { t } from '../../../i18n';
 import { NumberField, SelectField, TextField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
-/// 运算选项 — 集合与标签与 WidgetPalette mathItems 同源
+/// 运算选项 — 集合与标签与 paletteSections 的 mathItems 同源
 const OP_OPTIONS: [MathOp, string][] = [
   ['add', 'mathAdd'],
   ['sub', 'mathSub'],

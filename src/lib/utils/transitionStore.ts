@@ -6,7 +6,7 @@
 //!
 //! 用法 (在调用点包装 store 动作):
 //!   transitionStore(() => useAppStore.getState().setActiveDataTab(id))
-//!   transitionStore(() => toggleSidebar('widgets'))
+//!   transitionStore(() => toggleSidebar('panels'))
 //!
 //! 仅用于非紧急 UI 状态 (tab 切换 / 侧边栏视图与显隐 / 主题外观应用);
 //! 紧急路径应直接调用 store 动作, 不要经过本工具。

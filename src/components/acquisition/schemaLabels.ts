@@ -1,0 +1,84 @@
+import { t, type Lang } from '../../i18n';
+
+const FIELD_KEYS: Record<string, string> = {
+  port_name: 'schemaFieldPortName',
+  portName: 'schemaFieldPortName',
+  baud_rate: 'schemaFieldBaudRate',
+  baudRate: 'schemaFieldBaudRate',
+  data_bits: 'schemaFieldDataBits',
+  dataBits: 'schemaFieldDataBits',
+  stop_bits: 'schemaFieldStopBits',
+  stopBits: 'schemaFieldStopBits',
+  parity: 'schemaFieldParity',
+  flow_control: 'schemaFieldFlowControl',
+  flowControl: 'schemaFieldFlowControl',
+  host: 'schemaFieldHost',
+  port: 'schemaFieldPort',
+  path: 'schemaFieldPath',
+  address: 'schemaFieldAddress',
+  slave_id: 'schemaFieldUnitId',
+  unit_id: 'schemaFieldUnitId',
+  unitId: 'schemaFieldUnitId',
+  local_addr: 'schemaFieldLocalAddr',
+  remote_addr: 'schemaFieldRemoteAddr',
+  local_port: 'schemaFieldLocalPort',
+  remote_port: 'schemaFieldRemotePort',
+  listen_addr: 'schemaFieldListenAddr',
+  listen_port: 'schemaFieldListenPort',
+  channels: 'schemaFieldChannels',
+  sample_rate: 'schemaFieldSampleRate',
+  signal: 'schemaFieldSignal',
+  can_bitrate: 'schemaFieldCanBitrate',
+  bus: 'schemaFieldBus',
+  channel: 'schemaFieldChannel',
+  timeoutMs: 'schemaFieldTimeoutMs',
+  reconnect: 'schemaFieldReconnect',
+  maxAttempts: 'schemaFieldMaxAttempts',
+  initialDelayMs: 'schemaFieldInitialDelayMs',
+  maxDelayMs: 'schemaFieldMaxDelayMs',
+  points: 'schemaFieldPoints',
+  id: 'schemaFieldId',
+  area: 'schemaFieldArea',
+  dataType: 'schemaFieldDataType',
+  byteOrder: 'schemaFieldByteOrder',
+  wordOrder: 'schemaFieldWordOrder',
+  scale: 'schemaFieldScale',
+  offset: 'schemaFieldOffset',
+  pollPeriodMs: 'schemaFieldPollPeriodMs',
+};
+
+const ENUM_KEYS: Record<string, string> = {
+  none: 'schemaEnumNone',
+  odd: 'schemaEnumOdd',
+  even: 'schemaEnumEven',
+  one: 'schemaEnumOne',
+  two: 'schemaEnumTwo',
+  software: 'schemaEnumSoftware',
+  hardware: 'schemaEnumHardware',
+  seven: 'schemaEnumSeven',
+  eight: 'schemaEnumEight',
+  big: 'schemaEnumBig',
+  little: 'schemaEnumLittle',
+  coils: 'schemaEnumCoils',
+  discreteInputs: 'schemaEnumDiscreteInputs',
+  inputRegisters: 'schemaEnumInputRegisters',
+  holdingRegisters: 'schemaEnumHoldingRegisters',
+};
+
+export function schemaFieldLabelKey(name: string): string | undefined {
+  return FIELD_KEYS[name];
+}
+
+export function schemaEnumLabelKey(value: string): string | undefined {
+  return ENUM_KEYS[value];
+}
+
+export function schemaFieldLabel(lang: Lang, name: string): string | undefined {
+  const key = schemaFieldLabelKey(name);
+  return key ? t(lang, key) : undefined;
+}
+
+export function schemaEnumLabel(lang: Lang, value: string): string | undefined {
+  const key = schemaEnumLabelKey(value);
+  return key ? t(lang, key) : undefined;
+}

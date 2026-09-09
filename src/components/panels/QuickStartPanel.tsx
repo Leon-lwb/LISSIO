@@ -34,12 +34,12 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
 
 export function QuickStartPanel() {
   const lang = useAppStore((s) => s.lang);
-  const setSidebarView = useAppStore((s) => s.setSidebarView);
+  const openCategory = useAppStore((s) => s.openCategory);
 
-  /// 应用快照并切换到控件画布视图
+  /// 应用快照并切换到控件分类页
   const apply = async (snap: AppSnapshot, mode: TemplateApplyMode) => {
     await applyTemplate(snap, mode);
-    setSidebarView('widgets');
+    openCategory('display');
   };
 
   /// 通过系统对话框确认应用方式: 先询问「替换」(推荐), 取消则再询问「合并」

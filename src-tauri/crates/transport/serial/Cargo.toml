@@ -1,6 +1,6 @@
 [package]
 name = "serial"
-description = "Lissio 串口传输 — 同步串口 + Windows COM Description 枚举"
+description = "Lissio 串口传输 — 同步串口 + 跨平台系统设备描述枚举"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -20,9 +20,12 @@ transport = { workspace = true }
 schema_types = { workspace = true }
 async-trait = { workspace = true }
 serialport = { workspace = true }
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = { workspace = true }
+io-kit-sys = { workspace = true }
 [target.'cfg(windows)'.dependencies]
 windows-sys = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 4
-responsibility = "Lissio 串口传输 — 同步串口 + Windows COM Description 枚举"
+responsibility = "Lissio 串口传输 — 同步串口 + 跨平台系统设备描述枚举"

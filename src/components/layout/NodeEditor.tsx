@@ -53,7 +53,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   const onEdgesChange = useAppStore((s) => s.onEdgesChange);
   const onConnect = useAppStore((s) => s.onConnect);
   const addWidget = useAppStore((s) => s.addWidget);
-  const setSidebarView = useAppStore((s) => s.setSidebarView);
+  const openCategory = useAppStore((s) => s.openCategory);
   const reactFlow = useReactFlow();
 
   const flyToRequest = useAppStore((s) => s.flyToRequest);
@@ -92,7 +92,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       id: 'open-widget-palette',
       label: t(lang, 'widgetPalette'),
       icon: <LayoutGrid />,
-      onClick: () => transitionStore(() => setSidebarView('widgets')),
+      onClick: () => transitionStore(() => openCategory('display')),
     },
   ]);
 

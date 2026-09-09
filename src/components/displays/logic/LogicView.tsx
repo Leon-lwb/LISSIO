@@ -14,7 +14,7 @@ type ViewMode = 'timing' | 'events';
 export function LogicView() {
   const lang = useAppStore((s) => s.lang);
   const protocolConfig = usePrimaryProtocolConfig();
-  const setSidebarView = useAppStore((s) => s.setSidebarView);
+  const openCategory = useAppStore((s) => s.openCategory);
   const [mode, setMode] = useState<ViewMode>('timing');
 
   const tabs = [
@@ -32,7 +32,7 @@ export function LogicView() {
           message={t(lang, 'logicHintMessage')}
           action={{
             label: t(lang, 'logicHintAction'),
-            onClick: () => setSidebarView('widgets'),
+            onClick: () => openCategory('protocol'),
           }}
         />
       )}

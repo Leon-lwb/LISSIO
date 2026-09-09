@@ -254,7 +254,7 @@ export interface TriggerConfig {
 
 // ============ 控件类别 ============
 
-/// 控件类别 — 用于 WidgetPalette 分组与颜色区分
+/// 控件类别 — 用于控件分类页分组与颜色区分
 export type WidgetCategory =
   | 'transport'
   | 'protocol'
@@ -264,6 +264,19 @@ export type WidgetCategory =
   | 'math'       // 算术控件 (Math/Filter — 加减乘除/数学函数/滤波)
   | 'string'     // 字符串控件 (Str — 字符串截取/拼接/查找/大小写转换)
   | 'custom';    // 自定义控件 (Custom JS)
+
+/// 控件面板分类 — ActivityBar 分类导航与侧边栏分类页一一对应;
+/// attributes (测试数据等节点属性入口) 无独立 WidgetCategory, 图标色归 custom
+export type PaletteCategoryId =
+  | 'transport'
+  | 'protocol'
+  | 'send'
+  | 'math'
+  | 'string'
+  | 'display'
+  | 'input'
+  | 'attributes'
+  | 'custom';
 
 export type WidgetConfig =
   | { kind: 'Knob'; params: KnobConfig }
@@ -356,7 +369,7 @@ export function getWidgetCategory(kind: WidgetConfig['kind']): WidgetCategory {
   }
 }
 
-/// 各类别主题色 — WidgetPalette 分组着色与节点卡片着色共用
+/// 各类别主题色 — 控件分类页分组着色与节点卡片着色共用
 export const WIDGET_CATEGORY_COLORS: Record<WidgetCategory, string> = {
   transport: '#dcdcaa',
   protocol: '#4ec9b0',

@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
 use points::PointDescriptor;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 pub struct ModbusFactory {
     manifest: DriverManifest,
@@ -110,18 +110,11 @@ impl SourceFactory for ModbusRtuFactory {
         Ok(ports
             .into_iter()
             .map(|port| {
-                let mut metadata = BTreeMap::new();
-                metadata.insert("portType".into(), serde_json::json!(port.port_type));
-                if let Some(value) = port.vid {
-                    metadata.insert("vid".into(), serde_json::json!(value));
-                }
-                if let Some(value) = port.pid {
-                    metadata.insert("pid".into(), serde_json::json!(value));
-                }
+                let metadata = serial::port_metadata(&port);
                 DiscoveredEndpoint {
                     adapter_id: DriverId(RTU_DRIVER_ID.into()),
                     discovery_id: port.name.clone(),
-                    display_name: port.product.unwrap_or_else(|| port.name.clone()),
+                    display_name: port.description.or(port.product).unwrap_or_else(|| port.name.clone()),
                     configuration_patch: serde_json::json!({"portName": port.name}),
                     metadata,
                 }

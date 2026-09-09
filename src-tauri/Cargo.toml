@@ -223,6 +223,8 @@ window-vibrancy = "0.6"
 semver = "1"
 # 硬件/平台访问
 serialport = "4"
+core-foundation = "0.10"
+io-kit-sys = "0.4"
 nusb = "0.2"
 windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices_DeviceAndDriverInstallation", "Win32_System_Registry"] }
 # FFT (dsp_fft)

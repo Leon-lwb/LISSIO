@@ -88,3 +88,33 @@ port, a heavy optional adapter, or cross-crate test support. Otherwise add a
 private module to the capability owner. Names describe the responsibility;
 prefixes (`lissio-*`, `vofa-*`, layer names) and ambiguous standalone names
 (`core`, `runtime`, `types`, `common`) are forbidden.
+
+## Serial discovery and device presentation
+
+`serial` (L4) owns the shared enumeration pipeline in private `ports`,
+`macos_ports`, `windows_ports`, and `linux_ports` modules. The stable
+`serial::serial::list_ports` API returns `data-model::PortInfo` after platform
+information enrichment, text normalization, and interface deduplication:
+
+- macOS uses IORegistry's callout/dial-in properties on the **same service** to
+  choose the callout path, and reads DriverKit/USB names and identity.
+- Windows uses serialport's hardware identity and SetupAPI's localized friendly
+  name, falling back to the device description. COM spelling is canonicalized.
+- Linux uses serialport/libudev plus sysfs interface/product/manufacturer data;
+  filesystem aliases resolve to the actual device path. Missing sysfs data is
+  nonfatal and preserves the base enumeration.
+
+Serial, SLCAN, and Modbus RTU consume this same inventory and `port_metadata`.
+The optional discovery metadata `deviceId` is an OS-local **interface identity**
+(`serial:<canonical port>`), shared across adapters; it is not a permanent USB
+hardware ID. Do not deduplicate by VID/PID, product, or serial number: different
+devices or independent interfaces can share them. Previously saved paths remain
+valid connection inputs; discovery does not rewrite persisted configurations.
+
+The device panel groups only explicit matching `deviceId` values, offers the
+available adapter choices on one device card, and preserves each choice's
+configuration patch. Discoveries without identity remain adapter-scoped. React
+never infers OS aliases or hardware identity from device names. Manually
+configured/network connections remain accessible separately from discovered
+hardware. `PortInfo`, IPC signatures, and persisted configuration shapes remain
+unchanged; the discovery metadata addition is backward compatible.

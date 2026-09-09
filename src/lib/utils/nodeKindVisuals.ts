@@ -1,6 +1,6 @@
 //! 节点种类 → 图标 + 主题色 的共享映射。
 //!
-//! 图标与 WidgetPalette 抽屉保持同源（同一控件在画布上用什么图标，
+//! 图标与控件分类页保持同源（同一控件在画布上用什么图标，
 //! 历史面板行首就用什么图标）；颜色沿用画布的分类主题色体系：
 //! - 控件按 getWidgetCategory 分类: input 蓝 / display 绿 / math 橙 /
 //!   string 红 / custom 紫（与 PaletteRow 的底色徽章完全一致）
@@ -45,7 +45,7 @@ import {
 } from '../../types';
 import type { Node } from '@xyflow/react';
 
-/** 控件种类 → 图标（与 WidgetPalette 抽屉内条目一致） */
+/** 控件种类 → 图标（与控件分类页条目一致） */
 export const WIDGET_KIND_ICONS: Record<WidgetConfig['kind'], LucideIcon> = {
   Knob: Gauge,
   Button: Square,

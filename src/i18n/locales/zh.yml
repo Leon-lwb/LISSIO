@@ -692,7 +692,10 @@ catSignalProcessing: "信号处理"
 catTextProcessing: "文本处理"
 catDisplayInteraction: "显示与交互"
 catDisplay: 显示
+catInput: 交互输入
+catAttributes: 属性
 catCustom: 自定义
+pointSelector: 点位选择
 
 # 算术控件
 mathAdd: 加法
@@ -944,10 +947,10 @@ tourWelcomeTitle: 欢迎使用 Lissio
 tourWelcomeContent: 三分钟跑通核心工作流。高亮区是当前讲解对象，<strong>带勾选框的步骤需要动手完成</strong>；右上角 × 随时退出。
 tourQuickStartTitle: 快速开始 · 模板起步
 tourQuickStartContent: 左侧活动栏的<strong>火箭图标</strong>打开此面板——7 个模板一键生成画布与连线，应用后默认落在<strong>编译结果</strong>页核对。
-tourPaletteTitle: 控件面板 · 素材总览
-tourPaletteContent: 全部素材分<strong>九大分组</strong>——输入、接口、协议、显示、算术、滤波、频域、字符串、自定义。分组头可折叠展开。
-tourJumpbarTitle: 控件面板 · 跳转与搜索
-tourJumpbarContent: 图标条<strong>点击直达分组</strong>（自动展开已折叠项）；下方搜索框按名称即时过滤控件。
+tourPaletteTitle: 控件分类 · 素材总览
+tourPaletteContent: 全部素材分<strong>九大分类</strong>——连接设备、解析与编码、发送、信号处理、文本处理、显示、交互输入、属性、自定义，图标常驻最左侧栏。
+tourJumpbarTitle: 控件分类 · 切换与搜索
+tourJumpbarContent: 点击最左栏的分类图标<strong>直接打开该分类的控件列表</strong>（再点一次收起）；列表顶部搜索框按名称即时过滤控件。
 tourActJumpbar: 点击跳转条上任一分类图标
 tourCreateTitle: 新建卡片 · 放进画布
 tourCreateContent: <strong>拖拽</strong>任意行到画布松手落位，或单击该行快速添加；接口与协议节点为全局共享。
@@ -1410,6 +1413,86 @@ runStopHint: 停止工作区 (清空执行状态与待发送任务)
 cmdSendRequiresRun: 工作区未运行 — 手动发送要求运行态, 请先在状态栏启动
 capabilityVersionFallback: 当前应用版本暂不支持连接该接口。
 capabilityDiscoveredEndpoint: 已发现的端点
-capabilitySelectDiscovered: 选择一个已发现的端点…
+capabilityDiscovering: 发现中…
+capabilityNoEndpointsDiscovered: 未发现设备
 capabilityLabel: 名称
 capabilityUnavailable: 当前构建中不可用该接口。
+propertiesSectionGeneral: 通用
+propertiesSectionBusiness: 业务配置
+propertiesSectionExtra: 附加属性
+propertiesNoExtraAttributes: 暂无可用属性
+schemaFieldPortName: 串口
+schemaFieldBaudRate: 波特率
+schemaFieldDataBits: 数据位
+schemaFieldStopBits: 停止位
+schemaFieldParity: 校验位
+schemaFieldFlowControl: 流控
+schemaFieldHost: 主机
+schemaFieldPort: 端口
+schemaFieldPath: 路径
+schemaFieldAddress: 地址
+schemaFieldUnitId: 从站地址
+schemaFieldLocalAddr: 本地地址
+schemaFieldRemoteAddr: 远程地址
+schemaFieldLocalPort: 本地端口
+schemaFieldRemotePort: 远程端口
+schemaFieldListenAddr: 监听地址
+schemaFieldListenPort: 监听端口
+schemaFieldChannels: 通道数
+schemaFieldSampleRate: 采样率
+schemaFieldSignal: 信号类型
+schemaFieldCanBitrate: CAN 波特率
+schemaFieldBus: 总线
+schemaFieldChannel: 通道
+schemaFieldTimeoutMs: 超时 (ms)
+schemaFieldReconnect: 自动重连
+schemaFieldMaxAttempts: 最大重试次数
+schemaFieldInitialDelayMs: 初始延迟 (ms)
+schemaFieldMaxDelayMs: 最大延迟 (ms)
+schemaFieldPoints: 点位
+schemaFieldId: 标识
+schemaFieldArea: 区域
+schemaFieldDataType: 数据类型
+schemaFieldByteOrder: 字节序
+schemaFieldWordOrder: 字序
+schemaFieldScale: 缩放系数
+schemaFieldOffset: 偏移
+schemaFieldPollPeriodMs: 轮询周期 (ms)
+schemaEnumNone: 无
+schemaEnumOdd: 奇校验
+schemaEnumEven: 偶校验
+schemaEnumOne: 1 位
+schemaEnumTwo: 2 位
+schemaEnumSoftware: 软件
+schemaEnumHardware: 硬件
+schemaEnumSeven: 7 位
+schemaEnumEight: 8 位
+schemaEnumBig: 大端
+schemaEnumLittle: 小端
+schemaEnumCoils: 线圈
+schemaEnumDiscreteInputs: 离散输入
+schemaEnumInputRegisters: 输入寄存器
+schemaEnumHoldingRegisters: 保持寄存器
+
+devicePanelHint: 点击或拖动设备到画布，再配置通信参数并连接。
+devicePanelSearch: 搜索名称、端口、VID/PID…
+devicePanelAdd: 添加设备
+devicePanelManual: 手动配置
+devicePanelAdded: 已添加
+
+deviceTypeBluetooth: 蓝牙串口
+deviceTypeUsb: USB 串口
+deviceTypePci: PCI 串口
+deviceTypeSystem: 系统串口
+deviceBluetoothNoUsbIds: 非 USB 设备，无 USB VID/PID
+
+devicePanelDevices: 设备
+devicePanelManualConnections: 手动添加连接
+devicePanelConnectVia: 连接方式
+
+paletteSearchAll: 搜索设备、控件、分类…
+paletteJumpTo: 跳转到分类
+
+addDefaultCanvas: 添加默认画布
+defaultCanvas: 默认画布
+defaultCanvasUnavailable: 无法添加默认画布，请检查串口设备目录后重试。

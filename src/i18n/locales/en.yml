@@ -692,7 +692,10 @@ catSignalProcessing: "Signal processing"
 catTextProcessing: "Text processing"
 catDisplayInteraction: "Display & interaction"
 catDisplay: Display
+catInput: Interactive inputs
+catAttributes: Attributes
 catCustom: Custom
+pointSelector: Point selector
 
 # Math Widgets
 mathAdd: Add
@@ -944,10 +947,10 @@ tourWelcomeTitle: Welcome to Lissio
 tourWelcomeContent: The core workflow in three minutes. The spotlight marks each topic; steps with a <strong>checkbox are hands-on</strong>. Exit anytime via ×.
 tourQuickStartTitle: Quick Start · Templates
 tourQuickStartContent: The <strong>rocket icon</strong> in the activity bar opens this panel — 7 templates generate a canvas plus wiring in one click, landing on <strong>Compile Results</strong> for review.
-tourPaletteTitle: Widget Palette · Assets
-tourPaletteContent: Every asset lives in <strong>nine groups</strong> — Inputs, Interfaces, Protocol, Displays, Math, Filters, Frequency, Strings, Custom. Headers collapse.
-tourJumpbarTitle: Widget Palette · Jump & Search
-tourJumpbarContent: The icon strip <strong>jumps straight to a group</strong> (auto-expanding it); the search box below filters widgets by name instantly.
+tourPaletteTitle: Widget Categories · Assets
+tourPaletteContent: Every asset lives in <strong>nine categories</strong> — Connections, Parsing & encoding, Sending, Signal processing, Text processing, Display, Interactive inputs, Attributes, Custom. Their icons live in the leftmost bar.
+tourJumpbarTitle: Widget Categories · Switch & Search
+tourJumpbarContent: Click a category icon in the leftmost bar to <strong>open that category's widget list</strong> (click again to collapse); the search box above the list filters widgets by name instantly.
 tourActJumpbar: Click any category icon on the jump bar
 tourCreateTitle: New Cards · Onto the Canvas
 tourCreateContent: <strong>Drag</strong> any palette row onto the canvas to place it exactly there, or click the row for a quick add; interfaces and protocol nodes are global.
@@ -1409,7 +1412,87 @@ runPauseHint: Pause workspace (keeps connection, drops data while paused, no bac
 runStopHint: Stop workspace (clears execution state and pending send tasks)
 cmdSendRequiresRun: Workspace is not running — manual send requires running state, start it from the status bar
 capabilityVersionFallback: This interface cannot be connected with the current app version.
-capabilityDiscoveredEndpoint: Discovered endpoint
-capabilitySelectDiscovered: Select a discovered endpoint…
+capabilityDiscoveredEndpoint: Discovered endpoints
+capabilityDiscovering: Discovering…
+capabilityNoEndpointsDiscovered: No devices discovered
 capabilityLabel: Name
 capabilityUnavailable: This interface is not available in the current build.
+propertiesSectionGeneral: General
+propertiesSectionBusiness: Business configuration
+propertiesSectionExtra: Additional properties
+propertiesNoExtraAttributes: No additional properties available
+schemaFieldPortName: Serial port
+schemaFieldBaudRate: Baud rate
+schemaFieldDataBits: Data bits
+schemaFieldStopBits: Stop bits
+schemaFieldParity: Parity
+schemaFieldFlowControl: Flow control
+schemaFieldHost: Host
+schemaFieldPort: Port
+schemaFieldPath: Path
+schemaFieldAddress: Address
+schemaFieldUnitId: Unit ID
+schemaFieldLocalAddr: Local address
+schemaFieldRemoteAddr: Remote address
+schemaFieldLocalPort: Local port
+schemaFieldRemotePort: Remote port
+schemaFieldListenAddr: Listen address
+schemaFieldListenPort: Listen port
+schemaFieldChannels: Channels
+schemaFieldSampleRate: Sample rate
+schemaFieldSignal: Signal
+schemaFieldCanBitrate: CAN bitrate
+schemaFieldBus: Bus
+schemaFieldChannel: Channel
+schemaFieldTimeoutMs: Timeout (ms)
+schemaFieldReconnect: Reconnect
+schemaFieldMaxAttempts: Max attempts
+schemaFieldInitialDelayMs: Initial delay (ms)
+schemaFieldMaxDelayMs: Max delay (ms)
+schemaFieldPoints: Points
+schemaFieldId: ID
+schemaFieldArea: Area
+schemaFieldDataType: Data type
+schemaFieldByteOrder: Byte order
+schemaFieldWordOrder: Word order
+schemaFieldScale: Scale
+schemaFieldOffset: Offset
+schemaFieldPollPeriodMs: Poll period (ms)
+schemaEnumNone: None
+schemaEnumOdd: Odd
+schemaEnumEven: Even
+schemaEnumOne: One
+schemaEnumTwo: Two
+schemaEnumSoftware: Software
+schemaEnumHardware: Hardware
+schemaEnumSeven: Seven
+schemaEnumEight: Eight
+schemaEnumBig: Big-endian
+schemaEnumLittle: Little-endian
+schemaEnumCoils: Coils
+schemaEnumDiscreteInputs: Discrete inputs
+schemaEnumInputRegisters: Input registers
+schemaEnumHoldingRegisters: Holding registers
+
+devicePanelHint: Click or drag a device onto the canvas, then configure and connect.
+devicePanelSearch: Search name, port, VID/PID…
+devicePanelAdd: Add device
+devicePanelManual: Configure manually
+devicePanelAdded: Added
+
+deviceTypeBluetooth: Bluetooth serial
+deviceTypeUsb: USB serial
+deviceTypePci: PCI serial
+deviceTypeSystem: System serial
+deviceBluetoothNoUsbIds: Not a USB device; no USB VID/PID
+
+devicePanelDevices: Devices
+devicePanelManualConnections: Add a connection manually
+devicePanelConnectVia: Connect via
+
+paletteSearchAll: Search devices, widgets, categories…
+paletteJumpTo: Jump to category
+
+addDefaultCanvas: Add default canvas
+defaultCanvas: Default canvas
+defaultCanvasUnavailable: Unable to add the default canvas. Check the serial device catalog and try again.

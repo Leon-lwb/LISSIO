@@ -2,6 +2,7 @@ import type { JsonSchema } from '../../types';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 import { defaultsFromSchema } from '../../lib/acquisition/schemaForm';
+import { schemaEnumLabel, schemaFieldLabel } from './schemaLabels';
 
 interface SchemaFieldsProps {
   schema: JsonSchema;
@@ -32,7 +33,7 @@ export function SchemaFields({
       <div className="flex flex-col gap-2">
         {entries.map(([name, child]) => (
           <div key={`${path}.${name}`} className="block text-[11px] text-text-secondary">
-            <label htmlFor={`${path}.${name}`} className="block mb-1 text-text-secondary">{child.title ?? formatLabel(name)}</label>
+            <label htmlFor={`${path}.${name}`} className="block mb-1 text-text-secondary">{child.title ?? schemaFieldLabel(lang, name) ?? formatLabel(name)}</label>
             <SchemaFields
               schema={child}
               value={object[name]}
@@ -93,9 +94,10 @@ export function SchemaFields({
           onChange(selected);
         }}
       >
-        {schema.enum.map((option) => (
-          <option key={optionText(option)} value={optionText(option)}>{optionText(option)}</option>
-        ))}
+        {schema.enum.map((option) => {
+          const raw = optionText(option);
+          return <option key={raw} value={raw}>{schemaEnumLabel(lang, raw) ?? raw}</option>;
+        })}
       </select>
     );
   }

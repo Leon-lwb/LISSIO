@@ -15,7 +15,6 @@ import { DockDragGhost } from './components/ui/DockDragGhost';
 import { SuspenseFallback } from './components/ui/SuspenseFallback';
 import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
-import { selectWidgets } from './store/appStoreHelpers';
 import { useHistoryStore } from './store/historyStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
@@ -157,18 +156,17 @@ function App() {
   }, [initEventListeners, loadSettings, refreshPorts]);
 
   // 首次启动种子: 工作区由后端持久化, 仅在"无持久化工作区且画布为空"时
-  // 默认放一个 RawData 控件, 以保留旧版固定 raw Tab 的常驻行为
-  // (画布占位节点 + raw 数据 Tab)
+  // 默认创建 Serial → JustFloat → RawData，底部打开数据，右上显示 Serial 配置。
   useEffect(() => {
     if (!workspaceReady || workspaceRestored) return;
     const st = useAppStore.getState();
-    if (selectWidgets(st).length === 0 && !st.dataTabs.some((t) => t.type === 'raw')) {
+    if (st.rfNodes.length === 0 && !st.dataTabs.some((t) => t.type === 'raw')) {
       const rawWidget = createWidget('RawData');
       st.addWidget(rawWidget, 'default', { x: 560, y: 120 });
       // 空图时再给出 设备→协议解析→RawData 初始连线, 新用户开箱即有完整数据通路
       const fresh = useAppStore.getState();
       if (!fresh.rfNodes.some((n) => n.type === 'acquisition' || n.type === 'protocol')) {
-        fresh.seedInitialGraph(rawWidget.params.id);
+        void fresh.seedInitialGraph(rawWidget.params.id);
       }
     }
   }, [workspaceReady, workspaceRestored]);

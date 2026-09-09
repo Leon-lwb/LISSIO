@@ -44,12 +44,12 @@ describe('transitionStore', () => {
     expect(() =>
       transitionStore(() => useAppStore.getState().setActiveControlTab('default'))
     ).not.toThrow();
-    expect(() => transitionStore(() => useAppStore.getState().toggleSidebar('widgets'))).not.toThrow();
+    expect(() => transitionStore(() => useAppStore.getState().toggleSidebar('category'))).not.toThrow();
     expect(startTransition).toHaveBeenCalledTimes(2);
 
     // 执行被捕获的 transition 作用域, 确认侧边栏动作仍正常生效
     void vi.mocked(startTransition).mock.calls[1][0]();
-    expect(useAppStore.getState().sidebarView).toBe('widgets');
+    expect(useAppStore.getState().sidebarView).toBe('category');
     expect(useAppStore.getState().sidebarVisible).toBe(true);
   });
 });

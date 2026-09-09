@@ -1,10 +1,10 @@
 import type { Node } from '@xyflow/react';
 import { nanoid } from 'nanoid';
-import type { EndpointSpec } from '../../types';
+import type { DiscoveredEndpoint, EndpointSpec } from '../../types';
 import { useAppStore } from '../../store/appStore';
 import { withHistoryOp } from '../../store/historyStore';
 import { api } from '../tauri/tauri';
-import { defaultsFromSchema } from './schemaForm';
+import { defaultsFromSchema, mergeSchemaPatch } from './schemaForm';
 import type { DeviceCardModel } from './deviceCardModel';
 
 export interface AcquisitionNodeData extends Record<string, unknown> {
@@ -24,23 +24,23 @@ export function acquisitionNodeFromSpec(
   return { id: spec.id, type: 'acquisition', position, width: 200, data: { tabId, label: spec.label, spec, card, ports: card?.endpoint.ports.map(p => ({ id: p.id, direction: p.direction, domain: p.dataDomain })) } };
 }
 
-export function createAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string): Node<AcquisitionNodeData> {
+export function createAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string, discovered?: DiscoveredEndpoint): Node<AcquisitionNodeData> {
   return acquisitionNodeFromSpec({
     id: `acquisition-${nanoid(8)}`,
-    label: card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName,
+    label: discovered?.displayName ?? (card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName),
     enabled: true,
     capabilityEndpointId: card.endpoint.id,
     driver: {
       driverId: card.adapter.adapterId,
       schemaVersion: card.endpoint.configuration.schemaVersion,
-      payload: defaultsFromSchema(card.endpoint.configuration.jsonSchema) as Record<string, unknown>,
+      payload: mergeSchemaPatch(defaultsFromSchema(card.endpoint.configuration.jsonSchema), discovered?.configurationPatch ?? {}) as Record<string, unknown>,
     },
   }, position, card, tabId);
 }
 
-export function addAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string): void {
+export function addAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string, discovered?: DiscoveredEndpoint): void {
   withHistoryOp({ opKey: 'opAddTransportNode', detailText: card.adapter.displayName, target: { kind: 'node', node: { kind: 'transport' } } }, () => {
-    const node = createAcquisitionNode(card, position, tabId);
+    const node = createAcquisitionNode(card, position, tabId, discovered);
     useAppStore.setState((s) => ({ rfNodes: [...s.rfNodes, node] }));
     useAppStore.getState().syncAllTabGraphs();
   });

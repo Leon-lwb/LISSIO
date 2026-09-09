@@ -19,7 +19,7 @@
 
 import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
 import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
-import type { FilterPresetKind, MathOp, StrOp, WidgetConfig } from '../types';
+import type { DiscoveredEndpoint, FilterPresetKind, MathOp, StrOp, WidgetConfig } from '../types';
 import type { DeviceCardModel } from './acquisition/deviceCardModel';
 
 /// 从控件面板拖出的控件参数 (拖到画布)
@@ -33,6 +33,7 @@ export interface WidgetDragSpec {
   nodeType?: 'protocol' | 'acquisition' | 'point-selector';
   attribute?: 'test-data';
   acquisition?: DeviceCardModel;
+  discoveredEndpoint?: DiscoveredEndpoint;
 }
 
 export type DockDragSpec =

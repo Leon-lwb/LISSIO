@@ -150,8 +150,7 @@ export interface MathConfig {
 /// 单目运算集合 — 这些 op 只使用第一个输入
 ///
 /// 内部派生 (Math NodeDef `input_count` 在 widgetToNodeKind 中按 `isUnary` 强制 1);
-/// 此前以 `UNARY_MATH_OPS` 公开重导出被 NodeEditor / WidgetPalette / MathWidget 共用,
-/// 现在以 `isUnaryMathOp` 函数 + `lib/utils/nodeDef.ts` 内部使用替代,
+/// 以 `isUnaryMathOp` 函数 + `lib/utils/nodeDef.ts` 内部使用,
 /// 上层应改读 `widget.params.inputCount` (用户配置 → 后端 input_count 直接透传)。
 const _UNARY_MATH_OPS: readonly MathOp[] = ['abs', 'neg', 'square', 'sqrt', 'sin', 'cos', 'tan', 'log'];
 

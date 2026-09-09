@@ -192,7 +192,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
 // 数据面板菜单条目的「单一事实源」
 // ============================================================
 //
-// 菜单栏 (Windows MenuBar / 原生 menu_shell) 与侧边栏 (QuickStart / WidgetPalette)
+// 菜单栏 (Windows MenuBar / 原生 menu_shell) 与侧边栏 (QuickStart / CategoryPanel)
 // 三个入口共用同一份条目定义, 派生面板的 available 计算 (画布是否有该类 widget)
 // 也只此一处。条目结构:
 //   { type, labelKey, available, open }

@@ -84,14 +84,14 @@ export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
             </button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-3">
-            <h3 className="text-xs text-text-secondary mb-2">通用</h3>
+            <h3 className="text-xs text-text-secondary mb-2">{t(lang, 'propertiesSectionGeneral')}</h3>
             <TextField label={t(lang, 'widgetName')} value={(node.data.widget as WidgetConfig | undefined)?.params.label ?? node.data.label as string ?? ''}
               onCommit={(label) => useAppStore.getState().renameNode(node.id, label)} />
             <SizeSection nodeId={node.id} kind={(node.data.widget as WidgetConfig | undefined)?.kind} />
-            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">业务配置</h3>
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{t(lang, 'propertiesSectionBusiness')}</h3>
             {Properties && <Properties node={node} />}
-            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">附加属性</h3>
-            {node.type === 'acquisition' ? <SimulationProperties node={node} /> : <span className="text-xs text-text-secondary">暂无可用属性</span>}
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{t(lang, 'propertiesSectionExtra')}</h3>
+            {node.type === 'acquisition' ? <SimulationProperties node={node} /> : <span className="text-xs text-text-secondary">{t(lang, 'propertiesNoExtraAttributes')}</span>}
           </div>
         </>
       ) : (

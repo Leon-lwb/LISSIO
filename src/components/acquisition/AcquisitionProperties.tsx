@@ -1,23 +1,21 @@
 import { useEffect, useState } from 'react';
 import type { Node } from '@xyflow/react';
-import { Plug, PlugZap, RefreshCw } from 'lucide-react';
+import { Plug, PlugZap } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
-import { CAPABILITY_CONTRACT_VERSION, type DiscoveredEndpoint } from '../../types';
+import { CAPABILITY_CONTRACT_VERSION } from '../../types';
 import { api } from '../../lib/tauri/tauri';
 import { formatError } from '../../lib/tauri/notifications';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards, type DeviceCardModel } from '../../lib/acquisition/deviceCardModel';
 import { updateAcquisitionNode, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { refreshEndpointSnapshots, useEndpointSnapshot } from '../../lib/acquisition/useEndpointSnapshot';
-import { mergeSchemaPatch } from '../../lib/acquisition/schemaForm';
 import { SchemaFields } from './SchemaFields';
 
 export function AcquisitionProperties({ node }: { node: Node }) {
   const lang = useAppStore((s) => s.lang);
   const { spec, card: initialCard } = node.data as AcquisitionNodeData;
   const [card, setCard] = useState<DeviceCardModel | undefined>(initialCard);
-  const [discovered, setDiscovered] = useState<DiscoveredEndpoint[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
   const snapshot = useEndpointSnapshot(node.id);
@@ -33,14 +31,6 @@ export function AcquisitionProperties({ node }: { node: Node }) {
     }).catch((cause: unknown) => { if (active) setError(formatError(cause)); });
     return () => { active = false; };
   }, [spec.driver.driverId, spec.capabilityEndpointId]);
-
-  const discover = async () => {
-    setPending(true);
-    setError('');
-    try { setDiscovered(await api.discoverAcquisitionEndpoints(spec.driver.driverId)); }
-    catch (cause) { setError(formatError(cause)); }
-    finally { setPending(false); }
-  };
 
   const connect = async () => {
     if (!card) return;
@@ -65,22 +55,6 @@ export function AcquisitionProperties({ node }: { node: Node }) {
   const disabled = pending || hasSession;
   return (
     <div className="flex flex-col gap-3">
-      {card.adapter.operations.discover && (
-        <div className="flex items-center gap-1">
-          <select
-            className="form-select flex-1" disabled={disabled} value=""
-            aria-label={t(lang, 'capabilityDiscoveredEndpoint')}
-            onChange={(event) => {
-              const item = discovered.find((entry) => entry.discoveryId === event.target.value);
-              if (item) updateAcquisitionNode(node.id, { ...spec, driver: { ...spec.driver, payload: mergeSchemaPatch(spec.driver.payload, item.configurationPatch) as Record<string, unknown> } });
-            }}
-          >
-            <option value="">{t(lang, 'capabilitySelectDiscovered')}</option>
-            {discovered.map((item) => <option key={item.discoveryId} value={item.discoveryId}>{item.displayName}</option>)}
-          </select>
-          <button type="button" disabled={disabled} onClick={() => { void discover(); }} title={t(lang, 'refresh')} className="p-1 text-text-secondary"><RefreshCw size={14} /></button>
-        </div>
-      )}
       <SchemaFields
         schema={card.endpoint.configuration.jsonSchema}
         uiHints={card.endpoint.configuration.uiHints}

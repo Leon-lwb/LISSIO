@@ -75,9 +75,10 @@ describe('chrome store subscription granularity', () => {
   });
 
   describe('Sidebar (订阅 sidebar slice)', () => {
-    it('data slice 更新不重渲染', () => {
+    it('data slice 更新不重渲染', async () => {
       const spy = spyMemoRender(Sidebar as unknown as { type: FunctionComponent });
-      render(<Sidebar view="widgets" />);
+      render(<Sidebar view="category" />);
+      await act(async () => { await Promise.resolve(); });
       expect(spy).toHaveBeenCalledTimes(1);
 
       bumpDataVersion();
@@ -86,9 +87,10 @@ describe('chrome store subscription granularity', () => {
       expect(spy).toHaveBeenCalledTimes(1);
     });
 
-    it('自身 slice (lang) 更新时重渲染', () => {
+    it('自身 slice (lang) 更新时重渲染', async () => {
       const spy = spyMemoRender(Sidebar as unknown as { type: FunctionComponent });
-      render(<Sidebar view="widgets" />);
+      render(<Sidebar view="category" />);
+      await act(async () => { await Promise.resolve(); });
       expect(spy).toHaveBeenCalledTimes(1);
 
       act(() => useAppStore.setState({ lang: 'en' }));
@@ -131,7 +133,7 @@ describe('chrome store subscription granularity', () => {
   describe('ActivityBar (订阅 sidebar/settings/onboarding slice)', () => {
     it('data slice 更新不重渲染', () => {
       const spy = spyMemoRender(ActivityBar as unknown as { type: FunctionComponent });
-      render(<ActivityBar activeView="widgets" onSelect={() => { return undefined; }} />);
+      render(<ActivityBar activeView="category" onSelect={() => { return undefined; }} />);
       expect(spy).toHaveBeenCalledTimes(1);
 
       bumpDataVersion();
@@ -141,7 +143,7 @@ describe('chrome store subscription granularity', () => {
 
     it('自身 slice (lang) 更新时重渲染', () => {
       const spy = spyMemoRender(ActivityBar as unknown as { type: FunctionComponent });
-      render(<ActivityBar activeView="widgets" onSelect={() => { return undefined; }} />);
+      render(<ActivityBar activeView="category" onSelect={() => { return undefined; }} />);
       expect(spy).toHaveBeenCalledTimes(1);
 
       act(() => useAppStore.setState({ lang: 'en' }));

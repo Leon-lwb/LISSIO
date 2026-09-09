@@ -1,6 +1,6 @@
 use data_model::{PortInfo, Result, SerialConfig, INGEST_CHANNEL_CAPACITY};
 use error::TransportError;
-use serialport::{DataBits, FlowControl, Parity, SerialPortType, StopBits};
+use serialport::{DataBits, FlowControl, Parity, StopBits};
 use std::io::{Read, Write};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -36,50 +36,9 @@ const fn serial_open_error(port: String, source: std::io::Error) -> TransportErr
     TransportError::SerialOpen { port, source }
 }
 
-#[cfg(windows)]
-use crate::windows_ports::port_descriptions;
-
-#[cfg(not(windows))]
-fn port_descriptions() -> std::collections::HashMap<String, String> {
-    std::collections::HashMap::new()
-}
-
-/// 列出所有可用串口
+/// Enumerate unique serial interfaces with normalized system descriptions.
 pub fn list_ports() -> Result<Vec<PortInfo>> {
-    let ports =
-        serialport::available_ports().map_err(|e| TransportError::SerialEnumeration(e.into()))?;
-    let descriptions = port_descriptions();
-    Ok(ports
-        .into_iter()
-        .map(|p| {
-            let (port_type, vid, pid, serial_number, manufacturer, product) = match p.port_type {
-                SerialPortType::UsbPort(info) => (
-                    "USB".to_string(),
-                    Some(info.vid),
-                    Some(info.pid),
-                    info.serial_number,
-                    info.manufacturer,
-                    info.product,
-                ),
-                SerialPortType::PciPort => ("PCI".to_string(), None, None, None, None, None),
-                SerialPortType::BluetoothPort => {
-                    ("Bluetooth".to_string(), None, None, None, None, None)
-                }
-                SerialPortType::Unknown => ("Unknown".to_string(), None, None, None, None, None),
-            };
-            let description = descriptions.get(&p.port_name).cloned();
-            PortInfo {
-                name: p.port_name,
-                port_type,
-                vid,
-                pid,
-                serial_number,
-                manufacturer,
-                product,
-                description,
-            }
-        })
-        .collect())
+    crate::ports::list_ports()
 }
 
 /// 启动串口传输

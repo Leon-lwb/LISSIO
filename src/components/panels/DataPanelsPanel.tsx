@@ -1,7 +1,7 @@
 //! 数据面板面板 (Sidebar 'panels' view)
 //!
 //! 单一独立的 Sidebar 面板, 提供所有数据面板类型的一键打开入口。
-//! 与顶层菜单 Panel / QuickStart / WidgetPalette 完全分离, 唯一的数据面板 UI 入口。
+//! 与顶层菜单 Panel / QuickStart / CategoryPanel 完全分离, 唯一的数据面板 UI 入口。
 //!
 //! 行为:
 //! - 独立面板 (compile-errors / compile-results / can / logic) 总是 available,

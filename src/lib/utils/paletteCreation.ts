@@ -15,7 +15,7 @@ export function addPaletteNode(spec: WidgetDragSpec, position: { x: number; y: n
       app.addProtocolNode(undefined, position, tabId);
       return true;
     case 'acquisition':
-      if (spec.acquisition) addAcquisitionNode(spec.acquisition, position, tabId);
+      if (spec.acquisition) addAcquisitionNode(spec.acquisition, position, tabId, spec.discoveredEndpoint);
       return true;
     default:
       return false;

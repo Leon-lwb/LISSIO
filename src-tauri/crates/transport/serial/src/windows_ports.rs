@@ -1,15 +1,15 @@
-//! Windows 串口 Description 枚举
+//! Windows 串口系统友好名称与设备描述枚举
 //!
 //! `serialport` crate 的 UsbPortInfo 只暴露 product/manufacturer/serial_number，
-//! 不读取设备管理器中的 Description (SPDRP_DEVICEDESC)。本模块使用 SetupAPI
-//! 自行枚举 Ports / Modem 两类设备，建立 `COM端口名 -> Description` 映射。
+//! 本模块使用 SetupAPI 枚举 Ports / Modem 两类设备，优先读取 FriendlyName，
+//! 回退到 Description，建立 `COM端口名 -> 系统描述` 映射。
 
 use std::collections::HashMap;
 use windows_sys::core::GUID;
 use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
     SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
     SetupDiGetDeviceRegistryPropertyW, SetupDiOpenDevRegKey, DICS_FLAG_GLOBAL, DIGCF_PRESENT,
-    DIREG_DEV, SPDRP_DEVICEDESC, SP_DEVINFO_DATA,
+    DIREG_DEV, SPDRP_DEVICEDESC, SPDRP_FRIENDLYNAME, SP_DEVINFO_DATA,
 };
 use windows_sys::Win32::Foundation::{BOOL, ERROR_SUCCESS, HWND, INVALID_HANDLE_VALUE};
 use windows_sys::Win32::System::Registry::{RegCloseKey, RegQueryValueExW, HKEY, KEY_READ};
@@ -32,8 +32,7 @@ const GUID_DEVCLASS_MODEM: GUID = GUID {
 
 /// 读取设备管理器中的 Description，建立端口名映射。
 ///
-/// 非 Windows 平台由 `#[cfg(windows)]` 控制，不会编译本文件；
-/// 为保持接口一致，这里仍提供一个空映射的桩函数占位说明。
+/// Prefer the localized Device Manager friendly name, then the device description.
 pub fn port_descriptions() -> HashMap<String, String> {
     let mut map = HashMap::new();
 
@@ -71,7 +70,7 @@ pub fn port_descriptions() -> HashMap<String, String> {
                     DIREG_DEV,
                     KEY_READ,
                 );
-                if hkey == 0 {
+                if hkey == INVALID_HANDLE_VALUE {
                     continue;
                 }
 
@@ -89,10 +88,11 @@ pub fn port_descriptions() -> HashMap<String, String> {
                     continue;
                 }
 
-                // 读取 SPDRP_DEVICEDESC
-                if let Some(description) = read_device_description(info_set, &mut dev_info) {
+                // 优先读取设备管理器的友好名称。
+                if let Some(description) = read_device_description(info_set, &mut dev_info, SPDRP_FRIENDLYNAME)
+                    .or_else(|| read_device_description(info_set, &mut dev_info, SPDRP_DEVICEDESC)) {
                     if !description.is_empty() {
-                        map.insert(port_name, description);
+                        map.insert(port_name.to_ascii_uppercase(), description);
                     }
                 }
             }
@@ -144,12 +144,7 @@ unsafe fn read_reg_string(hkey: HKEY, value_name: &str) -> Option<String> {
         return None;
     }
 
-    let wide: &[u16] = std::slice::from_raw_parts(
-        buf.as_ptr() as *const u16,
-        (buf_len as usize) / std::mem::size_of::<u16>(),
-    );
-    let end = wide.iter().position(|&c| c == 0).unwrap_or(wide.len());
-    String::from_utf16(&wide[..end]).ok()
+    decode_reg_string(buf.get(..buf_len as usize)?)
 }
 
 /// 读取 SPDRP_DEVICEDESC 属性
@@ -160,6 +155,7 @@ unsafe fn read_reg_string(hkey: HKEY, value_name: &str) -> Option<String> {
 unsafe fn read_device_description(
     info_set: isize,
     dev_info: &mut SP_DEVINFO_DATA,
+    property: u32,
 ) -> Option<String> {
     let mut data_type: u32 = 0;
     let mut buf_len: u32 = 0;
@@ -167,7 +163,7 @@ unsafe fn read_device_description(
     let ok: BOOL = SetupDiGetDeviceRegistryPropertyW(
         info_set,
         dev_info,
-        SPDRP_DEVICEDESC,
+        property,
         &mut data_type,
         std::ptr::null_mut(),
         0,
@@ -181,7 +177,7 @@ unsafe fn read_device_description(
     let ok = SetupDiGetDeviceRegistryPropertyW(
         info_set,
         dev_info,
-        SPDRP_DEVICEDESC,
+        property,
         &mut data_type,
         buf.as_mut_ptr(),
         buf_len,
@@ -196,10 +192,28 @@ unsafe fn read_device_description(
         return None;
     }
 
-    let wide: &[u16] = std::slice::from_raw_parts(
-        buf.as_ptr() as *const u16,
-        (buf_len as usize) / std::mem::size_of::<u16>(),
-    );
-    let end = wide.iter().position(|&c| c == 0).unwrap_or(wide.len());
-    String::from_utf16(&wide[..end]).ok()
+    decode_reg_string(buf.get(..buf_len as usize)?)
+}
+
+
+fn decode_reg_string(bytes: &[u8]) -> Option<String> {
+    if bytes.len() % 2 != 0 { return None; }
+    let wide: Vec<u16> = bytes.chunks_exact(2)
+        .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
+        .take_while(|value| *value != 0).collect();
+    String::from_utf16(&wide).ok().filter(|value| !value.trim().is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::decode_reg_string;
+
+    #[test]
+    fn registry_strings_support_localized_names_and_reject_invalid_data() {
+        let bytes: Vec<u8> = "串口 (COM3)\0".encode_utf16().flat_map(u16::to_le_bytes).collect();
+        assert_eq!(decode_reg_string(&bytes).as_deref(), Some("串口 (COM3)"));
+        assert_eq!(decode_reg_string(&[0]), None);
+        assert_eq!(decode_reg_string(&[0, 0xd8]), None);
+        assert_eq!(decode_reg_string(&[0, 0]), None);
+    }
 }

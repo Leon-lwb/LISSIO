@@ -6018,8 +6018,10 @@ version = "0.6.0"
 dependencies = [
  "acquisition",
  "async-trait",
+ "core-foundation 0.10.1",
  "data-model",
  "error",
+ "io-kit-sys 0.4.1",
  "log",
  "schema_types",
  "serde_json",
