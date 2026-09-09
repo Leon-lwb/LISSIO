@@ -17,6 +17,7 @@
     "architecture": "node scripts/architecture.mjs",
     "check:architecture": "node scripts/check-crate-architecture.mjs",
     "check:deps": "node scripts/check-deps.mjs",
+    "set-version": "node scripts/set-version.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
