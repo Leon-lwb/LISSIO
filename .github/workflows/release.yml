@@ -61,12 +61,24 @@ jobs:
           WORKFLOW=$(jq -r '.workflowName' <<< "$RUN_JSON")
           HEAD_SHA=$(jq -r '.headSha' <<< "$RUN_JSON")
           CONCLUSION=$(jq -r '.conclusion' <<< "$RUN_JSON")
-          if [ "$WORKFLOW" != "Build" ] || [ "$CONCLUSION" != "success" ] || [ "$HEAD_SHA" != "${{ github.sha }}" ]; then
-            echo "::error::Build run $RUN_ID 不属于当前发布提交或未成功。"
-            echo "workflow=$WORKFLOW conclusion=$CONCLUSION head_sha=$HEAD_SHA expected_sha=${{ github.sha }}"
+          if [ "$WORKFLOW" != "Build" ] || [ "$CONCLUSION" != "success" ]; then
+            echo "::error::Build run $RUN_ID 不是成功的 Build 工作流运行。"
+            echo "workflow=$WORKFLOW conclusion=$CONCLUSION"
             exit 1
           fi
-          echo "已验证 Build #$RUN_ID 对应当前提交 $HEAD_SHA"
+          if [ "$HEAD_SHA" != "${{ github.sha }}" ]; then
+            # Build 工作流的 set-version 步骤可能自动推送 version bump 提交,
+            # 此时 build run 的 headSha 是发布提交的祖先而非其本身
+            git fetch --depth=100 origin "${{ github.ref }}"
+            if git merge-base --is-ancestor "$HEAD_SHA" "${{ github.sha }}"; then
+              echo "::warning::Build run 的 headSha ($HEAD_SHA) 与发布提交不同 (存在自动 version bump 提交),已验证其为当前提交的祖先,继续发布。"
+            else
+              echo "::error::Build run $RUN_ID 不属于当前发布提交。"
+              echo "head_sha=$HEAD_SHA expected_sha=${{ github.sha }}"
+              exit 1
+            fi
+          fi
+          echo "已验证 Build #$RUN_ID 对应当前提交代码线 (head_sha=$HEAD_SHA)"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
       - name: Download build artifacts
