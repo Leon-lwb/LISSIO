@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "acquisition"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-trait",
  "data-model",
@@ -115,7 +115,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "app"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "buffer_graph",
@@ -534,7 +534,7 @@ checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
 name = "automotive"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "automotive_diag"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "data-model",
@@ -560,7 +560,7 @@ dependencies = [
 
 [[package]]
 name = "automotive_isotp"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -771,7 +771,7 @@ dependencies = [
 
 [[package]]
 name = "buffer_graph"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "criterion",
  "data-model",
@@ -787,7 +787,7 @@ checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
 
 [[package]]
 name = "bus"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "log",
  "parking_lot",
@@ -866,7 +866,7 @@ dependencies = [
 
 [[package]]
 name = "can"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "serde",
@@ -875,7 +875,7 @@ dependencies = [
 
 [[package]]
 name = "can-transport"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -995,7 +995,7 @@ dependencies = [
 
 [[package]]
 name = "chat"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "async-trait",
  "chat-session",
@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "chat-session"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "error",
@@ -1502,7 +1502,7 @@ dependencies = [
 
 [[package]]
 name = "data-model"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "error",
@@ -1607,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "diagnostic"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -1894,7 +1894,7 @@ dependencies = [
 
 [[package]]
 name = "error"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -1903,7 +1903,7 @@ dependencies = [
 
 [[package]]
 name = "eval"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "buffer_graph",
  "criterion",
@@ -1922,7 +1922,7 @@ dependencies = [
 
 [[package]]
 name = "evaluator"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -1961,7 +1961,7 @@ dependencies = [
 
 [[package]]
 name = "events"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "serde",
@@ -2039,7 +2039,7 @@ dependencies = [
 
 [[package]]
 name = "filter"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2070,7 +2070,7 @@ dependencies = [
 
 [[package]]
 name = "flow"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "bytes",
  "serde",
@@ -2133,7 +2133,7 @@ dependencies = [
 
 [[package]]
 name = "frame-decoder"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "criterion",
  "log",
@@ -2554,7 +2554,7 @@ dependencies = [
 
 [[package]]
 name = "gpu"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -2580,7 +2580,7 @@ dependencies = [
 
 [[package]]
 name = "graph"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "buffer_graph",
  "criterion",
@@ -2599,7 +2599,7 @@ dependencies = [
 
 [[package]]
 name = "graph-testkit"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "buffer_graph",
  "data-model",
@@ -2613,7 +2613,7 @@ dependencies = [
 
 [[package]]
 name = "graph_ops"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "app",
@@ -2799,7 +2799,7 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "hir"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "buffer_graph",
  "data-model",
@@ -3402,7 +3402,7 @@ checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
 name = "kind"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "filter",
@@ -3625,7 +3625,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "lissio"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "app",
@@ -3697,7 +3697,7 @@ checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
 name = "llm"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "error",
@@ -3724,7 +3724,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 
 [[package]]
 name = "logic"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "serde",
@@ -3733,7 +3733,7 @@ dependencies = [
 
 [[package]]
 name = "logic_decoder"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "logic",
@@ -3742,7 +3742,7 @@ dependencies = [
 
 [[package]]
 name = "lower"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "filter",
  "graph-testkit",
@@ -3820,7 +3820,7 @@ dependencies = [
 
 [[package]]
 name = "mcp-client"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "error",
@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "mcp-server"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "app",
@@ -3863,7 +3863,7 @@ dependencies = [
 
 [[package]]
 name = "measurement"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "serde",
  "spectrum",
@@ -3886,7 +3886,7 @@ dependencies = [
 
 [[package]]
 name = "menu_shell"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "log",
  "serde",
@@ -3969,7 +3969,7 @@ dependencies = [
 
 [[package]]
 name = "modbus-adapter"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -4091,7 +4091,7 @@ dependencies = [
 
 [[package]]
 name = "network"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -4689,7 +4689,7 @@ checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
 name = "pipeline"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "app",
@@ -4750,7 +4750,7 @@ checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
 
 [[package]]
 name = "plane"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "graph-testkit",
  "hir",
@@ -4828,7 +4828,7 @@ dependencies = [
 
 [[package]]
 name = "points"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "flow",
  "serde",
@@ -4999,7 +4999,7 @@ checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
 
 [[package]]
 name = "protocol"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -5009,7 +5009,7 @@ dependencies = [
 
 [[package]]
 name = "protocol_can_bridge"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -5018,7 +5018,7 @@ dependencies = [
 
 [[package]]
 name = "protocol_float"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "protocol",
@@ -5194,7 +5194,7 @@ checksum = "ca45419789ae5a7899559e9512e58ca889e41f04f1f2445e9f4b290ceccd1d08"
 
 [[package]]
 name = "raw-data"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -5256,7 +5256,7 @@ dependencies = [
 
 [[package]]
 name = "recording"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "criterion",
  "duckdb",
@@ -5674,7 +5674,7 @@ dependencies = [
 
 [[package]]
 name = "schema"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -5690,7 +5690,7 @@ dependencies = [
 
 [[package]]
 name = "schema_types"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -6014,7 +6014,7 @@ dependencies = [
 
 [[package]]
 name = "serial"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -6218,7 +6218,7 @@ dependencies = [
 
 [[package]]
 name = "spectrum"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "log",
  "realfft",
@@ -6274,7 +6274,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "stream"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "can",
  "data-model",
@@ -6371,7 +6371,7 @@ dependencies = [
 
 [[package]]
 name = "subscription"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "parking_lot",
  "tokio",
@@ -7397,7 +7397,7 @@ dependencies = [
 
 [[package]]
 name = "transport"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "acquisition",
  "async-trait",
@@ -7447,7 +7447,7 @@ dependencies = [
 
 [[package]]
 name = "trigger"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "criterion",
  "glob",
@@ -7573,7 +7573,7 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 
 [[package]]
 name = "update_flow"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "data-model",
  "error",
@@ -7814,7 +7814,7 @@ dependencies = [
 
 [[package]]
 name = "waveform"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "criterion",
  "data-model",
