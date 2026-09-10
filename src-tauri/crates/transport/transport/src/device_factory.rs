@@ -1,17 +1,18 @@
 //! Byte adapters participate in the same capability directory and sessions as Modbus.
 use acquisition::handle::TransportHandle;
 use acquisition::{
-    AcquisitionError, AcquisitionResult, AdapterCapability, CapabilitySet, ConfigurationSchema,
-    DriverManifest, DriverSchema, EndpointDescriptor, EndpointDirection, PortDescriptor,
-    PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, SessionCapabilities, SourceFactory,
-    SourceSession, TransportBackend, TransportKind, ValidatedConfig, CAPABILITY_CONTRACT_VERSION,
+    AcquisitionError, AcquisitionResult, AdapterCapability, CAPABILITY_CONTRACT_VERSION,
+    CapabilitySet, ConfigurationSchema, DriverManifest, DriverSchema, EndpointDescriptor,
+    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
+    SessionCapabilities, SourceFactory, SourceSession, TransportBackend, TransportKind,
+    ValidatedConfig,
 };
 use async_trait::async_trait;
-use data_model::device::{DriverId, DriverPayload};
 use data_model::TransportConfig;
+use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
 use schema_types::{ProtocolConfig, TestDataLink};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::collections::BTreeSet;
 use std::sync::Arc;
 

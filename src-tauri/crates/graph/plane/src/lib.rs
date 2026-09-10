@@ -16,4 +16,4 @@ mod byte_plan;
 mod plane;
 
 pub use byte_plan::{BytePlan, ByteRoute};
-pub use plane::{byte_plane_order, value_plane, ValueMir};
+pub use plane::{ValueMir, byte_plane_order, value_plane};

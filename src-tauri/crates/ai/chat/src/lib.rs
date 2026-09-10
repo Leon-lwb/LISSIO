@@ -22,5 +22,5 @@ mod runner_tests;
 pub use events::{AiChatEvent, EventSink};
 pub use recorder::TurnRecorder;
 pub use runner::{
-    run_chat, ChatPayload, ChatTaskRegistry, GenaiTurnProvider, ToolExecutor, TurnProvider,
+    ChatPayload, ChatTaskRegistry, GenaiTurnProvider, ToolExecutor, TurnProvider, run_chat,
 };

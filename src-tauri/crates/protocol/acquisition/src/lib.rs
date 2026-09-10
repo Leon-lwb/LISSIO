@@ -16,10 +16,10 @@ mod stores;
 mod supervisor;
 
 pub use capabilities::{
-    AdapterCapability, AddressRegion, AddressSpaceDescriptor, ConfigurationSchema,
-    DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor, EndpointDirection, PortDescriptor,
-    PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
-    CAPABILITY_CONTRACT_VERSION,
+    AdapterCapability, AddressRegion, AddressSpaceDescriptor, CAPABILITY_CONTRACT_VERSION,
+    ConfigurationSchema, DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor,
+    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
+    TransportKind,
 };
 pub use lanes::{CommandLane, EventLane, EventLaneReceiver, LaneError, StateLane, StateLaneStats};
 pub use runtime::{AcquisitionRuntime, EndpointConnectionState, EndpointSnapshot};
@@ -38,8 +38,8 @@ use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::mpsc;
 
 pub type AcquisitionResult<T> = Result<T, AcquisitionError>;

@@ -1,8 +1,8 @@
 use data_model::{Result, SlcanConfig};
 use error::TransportError;
 use serial::serial::{SerialLifecycle, SerialSettings};
-use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 

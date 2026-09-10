@@ -14,6 +14,6 @@ pub mod autoset;
 pub mod period;
 pub mod stats;
 
-pub use autoset::{suggest_autoset, AutoSetChannel, AutoSetSuggestion, ChannelFit};
-pub use period::{detect_period, PeriodEstimate};
-pub use stats::{channel_stats, ChannelStats};
+pub use autoset::{AutoSetChannel, AutoSetSuggestion, ChannelFit, suggest_autoset};
+pub use period::{PeriodEstimate, detect_period};
+pub use stats::{ChannelStats, channel_stats};

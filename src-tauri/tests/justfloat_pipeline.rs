@@ -10,10 +10,10 @@
 
 use std::collections::HashMap;
 
-use app::byte_router;
 use app::AppState;
 use app::DecoderFeedCache;
 use app::TopicKey;
+use app::byte_router;
 use app::{MathOp, NodeDef, NodeKind};
 use buffer_graph::Edge;
 use graph_ops::apply_tab_graph;

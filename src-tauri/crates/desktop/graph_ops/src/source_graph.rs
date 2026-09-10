@@ -15,8 +15,8 @@ use error::ConfigError;
 use pipeline::NodeKind;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use data_model::{Error, Result};
 use pipeline::DataPlaneState;

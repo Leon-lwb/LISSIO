@@ -1,10 +1,10 @@
 //! 显示订阅命令壳 — 编排在 [`app::display`] (L3)
 
-use app::display::{DisplayRequest, SubscriptionInfo};
 use app::AppState;
+use app::display::{DisplayRequest, SubscriptionInfo};
 use data_model::Result;
-use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::State;
+use tauri::ipc::{Channel, InvokeResponseBody};
 
 /// 统一显示订阅。每个逻辑订阅只使用一个 Tauri Channel。
 #[tauri::command]

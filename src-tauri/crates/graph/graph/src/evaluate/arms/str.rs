@@ -2,7 +2,7 @@
 //! str ≤ 2 / num ≤ 2 走栈数组,超出走堆兜底;StrOp::evaluate 的 str_inputs 紧凑对齐
 //! 未连接字符串端口的内联回退: 仅 FORMAT 的 "fmt" 端口取 `tmpl` 参数 (对称于快路径 str_defaults)
 
-use kind::{str_num_default, uses_str_inline_text, NodeKind, PortDomain, StrResult};
+use kind::{NodeKind, PortDomain, StrResult, str_num_default, uses_str_inline_text};
 
 use crate::compile::CompiledGraph;
 use eval::{node_out_entry, node_out_str_entry, set_port, set_str_port};

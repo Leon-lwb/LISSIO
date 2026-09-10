@@ -1,4 +1,4 @@
-use raw_data::{chunk_matches, DirectionFilter, RawDataDirection, SearchPattern, StoredChunk};
+use raw_data::{DirectionFilter, RawDataDirection, SearchPattern, StoredChunk, chunk_matches};
 
 fn make_chunk(direction: RawDataDirection, bytes: &[u8]) -> StoredChunk {
     StoredChunk {

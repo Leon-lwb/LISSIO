@@ -11,7 +11,7 @@
 
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use trigger::{TriggerMatchType, TriggerMatcher, TriggerRuleDef};
 
 fn rule(id: &str, mt: TriggerMatchType, pattern: &str) -> TriggerRuleDef {

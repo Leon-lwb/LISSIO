@@ -3,20 +3,20 @@ use std::sync::Arc;
 
 use app::AppState;
 use chat::{
-    run_chat, AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider,
-    ToolExecutor, TurnRecorder,
+    AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, ToolExecutor,
+    TurnRecorder, run_chat,
 };
 use chat_session::{
-    derive_history, ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto,
+    ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
 };
 use error::{McpError, Result};
-use llm::{validate_config, AdapterInfo, AiProviderConfig, ToolSpecDto};
+use llm::{AdapterInfo, AiProviderConfig, ToolSpecDto, validate_config};
 use mcp_client::{McpManager, McpServerConfig, McpToolInfo};
 use mcp_server::{McpServerHandle, Toolbox};
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{ipc::Channel, AppHandle, Manager, State};
+use tauri::{AppHandle, Manager, State, ipc::Channel};
 
 use crate::native_executor::{NativeToolExecutor, PendingCalls, ToolOutcome};
 use crate::skills::{self, Lang};

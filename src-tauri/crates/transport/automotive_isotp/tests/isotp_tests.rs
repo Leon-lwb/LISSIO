@@ -44,7 +44,7 @@ const fn dummy_cfg() -> IsoTpConfig {
 
 #[test]
 fn pci_type_extraction_matches_iso_spec() {
-    use automotive_isotp::constants::{pci_type, PCI_CF, PCI_FC, PCI_FF, PCI_SF};
+    use automotive_isotp::constants::{PCI_CF, PCI_FC, PCI_FF, PCI_SF, pci_type};
     assert_eq!(PCI_SF, 0x00);
     assert_eq!(PCI_FF, 0x10);
     assert_eq!(PCI_CF, 0x20);

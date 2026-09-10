@@ -1,9 +1,9 @@
-use crate::client::{descriptors, ModbusSession, RuntimeConfig};
+use crate::client::{ModbusSession, RuntimeConfig, descriptors};
 use crate::descriptor::{
     capability_set, rtu_adapter_capability, rtu_capability_set, rtu_configuration_schema,
     tcp_adapter_capability, tcp_configuration_schema,
 };
-use crate::{ModbusConfig, ModbusRtuConfig, DRIVER_ID, RTU_DRIVER_ID, SCHEMA_VERSION};
+use crate::{DRIVER_ID, ModbusConfig, ModbusRtuConfig, RTU_DRIVER_ID, SCHEMA_VERSION};
 use acquisition::{
     AcquisitionError, AcquisitionResult, AdapterCapability, DiscoveredEndpoint, DriverManifest,
     DriverSchema, SourceFactory, SourceSession, ValidatedConfig,
@@ -114,7 +114,10 @@ impl SourceFactory for ModbusRtuFactory {
                 DiscoveredEndpoint {
                     adapter_id: DriverId(RTU_DRIVER_ID.into()),
                     discovery_id: port.name.clone(),
-                    display_name: port.description.or(port.product).unwrap_or_else(|| port.name.clone()),
+                    display_name: port
+                        .description
+                        .or(port.product)
+                        .unwrap_or_else(|| port.name.clone()),
                     configuration_patch: serde_json::json!({"portName": port.name}),
                     metadata,
                 }

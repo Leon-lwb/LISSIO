@@ -1,7 +1,7 @@
 //! ProtocolSource arm — source_frames / source_texts 双通道
 //! "str" 端口走字符串平面 (RawData 原始字节文本),其余按通道下标读数值平面
 
-use kind::{protocol_source_port_names, NodeKind};
+use kind::{NodeKind, protocol_source_port_names};
 
 use crate::compile::CompiledGraph;
 use eval::{node_out_entry, node_out_str_entry, set_port, set_str_port};

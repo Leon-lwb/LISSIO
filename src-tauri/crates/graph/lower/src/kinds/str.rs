@@ -5,7 +5,7 @@
 //! 字符串内联回退: 未连接的字符串端口编译期捕获 `str_defaults` (当前仅 FORMAT 的
 //! "fmt" 端口 ← `NodeKind::Str.tmpl`; 其余端口/算子为空串), 求值语义对称于 num_defaults。
 
-use kind::{str_num_default, NodeDef, PortDomain, StrNumParams, StrOp};
+use kind::{NodeDef, PortDomain, StrNumParams, StrOp, str_num_default};
 
 use crate::lower::LowerCtx;
 use crate::ops::CompiledOp;

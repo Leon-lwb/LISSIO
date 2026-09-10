@@ -1,11 +1,11 @@
 //! 测试共享辅助 — 各模块测试共用的节点/边/帧源构造器
 
 use buffer_graph::Edge;
+use data_model::DataFrame;
 use data_model::device::{
     DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
     EndpointSpec,
 };
-use data_model::DataFrame;
 use filter::FilterConfig;
 use schema_types::ProtocolConfig;
 use spectrum::SpectrumOutput;

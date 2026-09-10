@@ -13,5 +13,5 @@ mod args;
 mod executor;
 mod specs;
 
-pub use executor::{NativeToolExecutor, PendingCalls, ToolOutcome, AI_TOOL_INVOKE_EVENT};
+pub use executor::{AI_TOOL_INVOKE_EVENT, NativeToolExecutor, PendingCalls, ToolOutcome};
 pub use specs::native_tool_specs;

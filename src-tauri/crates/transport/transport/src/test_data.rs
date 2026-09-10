@@ -5,10 +5,10 @@
     clippy::cast_sign_loss
 )]
 use data_model::{TestDataConfig, TestSignal};
-use schema_types::{encode_by_blocks, ProtocolConfig, SchemaPreset, TestDataLink};
+use schema_types::{ProtocolConfig, SchemaPreset, TestDataLink, encode_by_blocks};
 use std::fmt::Write as _;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch};
 

@@ -3,7 +3,7 @@
 
 use std::sync::Arc;
 
-use crate::window::{apply_window, WindowType};
+use crate::window::{WindowType, apply_window};
 use realfft::{ComplexToReal, RealFftPlanner, RealToComplex};
 use rustfft::num_complex::Complex32;
 use serde::{Deserialize, Serialize};

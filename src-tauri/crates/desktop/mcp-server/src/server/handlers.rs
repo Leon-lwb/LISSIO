@@ -1,8 +1,8 @@
 //! MCP 工具 handler — `rmcp::tool_router` 宏生成路由与分发
 
+use rmcp::ServerHandler;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerInfo};
-use rmcp::ServerHandler;
 use tauri::AppHandle;
 
 use super::params::{

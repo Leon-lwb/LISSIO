@@ -12,6 +12,6 @@ pub mod manager;
 pub mod store;
 pub mod types;
 
-pub use manager::{McpManager, CONNECTION_TIMEOUT_SECS};
+pub use manager::{CONNECTION_TIMEOUT_SECS, McpManager};
 pub use store::{load_servers, save_servers};
 pub use types::{McpServerConfig, McpToolInfo, McpTransport};

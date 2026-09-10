@@ -24,15 +24,15 @@ pub use decoder_block::{
     AsciiBase, DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition, FieldType,
     LengthUnit,
 };
-pub use kind::{is_protocol_source, is_raw_data_handle, NewlineMode, NodeKind};
+pub use kind::{NewlineMode, NodeKind, is_protocol_source, is_raw_data_handle};
 pub use math_op::MathOp;
 pub use ports::{
-    port_domain, port_table, PortDomain, PortSpec, PortTable, FRAME_DECODER_IN_HANDLE,
-    LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE, RAW_DATA_PORT_PREFIX,
-    TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
+    FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
+    PortDomain, PortSpec, PortTable, RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE,
+    TRANSPORT_TX_HANDLE, port_domain, port_table,
 };
-pub use spec::{protocol_source_port_names, NodeDef};
-pub use str_op::{str_num_default, StrNumParams, StrOp, StrResult};
+pub use spec::{NodeDef, protocol_source_port_names};
+pub use str_op::{StrNumParams, StrOp, StrResult, str_num_default};
 
 /// 判断 (StrOp, 输入端口) 是否取内联回退文本 (`NodeKind::Str::tmpl`, 仅 FORMAT "fmt") —
 /// lowering / 快慢两条求值路径共用的单一事实源

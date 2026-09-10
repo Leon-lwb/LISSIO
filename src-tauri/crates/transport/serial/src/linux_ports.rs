@@ -9,15 +9,21 @@ pub fn enrich_ports(ports: &mut [PortInfo]) {
         if let Ok(path) = std::fs::canonicalize(&port.name) {
             port.name = path.to_string_lossy().into_owned();
         }
-        let Some(name) = Path::new(&port.name).file_name() else { continue; };
+        let Some(name) = Path::new(&port.name).file_name() else {
+            continue;
+        };
         let device = Path::new("/sys/class/tty").join(name).join("device");
-        if let Ok(device) = std::fs::canonicalize(device) { enrich_from_device(port, &device); }
+        if let Ok(device) = std::fs::canonicalize(device) {
+            enrich_from_device(port, &device);
+        }
     }
 }
 
 fn text(path: &Path, key: &str) -> Option<String> {
-    std::fs::read_to_string(path.join(key)).ok()
-        .map(|value| value.trim().to_owned()).filter(|value| !value.is_empty())
+    std::fs::read_to_string(path.join(key))
+        .ok()
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
 }
 
 fn hex(path: &Path, key: &str) -> Option<u16> {
@@ -27,7 +33,9 @@ fn hex(path: &Path, key: &str) -> Option<u16> {
 fn enrich_from_device(port: &mut PortInfo, device: &Path) {
     let mut interface = None;
     for ancestor in device.ancestors().take(32) {
-        if !ancestor.is_dir() { return; }
+        if !ancestor.is_dir() {
+            return;
+        }
         interface = interface.or_else(|| text(ancestor, "interface"));
         // Stop at the nearest USB device. An upstream hub is not this port.
         if ancestor.join("idVendor").exists() || ancestor.join("idProduct").exists() {
@@ -40,7 +48,9 @@ fn enrich_from_device(port: &mut PortInfo, device: &Path) {
             break;
         }
     }
-    port.description = interface.or_else(|| port.description.take()).or_else(|| port.product.clone());
+    port.description = interface
+        .or_else(|| port.description.take())
+        .or_else(|| port.product.clone());
 }
 
 #[cfg(test)]
@@ -52,12 +62,25 @@ mod tests {
         let root = std::env::temp_dir().join(format!("lissio-sysfs-{}", std::process::id()));
         let device = root.join("usb/interface/ttyUSB0");
         std::fs::create_dir_all(&device).unwrap();
-        for (key, value) in [("idVendor", "1a86\n"), ("idProduct", "7523\n"), ("product", "USB Serial\n"), ("manufacturer", "WCH\n")] {
+        for (key, value) in [
+            ("idVendor", "1a86\n"),
+            ("idProduct", "7523\n"),
+            ("product", "USB Serial\n"),
+            ("manufacturer", "WCH\n"),
+        ] {
             std::fs::write(root.join("usb").join(key), value).unwrap();
         }
         std::fs::write(root.join("usb/interface/interface"), "Debug UART\n").unwrap();
-        let mut port = PortInfo { name: "/dev/ttyUSB0".into(), port_type: "Unknown".into(),
-            vid: None, pid: None, product: None, manufacturer: None, serial_number: None, description: None };
+        let mut port = PortInfo {
+            name: "/dev/ttyUSB0".into(),
+            port_type: "Unknown".into(),
+            vid: None,
+            pid: None,
+            product: None,
+            manufacturer: None,
+            serial_number: None,
+            description: None,
+        };
         enrich_from_device(&mut port, &device);
         assert_eq!(port.description.as_deref(), Some("Debug UART"));
         assert_eq!(port.product.as_deref(), Some("USB Serial"));

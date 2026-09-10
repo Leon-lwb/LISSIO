@@ -4,19 +4,19 @@ use acquisition::{
 use data_model::device::{DriverId, DriverPayload, EndpointId, EndpointSpec};
 use flow::SourceId;
 use modbus_adapter::{
-    ByteOrder, ModbusArea, ModbusConfig, ModbusDataType, ModbusFactory, ModbusPoint,
-    ReconnectConfig, WordOrder, DRIVER_ID, SCHEMA_VERSION,
+    ByteOrder, DRIVER_ID, ModbusArea, ModbusConfig, ModbusDataType, ModbusFactory, ModbusPoint,
+    ReconnectConfig, SCHEMA_VERSION, WordOrder,
 };
 use points::{
     AcquisitionIntent, AcquisitionMode, DeliveryClass, PointId, PointValue, Priority, ReadRequest,
     WriteItem, WriteRequest,
 };
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{Mutex, mpsc};
 
 #[derive(Clone, Debug, PartialEq)]
 struct RequestRecord {
@@ -264,10 +264,12 @@ async fn reads_all_areas_plans_contiguous_registers_and_writes() {
         })
         .await
         .unwrap();
-    assert!(write
-        .items
-        .iter()
-        .all(|item| item.quality.validity == points::Validity::Good));
+    assert!(
+        write
+            .items
+            .iter()
+            .all(|item| item.quality.validity == points::Validity::Good)
+    );
 
     let records = records.lock().await;
     assert!(records.contains(&RequestRecord {
@@ -296,13 +298,15 @@ async fn exception_is_a_bad_sample_with_native_status() {
     let sample = &read.batch.payload.samples[0];
     assert!(sample.value.is_none());
     assert_eq!(sample.quality.validity, points::Validity::Bad);
-    assert!(sample
-        .quality
-        .native
-        .as_ref()
-        .unwrap()
-        .code
-        .starts_with("exception:"));
+    assert!(
+        sample
+            .quality
+            .native
+            .as_ref()
+            .unwrap()
+            .code
+            .starts_with("exception:")
+    );
     session.close().await.unwrap();
 }
 

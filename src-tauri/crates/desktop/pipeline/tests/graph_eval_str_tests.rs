@@ -11,7 +11,7 @@ use bus::TopicKey;
 use data_model::DataFrame;
 use graph::CompiledGraph;
 use kind::{MathOp, NodeDef, NodeKind, StrNumParams, StrOp};
-use pipeline::{evaluate_snapshot_now, frame_dispatch, DataPlaneState};
+use pipeline::{DataPlaneState, evaluate_snapshot_now, frame_dispatch};
 
 /// 纯本地图 (无 ProtocolSource → 任意源来帧都触发), 含一个 Str 节点
 fn str_node_graph(tab_id: &str) -> CompiledGraph {

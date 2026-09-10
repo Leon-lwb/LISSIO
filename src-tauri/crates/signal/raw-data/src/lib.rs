@@ -12,4 +12,4 @@ mod raw_filter;
 pub use raw::{
     RawDataBatch, RawDataChunk, RawDataCollector, RawDataDirection, RawDrain, StoredChunk,
 };
-pub use raw_filter::{chunk_matches, DirectionFilter, SearchPattern};
+pub use raw_filter::{DirectionFilter, SearchPattern, chunk_matches};

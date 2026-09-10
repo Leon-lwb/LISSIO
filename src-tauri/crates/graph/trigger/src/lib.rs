@@ -21,6 +21,6 @@
 mod trigger;
 
 pub use trigger::{
-    format_auto_command, parse_range, TriggerMatchResult, TriggerMatchType, TriggerMatcher,
-    TriggerRuleDef, TriggerState,
+    TriggerMatchResult, TriggerMatchType, TriggerMatcher, TriggerRuleDef, TriggerState,
+    format_auto_command, parse_range,
 };

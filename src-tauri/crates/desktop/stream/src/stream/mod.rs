@@ -11,7 +11,7 @@
 //!   `bounded_drain_size(backlog, min_batch, MAX_DRAIN)` 批量。
 //! - **顺序**: 增量流前端按 seq 严格重组; 快照流 (波形) 按 "最新 seq 胜出"。
 
-use crate::dispatcher::{adaptive_channel_loop, AdaptiveRate};
+use crate::dispatcher::{AdaptiveRate, adaptive_channel_loop};
 use can::{CanBuffer, CanFrameBatch};
 use data_model::{Error, Result};
 use error::ConfigError;
@@ -20,8 +20,8 @@ use parking_lot::Mutex;
 use pipeline::StreamGroupState;
 use raw_data::{RawDataBatch, RawDataCollector, RawDrain};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tauri::ipc::Channel;
 use tokio::sync::oneshot;

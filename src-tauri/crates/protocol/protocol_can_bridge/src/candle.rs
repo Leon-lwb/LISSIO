@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use can::CanFrame;
-use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
+use protocol::{FeedOutput, ProtocolEngine, split_at_boundaries};
 
 /// candleLight (GSUSB) 二进制帧大小 (字节)
 pub const CAND_FRAME_SIZE: usize = 24;

@@ -1,8 +1,8 @@
 //! Topic Actor — 每话题独占的历史环形缓冲 / 序号 / 订阅广播器
 
 use std::collections::VecDeque;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, oneshot};
 

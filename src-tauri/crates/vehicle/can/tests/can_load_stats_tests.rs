@@ -1,6 +1,6 @@
 //! `can::can_load_stats` 单元测试 + `frame_bits` 工具测试
 
-use can::{frame_bits, CanDirection, CanFrame, CanFrameTestData, CanLoadStats};
+use can::{CanDirection, CanFrame, CanFrameTestData, CanLoadStats, frame_bits};
 
 // ============ frame_bits 测试 ============
 

@@ -18,7 +18,7 @@ pub mod plans;
 
 use std::collections::BTreeSet;
 
-pub use plans::{plan_unit, SimdUnitPlan};
+pub use plans::{SimdUnitPlan, plan_unit};
 
 /// 每图 SIMD 执行计划 — 批内构建 (资格分析 O(ops), 无需跨批缓存)
 ///

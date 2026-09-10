@@ -6,7 +6,7 @@ use acquisition::{
 use async_trait::async_trait;
 use data_model::device::SimulationConfig;
 use data_model::{TestDataConfig, TestSignal, TransportConfig};
-use schema_types::{encode_by_blocks, ProtocolConfig, ProtocolSchema, SchemaPreset};
+use schema_types::{ProtocolConfig, ProtocolSchema, SchemaPreset, encode_by_blocks};
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, watch};
 
@@ -204,11 +204,13 @@ fn encode(
             }
             packet
         }
-        ProtocolConfig::LogicDecode { .. } => vec![values
-            .iter()
-            .take(8)
-            .enumerate()
-            .fold(0, |bits, (i, v)| bits | (u8::from(*v > 0.0) << i))],
+        ProtocolConfig::LogicDecode { .. } => vec![
+            values
+                .iter()
+                .take(8)
+                .enumerate()
+                .fold(0, |bits, (i, v)| bits | (u8::from(*v > 0.0) << i)),
+        ],
         ProtocolConfig::Diagnostic { .. } => unreachable!("validated at open"),
     }
 }

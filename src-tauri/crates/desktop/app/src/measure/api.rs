@@ -2,13 +2,13 @@
 
 use std::sync::Arc;
 
-use measurement::{suggest_autoset, AutoSetSuggestion, ChannelFit};
+use measurement::{AutoSetSuggestion, ChannelFit, suggest_autoset};
 use parking_lot::Mutex;
 use waveform::{DataBuffer, DerivedSeriesSelector};
 
 use super::{
-    extract_window, measure_series, ChannelMeasurement, DerivedMeasurement, ExtractedWindow,
-    SeriesKey, SourceMeasurements, AUTOSET_SEARCH_WINDOW_MS, MEASURE_BUDGET, REFINE_BUDGET,
+    AUTOSET_SEARCH_WINDOW_MS, ChannelMeasurement, DerivedMeasurement, ExtractedWindow,
+    MEASURE_BUDGET, REFINE_BUDGET, SeriesKey, SourceMeasurements, extract_window, measure_series,
 };
 
 /// 计算单数据源测量快照 (同步; 调用方负责放入阻塞线程)。

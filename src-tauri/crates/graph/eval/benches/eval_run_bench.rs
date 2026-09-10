@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use eval::{CompiledEval, StringValuesMap, ValuesMap};
 use filter::FilterConfig;
 use graph_testkit::{

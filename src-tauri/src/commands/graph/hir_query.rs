@@ -9,8 +9,8 @@
 //! - `hir_query` 暴露"全图 HIR 视图" (节点 + 边 + 端口域 + 边分类), 走 `get_graph_hir` 命令拉取
 //!   两者各司其职, 无重复字段, 也不互相替代.
 
-use app::{port_domain, NodeDef, PortDomain};
 use app::{CompiledGraph, EdgeClass, HirNode, TypedGraph};
+use app::{NodeDef, PortDomain, port_domain};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde::Serialize;
 use tauri::State;

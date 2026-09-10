@@ -14,7 +14,7 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 use tauri::AppHandle;
 
-use super::{byte_router, frame_dispatch, DataPlaneState, STATS_THROTTLE_MS};
+use super::{DataPlaneState, STATS_THROTTLE_MS, byte_router, frame_dispatch};
 use crate::feed_parallel::FEED_PARALLEL_UNIT;
 
 pub(super) fn mark_downstream_disconnected(plane: &DataPlaneState, transport_id: &str) {

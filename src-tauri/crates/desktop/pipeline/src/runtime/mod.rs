@@ -16,10 +16,10 @@ pub use graph::{
     ValuesMap,
 };
 pub use kind::{
-    port_domain, port_table, protocol_source_port_names, DecoderBlockDef, FieldType, MathOp,
-    NodeDef, NodeKind, PortDomain, PortSpec, PortTable,
+    DecoderBlockDef, FieldType, MathOp, NodeDef, NodeKind, PortDomain, PortSpec, PortTable,
+    port_domain, port_table, protocol_source_port_names,
 };
-pub use protocol::{detect_format, parse_ascii, parse_hex, InputFormat, ProtocolEngine};
-pub use schema::command_frame::{compute_frame_bytes, CommandFrameDto};
+pub use protocol::{InputFormat, ProtocolEngine, detect_format, parse_ascii, parse_hex};
+pub use schema::command_frame::{CommandFrameDto, compute_frame_bytes};
 pub use schema::{command_frame, frame_checksum, frame_field};
 pub use trigger::{TriggerMatchResult, TriggerMatcher, TriggerRuleDef};

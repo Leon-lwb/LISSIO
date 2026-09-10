@@ -12,14 +12,14 @@
 //! - 停止: 暂停语义 + 清空自动发送任务注册表 (待发送任务一并取消)
 
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use parking_lot::Mutex;
 
 use crate::eval_state::StreamGroupState;
 use crate::execution::{RunAction, RunSnapshot, RunState};
-use crate::{graph_eval, DataPlaneState};
+use crate::{DataPlaneState, graph_eval};
 
 /// 流订阅组注册表类型 — AppState.stream_groups 的共享句柄
 pub type StreamGroups = Arc<Mutex<HashMap<String, StreamGroupState>>>;

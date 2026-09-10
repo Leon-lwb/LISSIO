@@ -8,7 +8,7 @@ use waveform::DerivedWriter;
 use crate::graph_eval::{EvalBreakdown, SlotBufs};
 use crate::graph_eval_parallel::simd;
 
-use super::plan::{ns_since, BatchCtx, BucketPlan, WorkerState};
+use super::plan::{BatchCtx, BucketPlan, WorkerState, ns_since};
 
 /// 单桶单块执行 — 图优先两相推进:
 ///

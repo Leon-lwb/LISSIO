@@ -2,7 +2,7 @@ use std::fmt::Write as _;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use can::{CanDirection, CanFrame};
-use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
+use protocol::{FeedOutput, ProtocolEngine, split_at_boundaries};
 
 /// slcan (Lawicel ASCII) 协议引擎
 ///

@@ -388,10 +388,14 @@ mod tests {
 
     #[test]
     fn csv_window_uses_s_or_ms_description() {
-        assert!(format_can_load_csv(&snapshot(1_000_000), 500_000, "t")
-            .contains("# Window: 1000000 us (1s)"));
-        assert!(format_can_load_csv(&snapshot(100_000), 500_000, "t")
-            .contains("# Window: 100000 us (100ms)"));
+        assert!(
+            format_can_load_csv(&snapshot(1_000_000), 500_000, "t")
+                .contains("# Window: 1000000 us (1s)")
+        );
+        assert!(
+            format_can_load_csv(&snapshot(100_000), 500_000, "t")
+                .contains("# Window: 100000 us (100ms)")
+        );
     }
 
     #[test]

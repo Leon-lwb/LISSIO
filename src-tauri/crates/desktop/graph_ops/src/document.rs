@@ -4,15 +4,15 @@ use acquisition::PortDirection;
 use app::{SourceGraphs, SourceNodeHint, WidgetRecord, WorkspaceState};
 use buffer_graph::Edge;
 use data_model::{
-    device::{DevicePort, DevicePortDirection, DevicePortDomain},
     Error, Result,
+    device::{DevicePort, DevicePortDirection, DevicePortDomain},
 };
 use flow::PayloadKind;
 use kind::document::{NodeBusiness, NodeDocument};
 use pipeline::DataPlaneState;
 use std::{
     collections::{HashMap, HashSet},
-    sync::{atomic::AtomicU64, Arc},
+    sync::{Arc, atomic::AtomicU64},
 };
 use tauri::AppHandle;
 

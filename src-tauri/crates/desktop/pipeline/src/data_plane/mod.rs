@@ -35,8 +35,8 @@ use logic::{DecodedBuffer, LogicBuffer};
 use parking_lot::{Mutex, RwLock};
 use raw_data::RawDataCollector;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::task::JoinHandle;
 use waveform::DataBuffer;
 

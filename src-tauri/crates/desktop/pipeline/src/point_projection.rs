@@ -1,8 +1,8 @@
 //! Points enter the numeric graph only through explicit PointSelector nodes.
 use crate::{
-    data_plane::{frame_dispatch, DataPlaneState},
-    eval_state::GraphEvalState,
     SourceGraphs,
+    data_plane::{DataPlaneState, frame_dispatch},
+    eval_state::GraphEvalState,
 };
 use data_model::DataFrame;
 use kind::{NodeDef, NodeKind};

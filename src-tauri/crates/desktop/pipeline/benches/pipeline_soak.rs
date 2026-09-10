@@ -3,8 +3,8 @@
 #![allow(clippy::cast_precision_loss)]
 
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
 use app::AppState;
@@ -15,8 +15,8 @@ use graph_testkit::{edge, make_device_in, make_math, make_protocol_source, make_
 use kind::{NodeDef, NodeKind};
 use parking_lot::Mutex;
 use pipeline::{
-    apply_run_action, byte_router::route_bytes, DataPlaneState, DecoderFeedCache, RunAction,
-    StreamGroups,
+    DataPlaneState, DecoderFeedCache, RunAction, StreamGroups, apply_run_action,
+    byte_router::route_bytes,
 };
 use schema_types::{ProtocolConfig, TestDataLink};
 use waveform::{DerivedSeriesSelector, WaveformSeriesSelection};
@@ -200,10 +200,12 @@ fn main() {
             );
             for window in [&detail, &overview] {
                 assert!(window.timestamps.windows(2).all(|w| w[0] <= w[1]));
-                assert!(window
-                    .channels
-                    .iter()
-                    .all(|c| c.is_empty() || c.len() == window.timestamps.len()));
+                assert!(
+                    window
+                        .channels
+                        .iter()
+                        .all(|c| c.is_empty() || c.len() == window.timestamps.len())
+                );
                 if latest > 0 {
                     // 空数组也满足 windows().all()；必须独立验证窗口没有塌缩或消失。
                     assert!(window.timestamps.len() >= 2, "已有数据的窗口不得消失");

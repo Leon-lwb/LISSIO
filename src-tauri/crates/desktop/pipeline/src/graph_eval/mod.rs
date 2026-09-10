@@ -15,7 +15,7 @@ mod recording;
 mod snapshot_eval;
 
 pub use guards::{PutBack, TakeGuard};
-pub use hot_path::{merge_str_map, process_source_batch, EvalBreakdown, SlotBufs};
+pub use hot_path::{EvalBreakdown, SlotBufs, merge_str_map, process_source_batch};
 pub use predicates::{graph_requires_full_batch, graph_triggered_by, records_waveform_history};
 pub use snapshot_eval::{
     evaluate_snapshot_now, reset_all_transient_state, reset_source_transient_state,

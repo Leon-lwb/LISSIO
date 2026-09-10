@@ -7,10 +7,10 @@ use std::time::Duration;
 use chat::ToolExecutor;
 use error::Result;
 use llm::ToolSpecDto;
-use mcp_server::tools;
 use mcp_server::Toolbox;
+use mcp_server::tools;
 use parking_lot::Mutex;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
@@ -18,7 +18,7 @@ use super::args::{
     arg_f64, arg_i64, arg_opt_str, arg_opt_u32, arg_str, arg_vec_u8, parse_can_frame, shared,
     tool_failed, value_to_content,
 };
-use super::specs::{native_tool_specs, BACKEND_TOOLS, FRONTEND_TOOLS};
+use super::specs::{BACKEND_TOOLS, FRONTEND_TOOLS, native_tool_specs};
 use crate::skills::{self, Lang};
 
 /// 前端托管工具调用事件名 (前端 `toolHost.ts` 监听)。

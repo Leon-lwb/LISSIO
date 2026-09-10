@@ -16,7 +16,7 @@ pub fn set_window_acrylic<R: Runtime>(window: WebviewWindow<R>, enabled: bool) {
         #[cfg(target_os = "macos")]
         {
             use window_vibrancy::{
-                apply_vibrancy, clear_vibrancy, NSVisualEffectMaterial, NSVisualEffectState,
+                NSVisualEffectMaterial, NSVisualEffectState, apply_vibrancy, clear_vibrancy,
             };
             // FullScreenUI 跟随系统深浅外观, 能真实透出窗口后方内容;
             // UnderWindowBackground 只采样桌面壁纸且接近不透明, 会让亚克力看起来失效。

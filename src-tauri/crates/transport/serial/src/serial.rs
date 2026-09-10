@@ -1,9 +1,9 @@
-use data_model::{PortInfo, Result, SerialConfig, INGEST_CHANNEL_CAPACITY};
+use data_model::{INGEST_CHANNEL_CAPACITY, PortInfo, Result, SerialConfig};
 use error::TransportError;
 use serialport::{DataBits, FlowControl, Parity, StopBits};
 use std::io::{Read, Write};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 

@@ -13,15 +13,15 @@ use std::time::Duration;
 use data_model::Result;
 use error::{AppError, McpError};
 use parking_lot::Mutex;
+use rmcp::ServiceExt;
 use rmcp::model::{CallToolRequestParams, ContentBlock};
 use rmcp::service::{RoleClient, RunningService};
 use rmcp::transport::{StreamableHttpClientTransport, TokioChildProcess};
-use rmcp::ServiceExt;
 use serde_json::Value;
 use tokio::process::Command;
 
 use crate::store;
-use crate::types::{sanitize_segment, McpServerConfig, McpToolInfo, McpTransport};
+use crate::types::{McpServerConfig, McpToolInfo, McpTransport, sanitize_segment};
 
 /// 连接建立 (含 initialize 握手) 超时秒数。
 pub const CONNECTION_TIMEOUT_SECS: u64 = 10;

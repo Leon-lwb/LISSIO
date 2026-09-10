@@ -8,6 +8,6 @@
 
 pub mod filter;
 pub use filter::{
-    bandpass_biquad, bandstop_biquad, filter_kind_from_config, highpass_biquad, lowpass_biquad,
-    DigitalFilter, FilterConfig, FilterKind, FilterPreset,
+    DigitalFilter, FilterConfig, FilterKind, FilterPreset, bandpass_biquad, bandstop_biquad,
+    filter_kind_from_config, highpass_biquad, lowpass_biquad,
 };

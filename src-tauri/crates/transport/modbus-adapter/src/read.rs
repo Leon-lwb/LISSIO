@@ -1,16 +1,16 @@
 use crate::client::{
-    ensure_connected, mark_degraded, mark_online, normalize, OperationError, Runtime,
+    OperationError, Runtime, ensure_connected, mark_degraded, mark_online, normalize,
 };
-use crate::{decode_registers, plan_reads, ModbusArea, ModbusPoint, ReconnectConfig};
+use crate::{ModbusArea, ModbusPoint, ReconnectConfig, decode_registers, plan_reads};
 use acquisition::{AcquisitionError, AcquisitionResult};
 use flow::{Direction, FlowEnvelope};
 use points::{
-    quality_flags, DeliveryClass, NativeStatus, PointBatch, PointId, PointQuality, PointSample,
-    PointValue, ReadResult,
+    DeliveryClass, NativeStatus, PointBatch, PointId, PointQuality, PointSample, PointValue,
+    ReadResult, quality_flags,
 };
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio_modbus::client::Reader;
 

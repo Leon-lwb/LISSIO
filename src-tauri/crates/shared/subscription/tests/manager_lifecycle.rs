@@ -1,4 +1,4 @@
-use subscription::{cancel_subscription, register_cancel, SubscriptionManager};
+use subscription::{SubscriptionManager, cancel_subscription, register_cancel};
 
 #[tokio::test]
 async fn register_and_cancel_share_one_lifecycle_table() {

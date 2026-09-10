@@ -8,8 +8,8 @@ use async_trait::async_trait;
 use data_model::{Result, TransportConfig};
 use flow::{Boundary, BytesChunk, Direction, FlowEnvelope, FlowGap, Framing, LostUnit, SourceId};
 use schema_types::TestDataLink;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::{broadcast, mpsc};
 
@@ -118,7 +118,7 @@ impl LegacyFlowReceiver {
                 Err(broadcast::error::TryRecvError::Lagged(count)) => self.note_lag(count),
                 Err(broadcast::error::TryRecvError::Empty) => return Err(FlowTryRecvError::Empty),
                 Err(broadcast::error::TryRecvError::Closed) => {
-                    return Err(FlowTryRecvError::Closed)
+                    return Err(FlowTryRecvError::Closed);
                 }
             }
         }

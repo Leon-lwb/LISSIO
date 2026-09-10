@@ -158,9 +158,11 @@ fn multiple_outputs_from_one_source_remain_distinct_and_aligned() {
         window.derived["wave"]["custom"]["out-b"],
         vec![20.0, 21.0, 22.0]
     );
-    assert!(window.derived["wave"]["custom"]
-        .values()
-        .all(|values| values.len() == window.timestamps.len()));
+    assert!(
+        window.derived["wave"]["custom"]
+            .values()
+            .all(|values| values.len() == window.timestamps.len())
+    );
 }
 
 #[test]

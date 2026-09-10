@@ -3,9 +3,9 @@
 //! 通过 [`SerialBackend`] 注册到 `AcquisitionRuntime`; 通用串口 I/O 还能由
 //! serial-hosted 协议注入 [`serial::SerialLifecycle`] 复用。
 
-mod ports;
 #[cfg(any(target_os = "linux", test))]
 mod linux_ports;
+mod ports;
 
 #[cfg(target_os = "macos")]
 mod macos_ports;
@@ -25,7 +25,10 @@ use std::collections::BTreeMap;
 /// 串口元信息 → 发现端点 metadata (camelCase key, 与 modbus-adapter 对齐)
 pub fn port_metadata(port: &data_model::PortInfo) -> BTreeMap<String, serde_json::Value> {
     let mut metadata = BTreeMap::new();
-    metadata.insert("deviceId".into(), serde_json::json!(format!("serial:{}", port.name)));
+    metadata.insert(
+        "deviceId".into(),
+        serde_json::json!(format!("serial:{}", port.name)),
+    );
     metadata.insert("portType".into(), serde_json::json!(port.port_type));
     if let Some(value) = port.vid {
         metadata.insert("vid".into(), serde_json::json!(value));
@@ -115,7 +118,10 @@ mod tests {
             description: Some("System USB Serial".into()),
         };
         let metadata = port_metadata(&port);
-        assert_eq!(metadata["description"], serde_json::json!("System USB Serial"));
+        assert_eq!(
+            metadata["description"],
+            serde_json::json!("System USB Serial")
+        );
         assert_eq!(metadata["portType"], serde_json::json!("USB"));
         assert_eq!(metadata["vid"], serde_json::json!(0x1a86));
         assert_eq!(metadata["pid"], serde_json::json!(0x7523));

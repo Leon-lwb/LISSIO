@@ -13,12 +13,12 @@ use flow::SourceId;
 use points::{PointDescriptor, PointId, ReadRequest, ReadResult};
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use tokio::sync::{watch, Mutex};
-use tokio_modbus::client::Context;
+use tokio::sync::{Mutex, watch};
 use tokio_modbus::Slave;
+use tokio_modbus::client::Context;
 use tokio_serial::SerialPortBuilderExt;
 
 #[derive(Clone)]

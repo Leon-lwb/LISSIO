@@ -7,8 +7,8 @@ use std::time::Duration;
 use transport::CanBackend;
 
 use crate::constants::{
-    pci_type, FC_CTS, FC_OVERFLOW, FC_WAIT, FF_DATA_LEN, FF_DL_MAX, PCI_CF, PCI_FC, PCI_FF, PCI_SF,
-    SF_MAX_DATA,
+    FC_CTS, FC_OVERFLOW, FC_WAIT, FF_DATA_LEN, FF_DL_MAX, PCI_CF, PCI_FC, PCI_FF, PCI_SF,
+    SF_MAX_DATA, pci_type,
 };
 use crate::error::{AutomotiveError, AutomotiveResult};
 use crate::state::{Pending, PendingState, Receiver};

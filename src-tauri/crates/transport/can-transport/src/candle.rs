@@ -1,10 +1,10 @@
 use can::CandleDeviceInfo;
-use data_model::{CandleConfig, Result, INGEST_CHANNEL_CAPACITY};
+use data_model::{CandleConfig, INGEST_CHANNEL_CAPACITY, Result};
 use error::TransportError;
-use nusb::transfer::{Bulk, In, Out};
 use nusb::MaybeFuture;
-use std::sync::atomic::{AtomicBool, Ordering};
+use nusb::transfer::{Bulk, In, Out};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 

@@ -7,7 +7,7 @@ use bus::TopicKey;
 use graph::CompiledGraph;
 
 use crate::eval_state::GraphEvalState;
-use crate::graph_eval::{merge_str_map, SlotBufs};
+use crate::graph_eval::{SlotBufs, merge_str_map};
 
 use super::plan::{BucketPlan, WorkerState};
 

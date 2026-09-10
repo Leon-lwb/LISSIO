@@ -51,9 +51,10 @@ pub fn list_ports() -> Result<Vec<PortInfo>> {
     Ok(normalize(result, cfg!(windows)))
 }
 
-
 fn clean(value: Option<String>) -> Option<String> {
-    value.map(|value| value.trim().to_owned()).filter(|value| !value.is_empty())
+    value
+        .map(|value| value.trim().to_owned())
+        .filter(|value| !value.is_empty())
 }
 
 fn normalize(ports: Vec<PortInfo>, windows: bool) -> Vec<PortInfo> {
@@ -70,21 +71,34 @@ fn normalize(ports: Vec<PortInfo>, windows: bool) -> Vec<PortInfo> {
             if let Some(description) = &port.description {
                 let suffix = format!(" ({})", port.name);
                 if description.to_ascii_uppercase().ends_with(&suffix) {
-                    port.description = clean(Some(description[..description.len() - suffix.len()].into()));
+                    port.description =
+                        clean(Some(description[..description.len() - suffix.len()].into()));
                 }
             }
         }
         port.description = port.description.or_else(|| port.product.clone());
         // Never merge on USB IDs, product names or serial numbers: different
         // devices and multiple interfaces of one device can share all of them.
-        unique.entry(port.name.clone()).and_modify(|existing| {
-            existing.description = existing.description.take().or_else(|| port.description.clone());
-            existing.product = existing.product.take().or_else(|| port.product.clone());
-            existing.manufacturer = existing.manufacturer.take().or_else(|| port.manufacturer.clone());
-            existing.serial_number = existing.serial_number.take().or_else(|| port.serial_number.clone());
-            existing.vid = existing.vid.or(port.vid);
-            existing.pid = existing.pid.or(port.pid);
-        }).or_insert(port);
+        unique
+            .entry(port.name.clone())
+            .and_modify(|existing| {
+                existing.description = existing
+                    .description
+                    .take()
+                    .or_else(|| port.description.clone());
+                existing.product = existing.product.take().or_else(|| port.product.clone());
+                existing.manufacturer = existing
+                    .manufacturer
+                    .take()
+                    .or_else(|| port.manufacturer.clone());
+                existing.serial_number = existing
+                    .serial_number
+                    .take()
+                    .or_else(|| port.serial_number.clone());
+                existing.vid = existing.vid.or(port.vid);
+                existing.pid = existing.pid.or(port.pid);
+            })
+            .or_insert(port);
     }
     unique.into_values().collect()
 }
@@ -94,8 +108,16 @@ mod tests {
     use super::*;
 
     fn port(name: &str) -> PortInfo {
-        PortInfo { name: name.into(), port_type: "USB".into(), vid: Some(0x1234), pid: Some(0x5678),
-            description: None, product: Some(" USB Serial ".into()), manufacturer: None, serial_number: Some("shared".into()) }
+        PortInfo {
+            name: name.into(),
+            port_type: "USB".into(),
+            vid: Some(0x1234),
+            pid: Some(0x5678),
+            description: None,
+            product: Some(" USB Serial ".into()),
+            manufacturer: None,
+            serial_number: Some("shared".into()),
+        }
     }
 
     #[test]
@@ -110,7 +132,14 @@ mod tests {
 
     #[test]
     fn identical_hardware_ids_do_not_merge_distinct_interfaces() {
-        let ports = normalize(vec![port("/dev/ttyUSB1"), port("/dev/ttyUSB0"), port("/dev/ttyUSB0")], false);
+        let ports = normalize(
+            vec![
+                port("/dev/ttyUSB1"),
+                port("/dev/ttyUSB0"),
+                port("/dev/ttyUSB0"),
+            ],
+            false,
+        );
         assert_eq!(ports.len(), 2);
         assert_eq!(ports[0].description.as_deref(), Some("USB Serial"));
     }

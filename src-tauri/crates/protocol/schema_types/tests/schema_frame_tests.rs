@@ -1,8 +1,8 @@
 //! 帧 schema 集成测试 — ProtocolSchema + encode_by_blocks + 端口派生。
 
 use schema_types::{
-    encode_by_blocks, AsciiBase, ChecksumAlgorithm, DecoderBlockDef, EncodeBlockDef, FieldType,
-    ProtocolConfig, ProtocolSchema, SchemaPreset,
+    AsciiBase, ChecksumAlgorithm, DecoderBlockDef, EncodeBlockDef, FieldType, ProtocolConfig,
+    ProtocolSchema, SchemaPreset, encode_by_blocks,
 };
 
 // ============ SchemaPreset serde ============

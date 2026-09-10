@@ -2,7 +2,7 @@ use crate::{AcquisitionError, DriverContext, DriverPayload, SourceFactory};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{Mutex, watch};
 use tokio::task::JoinHandle;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

@@ -15,7 +15,7 @@ use parking_lot::Mutex;
 use serde_json::Value;
 
 use crate::events::{AiChatEvent, EventSink};
-use crate::runner::{run_chat, ChatPayload, ChatTaskRegistry, ToolExecutor, TurnProvider};
+use crate::runner::{ChatPayload, ChatTaskRegistry, ToolExecutor, TurnProvider, run_chat};
 use data_model::Result;
 
 /// 脚本化回合: 每轮弹出预置产物;额外记录每轮收到的历史快照。
@@ -155,12 +155,16 @@ async fn text_only_completes_in_one_round() {
     assert_eq!(rounds, 1);
 
     let events = events.lock();
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AiChatEvent::Done { rounds: 1 })));
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AiChatEvent::Delta { text } if text == "hello")));
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, AiChatEvent::Done { rounds: 1 }))
+    );
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, AiChatEvent::Delta { text } if text == "hello"))
+    );
 }
 
 /// 工具轮 → 回填 → 下一轮出最终回答;历史含 assistant 工具调用与 tool 结果。
@@ -232,9 +236,11 @@ async fn exceeds_max_rounds_errors() {
     .await;
     assert!(result.is_err(), "超轮次应返回错误");
     let events = events.lock();
-    assert!(events
-        .iter()
-        .any(|e| matches!(e, AiChatEvent::Error { .. })));
+    assert!(
+        events
+            .iter()
+            .any(|e| matches!(e, AiChatEvent::Error { .. }))
+    );
 }
 
 /// 取消标志置位 → Cancelled 错误 + Cancelled 事件。

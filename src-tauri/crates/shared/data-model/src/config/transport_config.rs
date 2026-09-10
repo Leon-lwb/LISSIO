@@ -8,8 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::serial_params::{FlowControl, Parity, StopBits};
 use crate::CanBitrate;
+use crate::serial_params::{FlowControl, Parity, StopBits};
 
 /// 传输层后端 — tagged enum, 序列化 `{ kind, params }`
 #[derive(Debug, Clone, Serialize, Deserialize)]

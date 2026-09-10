@@ -55,7 +55,7 @@ pub enum PointValue {
 }
 
 mod signed_string {
-    use serde::{de::Error, Deserialize, Deserializer, Serializer};
+    use serde::{Deserialize, Deserializer, Serializer, de::Error};
 
     // serde(with = ...) 的 serialize 契约要求 &T 形参, 8 字节原语按引用传入
     // 是外部接口约束而非风格选择
@@ -72,7 +72,7 @@ mod signed_string {
 }
 
 mod unsigned_string {
-    use serde::{de::Error, Deserialize, Deserializer, Serializer};
+    use serde::{Deserialize, Deserializer, Serializer, de::Error};
 
     #[allow(clippy::trivially_copy_pass_by_ref)]
     pub fn serialize<S: Serializer>(value: &u64, serializer: S) -> Result<S::Ok, S::Error> {

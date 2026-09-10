@@ -5,8 +5,8 @@ use std::sync::Arc;
 use schema_types::{ProtocolConfig, SchemaPreset};
 use tauri::AppHandle;
 
-use super::byte_router::{route_inner, RouteSummary};
 use super::DataPlaneState;
+use super::byte_router::{RouteSummary, route_inner};
 use crate::decoder_feed::DecoderFeedCache;
 use crate::feed_parallel::workers_needed;
 

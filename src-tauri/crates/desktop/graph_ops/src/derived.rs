@@ -4,7 +4,7 @@
 //! 随 `update_tab_graph` Tauri 命令返回并经 `graph:derived` 事件差分推送。
 //! 前端 `derivedPorts` store 据此渲染 React Flow handle 与节点摘要。
 
-use pipeline::{port_table, protocol_source_port_names, NodeDef, NodeKind, PortDomain};
+use pipeline::{NodeDef, NodeKind, PortDomain, port_table, protocol_source_port_names};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::Serialize;
 

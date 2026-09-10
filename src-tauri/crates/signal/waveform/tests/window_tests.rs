@@ -115,10 +115,12 @@ fn min_max_window_spans_history_and_preserves_extrema() {
     assert_eq!(window.timestamps.last(), Some(&0.0));
     assert!(window.channels[0].contains(&500.0));
     assert!(window.channels[1].contains(&-400.0));
-    assert!(window
-        .channels
-        .iter()
-        .all(|channel| channel.len() == window.timestamps.len()));
+    assert!(
+        window
+            .channels
+            .iter()
+            .all(|channel| channel.len() == window.timestamps.len())
+    );
     assert_eq!(window.sampling, WaveformSampling::MinMax);
 }
 
@@ -144,19 +146,25 @@ fn min_max_never_discards_series_extrema_to_meet_an_impossible_budget() {
     let window = buf.get_min_max(8);
     assert!(window.timestamps.len() > 8);
     for series in 0..12 {
-        assert!(window.derived["wave"][&format!("math-{series}")][""]
-            .contains(&(100.0 + series as f32)));
+        assert!(
+            window.derived["wave"][&format!("math-{series}")][""]
+                .contains(&(100.0 + series as f32))
+        );
     }
-    assert!(window
-        .channels
-        .iter()
-        .all(|channel| channel.len() == window.timestamps.len()));
-    assert!(window
-        .derived
-        .values()
-        .flat_map(std::collections::HashMap::values)
-        .flat_map(std::collections::HashMap::values)
-        .all(|series| series.len() == window.timestamps.len()));
+    assert!(
+        window
+            .channels
+            .iter()
+            .all(|channel| channel.len() == window.timestamps.len())
+    );
+    assert!(
+        window
+            .derived
+            .values()
+            .flat_map(std::collections::HashMap::values)
+            .flat_map(std::collections::HashMap::values)
+            .all(|series| series.len() == window.timestamps.len())
+    );
 }
 
 #[test]
@@ -170,10 +178,12 @@ fn sub_millisecond_700khz_window_uses_fractional_milliseconds() {
     let window = buf.get_window_raw(-0.1, 0.0);
     assert!((70..=72).contains(&window.raw_window_points));
     assert_eq!(window.timestamps.last(), Some(&0.0));
-    assert!(window
-        .timestamps
-        .first()
-        .is_some_and(|value| *value >= -0.1));
+    assert!(
+        window
+            .timestamps
+            .first()
+            .is_some_and(|value| *value >= -0.1)
+    );
 }
 
 #[test]

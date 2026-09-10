@@ -1,9 +1,9 @@
 use crate::{ModbusPoint, SCHEMA_VERSION};
 use acquisition::{
-    AdapterCapability, AddressRegion, AddressSpaceDescriptor, CapabilitySet, ConfigurationSchema,
-    DisplaySemantics, DriverManifest, EndpointDescriptor, EndpointDirection, PortDescriptor,
-    PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
-    CAPABILITY_CONTRACT_VERSION,
+    AdapterCapability, AddressRegion, AddressSpaceDescriptor, CAPABILITY_CONTRACT_VERSION,
+    CapabilitySet, ConfigurationSchema, DisplaySemantics, DriverManifest, EndpointDescriptor,
+    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
+    TransportKind,
 };
 use flow::PayloadKind;
 use points::{AccessLevel, NativeAddress, PointDataType, PointDescriptor};

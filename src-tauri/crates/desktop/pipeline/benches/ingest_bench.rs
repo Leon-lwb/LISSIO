@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use app::AppState;
 use buffer_graph::Edge;
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use graph::BytePlan;
 use graph_testkit::make_device_in;
 use kind::{NodeDef, NodeKind};

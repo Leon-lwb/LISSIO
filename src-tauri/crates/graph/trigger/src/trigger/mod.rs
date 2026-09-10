@@ -25,7 +25,7 @@ mod types;
 
 pub use matcher::TriggerMatcher;
 pub use pattern::parse_range;
-pub use state::{format_auto_command, TriggerState};
+pub use state::{TriggerState, format_auto_command};
 pub use types::{TriggerMatchResult, TriggerMatchType, TriggerRuleDef};
 
 #[cfg(test)]

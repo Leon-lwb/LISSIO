@@ -13,8 +13,8 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::frame_checksum::{compute_checksum, ChecksumKind};
-use crate::frame_field::{concat_chunks, pack_field, parse_hex, FieldType};
+use crate::frame_checksum::{ChecksumKind, compute_checksum};
+use crate::frame_field::{FieldType, concat_chunks, pack_field, parse_hex};
 
 /// 块类型 — 与前端 `BlockType` 一一对应 (snake_case 序列化)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

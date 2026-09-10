@@ -12,7 +12,7 @@ use serde::Serialize;
 
 use spectrum::normalized_autocorrelation;
 
-use crate::stats::{channel_stats, FLAT_SIGNAL_VPP};
+use crate::stats::{FLAT_SIGNAL_VPP, channel_stats};
 
 /// 自相关首峰接受阈值 (归一化 ACF)
 pub const ACF_PEAK_THRESHOLD: f32 = 0.35;

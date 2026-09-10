@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 
 use serde::{Deserialize, Serialize};
 
-use crate::raw_filter::{chunk_matches, DirectionFilter, SearchPattern};
+use crate::raw_filter::{DirectionFilter, SearchPattern, chunk_matches};
 
 /// 原始数据方向 — 接收 (RX) 或发送 (TX)
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]

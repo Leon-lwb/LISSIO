@@ -1,6 +1,6 @@
-use criterion::{criterion_group, criterion_main, Criterion};
+use criterion::{Criterion, criterion_group, criterion_main};
 use modbus_adapter::{
-    decode_registers, plan_reads, ByteOrder, ModbusArea, ModbusDataType, ModbusPoint, WordOrder,
+    ByteOrder, ModbusArea, ModbusDataType, ModbusPoint, WordOrder, decode_registers, plan_reads,
 };
 use points::PointId;
 use std::hint::black_box;

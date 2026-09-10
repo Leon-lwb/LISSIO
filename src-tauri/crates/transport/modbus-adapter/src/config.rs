@@ -22,11 +22,7 @@ impl ModbusArea {
     }
 
     pub const fn max_read_quantity(self) -> u16 {
-        if self.is_bits() {
-            2_000
-        } else {
-            125
-        }
+        if self.is_bits() { 2_000 } else { 125 }
     }
 }
 

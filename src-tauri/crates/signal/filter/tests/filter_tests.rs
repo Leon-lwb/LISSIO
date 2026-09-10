@@ -1,8 +1,8 @@
 //! 数字滤波器集成测试
 
 use filter::{
-    bandpass_biquad, bandstop_biquad, highpass_biquad, lowpass_biquad, DigitalFilter, FilterKind,
-    FilterPreset,
+    DigitalFilter, FilterKind, FilterPreset, bandpass_biquad, bandstop_biquad, highpass_biquad,
+    lowpass_biquad,
 };
 use std::f32::consts::PI;
 

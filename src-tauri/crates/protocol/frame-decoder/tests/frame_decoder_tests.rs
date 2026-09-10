@@ -1,6 +1,6 @@
 //! FrameParser 核心测试 — parse_hex / 校验算法 / 状态机端到端解析
 
-use frame_decoder::{parse_hex, ChecksumAlgorithm, FrameParser};
+use frame_decoder::{ChecksumAlgorithm, FrameParser, parse_hex};
 use schema_types::{
     DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition, FieldType, LengthUnit,
 };

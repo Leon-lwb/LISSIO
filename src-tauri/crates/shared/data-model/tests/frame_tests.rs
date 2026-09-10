@@ -9,7 +9,7 @@
 //! - `TransportStats` 默认值与累加
 //! - `now_us` 单调性 / 非负性
 
-use data_model::frame::{now_us, ConnectionState, DataFrame, PortInfo, RawData, TransportStats};
+use data_model::frame::{ConnectionState, DataFrame, PortInfo, RawData, TransportStats, now_us};
 
 #[test]
 fn dataframe_new_uses_current_timestamp() {

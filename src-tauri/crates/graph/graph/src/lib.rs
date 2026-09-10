@@ -32,11 +32,11 @@ pub mod evaluate;
 
 pub use compile::CompiledGraph;
 pub use eval::{
-    node_out_entry, node_out_str_entry, set_port, set_str_port, CompiledEval, SourceFramesMap,
-    SourceTextsMap, StringValuesMap, ValuesMap,
+    CompiledEval, SourceFramesMap, SourceTextsMap, StringValuesMap, ValuesMap, node_out_entry,
+    node_out_str_entry, set_port, set_str_port,
 };
 pub use hir::{
-    port_domain_event, CompileError, CompileReport, EdgeClass, HirEdge, HirNode, TypedGraph,
+    CompileError, CompileReport, EdgeClass, HirEdge, HirNode, TypedGraph, port_domain_event,
 };
 pub use lower::CompiledOp;
 pub use plane::{BytePlan, ByteRoute};

@@ -3,7 +3,7 @@
 use can::{CanDirection, CanFrame};
 use protocol::{FeedOutput, ProtocolEngine};
 use protocol_can_bridge::{
-    CandleEngine, CAND_CMD_RX, CAND_CMD_TX, CAND_FRAME_SIZE, CAND_ID_EFF, CAND_ID_MASK, CAND_ID_RTR,
+    CAND_CMD_RX, CAND_CMD_TX, CAND_FRAME_SIZE, CAND_ID_EFF, CAND_ID_MASK, CAND_ID_RTR, CandleEngine,
 };
 
 /// 构造一个 24 字节帧

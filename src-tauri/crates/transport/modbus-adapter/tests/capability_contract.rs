@@ -1,10 +1,10 @@
 use acquisition::{
-    EndpointDirection, PortDirection, ProtocolKind, RuntimeState, SourceFactory, TransportKind,
-    CAPABILITY_CONTRACT_VERSION,
+    CAPABILITY_CONTRACT_VERSION, EndpointDirection, PortDirection, ProtocolKind, RuntimeState,
+    SourceFactory, TransportKind,
 };
 use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
-use modbus_adapter::{ModbusFactory, ModbusRtuFactory, DRIVER_ID, RTU_DRIVER_ID, SCHEMA_VERSION};
+use modbus_adapter::{DRIVER_ID, ModbusFactory, ModbusRtuFactory, RTU_DRIVER_ID, SCHEMA_VERSION};
 use serde_json::json;
 
 #[test]
@@ -84,12 +84,14 @@ fn only_the_current_schema_is_accepted() {
             "vendorExtension": {"keep": true}
         }),
     };
-    assert!(factory
-        .validate(&old)
-        .err()
-        .expect("schema 0 must fail")
-        .to_string()
-        .contains("schema version"));
+    assert!(
+        factory
+            .validate(&old)
+            .err()
+            .expect("schema 0 must fail")
+            .to_string()
+            .contains("schema version")
+    );
 }
 
 #[test]
@@ -100,10 +102,12 @@ fn future_schema_versions_are_rejected_without_mutation() {
         schema_version: SCHEMA_VERSION + 1,
         payload: json!({"host": "example", "points": []}),
     };
-    assert!(factory
-        .validate(&future)
-        .err()
-        .expect("future schema must fail")
-        .to_string()
-        .contains("schema version"));
+    assert!(
+        factory
+            .validate(&future)
+            .err()
+            .expect("future schema must fail")
+            .to_string()
+            .contains("schema version")
+    );
 }

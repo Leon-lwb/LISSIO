@@ -63,11 +63,7 @@ pub fn column_of(i: usize, n: usize, columns: usize) -> usize {
 
 /// ±0 归一 — 保序位键的前置条件 (CPU/WGSL 同语义)
 fn normalize(v: f32) -> f32 {
-    if v == 0.0 {
-        0.0
-    } else {
-        v
-    }
+    if v == 0.0 { 0.0 } else { v }
 }
 
 /// CPU 参考实现 — 线性扫描 (GPU 不可用时的回退路径与等价性仲裁基准)

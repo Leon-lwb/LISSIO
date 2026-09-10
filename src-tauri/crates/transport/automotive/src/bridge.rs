@@ -8,8 +8,8 @@ use error::TransportError;
 use parking_lot::Mutex;
 use protocol::ProtocolEngine;
 use protocol_can_bridge::{CandleEngine, SlcanEngine};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::{broadcast, mpsc};
 use transport::CanBackend;
 

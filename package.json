@@ -18,6 +18,7 @@
     "check:architecture": "node scripts/check-crate-architecture.mjs",
     "check:deps": "node scripts/check-deps.mjs",
     "set-version": "node scripts/set-version.mjs",
+    "auto-build": "bash scripts/auto-build.sh",
     "tauri": "tauri"
   },
   "dependencies": {

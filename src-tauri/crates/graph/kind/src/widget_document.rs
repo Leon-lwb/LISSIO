@@ -1,6 +1,6 @@
 //! Widget business configuration → graph semantics. UI-only properties do not enter the graph.
-use crate::{document::CustomPorts, NodeKind};
-use serde_json::{json, Value};
+use crate::{NodeKind, document::CustomPorts};
+use serde_json::{Value, json};
 
 pub fn lower(kind: &str, p: &Value, ports: Option<&CustomPorts>) -> Result<NodeKind, String> {
     let (kind, params) = match kind {

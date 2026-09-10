@@ -1,7 +1,7 @@
 //! 统一分片流框架测试 — bounded_drain_size / 分片组状态机 / AdaptiveRate / 游标源
 
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use can::{CanBuffer, CanDirection, CanFrame};
@@ -9,8 +9,8 @@ use parking_lot::Mutex;
 use raw_data::{RawDataCollector, RawDataDirection};
 use stream::AdaptiveRate;
 use stream::{
-    bounded_drain_size, join_or_create_group, leave_group, CanStreamSource, RawDataSource,
-    StreamSource, WaveformSource,
+    CanStreamSource, RawDataSource, StreamSource, WaveformSource, bounded_drain_size,
+    join_or_create_group, leave_group,
 };
 use waveform::DataBuffer;
 

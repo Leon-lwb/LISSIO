@@ -1,7 +1,7 @@
 use crate::{
-    validate_capability_contract, AcquisitionError, AcquisitionResult, AcquisitionRunState,
-    AdapterCapability, DiscoveredEndpoint, DriverContext, ExecutionGate, PointBatchObserver,
-    SessionCapabilities, SourceRegistry, SourceSession, StateLane, SubscriptionIntent,
+    AcquisitionError, AcquisitionResult, AcquisitionRunState, AdapterCapability,
+    DiscoveredEndpoint, DriverContext, ExecutionGate, PointBatchObserver, SessionCapabilities,
+    SourceRegistry, SourceSession, StateLane, SubscriptionIntent, validate_capability_contract,
 };
 use data_model::device::{DriverId, DriverPayload, EndpointId, EndpointSpec};
 use flow::SourceId;
@@ -11,8 +11,8 @@ use points::{
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 use tokio::sync::mpsc;
 

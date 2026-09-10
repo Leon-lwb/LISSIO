@@ -10,8 +10,8 @@
 use crate::RingBuffer;
 use parking_lot::Mutex;
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 /// 派生缓冲条目 (sink/widget 元数据 + 独立时间轴环形缓冲)
 #[derive(Clone)]

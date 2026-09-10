@@ -18,6 +18,6 @@ pub mod types;
 
 pub use client::{build_client, chat_turn_stream, validate_config};
 pub use types::{
-    adapter_kind_from_str, list_adapters, AdapterInfo, AiProviderConfig, ChatMessageDto,
-    ChatRoleDto, ChatTurnOutcome, ProviderEvent, ToolCallDto, ToolSpecDto,
+    AdapterInfo, AiProviderConfig, ChatMessageDto, ChatRoleDto, ChatTurnOutcome, ProviderEvent,
+    ToolCallDto, ToolSpecDto, adapter_kind_from_str, list_adapters,
 };

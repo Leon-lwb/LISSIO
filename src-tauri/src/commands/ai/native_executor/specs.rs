@@ -1,7 +1,7 @@
 //! 内置工具清单 — 静态规格目录与前后端工具名集合
 
 use llm::ToolSpecDto;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 // ============ 工具清单 ============
 

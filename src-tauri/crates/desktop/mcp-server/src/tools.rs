@@ -10,7 +10,7 @@ use can::CanFrame;
 use pipeline::data_plane::{byte_router, frame_dispatch};
 use pipeline::decoder_feed::DecoderFeedCache;
 use raw_data::RawDataDirection;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use tauri::AppHandle;
 
 use crate::server::Toolbox;

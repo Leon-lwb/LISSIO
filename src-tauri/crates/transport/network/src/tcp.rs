@@ -1,7 +1,7 @@
-use data_model::{Result, TcpClientConfig, TcpServerConfig, INGEST_CHANNEL_CAPACITY};
+use data_model::{INGEST_CHANNEL_CAPACITY, Result, TcpClientConfig, TcpServerConfig};
 use error::TransportError;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{broadcast, mpsc};

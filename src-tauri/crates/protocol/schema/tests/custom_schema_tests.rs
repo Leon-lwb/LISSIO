@@ -1,7 +1,7 @@
 //! 集成测试: SchemaEngine — 自定义 schema 流式解析/编码
 
 use protocol::ProtocolEngine;
-use schema::{compile_schema, SchemaEngine};
+use schema::{SchemaEngine, compile_schema};
 use schema_types::{
     AsciiBase, ChecksumAlgorithm, DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition,
     EncodeBlockDef, FieldType, ProtocolConfig, ProtocolSchema, SchemaPreset,

@@ -40,6 +40,6 @@ pub use config::{
 };
 pub use error::{AppError as Error, Result};
 pub use frame::{
-    now_us, CanBitrate, ConnectionState, DataFrame, PortInfo, RawData, TransportStats,
+    CanBitrate, ConnectionState, DataFrame, PortInfo, RawData, TransportStats, now_us,
 };
 pub use serial_params::{FlowControl, Parity, StopBits};

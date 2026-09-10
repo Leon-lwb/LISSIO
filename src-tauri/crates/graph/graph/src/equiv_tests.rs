@@ -224,7 +224,7 @@ fn test_compiled_eval_equivalence() {
     input_values.insert("knob1".to_string(), 7.0_f32);
     let custom_outputs = HashMap::new();
     let decoder_states = HashMap::new(); // d1 无 parser
-                                         // 两条路径各自独立的 filter_states (跨帧状态)
+    // 两条路径各自独立的 filter_states (跨帧状态)
     let mut fs_a = HashMap::new();
     let mut fs_b = HashMap::new();
 

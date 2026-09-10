@@ -2,13 +2,13 @@
 
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::sync::{broadcast, mpsc, oneshot};
 
 use crate::actor::{
-    run_topic, ControlCommand, Metrics, PublishCommand, COMMAND_CAPACITY, ESTIMATED_TOPIC_COUNT,
-    SAMPLE_BYTES,
+    COMMAND_CAPACITY, ControlCommand, ESTIMATED_TOPIC_COUNT, Metrics, PublishCommand, SAMPLE_BYTES,
+    run_topic,
 };
 use crate::types::{RuntimeHealth, RuntimeLimits, SampleBatch, SampleStatus, TopicKey};
 

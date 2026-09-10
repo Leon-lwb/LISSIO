@@ -1,5 +1,5 @@
 use data_model::DataFrame;
-use protocol::{split_at_boundaries, FeedOutput, ProtocolEngine};
+use protocol::{FeedOutput, ProtocolEngine, split_at_boundaries};
 
 /// JustFloat 协议引擎
 ///

@@ -1,5 +1,5 @@
 use acquisition::PointBatchObserver;
-use pipeline::{data_plane::DataPlaneState, point_projection::PointProjection, SourceGraphs};
+use pipeline::{SourceGraphs, data_plane::DataPlaneState, point_projection::PointProjection};
 use points::PointEnvelope;
 
 pub(crate) struct FourDomainPointObserver(PointProjection);

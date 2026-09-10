@@ -36,5 +36,5 @@ pub use decoder_block::{
 pub use hex::parse_hex;
 pub use protocol_config::ProtocolConfig;
 pub use schema_frame::{
-    encode_by_blocks, EncodeBlockDef, ProtocolSchema, SchemaPreset, TestDataLink,
+    EncodeBlockDef, ProtocolSchema, SchemaPreset, TestDataLink, encode_by_blocks,
 };

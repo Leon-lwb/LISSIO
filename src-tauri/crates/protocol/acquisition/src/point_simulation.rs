@@ -10,8 +10,8 @@ use points::{
     DeliveryClass, PointBatch, PointDataType, PointDescriptor, PointKey, PointQuality, PointSample,
     PointValue, ReadRequest, ReadResult,
 };
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use tokio::sync::watch;
 
 struct Simulation {

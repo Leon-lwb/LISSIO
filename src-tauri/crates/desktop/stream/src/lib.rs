@@ -12,10 +12,9 @@
 pub mod dispatcher;
 pub mod stream;
 
-pub use dispatcher::{adaptive_channel_loop, AdaptiveRate};
+pub use dispatcher::{AdaptiveRate, adaptive_channel_loop};
 pub use stream::{
-    bounded_drain_size, join_or_create_group, leave_group, sharded_stream_loop,
-    sharded_stream_loop_map, CanStreamSource, DecodedStreamSource, GroupMembership,
-    LogicStreamSource, RawDataSource, StreamSource, WaveformSource, WaveformViewSpec,
-    MAX_STREAM_SHARDS,
+    CanStreamSource, DecodedStreamSource, GroupMembership, LogicStreamSource, MAX_STREAM_SHARDS,
+    RawDataSource, StreamSource, WaveformSource, WaveformViewSpec, bounded_drain_size,
+    join_or_create_group, leave_group, sharded_stream_loop, sharded_stream_loop_map,
 };

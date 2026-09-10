@@ -20,4 +20,4 @@ pub use autocorr::normalized_autocorrelation;
 pub use ifft::IfftState;
 pub use spectrum::{SpectrumAnalyzer, SpectrumOutput, SpectrumResult};
 pub use streaming::{SpectrumFrame, StreamingFft, StreamingIfft, TransformConfig, TransformError};
-pub use window::{apply_window, WindowType};
+pub use window::{WindowType, apply_window};

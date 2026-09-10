@@ -18,7 +18,7 @@
 use std::hint::black_box;
 
 use buffer_graph::Edge;
-use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion, Throughput};
+use criterion::{BatchSize, BenchmarkId, Criterion, Throughput, criterion_group, criterion_main};
 use filter::FilterConfig;
 use graph::CompiledGraph;
 use graph_testkit::{
@@ -27,7 +27,7 @@ use graph_testkit::{
 use hir::TypedGraph;
 use kind::{MathOp, NodeDef};
 use lower::lower_value_plane;
-use plane::{value_plane, BytePlan};
+use plane::{BytePlan, value_plane};
 
 /// 单链基线图: ps1(ch0,ch1) + knob1 → Mul → Add
 fn one_chain() -> (Vec<NodeDef>, Vec<Edge>) {

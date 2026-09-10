@@ -4,8 +4,8 @@ use acquisition::{
 use data_model::device::{DriverId, DriverPayload};
 use flow::SourceId;
 use modbus_adapter::{
-    decode_registers, plan_reads, ByteOrder, ModbusArea, ModbusConfig, ModbusDataType,
-    ModbusFactory, ModbusPoint, ReconnectConfig, WordOrder, DRIVER_ID, SCHEMA_VERSION,
+    ByteOrder, DRIVER_ID, ModbusArea, ModbusConfig, ModbusDataType, ModbusFactory, ModbusPoint,
+    ReconnectConfig, SCHEMA_VERSION, WordOrder, decode_registers, plan_reads,
 };
 use points::{PointId, PointKey, PointQuality, PointSample, PointValue, ReadRequest};
 use serde_json::json;

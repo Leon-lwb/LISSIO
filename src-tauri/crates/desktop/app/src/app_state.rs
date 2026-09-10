@@ -8,15 +8,15 @@ use data_model::PipelineConfig;
 use logic::{DecodedBuffer, LogicBuffer};
 use parking_lot::{Mutex, RwLock};
 use pipeline::NodeKind;
-use pipeline::{
-    build_graph_eval_state, GraphEvalState, StreamGroupState, DEFAULT_CAN_BUFFER_CAPACITY,
-    DEFAULT_CAN_LOAD_STATS_WINDOW, DEFAULT_DECODED_BUFFER_CAPACITY, DEFAULT_LOGIC_BUFFER_CAPACITY,
-};
 use pipeline::{CompiledGraph, SourceFramesMap, SourceTextsMap};
+use pipeline::{
+    DEFAULT_CAN_BUFFER_CAPACITY, DEFAULT_CAN_LOAD_STATS_WINDOW, DEFAULT_DECODED_BUFFER_CAPACITY,
+    DEFAULT_LOGIC_BUFFER_CAPACITY, GraphEvalState, StreamGroupState, build_graph_eval_state,
+};
 use raw_data::RawDataCollector;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use waveform::DataBuffer;
 
 /// Stop 模式下冻结的原始波形缓存。

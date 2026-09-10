@@ -7,7 +7,7 @@ use error::McpError;
 use tauri::AppHandle;
 
 use super::handlers::VofaMcpServer;
-use super::toolbox::{Toolbox, MCP_ENDPOINT_PATH};
+use super::toolbox::{MCP_ENDPOINT_PATH, Toolbox};
 
 /// 正在运行的 MCP server 句柄 — 显式 [`McpServerHandle::stop`] 触发优雅关闭。
 pub struct McpServerHandle {

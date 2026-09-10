@@ -8,18 +8,18 @@ use buffer_graph::Edge;
 use data_model::{Error, Result};
 use error::ConfigError;
 use events::emit_graph_derived;
-use pipeline::data_plane::frame_dispatch;
-use pipeline::decoder_feed::sync_decoders_now;
 use pipeline::BytePlan;
 use pipeline::DataPlaneState;
+use pipeline::data_plane::frame_dispatch;
+use pipeline::decoder_feed::sync_decoders_now;
 use pipeline::{NodeDef, NodeKind};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter};
 
 use crate::{
-    compute_derived, inject_protocol_sources, CompileState, GraphCompileEvent, GraphDerived,
-    GraphSourceEvent, GRAPH_SOURCE_EVENT,
+    CompileState, GRAPH_SOURCE_EVENT, GraphCompileEvent, GraphDerived, GraphSourceEvent,
+    compute_derived, inject_protocol_sources,
 };
 
 // ============ 节点图 (后端化重构) ============

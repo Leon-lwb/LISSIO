@@ -7,11 +7,11 @@
 use app::AppState;
 use pipeline::eval_state::StreamGroupState;
 use pipeline::execution::{SendMode, SendTask};
-use pipeline::run_control::{apply_run_action, StreamGroups};
+use pipeline::run_control::{StreamGroups, apply_run_action};
 use pipeline::{RunAction, RunState};
 use schema::command_frame::CommandFrameDto;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 fn test_state() -> (pipeline::DataPlaneState, StreamGroups) {
     let state = AppState::new();

@@ -12,13 +12,13 @@
 //! - 设备节点 `tx`: AcquisitionRuntime.send (协议转换回注 / 命令发送落地)
 
 use kind::{
-    NodeKind, FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE,
+    FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, NodeKind, PROTOCOL_IN_HANDLE,
     PROTOCOL_OUT_HANDLE, TRANSPORT_TX_HANDLE,
 };
 use tauri::AppHandle;
 
-use super::protocol_feed::feed_protocol;
 use super::DataPlaneState;
+use super::protocol_feed::feed_protocol;
 use crate::decoder_feed::DecoderFeedCache;
 
 /// convert 链递归深度上限 (BytePlan 已保证 DAG, 此为防御性兜底)

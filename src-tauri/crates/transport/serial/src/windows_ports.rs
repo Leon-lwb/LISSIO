@@ -5,14 +5,14 @@
 //! 回退到 Description，建立 `COM端口名 -> 系统描述` 映射。
 
 use std::collections::HashMap;
-use windows_sys::core::GUID;
 use windows_sys::Win32::Devices::DeviceAndDriverInstallation::{
-    SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
-    SetupDiGetDeviceRegistryPropertyW, SetupDiOpenDevRegKey, DICS_FLAG_GLOBAL, DIGCF_PRESENT,
-    DIREG_DEV, SPDRP_DEVICEDESC, SPDRP_FRIENDLYNAME, SP_DEVINFO_DATA,
+    DICS_FLAG_GLOBAL, DIGCF_PRESENT, DIREG_DEV, SP_DEVINFO_DATA, SPDRP_DEVICEDESC,
+    SPDRP_FRIENDLYNAME, SetupDiDestroyDeviceInfoList, SetupDiEnumDeviceInfo, SetupDiGetClassDevsW,
+    SetupDiGetDeviceRegistryPropertyW, SetupDiOpenDevRegKey,
 };
 use windows_sys::Win32::Foundation::{BOOL, ERROR_SUCCESS, HWND, INVALID_HANDLE_VALUE};
-use windows_sys::Win32::System::Registry::{RegCloseKey, RegQueryValueExW, HKEY, KEY_READ};
+use windows_sys::Win32::System::Registry::{HKEY, KEY_READ, RegCloseKey, RegQueryValueExW};
+use windows_sys::core::GUID;
 
 /// 设备类 GUID: Ports (COM & LPT ports)
 const GUID_DEVCLASS_PORTS: GUID = GUID {
@@ -89,8 +89,11 @@ pub fn port_descriptions() -> HashMap<String, String> {
                 }
 
                 // 优先读取设备管理器的友好名称。
-                if let Some(description) = read_device_description(info_set, &mut dev_info, SPDRP_FRIENDLYNAME)
-                    .or_else(|| read_device_description(info_set, &mut dev_info, SPDRP_DEVICEDESC)) {
+                if let Some(description) =
+                    read_device_description(info_set, &mut dev_info, SPDRP_FRIENDLYNAME).or_else(
+                        || read_device_description(info_set, &mut dev_info, SPDRP_DEVICEDESC),
+                    )
+                {
                     if !description.is_empty() {
                         map.insert(port_name.to_ascii_uppercase(), description);
                     }
@@ -195,13 +198,18 @@ unsafe fn read_device_description(
     decode_reg_string(buf.get(..buf_len as usize)?)
 }
 
-
 fn decode_reg_string(bytes: &[u8]) -> Option<String> {
-    if bytes.len() % 2 != 0 { return None; }
-    let wide: Vec<u16> = bytes.chunks_exact(2)
+    if bytes.len() % 2 != 0 {
+        return None;
+    }
+    let wide: Vec<u16> = bytes
+        .chunks_exact(2)
         .map(|pair| u16::from_le_bytes([pair[0], pair[1]]))
-        .take_while(|value| *value != 0).collect();
-    String::from_utf16(&wide).ok().filter(|value| !value.trim().is_empty())
+        .take_while(|value| *value != 0)
+        .collect();
+    String::from_utf16(&wide)
+        .ok()
+        .filter(|value| !value.trim().is_empty())
 }
 
 #[cfg(test)]
@@ -210,7 +218,10 @@ mod tests {
 
     #[test]
     fn registry_strings_support_localized_names_and_reject_invalid_data() {
-        let bytes: Vec<u8> = "串口 (COM3)\0".encode_utf16().flat_map(u16::to_le_bytes).collect();
+        let bytes: Vec<u8> = "串口 (COM3)\0"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
         assert_eq!(decode_reg_string(&bytes).as_deref(), Some("串口 (COM3)"));
         assert_eq!(decode_reg_string(&[0]), None);
         assert_eq!(decode_reg_string(&[0, 0xd8]), None);

@@ -4,14 +4,14 @@ use acquisition::{
 };
 use async_trait::async_trait;
 use data_model::{
-    device::{DriverId, DriverPayload, EndpointId, EndpointSpec, SimulationConfig, TestWaveform},
     SerialConfig, TransportConfig,
+    device::{DriverId, DriverPayload, EndpointId, EndpointSpec, SimulationConfig, TestWaveform},
 };
 use schema_types::TestDataLink;
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     time::Duration,
 };
@@ -162,22 +162,30 @@ async fn simulation_requires_encoding_and_pauses_without_catching_up() {
     assert!(runtime.open_endpoint(config).await.is_err());
     runtime.open_endpoint(spec("a", true)).await.unwrap();
     let mut rx = runtime.subscribe_bytes("a").unwrap();
-    assert!(tokio::time::timeout(Duration::from_millis(30), rx.recv())
-        .await
-        .is_err());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(30), rx.recv())
+            .await
+            .is_err()
+    );
     runtime.set_run_state(AcquisitionRunState::Running);
-    assert!(tokio::time::timeout(Duration::from_secs(1), rx.recv())
-        .await
-        .is_ok());
+    assert!(
+        tokio::time::timeout(Duration::from_secs(1), rx.recv())
+            .await
+            .is_ok()
+    );
     runtime.set_run_state(AcquisitionRunState::Paused);
     while rx.try_recv().is_ok() {}
-    assert!(tokio::time::timeout(Duration::from_millis(30), rx.recv())
-        .await
-        .is_err());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(30), rx.recv())
+            .await
+            .is_err()
+    );
     runtime.set_run_state(AcquisitionRunState::Running);
-    assert!(tokio::time::timeout(Duration::from_secs(1), rx.recv())
-        .await
-        .is_ok());
+    assert!(
+        tokio::time::timeout(Duration::from_secs(1), rx.recv())
+            .await
+            .is_ok()
+    );
     runtime.close("a").await;
 }
 

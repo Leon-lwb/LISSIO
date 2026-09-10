@@ -15,4 +15,4 @@
 pub mod server;
 pub mod tools;
 
-pub use server::{start, McpServerHandle, Toolbox, VofaMcpServer};
+pub use server::{McpServerHandle, Toolbox, VofaMcpServer, start};

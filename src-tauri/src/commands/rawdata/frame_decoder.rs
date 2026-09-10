@@ -1,4 +1,4 @@
-use app::{detect_format, parse_ascii, parse_hex, InputFormat};
+use app::{InputFormat, detect_format, parse_ascii, parse_hex};
 use data_model::Result;
 
 /// 帧解码器手动测试结果 (与前端 FrameDecoderManualResult 对应)

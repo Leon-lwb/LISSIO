@@ -18,9 +18,9 @@ use data_model::device::{
 use data_model::{SerialConfig, TransportConfig};
 use graph::BytePlan;
 use kind::{DecoderBlockDef, FieldType, NodeDef, NodeKind};
+use pipeline::DataPlaneState;
 use pipeline::byte_router::route_bytes;
 use pipeline::decoder_feed::DecoderFeedCache;
-use pipeline::DataPlaneState;
 use schema_types::{ProtocolConfig, ProtocolSchema, SchemaPreset, TestDataLink};
 
 fn node(id: &str, kind: NodeKind) -> NodeDef {
@@ -253,9 +253,11 @@ async fn simulation_session_updates_sample_clock_without_reanchoring() {
         (2.0..=4.0).contains(&hot_update_step),
         "热更新边界应立即使用约 2.86µs 的新间隔，实际 {hot_update_step}µs"
     );
-    assert!(timestamps[4..]
-        .windows(2)
-        .all(|pair| (2.0..=4.0).contains(&(pair[1] - pair[0]))));
+    assert!(
+        timestamps[4..]
+            .windows(2)
+            .all(|pair| (2.0..=4.0).contains(&(pair[1] - pair[0])))
+    );
     plane.transport.close("tp").await;
 }
 
@@ -1008,8 +1010,8 @@ async fn run_stream_pressure_case(protocol: ProtocolConfig, channels: usize) {
 #[ignore = "manual sustained throughput gate; run with --release"]
 #[allow(clippy::cast_precision_loss)] // 有界测试规模的吞吐与相位计算
 async fn sustained_justfloat_over_10mbps_keeps_waveform_timeline_stable() {
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::{Duration, Instant};
 
     const CHANNELS: usize = 4;

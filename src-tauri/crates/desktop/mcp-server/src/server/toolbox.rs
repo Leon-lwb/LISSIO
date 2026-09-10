@@ -1,8 +1,8 @@
 //! MCP server 工具所需的应用状态切片 (全部为 `Arc` 共享句柄)
 
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 
 use app::AppState;
 

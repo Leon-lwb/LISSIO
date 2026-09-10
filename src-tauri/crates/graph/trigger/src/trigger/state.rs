@@ -147,7 +147,7 @@ mod tests {
         // 持续高位: 不再触发
         assert!(st.eval_auto("rising", 5.0).is_none());
         assert!(st.eval_auto("rising", 6.0).is_none()); // 非零 → 非零 不算上升沿
-                                                        // 回落到 0 后再升: 重新触发 (re-arm)
+        // 回落到 0 后再升: 重新触发 (re-arm)
         assert!(st.eval_auto("rising", 0.0).is_none());
         assert!(st.eval_auto("rising", 3.0).is_some());
         // 负值不是上升沿 (prev==0 但 value 不 > 0)

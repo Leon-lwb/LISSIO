@@ -4,12 +4,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::AppState;
-use gpu::{envelope_minmax_cpu, GpuContext};
+use gpu::{GpuContext, envelope_minmax_cpu};
 use parking_lot::Mutex;
 use tauri::ipc::{Channel, InvokeResponseBody};
 use waveform::DataBuffer;
 
-use super::binary::{encode_envelope, ENVELOPE_WINDOW_CAP};
+use super::binary::{ENVELOPE_WINDOW_CAP, encode_envelope};
 use super::display_rate;
 
 pub(super) fn spawn_envelope_stream(

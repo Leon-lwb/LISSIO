@@ -7,8 +7,9 @@ use core_foundation::{
 };
 use data_model::PortInfo;
 use io_kit_sys::{
-    types::io_object_t, IOIteratorNext, IOObjectRelease, IORegistryEntryCreateCFProperty,
+    IOIteratorNext, IOObjectRelease, IORegistryEntryCreateCFProperty,
     IORegistryEntryGetParentEntry, IOServiceGetMatchingServices, IOServiceMatching,
+    types::io_object_t,
 };
 use std::collections::HashMap;
 
@@ -79,9 +80,15 @@ impl SystemPort {
     }
 
     fn apply(&self, port: &mut PortInfo) {
-        if let Some(callout) = &self.callout { port.name.clone_from(callout); }
-        port.description = port.description.take().or_else(|| self.product.clone())
-            .or_else(|| port.product.clone()).or_else(|| self.name.clone());
+        if let Some(callout) = &self.callout {
+            port.name.clone_from(callout);
+        }
+        port.description = port
+            .description
+            .take()
+            .or_else(|| self.product.clone())
+            .or_else(|| port.product.clone())
+            .or_else(|| self.name.clone());
         if self.bluetooth {
             port.port_type = "Bluetooth".into();
         } else if self.vid.is_some() {
@@ -89,8 +96,14 @@ impl SystemPort {
             port.vid = self.vid.or(port.vid);
             port.pid = self.pid.or(port.pid);
             port.product = port.product.take().or_else(|| self.product.clone());
-            port.manufacturer = port.manufacturer.take().or_else(|| self.manufacturer.clone());
-            port.serial_number = port.serial_number.take().or_else(|| self.serial_number.clone());
+            port.manufacturer = port
+                .manufacturer
+                .take()
+                .or_else(|| self.manufacturer.clone());
+            port.serial_number = port
+                .serial_number
+                .take()
+                .or_else(|| self.serial_number.clone());
         } else if port.port_type == "PCI" {
             // serialport uses PCI as its macOS catch-all, not evidence of a PCI device.
             port.port_type = "Unknown".into();
@@ -104,7 +117,9 @@ pub fn enrich_ports(ports: &mut [PortInfo]) {
     // dictionary is consumed by GetMatchingServices, including on failure.
     let status = unsafe {
         let matching = IOServiceMatching(c"IOSerialBSDClient".as_ptr());
-        if matching.is_null() { return; }
+        if matching.is_null() {
+            return;
+        }
         IOServiceGetMatchingServices(0, matching, &raw mut iterator)
     };
     if status != 0 || iterator == 0 {
@@ -115,30 +130,45 @@ pub fn enrich_ports(ports: &mut [PortInfo]) {
     loop {
         // SAFETY: iterator is owned and valid throughout this loop.
         let entry = unsafe { IOIteratorNext(iterator.0) };
-        if entry == 0 { break; }
+        if entry == 0 {
+            break;
+        }
         let entry = IoObject(entry);
-        let paths: Vec<_> = ["IOCalloutDevice", "IODialinDevice"].iter()
-            .filter_map(|key| string(entry.0, key)).collect();
-        let mut info = SystemPort { name: string(entry.0, "IOTTYDevice"),
-            callout: string(entry.0, "IOCalloutDevice"), ..Default::default() };
+        let paths: Vec<_> = ["IOCalloutDevice", "IODialinDevice"]
+            .iter()
+            .filter_map(|key| string(entry.0, key))
+            .collect();
+        let mut info = SystemPort {
+            name: string(entry.0, "IOTTYDevice"),
+            callout: string(entry.0, "IOCalloutDevice"),
+            ..Default::default()
+        };
         info.inspect(entry.0);
         let mut current = entry;
         // Bound traversal even if a malformed driver publishes a cyclic registry.
         for _ in 0..32 {
-            if info.bluetooth || info.vid.is_some() { break; }
+            if info.bluetooth || info.vid.is_some() {
+                break;
+            }
             let mut parent = 0;
             // SAFETY: current is live; parent is an initialized output slot.
             let status = unsafe {
                 IORegistryEntryGetParentEntry(current.0, c"IOService".as_ptr(), &raw mut parent)
             };
-            if status != 0 || parent == 0 { break; }
+            if status != 0 || parent == 0 {
+                break;
+            }
             current = IoObject(parent);
             info.inspect(current.0);
         }
-        for path in paths { descriptions.insert(path, info.clone()); }
+        for path in paths {
+            descriptions.insert(path, info.clone());
+        }
     }
     for port in ports {
-        if let Some(info) = descriptions.get(&port.name) { info.apply(port); }
+        if let Some(info) = descriptions.get(&port.name) {
+            info.apply(port);
+        }
     }
 }
 
@@ -147,14 +177,27 @@ mod tests {
     use super::*;
 
     fn port() -> PortInfo {
-        PortInfo { name: "/dev/cu.headset".into(), port_type: "PCI".into(), vid: None,
-            pid: None, manufacturer: None, product: None, serial_number: None, description: None }
+        PortInfo {
+            name: "/dev/cu.headset".into(),
+            port_type: "PCI".into(),
+            vid: None,
+            pid: None,
+            manufacturer: None,
+            product: None,
+            serial_number: None,
+            description: None,
+        }
     }
 
     #[test]
     fn bluetooth_uses_system_name_without_fabricating_usb_ids() {
         let mut port = port();
-        SystemPort { name: Some("Headset".into()), bluetooth: true, ..Default::default() }.apply(&mut port);
+        SystemPort {
+            name: Some("Headset".into()),
+            bluetooth: true,
+            ..Default::default()
+        }
+        .apply(&mut port);
         assert_eq!(port.description.as_deref(), Some("Headset"));
         assert_eq!(port.port_type, "Bluetooth");
         assert_eq!((port.vid, port.pid), (None, None));
@@ -164,15 +207,25 @@ mod tests {
     fn same_registry_service_maps_dialin_to_callout() {
         let mut dialin = port();
         dialin.name = "/dev/tty.headset".into();
-        SystemPort { callout: Some("/dev/cu.headset".into()), ..Default::default() }.apply(&mut dialin);
+        SystemPort {
+            callout: Some("/dev/cu.headset".into()),
+            ..Default::default()
+        }
+        .apply(&mut dialin);
         assert_eq!(dialin.name, "/dev/cu.headset");
     }
 
     #[test]
     fn usb_identity_and_product_are_preserved() {
         let mut port = port();
-        SystemPort { name: Some("usbmodem1".into()), vid: Some(0x1a86), pid: Some(0x7523),
-            product: Some("USB Serial".into()), ..Default::default() }.apply(&mut port);
+        SystemPort {
+            name: Some("usbmodem1".into()),
+            vid: Some(0x1a86),
+            pid: Some(0x7523),
+            product: Some("USB Serial".into()),
+            ..Default::default()
+        }
+        .apply(&mut port);
         assert_eq!(port.description.as_deref(), Some("USB Serial"));
         assert_eq!(port.port_type, "USB");
         assert_eq!((port.vid, port.pid), (Some(0x1a86), Some(0x7523)));

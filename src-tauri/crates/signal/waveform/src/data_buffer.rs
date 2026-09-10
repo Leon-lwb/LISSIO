@@ -4,14 +4,14 @@
 //! 求值平面的派生通道在独立时间轴上 ([`DerivedStore`], 内部独立 Mutex) —
 //! 两个平面各持一把锁互不阻塞, 求值积压不影响原始波形入库。
 
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::RingBuffer;
 use data_model::DataFrame;
 use parking_lot::Mutex;
 
-use crate::derived::{shared_derived_store, SharedDerivedStore};
+use crate::derived::{SharedDerivedStore, shared_derived_store};
 use crate::tier::Tier;
 
 /// 多通道时间序列数据缓冲区

@@ -7,7 +7,7 @@
 //! - [`restore_workspace`]: 启动时从 `workspace.json` 恢复存储并逐 tab 重编译,
 //!   让图在后端立即可求值 (前端随后水合, 不再回推整图)
 
-use app::{load_workspace, DataTabMeta, TabGraphFile, TabMeta};
+use app::{DataTabMeta, TabGraphFile, TabMeta, load_workspace};
 use serde::Serialize;
 use std::path::Path;
 use std::sync::atomic::Ordering;

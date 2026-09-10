@@ -13,7 +13,7 @@
 use std::collections::HashMap;
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use frame_decoder::{ChecksumAlgorithm, FrameDecoderTestData, FrameParser};
 use schema_types::{DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition, FieldType};
 

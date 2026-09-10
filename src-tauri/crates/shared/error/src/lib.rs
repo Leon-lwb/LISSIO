@@ -419,9 +419,11 @@ mod tests {
         assert_eq!(e.kind(), "AiKeyringAccessDenied");
         let value = serde_json::to_value(&e).expect("serialize keyring access denied");
         assert_eq!(value["kind"], "AiKeyringAccessDenied");
-        assert!(value["data"]
-            .as_object()
-            .is_some_and(serde_json::Map::is_empty));
+        assert!(
+            value["data"]
+                .as_object()
+                .is_some_and(serde_json::Map::is_empty)
+        );
     }
 
     #[test]

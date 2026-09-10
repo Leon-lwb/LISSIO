@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use spectrum::{IfftState, SpectrumAnalyzer, SpectrumResult};
 use std::any::Any;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use trigger::TriggerState;
 
 /// 单个图输出快照 — 通过 Channel 推送到前端

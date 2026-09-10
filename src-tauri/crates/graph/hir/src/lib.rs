@@ -13,5 +13,5 @@
 mod errors;
 mod hir;
 
-pub use errors::{port_domain_event, CompileError, CompileReport};
+pub use errors::{CompileError, CompileReport, port_domain_event};
 pub use hir::{EdgeClass, Hir, HirEdge, HirNode, TypedGraph};

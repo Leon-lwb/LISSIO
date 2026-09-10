@@ -15,8 +15,8 @@
 //! - `menu:panel:*`     -> 打开数据面板 (Compile Errors / Results / CAN / Logic / …)
 
 use tauri::{
-    menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
     App, Emitter, Manager, Wry,
+    menu::{Menu, MenuItem, PredefinedMenuItem, Submenu},
 };
 
 /// 菜单项 ID 常量 — 与前端事件名一致

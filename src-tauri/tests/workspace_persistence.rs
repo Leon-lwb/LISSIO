@@ -1,6 +1,6 @@
 //! 工作区持久化集成测试：每个页签只保存节点文档与连线。
 
-use app::{collect_workspace_file, save_workspace, AppState};
+use app::{AppState, collect_workspace_file, save_workspace};
 use buffer_graph::Edge;
 use graph_ops::{apply_connect_edge, apply_document, apply_remove_tab_graph};
 use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};

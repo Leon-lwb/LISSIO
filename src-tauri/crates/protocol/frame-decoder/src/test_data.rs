@@ -43,8 +43,8 @@
 
 use std::collections::HashMap;
 
-use super::blocks::{block_should_execute, checksum_byte_len, parse_hex};
 use super::ChecksumAlgorithm;
+use super::blocks::{block_should_execute, checksum_byte_len, parse_hex};
 use schema_types::{DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition, FieldType};
 
 /// 帧解码器测试数据生成器 — 见模块文档

@@ -7,10 +7,10 @@ use crate::{
 use flow::SourceId;
 use points::{PointId, PointValue};
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{watch, Mutex};
+use tokio::sync::{Mutex, watch};
 use tokio_modbus::Slave;
 
 #[tokio::test]

@@ -84,8 +84,8 @@ impl StageSlot {
 #[cfg(test)]
 mod tests {
     use super::{PanicSignal, SpinBarrier};
-    use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
     use std::time::Duration;
 
     #[test]

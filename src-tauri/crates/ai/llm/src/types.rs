@@ -200,7 +200,7 @@ pub fn adapter_kind_from_str(adapter: &str) -> data_model::Result<AdapterKind> {
             return Err(AiError::UnknownAdapter {
                 adapter: adapter.to_string(),
             }
-            .into())
+            .into());
         }
     };
     Ok(kind)

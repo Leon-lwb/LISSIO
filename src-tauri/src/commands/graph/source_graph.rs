@@ -6,7 +6,7 @@
 use app::AppState;
 use data_model::Result;
 use graph_ops::{
-    apply_connect_edge, apply_disconnect_edge, ConnectedEdge, DisconnectedEdge, GraphSourceEvent,
+    ConnectedEdge, DisconnectedEdge, GraphSourceEvent, apply_connect_edge, apply_disconnect_edge,
 };
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, State};

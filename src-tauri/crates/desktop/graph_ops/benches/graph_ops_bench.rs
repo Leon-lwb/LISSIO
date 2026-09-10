@@ -11,7 +11,7 @@
 
 use std::hint::black_box;
 
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use graph_ops::{compute_derived, inject_protocol_sources};
 use graph_testkit::{edge, make_input, make_math, make_protocol, make_protocol_source};
 use pipeline::{MathOp, NodeDef};

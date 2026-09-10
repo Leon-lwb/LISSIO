@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use duckdb::types::ValueRef;
-use duckdb::{params, Connection};
+use duckdb::{Connection, params};
 use serde::{Deserialize, Serialize};
 
 use crate::codec;

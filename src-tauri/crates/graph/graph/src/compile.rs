@@ -22,7 +22,7 @@ use spectrum::WindowType;
 use eval::CompiledEval;
 use hir::{CompileError, EdgeClass, HirEdge, TypedGraph};
 use lower::lower_value_plane;
-use plane::{value_plane, BytePlan};
+use plane::{BytePlan, value_plane};
 
 /// 编译后的图 — 包含拓扑序的评估计划
 pub struct CompiledGraph {

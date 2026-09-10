@@ -16,7 +16,7 @@ use kind::NodeKind;
 use hir::TypedGraph;
 use plane::ValueMir;
 
-use crate::ops::{op_weight, CompiledOp, EvalUnit, TextOutSpec};
+use crate::ops::{CompiledOp, EvalUnit, TextOutSpec, op_weight};
 use crate::units;
 
 /// 槽位表拆解产物 (names + index)

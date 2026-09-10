@@ -5,9 +5,9 @@
 
 use std::collections::HashMap;
 
-use app::apply_run_action;
 use app::AppState;
 use app::CommandFrameDto;
+use app::apply_run_action;
 use app::{RunAction, RunState};
 use app::{RunSnapshot, SendMode, SendStatus, SendTask};
 use data_model::{Error, Result};

@@ -9,7 +9,7 @@
 //! 推导 (后端单一权威)。
 
 use buffer_graph::Edge;
-use pipeline::{protocol_source_port_names, NodeDef, NodeKind};
+use pipeline::{NodeDef, NodeKind, protocol_source_port_names};
 use schema_types::ProtocolConfig;
 use std::collections::HashSet;
 

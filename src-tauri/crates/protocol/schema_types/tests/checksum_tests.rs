@@ -34,9 +34,11 @@ fn none_returns_empty() {
 #[test]
 fn custom_returns_empty_and_verifies_as_pass() {
     // Custom 暂不支持, 后端返回空 + verify 默认通过
-    assert!(ChecksumAlgorithm::Custom
-        .compute(b"12345", Some("ignored"))
-        .is_empty());
+    assert!(
+        ChecksumAlgorithm::Custom
+            .compute(b"12345", Some("ignored"))
+            .is_empty()
+    );
     assert!(ChecksumAlgorithm::Custom.verify(b"12345", &[0xDE, 0xAD], Some("ignored")));
 }
 

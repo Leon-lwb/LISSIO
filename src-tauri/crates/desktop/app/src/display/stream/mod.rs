@@ -13,8 +13,8 @@ use stream::{
     AdaptiveRate, CanStreamSource, DecodedStreamSource, LogicStreamSource, RawDataSource,
     StreamSource, WaveformSource,
 };
-use tauri::ipc::{Channel, InvokeResponseBody};
 use tauri::State;
+use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
 use super::snapshot::spawn_snapshot;
@@ -256,7 +256,7 @@ pub async fn subscribe_data(
                             subscription_id: channel_id,
                             schema_version: BINARY_SCHEMA_VERSION,
                             mode,
-                        })
+                        });
                     }
                 },
             };

@@ -1,7 +1,7 @@
-use data_model::{Result, UdpConfig, INGEST_CHANNEL_CAPACITY};
+use data_model::{INGEST_CHANNEL_CAPACITY, Result, UdpConfig};
 use error::TransportError;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::net::UdpSocket;
 use tokio::sync::{broadcast, mpsc};

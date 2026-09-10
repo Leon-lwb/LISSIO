@@ -34,8 +34,8 @@ mod simd;
 mod worker;
 
 use std::panic::AssertUnwindSafe;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use bus::TopicKey;
 use graph::{CompiledGraph, SourceFramesMap};
@@ -45,14 +45,14 @@ use waveform::DerivedWriter;
 
 use crate::eval_state::GraphEvalState;
 use crate::graph_eval::{
-    graph_requires_full_batch, graph_triggered_by, records_waveform_history, EvalBreakdown,
-    PutBack, SlotBufs, TakeGuard,
+    EvalBreakdown, PutBack, SlotBufs, TakeGuard, graph_requires_full_batch, graph_triggered_by,
+    records_waveform_history,
 };
 
 use barrier::{PanicSignal, SpinBarrier, StageSlot};
 use plan::{
-    build_plans, new_slot_bufs, ns_since, split_states, BatchCtx, ParallelPlans, WorkerState,
-    EVAL_CHUNK,
+    BatchCtx, EVAL_CHUNK, ParallelPlans, WorkerState, build_plans, new_slot_bufs, ns_since,
+    split_states,
 };
 use publish::{publish_batch_tail, publish_point, publish_port_batches};
 use worker::{drain_worker, push_static_derived, run_bucket_chunk};

@@ -18,8 +18,8 @@ use genai::resolver::{AuthData, Endpoint};
 use genai::{Client, ModelIden, ServiceTarget};
 
 use crate::types::{
-    adapter_kind_from_str, AiProviderConfig, ChatMessageDto, ChatRoleDto, ChatTurnOutcome,
-    ProviderEvent, ToolCallDto, ToolSpecDto,
+    AiProviderConfig, ChatMessageDto, ChatRoleDto, ChatTurnOutcome, ProviderEvent, ToolCallDto,
+    ToolSpecDto, adapter_kind_from_str,
 };
 
 /// Ollama 等本地服务允许空 key。

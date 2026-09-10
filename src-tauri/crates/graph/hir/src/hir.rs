@@ -13,9 +13,9 @@ use buffer_graph::Edge;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use rustc_hash::FxHashMap;
 
-use kind::{port_domain, NodeDef, NodeKind, PortDomain, RAW_DATA_PORT_PREFIX};
+use kind::{NodeDef, NodeKind, PortDomain, RAW_DATA_PORT_PREFIX, port_domain};
 
-use crate::errors::{port_domain_event, CompileError};
+use crate::errors::{CompileError, port_domain_event};
 
 /// 节点图 HIR 类型
 pub type Hir = StableDiGraph<HirNode, HirEdge>;

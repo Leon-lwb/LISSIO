@@ -14,9 +14,9 @@ pub use buffer_graph::{Edge, NodeGraph, RoutedData};
 pub use filter::DigitalFilter;
 pub use frame_decoder::FrameParser;
 pub use kind::{
-    DecoderBlockDef, MathOp, NodeDef, NodeKind, PortDomain, StrNumParams, StrOp, StrResult,
-    FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
-    RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
+    DecoderBlockDef, FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, MathOp, NodeDef, NodeKind,
+    PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE, PortDomain, RAW_DATA_PORT_PREFIX, StrNumParams, StrOp,
+    StrResult, TRANSPORT_RX_HANDLE, TRANSPORT_TX_HANDLE,
 };
 pub use spectrum::{IfftState, SpectrumOutput, WindowType};
 pub use trigger::{TriggerRuleDef, TriggerState};
@@ -29,7 +29,7 @@ pub use crate::traits::{
 };
 pub use eval::{CompiledEval, SourceFramesMap, SourceTextsMap};
 pub use hir::{
-    port_domain_event, CompileError, CompileReport, EdgeClass, HirEdge, HirNode, TypedGraph,
+    CompileError, CompileReport, EdgeClass, HirEdge, HirNode, TypedGraph, port_domain_event,
 };
 pub use lower::CompiledOp;
 pub use plane::{BytePlan, ByteRoute, ValueMir};

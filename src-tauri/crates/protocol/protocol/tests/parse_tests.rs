@@ -1,6 +1,6 @@
 //! 集成测试: `parse_hex` / `parse_ascii` / `detect_format`
 
-use protocol::{detect_format, parse_ascii, parse_hex, InputFormat};
+use protocol::{InputFormat, detect_format, parse_ascii, parse_hex};
 
 // ===== detect_format =====
 

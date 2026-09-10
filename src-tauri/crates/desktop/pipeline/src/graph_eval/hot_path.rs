@@ -12,7 +12,7 @@ use waveform::DerivedWriter;
 use crate::eval_state::GraphEvalState;
 
 use super::predicates::{graph_requires_full_batch, graph_triggered_by, records_waveform_history};
-use super::recording::{publish_recorded_batches, record_spectrum, PortSampleBatch, PortTextBatch};
+use super::recording::{PortSampleBatch, PortTextBatch, publish_recorded_batches, record_spectrum};
 
 /// 分段计时抽样周期 — Instant::now 本身在 700k fps 下占 5-7% 纯观测开销,
 /// 每 64 帧抽 1 帧计时 ×64 估算分段耗时 (观测用, 不影响行为)

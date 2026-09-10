@@ -10,10 +10,10 @@
 use std::collections::HashMap;
 use std::hash::Hash;
 
+use petgraph::Direction;
 use petgraph::algo::toposort;
 use petgraph::stable_graph::{NodeIndex, StableDiGraph};
 use petgraph::visit::{EdgeRef, IntoEdgeReferences, IntoNeighborsDirected};
-use petgraph::Direction;
 use rustc_hash::{FxHashMap, FxHashSet};
 
 use kind::NodeKind;

@@ -2,7 +2,7 @@
 
 use measurement::{channel_stats, detect_period};
 
-use super::{SeriesStats, ACF_MAX_POINTS, PERIOD_GUARD};
+use super::{ACF_MAX_POINTS, PERIOD_GUARD, SeriesStats};
 
 /// 包络极值 (跳过 NaN; 层路径极值即真值, 原始路径同样适用)
 fn envelope_min(values: &[f32]) -> f64 {

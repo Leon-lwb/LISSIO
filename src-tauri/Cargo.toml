@@ -4,7 +4,7 @@ version = "0.6.1"
 description = "Modern serial port assistant with VOFA protocol support"
 authors = ["peng"]
 license = "GPL-2.0-only"
-edition = "2021"
+edition = "2024"
 
 [package.metadata.lissio]
 domain = "desktop"
@@ -92,7 +92,7 @@ members = [
 ]
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 version = "0.6.1"
 license = "GPL-2.0-only"
 
@@ -153,8 +153,6 @@ significant_drop_tightening = "allow"
 # Tauri 命令保持 async 以在 tokio 运行时执行 (sync 命令会跑在主线程, 持锁路径
 # 会阻塞 UI); 大量命令无 await 点属正常形态
 unused_async = "allow"
-
-
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
