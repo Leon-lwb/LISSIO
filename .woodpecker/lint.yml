@@ -1,0 +1,82 @@
+# Codeberg CI (Woodpecker) — 对应 GitHub lint.yml
+# 注意: Codeberg CI 仅提供 Linux 容器, 原 lint.yml 中 serial-platforms 的
+# windows/macos 矩阵无法迁移, 这里只保留 Linux。
+#
+# 前置条件: 在 https://ci.codeberg.org 启用本仓库。
+when:
+  - event: push
+    branch: [main, develop]
+  - event: pull_request
+
+steps:
+  # ---- 前端: ESLint + TypeScript (基线阶段, 不挡合入) ----
+  - name: pnpm-install
+    image: &node-image node:26-bookworm
+    commands:
+      - corepack enable
+      - corepack prepare pnpm@10 --activate
+      - pnpm install --frozen-lockfile
+
+  # 现存 lint + typecheck 违规作为基线展示, 先不挡合入 (对应 GitHub 的 continue-on-error)
+  - name: lint
+    image: *node-image
+    failure: ignore
+    commands:
+      - corepack enable
+      - corepack prepare pnpm@10 --activate
+      - pnpm lint
+
+  - name: typecheck
+    image: *node-image
+    failure: ignore
+    commands:
+      - corepack enable
+      - corepack prepare pnpm@10 --activate
+      - pnpm typecheck
+
+  # ---- Crate 分层 + 依赖版本统一 ----
+  - name: crate-layers
+    image: &rust-image rust:1-bookworm
+    commands:
+      - apt-get update && apt-get install -y nodejs npm
+      - npm install -g pnpm@10
+      - pnpm install --frozen-lockfile
+      - pnpm check:architecture
+      - pnpm check:deps
+
+  # ---- cargo-deny (钉住 0.20.2, 与 GitHub CI 一致) ----
+  - name: cargo-deny
+    image: *rust-image
+    commands:
+      - apt-get update && apt-get install -y curl ca-certificates
+      - curl -fsSL https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz | tar -xz --strip-components=1 -C /usr/local/bin
+      - cd src-tauri && cargo deny check
+
+  # ---- Rust: 500 行限制 + fmt + clippy + test ----
+  - name: rust
+    image: *rust-image
+    environment:
+      CARGO_TERM_COLOR: always
+    commands:
+      - rustup component add rustfmt clippy
+      # tauri / wry 在 Linux 上编译需要 webkit2gtk 等系统库
+      - apt-get update
+      - apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev patchelf libssl-dev
+      - |
+        OVER=$(find src-tauri/crates src-tauri/src -name '*.rs' ! -path '*/tests/*' ! -path '*/benches/*' ! -name '*_tests.rs' -exec wc -l {} + | awk '$1 > 500 && $2 != "total" {print}')
+        if [ -n "$OVER" ]; then
+          echo "Source files exceed the 500-line limit (tests are exempt):"
+          echo "$OVER"
+          exit 1
+        fi
+        echo "All source files within 500 lines."
+      - cd src-tauri && cargo fmt --check
+      - cd src-tauri && cargo clippy --workspace --all-targets
+      - cd src-tauri && cargo test --workspace
+
+  # ---- 串口/Modbus/CAN 契约测试 (原 serial-platforms, 仅 Linux) ----
+  - name: serial-contracts
+    image: *rust-image
+    commands:
+      - apt-get update && apt-get install -y libudev-dev pkg-config
+      - cd src-tauri && cargo test --locked -p serial -p modbus-adapter -p can-transport
