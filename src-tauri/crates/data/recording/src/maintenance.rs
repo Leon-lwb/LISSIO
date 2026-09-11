@@ -56,22 +56,22 @@ pub fn delete_sessions_on(
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
     )?;
 
-    connection.execute_batch("BEGIN TRANSACTION")?;
-    let result = (|| -> Result<(), RecordingError> {
-        let batches_sql = format!("DELETE FROM recording_batches WHERE session_id IN ({markers})");
-        connection.execute(&batches_sql, params_from_iter(unique.iter().copied()))?;
-        let bindings_sql = format!("DELETE FROM display_bindings WHERE session_id IN ({markers})");
-        connection.execute(&bindings_sql, params_from_iter(unique.iter().copied()))?;
-        let sessions_sql = format!("DELETE FROM recording_sessions WHERE id IN ({markers})");
-        connection.execute(&sessions_sql, params_from_iter(unique.iter().copied()))?;
-        Ok(())
-    })();
-    match result {
-        Ok(()) => connection.execute_batch("COMMIT")?,
-        Err(error) => {
-            let _ = connection.execute_batch("ROLLBACK");
-            return Err(error);
-        }
+    // DuckDB foreign-key checks do not observe child deletes that are still
+    // inside the same transaction. Keep child deletes auto-committed before the
+    // parent delete; per-session deletion minimizes partial-cleanup footprint.
+    for id in &unique {
+        connection.execute(
+            "DELETE FROM recording_batches WHERE session_id = ?",
+            params_from_iter(std::iter::once(*id)),
+        )?;
+        connection.execute(
+            "DELETE FROM display_bindings WHERE session_id = ?",
+            params_from_iter(std::iter::once(*id)),
+        )?;
+        connection.execute(
+            "DELETE FROM recording_sessions WHERE id = ?",
+            params_from_iter(std::iter::once(*id)),
+        )?;
     }
 
     Ok(RecordingCleanupResult {

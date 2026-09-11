@@ -30,6 +30,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   const loadOverview = useRecordingDatabaseStore((s) => s.loadOverview);
   const selectSession = useRecordingDatabaseStore((s) => s.selectSession);
   const cleanupSessions = useRecordingDatabaseStore((s) => s.cleanupSessions);
+  const error = useRecordingDatabaseStore((s) => s.error);
+  const clearError = useRecordingDatabaseStore((s) => s.clearError);
 
   const [keepLatest, setKeepLatest] = useState(10);
   const [busy, setBusy] = useState(false);
@@ -55,6 +57,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         older_than_us: null,
         keep_latest: null,
       });
+    } catch (cleanupError) {
+      console.error('recording cleanup failed', cleanupError);
     } finally {
       setBusy(false);
     }
@@ -75,6 +79,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         older_than_us: null,
         keep_latest: keepLatest,
       });
+    } catch (cleanupError) {
+      console.error('recording cleanup failed', cleanupError);
     } finally {
       setBusy(false);
     }
@@ -92,12 +98,16 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         older_than_us: null,
         keep_latest: null,
       });
+    } catch (cleanupError) {
+      console.error('recording cleanup failed', cleanupError);
     } finally {
       setBusy(false);
     }
   }
 
-  const runningCount = sessions.filter((item) => item.session.state === 'running' || item.session.state === 'paused').length;
+  const terminalCount = sessions.filter(
+    (item) => item.session.state === 'stopped' || item.session.state === 'failed',
+  ).length;
 
   return (
     <div className="flex h-full flex-col gap-2 overflow-hidden text-[11px]" data-tour="recording-database">
@@ -131,7 +141,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
       <div className="flex flex-wrap gap-1">
         <button
           type="button"
-          disabled={busy || runningCount === sessions.length}
+          disabled={busy || terminalCount === 0}
           onClick={() => void cleanupStopped()}
           className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
         >
@@ -150,7 +160,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           />
           <button
             type="button"
-            disabled={busy || runningCount === sessions.length}
+            disabled={busy || terminalCount === 0 || terminalCount <= Math.max(0, keepLatest)}
             onClick={() => void cleanupKept()}
             className="h-full border-l border-border-subtle px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
           >
@@ -159,6 +169,20 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         </div>
       </div>
 
+      {error !== null && (
+        <div className="rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] text-red-300">
+          <div className="flex items-start gap-1">
+            <span className="min-w-0 flex-1 break-words">{error}</span>
+            <button
+              type="button"
+              onClick={clearError}
+              className="shrink-0 text-red-200 hover:text-white"
+            >
+              {t(lang, 'recordingDatabaseDismiss')}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="min-h-0 flex-1 overflow-y-auto rounded border border-border-subtle">
         {sessions.map((summary) => {
           const active = summary.session.state === 'running' || summary.session.state === 'paused';

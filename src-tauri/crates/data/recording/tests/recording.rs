@@ -277,3 +277,44 @@ fn cleanup_prunes_only_terminal_sessions() {
     hub.stop().unwrap();
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+fn cleanup_keep_latest_prunes_multiple_terminal_sessions() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-keep-latest-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    for _ in 0..3 {
+        hub.start(&path, Vec::new(), RecordingLimits::default())
+            .unwrap();
+        hub.stop().unwrap();
+    }
+    let current = hub
+        .start(&path, Vec::new(), RecordingLimits::default())
+        .unwrap();
+    assert_eq!(hub.list_session_summaries().unwrap().len(), 4);
+
+    let result = hub
+        .cleanup_sessions(RecordingCleanupPolicy {
+            keep_latest: Some(1),
+            ..RecordingCleanupPolicy::default()
+        })
+        .unwrap();
+    assert_eq!(result.deleted_sessions, 2);
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 2);
+    assert_eq!(summaries[0].session.id, current.id);
+
+    let stopped = hub
+        .cleanup_sessions(RecordingCleanupPolicy {
+            delete_stopped: true,
+            ..RecordingCleanupPolicy::default()
+        })
+        .unwrap();
+    assert_eq!(stopped.deleted_sessions, 1);
+    assert_eq!(hub.list_session_summaries().unwrap().len(), 1);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}

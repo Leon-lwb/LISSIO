@@ -181,16 +181,21 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
       },
 
       cleanupSessions: async (policy) => {
-        const result = await api.cleanupRecordingSessions(policy);
-        set({
-          history: [],
-          selectedSessionId: null,
-          selectedBindingId: null,
-          bindings: [],
-          error: null,
-        });
-        await get().loadOverview();
-        return result;
+        try {
+          const result = await api.cleanupRecordingSessions(policy);
+          set({
+            history: [],
+            selectedSessionId: null,
+            selectedBindingId: null,
+            bindings: [],
+            error: null,
+          });
+          await get().loadOverview();
+          return result;
+        } catch (error) {
+          set({ error: String(error) });
+          throw error;
+        }
       },
 
       clearError: () => set({ error: null }),
