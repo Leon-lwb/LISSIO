@@ -170,8 +170,7 @@ impl AppState {
                         Error::Config(ConfigError::ProtocolNodeNotFound { node_id: pn })
                     })?;
                 let engine = st.lock().engine.clone();
-                let bytes = engine.lock().encode_channel(channel, value);
-                bytes
+                engine.lock().encode_channel(channel, value)
             }
             WidgetBinding::Manual { template, .. } => template
                 .replace(concat!("{", "value", "}"), &value.to_string())
@@ -225,8 +224,7 @@ impl AppState {
                     })
                 })?;
             let engine = st.lock().engine.clone();
-            let bytes = engine.lock().encode_can(&frame);
-            bytes
+            engine.lock().encode_can(&frame)
         };
         if data.is_empty() {
             return Ok(()); // 非 CAN 协议, 忽略

@@ -63,17 +63,17 @@ pub(super) fn publish_recorded_batches(
         }
         let port =
             recording::PortIdentity::new(&batch.key.source_node_id, &batch.key.source_handle);
-        if eval.recording.is_bound(&port) {
-            if let Err(error) = eval.recording.record_next(
+        if eval.recording.is_bound(&port)
+            && let Err(error) = eval.recording.record_next(
                 &port,
                 eval.execution.snapshot().epoch,
                 batch.timestamps.clone(),
                 recording::BatchPayload::Float {
                     values: batch.values.clone(),
                 },
-            ) {
-                log::error!("numeric recording stopped accepting data: {error}");
-            }
+            )
+        {
+            log::error!("numeric recording stopped accepting data: {error}");
         }
         if eval.bus.is_active(&batch.key) {
             eval.bus.publish_samples(
@@ -100,17 +100,17 @@ pub(super) fn publish_recorded_batches(
     }
     for (key, timestamp, value) in static_numeric {
         let port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
-        if eval.recording.is_bound(&port) {
-            if let Err(error) = eval.recording.record_next(
+        if eval.recording.is_bound(&port)
+            && let Err(error) = eval.recording.record_next(
                 &port,
                 eval.execution.snapshot().epoch,
                 vec![timestamp],
                 recording::BatchPayload::Float {
                     values: vec![value],
                 },
-            ) {
-                log::error!("static numeric recording stopped accepting data: {error}");
-            }
+            )
+        {
+            log::error!("static numeric recording stopped accepting data: {error}");
         }
         if eval.bus.is_active(&key) {
             eval.bus

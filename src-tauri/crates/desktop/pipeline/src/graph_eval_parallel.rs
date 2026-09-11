@@ -301,10 +301,10 @@ pub(crate) fn process_source_batch_parallel(
                                 run_bucket_chunk(&plan, &mut ws, ctx_ref, (cs, ce));
                             }));
                             if let Err(payload) = done {
-                                if let Some(mut g) = panic_slot.try_lock() {
-                                    if g.is_none() {
-                                        *g = Some(payload);
-                                    }
+                                if let Some(mut g) = panic_slot.try_lock()
+                                    && g.is_none()
+                                {
+                                    *g = Some(payload);
                                 }
                                 broken.store(true, Ordering::Relaxed);
                             }

@@ -1,13 +1,13 @@
 use std::path::{Path, PathBuf};
 
 use duckdb::types::ValueRef;
-use duckdb::{Connection, params};
+use duckdb::{AccessMode, Config, Connection, params};
 use serde::{Deserialize, Serialize};
 
 use crate::codec;
 use crate::{
-    BatchPayload, DisplayBinding, Domain, RecordBatch, RecordingError, SessionInfo, SessionState,
-    StoredBatch,
+    BatchPayload, DisplayBinding, Domain, HistoryQuery, RecordBatch, RecordingError, SessionInfo,
+    SessionState, StoredBatch,
 };
 
 #[derive(Debug, Clone)]
@@ -59,6 +59,15 @@ impl RecordingStore {
         Ok(connection)
     }
 
+    pub(crate) fn connect_read_only(&self) -> Result<Connection, RecordingError> {
+        let config = Config::default()
+            .access_mode(AccessMode::ReadOnly)?
+            .enable_external_access(false)?;
+        let connection = Connection::open_with_flags(&self.path, config)?;
+        connection.execute_batch("SET threads=4;")?;
+        Ok(connection)
+    }
+
     pub(crate) fn create_session(
         &self,
         bindings: &[DisplayBinding],
@@ -90,7 +99,7 @@ impl RecordingStore {
     }
 
     pub fn list_sessions(&self) -> Result<Vec<SessionInfo>, RecordingError> {
-        let connection = self.connect()?;
+        let connection = self.connect_read_only()?;
         let mut statement = connection.prepare(
             "SELECT id, started_at_us, ended_at_us, state FROM recording_sessions \
              ORDER BY started_at_us DESC",
@@ -152,59 +161,20 @@ impl RecordingStore {
         limit: usize,
         include_payload: bool,
     ) -> Result<HistoryPage, RecordingError> {
-        let limit = limit.clamp(1, 10_000);
-        let connection = self.connect()?;
-        let mut statement = connection.prepare(
-            "SELECT row_id, session_id, binding_id, domain, epoch, sequence_start, sequence_end, \
-                    first_timestamp_us, last_timestamp_us, item_count, effective_bytes, checksum, payload \
-             FROM recording_batches \
-             WHERE session_id=? AND row_id>? AND (? IS NULL OR binding_id=?) \
-             ORDER BY row_id LIMIT ?",
-        )?;
-        let rows = statement.query_map(
-            params![
-                session_id,
-                after_row_id,
-                binding_id,
-                binding_id,
-                limit as u64
-            ],
-            |row| {
-                let domain_name: String = row.get(3)?;
-                let domain = parse_domain(&domain_name);
-                let bytes: Vec<u8> = row.get(12)?;
-                let payload = if include_payload {
-                    Some(codec::decode(domain, &bytes).map_err(to_duckdb_error)?)
-                } else {
-                    None
-                };
-                Ok(StoredBatch {
-                    row_id: row.get(0)?,
-                    session_id: row.get(1)?,
-                    binding_id: row.get(2)?,
-                    domain,
-                    epoch: row.get(4)?,
-                    sequence_start: row.get(5)?,
-                    sequence_end: row.get(6)?,
-                    first_timestamp_us: row.get(7)?,
-                    last_timestamp_us: row.get(8)?,
-                    item_count: row.get(9)?,
-                    effective_bytes: row.get(10)?,
-                    checksum: row.get(11)?,
-                    payload,
-                })
-            },
-        )?;
-        let rows = rows.collect::<Result<Vec<_>, _>>()?;
-        let next_row_id = (rows.len() == limit)
-            .then(|| rows.last().map(|row| row.row_id))
-            .flatten();
-        Ok(HistoryPage { rows, next_row_id })
+        self.history_page_query(&HistoryQuery {
+            session_id: session_id.to_string(),
+            binding_id: binding_id.map(ToString::to_string),
+            after_row_id,
+            from_us: None,
+            to_us: None,
+            limit,
+            include_payload,
+        })
     }
 
     /// Run one read-only SELECT and return rows as JSON objects.
     pub fn query_sql(&self, sql: &str, max_rows: usize) -> Result<SqlResult, RecordingError> {
-        let connection = self.connect()?;
+        let connection = self.connect_read_only()?;
         Self::query_sql_on(&connection, sql, max_rows)
     }
 
@@ -397,7 +367,7 @@ fn validate_batch(batch: &RecordBatch) -> Result<(), RecordingError> {
     Ok(())
 }
 
-fn parse_domain(value: &str) -> Domain {
+pub fn parse_domain(value: &str) -> Domain {
     match value {
         "bytes" => Domain::Bytes,
         "string" => Domain::String,
@@ -406,7 +376,7 @@ fn parse_domain(value: &str) -> Domain {
     }
 }
 
-fn parse_state(value: &str) -> SessionState {
+pub fn parse_state(value: &str) -> SessionState {
     match value {
         "running" => SessionState::Running,
         "paused" => SessionState::Paused,
@@ -423,7 +393,7 @@ fn now_us() -> u64 {
         })
 }
 
-fn to_duckdb_error(error: impl std::fmt::Display) -> duckdb::Error {
+pub fn to_duckdb_error(error: impl std::fmt::Display) -> duckdb::Error {
     duckdb::Error::InvalidParameterName(error.to_string())
 }
 

@@ -134,8 +134,8 @@ impl ReadbackStaging {
             .map_err(|e| GpuError::Map(format!("get_mapped_range: {e}")))
             .expect("read_f32 要求 staging 处于已映射状态");
         let need = out.len() * 4;
-        for (i, chunk) in bytes[..need].chunks_exact(4).enumerate() {
-            out[i] = f32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+        for (i, chunk) in bytes[..need].as_chunks::<4>().0.iter().enumerate() {
+            out[i] = f32::from_ne_bytes(*chunk);
         }
     }
 
@@ -151,8 +151,8 @@ impl ReadbackStaging {
             .get_mapped_range()
             .expect("read_u32 要求 staging 处于已映射状态");
         let need = out.len() * 4;
-        for (i, chunk) in bytes[..need].chunks_exact(4).enumerate() {
-            out[i] = u32::from_ne_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]);
+        for (i, chunk) in bytes[..need].as_chunks::<4>().0.iter().enumerate() {
+            out[i] = u32::from_ne_bytes(*chunk);
         }
     }
 

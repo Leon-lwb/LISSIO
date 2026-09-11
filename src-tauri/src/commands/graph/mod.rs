@@ -3,6 +3,7 @@
 //! 层级: L4 cmd。只做参数反序列化、`State` 借用与命令注册; 图提交/编译/
 //! 拓扑 op 核心在 [`graph_ops`] (L3 应用核心), MCP 工具与之共用同一实现。
 
+#[allow(clippy::module_inception)] // 领域目录 mod.rs + 同名核心文件为既定布局
 mod graph;
 mod hir_query;
 mod logic;

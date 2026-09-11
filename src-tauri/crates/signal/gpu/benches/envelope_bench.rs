@@ -21,7 +21,10 @@ fn waveform(n: usize) -> Vec<f32> {
             if i % 997 == 0 {
                 f32::NAN
             } else {
-                ((i % 10_000) as f32 * 0.001 * std::f32::consts::TAU).sin() + noise * 0.1
+                noise.mul_add(
+                    0.1,
+                    ((i % 10_000) as f32 * 0.001 * std::f32::consts::TAU).sin(),
+                )
             }
         })
         .collect()

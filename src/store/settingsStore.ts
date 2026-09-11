@@ -167,10 +167,12 @@ function applyPipelineConfig(settings: AppSettings) {
 const LEGACY_DEFAULT_UI_FONTS = [
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   "'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  "'JetBrains Mono', 'Maple Mono CN', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
 ];
 const LEGACY_DEFAULT_MONO_FONTS = [
   "'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
   "'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
+  "'JetBrains Mono', 'Maple Mono CN', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
 ];
 
 /// 防御性 token 迁移映射: 历史版本曾用过的旧 token 名 -> 当前名。

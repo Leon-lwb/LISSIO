@@ -67,13 +67,11 @@ fn normalize(ports: Vec<PortInfo>, windows: bool) -> Vec<PortInfo> {
         port.product = clean(port.product);
         port.manufacturer = clean(port.manufacturer);
         port.serial_number = clean(port.serial_number);
-        if windows {
-            if let Some(description) = &port.description {
-                let suffix = format!(" ({})", port.name);
-                if description.to_ascii_uppercase().ends_with(&suffix) {
-                    port.description =
-                        clean(Some(description[..description.len() - suffix.len()].into()));
-                }
+        if windows && let Some(description) = &port.description {
+            let suffix = format!(" ({})", port.name);
+            if description.to_ascii_uppercase().ends_with(&suffix) {
+                port.description =
+                    clean(Some(description[..description.len() - suffix.len()].into()));
             }
         }
         port.description = port.description.or_else(|| port.product.clone());

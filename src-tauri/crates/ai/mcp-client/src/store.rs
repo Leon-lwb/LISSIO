@@ -93,6 +93,6 @@ mod tests {
     fn missing_file_is_empty() {
         let dir = std::env::temp_dir().join(format!("vofa-mcp-missing-{}", std::process::id()));
         let loaded = load_servers(&dir).expect("缺失文件应视为空");
-        assert!(loaded.is_empty());
+        assert_eq!(loaded, []);
     }
 }

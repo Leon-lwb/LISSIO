@@ -26,7 +26,7 @@ pub fn sync_spectrum_analyzers(state: &GraphEvalState) {
             f32,
         ),
     > = HashMap::new();
-    for (_, graph) in graphs.iter() {
+    for graph in graphs.values() {
         for sink_id in graph.spectrum_sink_ids() {
             if let Some(cfg) = graph.spectrum_sink_config(sink_id) {
                 current_configs.insert(sink_id.clone(), cfg);

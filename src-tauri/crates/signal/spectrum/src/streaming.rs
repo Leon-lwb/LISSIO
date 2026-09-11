@@ -268,10 +268,11 @@ impl StreamingIfft {
         let hop = self.config.hop_size;
         for i in 0..hop {
             let index = frame.start_sample + i64::try_from(i).unwrap_or(0);
-            if let Ok(index) = u64::try_from(index) {
-                if index < frame.valid_samples && self.weight[i] > 1e-10 {
-                    emit(index, self.sum[i] / self.weight[i]);
-                }
+            if let Ok(index) = u64::try_from(index)
+                && index < frame.valid_samples
+                && self.weight[i] > 1e-10
+            {
+                emit(index, self.sum[i] / self.weight[i]);
             }
         }
         self.sum.rotate_left(hop);

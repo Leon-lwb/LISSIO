@@ -14,6 +14,8 @@ const FILES: [&str; 4] = [
 ///
 /// The old directory is never modified. Each file is independent so a later
 /// invocation can recover from a partial copy.
+// clippy 误报: 私有根模块内的 pub(crate) 对 crate:: 路径访问是必需的 (private 会 E0603)
+#[allow(clippy::redundant_pub_crate)]
 pub(crate) fn migrate_legacy_config(target: &Path) -> io::Result<Vec<String>> {
     fs::create_dir_all(target)?;
     let Some(parent) = target.parent() else {

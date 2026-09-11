@@ -36,7 +36,7 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
     let mut combined: graph::ValuesMap = HashMap::default();
     // 字符串输出: 各图求值结果累积于此, 求值后全量覆盖写进 graph_string_outputs
     let mut combined_str = graph::StringValuesMap::default();
-    for (_, graph) in graphs.iter() {
+    for graph in graphs.values() {
         let out = graph.evaluate(
             source_frames,
             &source_texts,
@@ -78,17 +78,17 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
         for (port, value) in ports {
             let key = TopicKey::new(node_id, port);
             let identity = recording::PortIdentity::new(node_id, port);
-            if eval_state.recording.is_bound(&identity) {
-                if let Err(error) = eval_state.recording.record_next(
+            if eval_state.recording.is_bound(&identity)
+                && let Err(error) = eval_state.recording.record_next(
                     &identity,
                     eval_state.execution.snapshot().epoch,
                     vec![event_timestamp],
                     recording::BatchPayload::Float {
                         values: vec![f64::from(*value)],
                     },
-                ) {
-                    log::error!("event numeric recording stopped accepting data: {error}");
-                }
+                )
+            {
+                log::error!("event numeric recording stopped accepting data: {error}");
             }
             if eval_state.bus.is_active(&key) {
                 eval_state.bus.publish_samples(
@@ -117,17 +117,17 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
         }
         for (port, value) in ports {
             let identity = recording::PortIdentity::new(node_id, port);
-            if eval_state.recording.is_bound(&identity) {
-                if let Err(error) = eval_state.recording.record_next(
+            if eval_state.recording.is_bound(&identity)
+                && let Err(error) = eval_state.recording.record_next(
                     &identity,
                     eval_state.execution.snapshot().epoch,
                     vec![event_timestamp],
                     recording::BatchPayload::String {
                         values: vec![value.clone()],
                     },
-                ) {
-                    log::error!("event string recording stopped accepting data: {error}");
-                }
+                )
+            {
+                log::error!("event string recording stopped accepting data: {error}");
             }
         }
     }
@@ -137,7 +137,7 @@ pub fn evaluate_snapshot_now(eval_state: &GraphEvalState, source_frames: &Source
     // analyzer 的创建/删除由 spectrum_ticker 在每 tick 开头与 graphs 同步
     let mut analyzers = eval_state.spectrum_analyzers.lock();
     if !analyzers.is_empty() {
-        for (_, graph) in graphs.iter() {
+        for graph in graphs.values() {
             let spectrum_inputs = graph.collect_spectrum_inputs(&combined);
             for (sink_id, value) in spectrum_inputs {
                 if let Some(analyzer) = analyzers.get_mut(&sink_id) {

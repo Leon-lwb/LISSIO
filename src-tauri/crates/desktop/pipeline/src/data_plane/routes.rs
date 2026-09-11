@@ -123,8 +123,8 @@ impl DataPlaneState {
                 });
                 let Some(key) = key else { continue };
                 match local.iter_mut().find(|(k, ..)| *k == key) {
-                    Some((_, _, members)) => members.push(target.clone()),
-                    None => local.push((key, target.clone(), vec![target.clone()])),
+                    Some((_, _, members)) => members.push(target),
+                    None => local.push((key, target.clone(), vec![target])),
                 }
             }
             for (_, repr, members) in &local {

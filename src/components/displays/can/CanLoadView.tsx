@@ -283,7 +283,7 @@ function LoadGauge({ loadRatio, fps, frameCount }: { loadRatio: number; fps: num
           fill={color}
           fontSize="18"
           fontWeight="bold"
-          fontFamily="monospace"
+          style={{ fontFamily: 'var(--font-mono)' }}
         >
           {formatPercent(loadRatio)}
         </text>

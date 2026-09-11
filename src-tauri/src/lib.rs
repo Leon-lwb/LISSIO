@@ -29,7 +29,10 @@ use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
 fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
-    use data_model::TransportConfig;
+    use data_model::{
+        CandleConfig, SerialConfig, SlcanConfig, TcpClientConfig, TcpServerConfig, TransportConfig,
+        UdpConfig,
+    };
     use std::sync::Arc;
     use transport::device_factory::ByteDeviceFactory;
     let registry = Arc::new(acquisition::SourceRegistry::default());
@@ -41,37 +44,37 @@ fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
         (
             "serial",
             "Serial",
-            TransportConfig::Serial(Default::default()),
+            TransportConfig::Serial(SerialConfig::default()),
             serial,
         ),
         (
             "tcp-client",
             "TCP Client",
-            TransportConfig::TcpClient(Default::default()),
+            TransportConfig::TcpClient(TcpClientConfig::default()),
             network.clone(),
         ),
         (
             "tcp-server",
             "TCP Server",
-            TransportConfig::TcpServer(Default::default()),
+            TransportConfig::TcpServer(TcpServerConfig::default()),
             network.clone(),
         ),
         (
             "udp",
             "UDP",
-            TransportConfig::Udp(Default::default()),
+            TransportConfig::Udp(UdpConfig::default()),
             network,
         ),
         (
             "slcan",
             "Slcan",
-            TransportConfig::Slcan(Default::default()),
+            TransportConfig::Slcan(SlcanConfig::default()),
             can.clone(),
         ),
         (
             "candle-light",
             "CandleLight",
-            TransportConfig::CandleLight(Default::default()),
+            TransportConfig::CandleLight(CandleConfig::default()),
             can,
         ),
     ] {
@@ -85,6 +88,8 @@ fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+// tauri::generate_context! 展开生成的闭包栈占用无法由本仓库控制
+#[allow(clippy::large_stack_frames)]
 pub fn run() {
     let app_state = AppState::with_acquisition(acquisition_runtime());
     let acquisition = app_state.transport.clone();
@@ -120,7 +125,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(app_state)
         .manage(acquisition)
-        .manage(PendingUpdate(Default::default()))
+        .manage(PendingUpdate(std::sync::Mutex::default()))
         .setup(|app| {
             // 构建原生菜单栏。
             // - macOS: 菜单位于系统全局菜单栏, 与窗口透明无关, 正常挂载。
@@ -211,11 +216,16 @@ pub fn run() {
             get_data_health,
             get_recording_health,
             list_recording_sessions,
+            list_recording_session_summaries,
+            list_recording_bindings,
+            get_recording_database_info,
             query_recording_history,
             query_recording_sql,
             cancel_recording_query,
             flush_recording,
             delete_recording_session,
+            cleanup_recording_sessions,
+            export_recording_data,
             create_waveform_snapshot,
             query_waveform_snapshot,
             release_waveform_snapshot,
@@ -310,7 +320,7 @@ pub fn run() {
         .expect("error while building tauri application")
         .run(|app, event| {
             // 退出 flush: 把未落盘的工作区变更同步写盘 (逻辑在 app::runtime)
-            if let tauri::RunEvent::Exit = event {
+            if matches!(event, tauri::RunEvent::Exit) {
                 app::flush_workspace_on_exit(app);
             }
         });

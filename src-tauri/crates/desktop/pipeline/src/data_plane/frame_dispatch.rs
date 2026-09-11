@@ -231,15 +231,15 @@ pub(crate) fn publish_protocol_samples(
                     values.push(f64::from(*value));
                 }
             }
-            if !values.is_empty() {
-                if let Err(error) = eval.recording.record_next(
+            if !values.is_empty()
+                && let Err(error) = eval.recording.record_next(
                     &recording_port,
                     eval.execution.snapshot().epoch,
                     timestamps,
                     recording::BatchPayload::Float { values },
-                ) {
-                    log::error!("protocol sample recording stopped accepting data: {error}");
-                }
+                )
+            {
+                log::error!("protocol sample recording stopped accepting data: {error}");
             }
         }
         if !bus.is_active(&key) {
@@ -284,17 +284,17 @@ pub fn cache_source_text(plane: &DataPlaneState, source_id: &str, data: &[u8]) {
     let text = String::from_utf8_lossy(data).into_owned();
     let timestamp = data_model::now_us();
     let port = recording::PortIdentity::new(source_id, "str");
-    if plane.eval.recording.is_bound(&port) {
-        if let Err(error) = plane.eval.recording.record_next(
+    if plane.eval.recording.is_bound(&port)
+        && let Err(error) = plane.eval.recording.record_next(
             &port,
             plane.eval.execution.snapshot().epoch,
             vec![timestamp],
             recording::BatchPayload::String {
                 values: vec![text.clone()],
             },
-        ) {
-            log::error!("source text recording stopped accepting data: {error}");
-        }
+        )
+    {
+        log::error!("source text recording stopped accepting data: {error}");
     }
     plane
         .source_texts

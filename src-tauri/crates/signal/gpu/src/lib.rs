@@ -8,6 +8,9 @@
 //! 平台后端: macOS = Metal, Windows = DX12 + Vulkan, Linux = Vulkan
 //! ([`wgpu::Backends::PRIMARY`])。无适配器时调用方优雅回退 CPU 路径。
 
+// wgpu 类型树过深, auto-trait (Send/Sync) 求值超出默认 128 层递归上限
+#![recursion_limit = "256"]
+
 pub use device::{GpuContext, GpuDeviceInfo};
 pub use envelope::{Envelope, envelope_minmax, envelope_minmax_cpu};
 pub use error::{GpuError, GpuResult};

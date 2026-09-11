@@ -169,7 +169,7 @@ pub async fn chat_turn_stream(
     system: Option<String>,
     messages: &[ChatMessageDto],
     tools: &[ToolSpecDto],
-) -> Result<impl Stream<Item = Result<ProviderEvent>> + Send> {
+) -> Result<impl Stream<Item = Result<ProviderEvent>> + Send + use<>> {
     let client = build_client(cfg)?;
     let kind = adapter_kind_from_str(&cfg.adapter)?;
     let model = ModelIden::new(kind, cfg.model.clone());

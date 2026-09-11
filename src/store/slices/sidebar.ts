@@ -2,7 +2,7 @@ import type { Lang } from '../../i18n';
 import type { PaletteCategoryId } from '../../types';
 import type { AppSlice } from './types';
 
-export type SidebarView = 'category' | 'quickstart' | 'panels';
+export type SidebarView = 'category' | 'quickstart' | 'panels' | 'recording';
 
 export interface SidebarSlice {
   lang: Lang;

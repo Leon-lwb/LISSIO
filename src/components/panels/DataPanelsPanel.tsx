@@ -14,6 +14,7 @@ import {
   Activity,
   Layers,
   Cpu,
+  Database,
   Waves,
   PieChart as PieChartIcon,
   Image as ImageIcon,
@@ -55,6 +56,7 @@ const PANEL_ICONS: Record<DataPanelEntry['type'], LucideIcon> = {
   'table-view': BarChart3Icon,
   'operation-history': HistoryIcon,
   'node-properties': SettingsIcon,
+  'recording-database': Database,
 };
 
 export function DataPanelsPanel() {

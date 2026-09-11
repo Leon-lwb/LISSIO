@@ -80,8 +80,10 @@ fn decode_floats(data: &[u8]) -> Result<Vec<f64>, RecordingError> {
         return Err(RecordingError::Corrupt("unaligned float payload".into()));
     }
     Ok(data
-        .chunks_exact(8)
-        .map(|bytes| f64::from_le_bytes(bytes.try_into().expect("chunk is eight bytes")))
+        .as_chunks::<8>()
+        .0
+        .iter()
+        .map(|bytes| f64::from_le_bytes(*bytes))
         .collect())
 }
 

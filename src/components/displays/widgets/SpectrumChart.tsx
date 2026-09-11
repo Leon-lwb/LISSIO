@@ -218,7 +218,8 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
       // 吸附点 频率 / 幅值 读数
       const freq = freqs[i] ?? (i / (n - 1)) * maxFreq;
       const label = `${formatFreq(freq)}  ${formatValue(snapValue, output)}`;
-      ctx.font = '10px "JetBrains Mono", monospace';
+      // canvas 的 ctx.font 不解析 CSS 变量, 需取出 --font-mono 的实际字体栈
+      ctx.font = `10px ${getThemeColor('--font-mono', 'monospace')}`;
       const textW = ctx.measureText(label).width;
       let lx = snapX + 10;
       let ly = snapY - 10;

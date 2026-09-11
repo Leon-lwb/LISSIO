@@ -553,8 +553,6 @@ dependencies = [
 name = "automotive_diag"
 version = "0.6.1"
 dependencies = [
- "acquisition",
- "data-model",
  "libautomotive",
 ]
 
@@ -889,7 +887,6 @@ dependencies = [
  "serial",
  "thiserror 1.0.69",
  "tokio",
- "transport",
 ]
 
 [[package]]
@@ -1004,7 +1001,6 @@ dependencies = [
  "futures",
  "llm",
  "log",
- "mcp-client",
  "parking_lot",
  "serde",
  "serde_json",
@@ -2114,7 +2110,6 @@ name = "frame-decoder"
 version = "0.6.1"
 dependencies = [
  "criterion",
- "log",
  "schema_types",
  "serde",
 ]
@@ -4106,7 +4101,6 @@ dependencies = [
  "schema_types",
  "thiserror 1.0.69",
  "tokio",
- "transport",
 ]
 
 [[package]]
@@ -6033,7 +6027,6 @@ dependencies = [
  "serialport",
  "thiserror 1.0.69",
  "tokio",
- "transport",
  "windows-sys 0.52.0",
 ]
 
@@ -6225,7 +6218,6 @@ dependencies = [
 name = "spectrum"
 version = "0.6.1"
 dependencies = [
- "log",
  "realfft",
  "rustfft",
  "serde",
@@ -7580,7 +7572,6 @@ checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
 name = "update_flow"
 version = "0.6.1"
 dependencies = [
- "data-model",
  "error",
  "reqwest",
  "serde",

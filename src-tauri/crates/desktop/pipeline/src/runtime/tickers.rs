@@ -244,10 +244,9 @@ pub async fn send_scheduler_ticker(
                     st.task.mode,
                     st.task.interval_ms,
                     payload.as_deref(),
-                ) {
-                    if let Some(bytes) = payload {
-                        due.push((st.task.key(), st.task.widget_id.clone(), bytes));
-                    }
+                ) && let Some(bytes) = payload
+                {
+                    due.push((st.task.key(), st.task.widget_id.clone(), bytes));
                 }
             }
         }

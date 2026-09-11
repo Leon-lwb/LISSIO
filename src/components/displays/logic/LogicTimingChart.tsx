@@ -220,7 +220,7 @@ export function LogicTimingChart() {
                 y={ch * rowHeight + rowHeight / 2 + 4}
                 fill={channelColors[ch % channelColors.length]}
                 fontSize={11}
-                fontFamily="monospace"
+                style={{ fontFamily: 'var(--font-mono)' }}
                 fontWeight={600}
               >
                 CH{ch}

@@ -220,7 +220,7 @@ pub(super) fn build_plans(
                 plans[b].graph_mut(gi).ports.push(route);
             }
         }
-        for (slot, buf_idx) in derived_edges[gi].drain(..) {
+        for (slot, buf_idx) in std::mem::take(&mut derived_edges[gi]) {
             let b = bucket_of(&unit_bucket[gi], slot_unit, slot);
             plans[b].ensure_graph(gi);
             plans[b].graph_mut(gi).derived.push((slot, buf_idx));
@@ -344,7 +344,7 @@ pub(super) fn split_states(
 }
 
 /// 正本槽位 → 桶 (槽位 → 单元 → 桶)
-pub(super) fn bucket_of(unit_bucket: &[u32], slot_unit: &[u32], slot: usize) -> usize {
+pub(super) const fn bucket_of(unit_bucket: &[u32], slot_unit: &[u32], slot: usize) -> usize {
     unit_bucket[slot_unit[slot] as usize] as usize
 }
 

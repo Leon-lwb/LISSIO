@@ -150,12 +150,12 @@ pub fn spawn(
             let msg_interval =
                 Duration::from_secs_f64(samples_per_msg as f64 / f64::from(sample_rate));
             let sample_dt = 1.0_f64 / f64::from(sample_rate);
-            if let Some(previous_dt) = previous_sample_dt.replace(sample_dt) {
-                if (previous_dt - sample_dt).abs() > f64::EPSILON {
-                    // sample_time_sec 指向下一个样本；热更新后把该间隔替换为新间隔，
-                    // 但不改变已经生成的相位历史。
-                    sample_time_sec += sample_dt - previous_dt;
-                }
+            if let Some(previous_dt) = previous_sample_dt.replace(sample_dt)
+                && (previous_dt - sample_dt).abs() > f64::EPSILON
+            {
+                // sample_time_sec 指向下一个样本；热更新后把该间隔替换为新间隔，
+                // 但不改变已经生成的相位历史。
+                sample_time_sec += sample_dt - previous_dt;
             }
             tokio::select! {
                 () = tokio::time::sleep_until(next_deadline) => {
@@ -209,13 +209,12 @@ fn generate_link_bytes(
     link: &TestDataLink,
     sample_idx: u64,
 ) -> Vec<u8> {
-    if let Some(schema) = &link.schema {
-        if schema.preset == SchemaPreset::Custom {
-            if let Some(encode) = &schema.encode {
-                let frame = generate_frame(channels, signal, t);
-                return encode_by_blocks(encode, &schema.port_names(), &frame);
-            }
-        }
+    if let Some(schema) = &link.schema
+        && schema.preset == SchemaPreset::Custom
+        && let Some(encode) = &schema.encode
+    {
+        let frame = generate_frame(channels, signal, t);
+        return encode_by_blocks(encode, &schema.port_names(), &frame);
     }
     generate_bytes(channels, signal, t, &link.protocol, sample_idx)
 }
@@ -383,7 +382,7 @@ fn generate_frame(channels: usize, signal: TestSignal, t: f64) -> Vec<f32> {
                     let u2 = (seed2.sin() * 12_345.679).fract();
                     let n = (-2.0 * u1.ln()).sqrt() * (2.0 * std::f64::consts::PI * u2).cos();
                     // 标准正态 → 缩放到 0..255
-                    (n * 40.0 + 128.0).clamp(0.0, 255.0) as f32
+                    n.mul_add(40.0, 128.0).clamp(0.0, 255.0) as f32
                 }
                 TestSignal::MultiTone => {
                     // 多频叠加: 基频 + 3次谐波 + 5次谐波

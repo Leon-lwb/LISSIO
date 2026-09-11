@@ -1137,6 +1137,45 @@ dataTabTrigger: Trigger
 menuPanelOpenOperationHistory: Open Operation History
 menuPanelOpenNodeProperties: Open Properties
 operationHistoryTitle: Operation History
+recordingDatabaseTitle: Recording Database
+recordingDatabaseRefresh: Refresh
+recordingDatabaseIncludePayload: Decode payload
+recordingDatabaseExport: Export
+recordingDatabaseExporting: Exporting
+recordingDatabaseDismiss: Dismiss
+recordingDatabaseSessions: Sessions
+recordingDatabaseBatches: batches
+recordingDatabaseChannels: channels
+recordingDatabaseNoSessions: No recording sessions
+recordingDatabaseBindings: Display bindings
+recordingDatabaseAllBindings: All bindings
+recordingDatabaseSamples: samples
+recordingDatabaseColumnTime: Time
+recordingDatabaseColumnBinding: Binding
+recordingDatabaseColumnDomain: Domain
+recordingDatabaseColumnSequence: Sequence
+recordingDatabaseColumnItems: Items
+recordingDatabaseColumnPayload: Payload
+recordingDatabaseNoData: No rows in this page
+recordingDatabaseSelectSession: Select a recording session
+recordingDatabaseRows: rows
+recordingDatabaseLoading: Loading
+recordingDatabaseLoadMore: Load more
+recordingDatabaseCleanupStopped: Clean stopped
+recordingDatabaseCleanupStoppedConfirm: Delete all stopped and failed recording sessions? This cannot be undone.
+recordingDatabaseKeepLatest: Keep latest count
+recordingDatabaseCleanupKeep: Keep latest N
+recordingDatabaseCleanupKeepConfirm: Keep only the latest {count} finished sessions? Older sessions will be deleted.
+recordingDatabaseDelete: Delete
+recordingDatabaseDeleteConfirm: Delete the selected recording session? This cannot be undone.
+recordingDatabaseStateRunning: running
+recordingDatabaseStatePaused: paused
+recordingDatabaseStateStopped: stopped
+recordingDatabaseStateFailed: failed
+recordingDatabaseSessionCount: Sessions
+recordingDatabaseBatchCount: Batches
+recordingDatabaseItemCount: Items
+recordingDatabaseFileSize: File
 opHistoryInitial: Initial state
 opHistoryEmpty: No operations recorded yet.
 opHistoryClear: Clear history

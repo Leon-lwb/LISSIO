@@ -77,7 +77,7 @@ fn search_pattern_matches_single_byte_optimization() {
     // (parse 默认 hex 分支, 单字符如 "41" 解析为 [0x41])
     let single = SearchPattern::parse("41").unwrap(); // 'A' = 0x41
     assert_eq!(single.as_bytes(), &[0x41]);
-    assert!(single.len() == 1);
+    assert_eq!(single.len(), 1);
     assert!(single.matches(b"BANANA"));
     let multi = SearchPattern::parse("414e41").unwrap(); // 'ANA' hex
     assert_eq!(multi.as_bytes(), &[0x41, 0x4E, 0x41]);
@@ -110,7 +110,7 @@ fn chunk_matches_direction_filter_rejects() {
         b"prev_tail_should_be_ignored",
     );
     assert!(!ok);
-    assert!(tail.is_empty());
+    assert_eq!(tail, [] as [u8; 0]);
 }
 
 #[test]

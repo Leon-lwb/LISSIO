@@ -57,10 +57,10 @@ pub fn set_window_acrylic<R: Runtime>(window: WebviewWindow<R>, enabled: bool) {
 #[tauri::command]
 pub fn show_main_window(app: tauri::AppHandle) {
     use tauri::Manager;
-    if let Some(main) = app.get_webview_window("main") {
-        if let Err(e) = main.show().and_then(|()| main.set_focus()) {
-            log::warn!("show main window failed: {e}");
-        }
+    if let Some(main) = app.get_webview_window("main")
+        && let Err(e) = main.show().and_then(|()| main.set_focus())
+    {
+        log::warn!("show main window failed: {e}");
     }
 }
 
@@ -71,14 +71,14 @@ pub fn show_main_window(app: tauri::AppHandle) {
 #[tauri::command]
 pub fn close_splashscreen(app: tauri::AppHandle) {
     use tauri::Manager;
-    if let Some(splash) = app.get_webview_window("splashscreen") {
-        if let Err(e) = splash.close() {
-            log::warn!("close splashscreen failed: {e}");
-        }
+    if let Some(splash) = app.get_webview_window("splashscreen")
+        && let Err(e) = splash.close()
+    {
+        log::warn!("close splashscreen failed: {e}");
     }
-    if let Some(main) = app.get_webview_window("main") {
-        if let Err(e) = main.show().and_then(|()| main.set_focus()) {
-            log::warn!("show main window failed: {e}");
-        }
+    if let Some(main) = app.get_webview_window("main")
+        && let Err(e) = main.show().and_then(|()| main.set_focus())
+    {
+        log::warn!("show main window failed: {e}");
     }
 }

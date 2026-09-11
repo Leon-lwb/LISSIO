@@ -197,6 +197,12 @@ function DockNodeView({ node }: { node: DockNode }) {
         const panel = (
           <Panel
             key={child.id}
+            // order 必须显式给出且与 DOM 顺序一致:
+            // react-resizable-panels 默认按「注册顺序」排列内部面板数组, 卡片被关闭
+            // / 重新打开时某个子 Panel 会重新挂载并被追加到数组末尾, 而它的 DOM 位置
+            // 不变, 于是内部数组顺序与 DOM 顺序错位 —— 句柄的 pivot 索引随之指到相邻
+            // 的另一个面板, 拖动分隔条就朝相反方向移动。固定 order 后库始终按声明排序。
+            order={i + 1}
             defaultSize={node.sizes[i] ?? 100 / node.children.length}
             minSize={10}
             className="min-w-0 min-h-0"

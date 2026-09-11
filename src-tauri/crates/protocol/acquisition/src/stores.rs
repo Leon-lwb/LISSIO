@@ -19,10 +19,10 @@ impl PointStore {
 
     pub fn apply(&mut self, envelope: &PointEnvelope) {
         for sample in &envelope.payload.samples {
-            if let Some((epoch, _)) = self.latest.get(&sample.key) {
-                if *epoch > envelope.connection_epoch {
-                    continue;
-                }
+            if let Some((epoch, _)) = self.latest.get(&sample.key)
+                && *epoch > envelope.connection_epoch
+            {
+                continue;
             }
             self.order.retain(|key| key != &sample.key);
             self.order.push_back(sample.key.clone());

@@ -52,10 +52,10 @@ pub fn detect_period(values: &[f32], dt_sec: f64) -> Option<PeriodEstimate> {
     // ACF 内部去均值 — 直传原始序列即可
     let max_lag = values.len() / 2;
     let acf = normalized_autocorrelation(values, max_lag);
-    if let Some(acf) = acf.as_deref() {
-        if let Some(est) = peak_from_autocorrelation(acf, dt_sec) {
-            return Some(est);
-        }
+    if let Some(acf) = acf.as_deref()
+        && let Some(est) = peak_from_autocorrelation(acf, dt_sec)
+    {
+        return Some(est);
     }
     detect_by_crossing(values, dt_sec, stats.vpp, stats.vavg, acf.as_deref())
 }

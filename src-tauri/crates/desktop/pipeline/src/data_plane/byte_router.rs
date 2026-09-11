@@ -101,18 +101,19 @@ pub(super) async fn route_inner(
         _ => LOOPBACK_OUT_HANDLE.to_string(),
     };
     let port = recording::PortIdentity::new(source_id, source_handle);
-    if !data.is_empty() && plane.eval.recording.is_bound(&port) {
-        if let Err(error) = plane.eval.recording.record_next(
+    if !data.is_empty()
+        && plane.eval.recording.is_bound(&port)
+        && let Err(error) = plane.eval.recording.record_next(
             &port,
             plane.eval.execution.snapshot().epoch,
             vec![data_model::now_us()],
             recording::BatchPayload::Bytes {
                 data: data.to_vec(),
             },
-        ) {
-            log::error!("byte recording stopped accepting data: {error}");
-            return;
-        }
+        )
+    {
+        log::error!("byte recording stopped accepting data: {error}");
+        return;
     }
     // 路由表快照 (锁即刻释放, 下游分发不持 byte_plan 锁)
     let routes: Vec<_> = plane.byte_plan.lock().routes_for(source_id).to_vec();

@@ -214,3 +214,94 @@ pub struct StoredBatch {
     pub checksum: u64,
     pub payload: Option<BatchPayload>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BindingInfo {
+    pub id: String,
+    pub session_id: String,
+    pub component_id: String,
+    pub source_node_id: String,
+    pub source_handle: String,
+    pub domain: Domain,
+    pub capability: BindingCapability,
+    pub bound_at_us: u64,
+    pub unbound_at_us: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionSummary {
+    pub session: SessionInfo,
+    pub binding_count: u64,
+    pub batch_count: u64,
+    pub item_count: u64,
+    pub effective_bytes: u64,
+    pub first_timestamp_us: Option<u64>,
+    pub last_timestamp_us: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingDatabaseInfo {
+    pub path: String,
+    pub file_size_bytes: u64,
+    pub session_count: u64,
+    pub batch_count: u64,
+    pub item_count: u64,
+    pub effective_bytes: u64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RecordingExportFormat {
+    Csv,
+    Json,
+    Parquet,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingExportRequest {
+    pub session_id: String,
+    pub binding_id: Option<String>,
+    pub from_us: Option<u64>,
+    pub to_us: Option<u64>,
+    pub format: RecordingExportFormat,
+    pub path: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingExportResult {
+    pub rows: u64,
+    pub bytes: u64,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingCleanupPolicy {
+    #[serde(default)]
+    pub session_ids: Vec<String>,
+    #[serde(default)]
+    pub delete_stopped: bool,
+    #[serde(default)]
+    pub delete_failed: bool,
+    #[serde(default)]
+    pub older_than_us: Option<u64>,
+    #[serde(default)]
+    pub keep_latest: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecordingCleanupResult {
+    pub deleted_sessions: u64,
+    pub deleted_batches: u64,
+    pub deleted_items: u64,
+    pub deleted_bytes: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HistoryQuery {
+    pub session_id: String,
+    pub binding_id: Option<String>,
+    pub after_row_id: i64,
+    pub from_us: Option<u64>,
+    pub to_us: Option<u64>,
+    pub limit: usize,
+    pub include_payload: bool,
+}

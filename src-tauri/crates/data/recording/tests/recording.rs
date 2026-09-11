@@ -1,6 +1,7 @@
 use recording::{
-    BatchPayload, BindingCapability, DisplayBinding, Domain, PortIdentity, RecordBatch, Recorder,
-    RecordingLimits, RecordingStore, SessionState,
+    BatchPayload, BindingCapability, DisplayBinding, Domain, HistoryQuery, PortIdentity,
+    RecordBatch, Recorder, RecordingCleanupPolicy, RecordingExportFormat, RecordingExportRequest,
+    RecordingHub, RecordingLimits, RecordingStore, SessionState, export_recording_data,
 };
 
 fn binding(id: &str, domain: Domain) -> DisplayBinding {
@@ -113,12 +114,80 @@ fn persists_and_queries_all_domains_without_loss() {
         .unwrap();
     assert_eq!(result.rows.len(), 4);
     assert!(!result.truncated);
+    let summaries = store.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].session.id, session_id);
+    assert_eq!(summaries[0].binding_count, 4);
+    let bindings = store.list_bindings(&session_id).unwrap();
+    assert_eq!(bindings.len(), 4);
+    let info = store.database_info().unwrap();
+    assert_eq!(info.session_count, 1);
+    assert_eq!(info.batch_count, 4);
+    let filtered = store
+        .history_page_query(&HistoryQuery {
+            session_id: session_id.clone(),
+            binding_id: Some("float".to_string()),
+            after_row_id: 0,
+            from_us: None,
+            to_us: None,
+            limit: 10,
+            include_payload: true,
+        })
+        .unwrap();
+    assert_eq!(filtered.rows.len(), 1);
+    let csv_path = path.with_extension("csv");
+    let exported = export_recording_data(
+        &store,
+        &RecordingExportRequest {
+            session_id: session_id.clone(),
+            binding_id: None,
+            from_us: None,
+            to_us: None,
+            format: RecordingExportFormat::Csv,
+            path: csv_path.to_string_lossy().into_owned(),
+        },
+    )
+    .unwrap();
+    assert!(exported.rows > 0);
+    let csv_text = std::fs::read_to_string(&csv_path).unwrap();
+    assert!(csv_text.contains("float"));
+    let _ = std::fs::remove_file(csv_path);
+    let json_path = path.with_extension("json");
+    let json_export = export_recording_data(
+        &store,
+        &RecordingExportRequest {
+            session_id: session_id.clone(),
+            binding_id: Some("float".to_string()),
+            from_us: None,
+            to_us: None,
+            format: RecordingExportFormat::Json,
+            path: json_path.to_string_lossy().into_owned(),
+        },
+    )
+    .unwrap();
+    assert!(json_export.rows > 0);
+    let _ = std::fs::remove_file(json_path);
+    let parquet_path = path.with_extension("parquet");
+    let parquet_export = export_recording_data(
+        &store,
+        &RecordingExportRequest {
+            session_id: session_id.clone(),
+            binding_id: Some("spectrum".to_string()),
+            from_us: None,
+            to_us: None,
+            format: RecordingExportFormat::Parquet,
+            path: parquet_path.to_string_lossy().into_owned(),
+        },
+    )
+    .unwrap();
+    assert!(parquet_export.rows > 0);
+    let _ = std::fs::remove_file(parquet_path);
     recorder.shutdown().unwrap();
     let reopened = RecordingStore::open(&path).unwrap();
     let sessions = reopened.list_sessions().unwrap();
     assert_eq!(sessions[0].state, SessionState::Stopped);
     reopened.delete_session(&session_id).unwrap();
-    assert!(reopened.list_sessions().unwrap().is_empty());
+    assert_eq!(reopened.list_sessions().unwrap(), []);
     let _ = std::fs::remove_file(path);
 }
 
@@ -174,6 +243,37 @@ fn analytical_query_can_be_cancelled() {
     std::thread::sleep(std::time::Duration::from_millis(250));
     assert!(hub.cancel_query("cancel-test"));
     assert!(query.join().unwrap().is_err());
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn cleanup_prunes_only_terminal_sessions() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-cleanup-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let _first = hub
+        .start(&path, Vec::new(), RecordingLimits::default())
+        .unwrap();
+    hub.stop().unwrap();
+    let second = hub
+        .start(&path, Vec::new(), RecordingLimits::default())
+        .unwrap();
+    assert_eq!(hub.list_session_summaries().unwrap().len(), 2);
+    let deleted = hub
+        .cleanup_sessions(RecordingCleanupPolicy {
+            delete_stopped: true,
+            ..RecordingCleanupPolicy::default()
+        })
+        .unwrap();
+    assert_eq!(deleted.deleted_sessions, 1);
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].session.id, second.id);
+    assert!(hub.delete_session(&second.id).is_err());
     hub.stop().unwrap();
     let _ = std::fs::remove_file(path);
 }

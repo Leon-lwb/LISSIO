@@ -290,7 +290,7 @@ mod tests {
         assert_eq!(v["error"]["edge_id"], "e1");
         assert_eq!(v["error"]["src_domain"], "bytes");
         assert_eq!(v["edges"][0], "e1");
-        assert!(v["nodes"].as_array().unwrap().len() == 2);
+        assert_eq!(v["nodes"].as_array().unwrap().len(), 2);
     }
 
     #[test]

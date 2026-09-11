@@ -286,8 +286,7 @@ pub async fn send_can_frame(
             .cloned()
             .ok_or_else(|| format!("Protocol 节点不存在: {proto_id}"))?;
         let engine = st.lock().engine.clone();
-        let bytes = engine.lock().encode_can(&frame);
-        bytes
+        engine.lock().encode_can(&frame)
     };
     if data.is_empty() {
         return Err("该 Protocol 节点不是 CAN 协议 (encode_can 为空)".to_string());

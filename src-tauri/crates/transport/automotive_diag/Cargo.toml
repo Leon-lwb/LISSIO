@@ -8,8 +8,6 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-acquisition = { workspace = true }
-data_model = { workspace = true }
 libautomotive = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"

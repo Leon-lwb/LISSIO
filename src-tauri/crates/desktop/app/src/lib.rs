@@ -18,6 +18,9 @@
 //! 后台 ticker (发送调度/TextOut/字符串输出/频谱) 定义在 L2 [`runtime`] 门面
 //! crate, 此处 re-export 供二进制组合根与既有调用方使用。
 
+// 异步块持有 GpuContext (wgpu 类型树过深), Send 求值超出默认 128 层递归上限
+#![recursion_limit = "256"]
+
 pub mod display;
 
 mod app_state;

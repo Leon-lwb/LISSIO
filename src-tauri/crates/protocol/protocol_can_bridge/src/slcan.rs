@@ -120,10 +120,10 @@ impl ProtocolEngine for SlcanEngine {
             let b = self.line_buf[i];
             if b == b'\r' || b == b'\n' {
                 let line = &self.line_buf[line_start..i];
-                if !line.is_empty() {
-                    if let Some(frame) = Self::parse_line(line) {
-                        frames.push(frame);
-                    }
+                if !line.is_empty()
+                    && let Some(frame) = Self::parse_line(line)
+                {
+                    frames.push(frame);
                 }
                 line_start = i + 1;
             }
@@ -193,7 +193,7 @@ impl ProtocolEngine for SlcanEngine {
         let boundaries: Vec<usize> = data
             .iter()
             .enumerate()
-            .filter(|(_, &b)| b == b'\r' || b == b'\n')
+            .filter(|&(_, b)| matches!(*b, b'\r' | b'\n'))
             .map(|(i, _)| i + 1)
             .collect();
         Some(split_at_boundaries(&boundaries, workers))

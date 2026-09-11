@@ -315,7 +315,7 @@ mod tests {
     fn missing_file_is_empty() {
         let dir = temp_dir("missing");
         let loaded = load_sessions(&dir).expect("缺失文件应视为空");
-        assert!(loaded.is_empty());
+        assert_eq!(loaded, []);
     }
 
     #[test]
@@ -360,7 +360,7 @@ mod tests {
         assert_eq!(store.get(&s1.id).unwrap().items.len(), 1);
 
         store.clear_items(&s1.id).expect("清空");
-        assert!(store.get(&s1.id).unwrap().items.is_empty());
+        assert_eq!(store.get(&s1.id).unwrap().items, []);
 
         store.remove(&s2.id).expect("删除");
         assert!(store.get(&s2.id).is_none());

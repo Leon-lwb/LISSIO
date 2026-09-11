@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import {
   Cable,
+  Database,
   Layers,
   Settings,
   Info,
@@ -75,6 +76,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
   const items: { view: SidebarView; icon: React.ReactNode; key: Parameters<typeof t>[1] }[] = [
     { view: 'quickstart', icon: <Rocket size={22} />, key: 'quickStart' },
     { view: 'panels', icon: <Layers size={22} />, key: 'menuPanel' },
+    { view: 'recording', icon: <Database size={22} />, key: 'recordingDatabaseTitle' },
   ];
 
   return (

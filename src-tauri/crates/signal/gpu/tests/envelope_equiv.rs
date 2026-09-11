@@ -21,7 +21,10 @@ fn waveform(n: usize) -> Vec<f32> {
                 return if i % 2 == 0 { 0.0 } else { -0.0 };
             }
             let noise = ((seed >> 8) % 20_000) as f32 / 100.0 - 100.0;
-            (f32::from((i % 10_000) as u16) * 0.001 * std::f32::consts::TAU).sin() + noise * 0.01
+            noise.mul_add(
+                0.01,
+                (f32::from((i % 10_000) as u16) * 0.001 * std::f32::consts::TAU).sin(),
+            )
         })
         .collect()
 }

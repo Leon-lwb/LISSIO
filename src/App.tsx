@@ -404,11 +404,11 @@ function App() {
       {bottomDocked ? (
         // AI 面板停靠底部 — 工作台与对话面板纵向分栏
         <PanelGroup direction="vertical" autoSaveId="sp-ai-bottom" className="flex-1 min-h-0">
-          <Panel minSize={30} className="min-h-0">
+          <Panel order={1} minSize={30} className="min-h-0">
             {workbench}
           </Panel>
           <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
-          <Panel defaultSize={34} minSize={15} maxSize={70} className="min-h-0">
+          <Panel order={2} defaultSize={34} minSize={15} maxSize={70} className="min-h-0">
             <div className={`module-card dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
               <AiChatPanel />
             </div>

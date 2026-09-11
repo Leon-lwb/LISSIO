@@ -55,7 +55,7 @@ fn clear() {
     assert_eq!(col.dropped_bytes(), 0);
     assert_eq!(col.base_index(), 1);
     let (chunks, _) = col.read_from(0, 1024);
-    assert!(chunks.is_empty());
+    assert_eq!(chunks, [] as [(u64, RawDataDirection, Vec<u8>); 0]);
 }
 
 #[test]

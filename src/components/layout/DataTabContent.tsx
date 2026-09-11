@@ -11,6 +11,7 @@ import { LogicView } from '../displays/logic/LogicView';
 import { CompileErrorsView } from '../displays/compileErrors/CompileErrorsView';
 import { CompileResultsView } from '../displays/compileResults/CompileResultsView';
 import { OperationHistoryView } from '../displays/history/OperationHistoryView';
+import { RecordingDatabaseView } from '../displays/recording/RecordingDatabaseView';
 import { NodePropertiesPanel } from '../nodes/NodePropertiesPanel';
 import { FrameDecoder } from '../displays/decoder/FrameDecoder';
 import { Trigger } from '../widgets/trigger/TriggerView';
@@ -226,6 +227,11 @@ const compileResultsTabContent = (
 const operationHistoryTabContent = (
   <div className="flex h-full w-full">
     <OperationHistoryView />
+  </div>
+);
+const recordingDatabaseTabContent = (
+  <div className="flex h-full w-full">
+    <RecordingDatabaseView />
   </div>
 );
 const nodePropertiesTabContent = (
@@ -485,6 +491,8 @@ export const DataTabContent = memo(function DataTabContent({ tabId }: { tabId: s
       return compileResultsTabContent;
     case 'operation-history':
       return operationHistoryTabContent;
+    case 'recording-database':
+      return recordingDatabaseTabContent;
     case 'node-properties':
       return nodePropertiesTabContent;
     case 'table-view': {

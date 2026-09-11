@@ -3,8 +3,9 @@
 # auto-build.sh — 本地自动构建 (仅 macOS 宿主), 行为对齐 .github/workflows/build.yml
 #
 # 对应关系:
-#   CI set-version job  → --bump / --version 自动或手动升版本 + pnpm set-version (--commit 时提交)
-#   CI build matrix     → --target macos-arm64|macos-amd64|windows|linux
+#   CI set-version job  → --bump / --version 升版本 (+0.0.1, 取 tag/当前版本较大者, 交互确认)
+#                         + pnpm set-version (--commit 时提交)
+#   CI build matrix     → --target macos-arm64|macos-amd64|windows|linux 或 --all / --all-macos
 #                         macos-*  : 本机构建 (amd64 走 rustup 交叉)
 #                         windows  : cargo-xwin 交叉编译 (MSVC, 打包 NSIS)
 #                         linux    : Docker ubuntu:24.04 容器内构建 (WebKit/GTK 无法在 macOS 直接交叉链接)
@@ -15,6 +16,7 @@
 # 用法示例:
 #   scripts/auto-build.sh                                  # 当前 Mac 原生 target
 #   scripts/auto-build.sh --all-macos                      # 两个 macOS target
+#   scripts/auto-build.sh --all                            # 全部: macOS x2 + Windows + Linux
 #   scripts/auto-build.sh --target windows                 # 交叉编译 Windows (cargo-xwin + NSIS)
 #   scripts/auto-build.sh --target linux                   # Docker 容器内构建 Linux
 #   scripts/auto-build.sh --bump --commit --all-macos      # 升版本、提交并构建 (等同完整 CI 流程)
@@ -47,6 +49,7 @@ while [ $# -gt 0 ]; do
     --commit)       COMMIT=true; shift ;;
     --target)       TARGETS+=("$2"); shift 2 ;;
     --all-macos)    TARGETS+=(macos-arm64 macos-amd64); shift ;;
+    --all)          TARGETS+=(macos-arm64 macos-amd64 windows linux); shift ;;
     --bundles)      EXTRA_BUNDLES="$2"; shift 2 ;;
     --key-file)     KEY_FILE="$2"; shift 2 ;;
     --key-password) KEY_PASSWORD="$2"; shift 2 ;;
@@ -109,21 +112,46 @@ echo "宿主: macOS ($HOST_ARCH)"
 echo "targets: ${TARGETS[*]}"
 
 # ── 版本解析 (对应 set-version job) ──────────────────────────
+# 版本比较: $1 > $2 时返回 0 (仅比较 major.minor.patch)
+ver_gt() {
+  local a1 a2 a3 b1 b2 b3
+  IFS='.' read -r a1 a2 a3 <<< "$1"
+  IFS='.' read -r b1 b2 b3 <<< "$2"
+  if [ "$a1" -ne "$b1" ]; then [ "$a1" -gt "$b1" ]; return; fi
+  if [ "$a2" -ne "$b2" ]; then [ "$a2" -gt "$b2" ]; return; fi
+  [ "$a3" -gt "$b3" ]
+}
+
 if [ "$BUMP" = true ]; then
   if [ -n "$VERSION" ]; then
     echo "错误: --bump 与 --version 不能同时使用" >&2
     exit 1
   fi
+  CURRENT="$(node -p "require('./package.json').version")"
+  # base 取「当前版本」与「最近 tag」中较大者, 避免发布后未打 tag 时重复算出同版本
+  BASE="${CURRENT%%-*}"
   LAST_TAG="$(git tag --list 'v[0-9]*' --sort=-v:refname | head -n1)"
-  if [ -z "$LAST_TAG" ]; then
-    echo "警告: 仓库无任何 v* tag, 回退到 0.1.0"
-    VERSION="0.1.0"
-  else
-    BASE="${LAST_TAG#v}"; BASE="${BASE%%-*}"
-    IFS='.' read -r MAJ MIN PATCH <<< "$BASE"
-    VERSION="$MAJ.$MIN.$((PATCH+1))"
+  if [ -n "$LAST_TAG" ]; then
+    TAG_BASE="${LAST_TAG#v}"; TAG_BASE="${TAG_BASE%%-*}"
+    if ver_gt "$TAG_BASE" "$BASE"; then
+      BASE="$TAG_BASE"
+    fi
   fi
-  echo "自动提升: ${LAST_TAG:-<none>} -> $VERSION"
+  IFS='.' read -r MAJ MIN PATCH <<< "$BASE"
+  VERSION="$MAJ.$MIN.$((PATCH+1))"
+  echo "自动提升 (+0.0.1): 当前 $CURRENT / 最近 tag ${LAST_TAG:-<none>} -> $VERSION"
+
+  # 主动询问确认: 回车确认, 或输入其他版本号覆盖
+  if [ -t 0 ]; then
+    printf "回车确认使用 v%s, 或输入其他版本号: " "$VERSION"
+    read -r INPUT_VERSION
+    if [ -n "$INPUT_VERSION" ]; then
+      VERSION="$INPUT_VERSION"
+      echo "使用手动输入版本: $VERSION"
+    fi
+  else
+    echo "非交互环境, 直接使用 $VERSION"
+  fi
 fi
 [ -n "$VERSION" ] && echo "版本: $VERSION" || echo "版本: 不修改"
 

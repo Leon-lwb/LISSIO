@@ -109,10 +109,10 @@ impl ToolExecutor for CompositeExecutor {
     }
 
     async fn call(&self, name: &str, arguments: Value) -> Result<String> {
-        if let Some(n) = &self.native {
-            if NativeToolExecutor::handles(name) {
-                return n.call(name, arguments).await;
-            }
+        if let Some(n) = &self.native
+            && NativeToolExecutor::handles(name)
+        {
+            return n.call(name, arguments).await;
         }
         if let Some(m) = &self.mcp {
             return m.call(name, arguments).await;
@@ -449,13 +449,13 @@ pub struct McpServerStatus {
 #[tauri::command]
 pub fn mcp_server_status(state: State<'_, AiState>) -> McpServerStatus {
     let mut guard = state.server.lock();
-    if let Some(handle) = guard.as_mut() {
-        if matches!(handle.check_running(), Ok(true)) {
-            return McpServerStatus {
-                running: true,
-                port: Some(handle.port),
-            };
-        }
+    if let Some(handle) = guard.as_mut()
+        && matches!(handle.check_running(), Ok(true))
+    {
+        return McpServerStatus {
+            running: true,
+            port: Some(handle.port),
+        };
     }
     McpServerStatus {
         running: false,
@@ -471,10 +471,10 @@ pub fn mcp_server_status(state: State<'_, AiState>) -> McpServerStatus {
 pub async fn mcp_server_start(state: State<'_, AiState>, app: AppHandle, port: u16) -> Result<u16> {
     {
         let mut guard = state.server.lock();
-        if let Some(handle) = guard.as_mut() {
-            if matches!(handle.check_running(), Ok(true)) {
-                return Ok(handle.port);
-            }
+        if let Some(handle) = guard.as_mut()
+            && matches!(handle.check_running(), Ok(true))
+        {
+            return Ok(handle.port);
         }
         *guard = None;
     }

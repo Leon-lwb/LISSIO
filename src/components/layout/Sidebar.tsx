@@ -8,6 +8,7 @@ import { t } from '../../i18n';
 import { CategoryPanel } from '../panels/widgetPalette';
 import { QuickStartPanel } from '../panels/QuickStartPanel';
 import { DataPanelsPanel } from '../panels/DataPanelsPanel';
+import { RecordingDatabasePanel } from '../panels/RecordingDatabasePanel';
 import { PanelLeft, RefreshCw } from 'lucide-react';
 import { AnimatedSwitch } from '../ui/AnimatedSwitch';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -44,6 +45,7 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
   const titleMap: Partial<Record<SidebarView, Parameters<typeof t>[1]>> = {
     quickstart: 'quickStart',
     panels: 'menuPanel',
+    recording: 'recordingDatabaseTitle',
   };
 
   const activeCategory = useAppStore((s) => s.activeCategory);
@@ -74,13 +76,14 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
       <div className="flex-1 min-h-0 overflow-hidden px-3 py-3">
         <AnimatedSwitch
           switchKey={view}
-          order={['quickstart', 'category', 'panels']}
+          order={['quickstart', 'category', 'panels', 'recording']}
           axis="y"
           className="h-full"
         >
           {view === 'quickstart' && <QuickStartPanel />}
           {view === 'category' && <CategoryPanel />}
           {view === 'panels' && <DataPanelsPanel />}
+          {view === 'recording' && <RecordingDatabasePanel />}
         </AnimatedSwitch>
       </div>
     </div>

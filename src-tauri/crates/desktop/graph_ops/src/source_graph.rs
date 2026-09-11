@@ -92,14 +92,14 @@ fn locate_tab(
             target_tab,
         }));
     }
-    if let Some(expected) = tab_id {
-        if expected != source_tab {
-            return Err(Error::Config(ConfigError::NodeTabMismatch {
-                node_id: source.to_string(),
-                expected: expected.to_string(),
-                actual: source_tab,
-            }));
-        }
+    if let Some(expected) = tab_id
+        && expected != source_tab
+    {
+        return Err(Error::Config(ConfigError::NodeTabMismatch {
+            node_id: source.to_string(),
+            expected: expected.to_string(),
+            actual: source_tab,
+        }));
     }
     let graph = store
         .get(&source_tab)

@@ -94,10 +94,7 @@ fn ordered_bytes(point: &ModbusPoint, registers: &[u16]) -> Vec<u8> {
 }
 
 fn unorder_bytes(point: &ModbusPoint, bytes: Vec<u8>) -> Vec<u16> {
-    let mut words: Vec<[u8; 2]> = bytes
-        .chunks_exact(2)
-        .map(|chunk| [chunk[0], chunk[1]])
-        .collect();
+    let mut words: Vec<[u8; 2]> = bytes.as_chunks::<2>().0.to_vec();
     if point.byte_order == ByteOrder::Little {
         for word in &mut words {
             word.swap(0, 1);

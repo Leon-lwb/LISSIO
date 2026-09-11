@@ -184,7 +184,7 @@ mod tests {
         let (merged, _, _) = queue.pop_ready().unwrap();
         assert_eq!(merged.len(), 14_000);
         assert_eq!(merged[0].channels.as_ptr(), channels_ptr);
-        for (i, chunk) in merged.chunks_exact(3_500).enumerate() {
+        for (i, chunk) in merged.as_chunks::<3_500>().0.iter().enumerate() {
             assert!(chunk.iter().all(|frame| frame.timestamp == i as u64 + 1));
         }
         assert_eq!(queue.frames, 3_500);

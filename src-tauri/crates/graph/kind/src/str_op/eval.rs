@@ -229,10 +229,10 @@ fn scan_first_number(text: &str) -> f32 {
     let b = text.as_bytes();
     let mut i = 0;
     while i < b.len() {
-        if is_number_start(b[i]) {
-            if let Some((_, v)) = number_at(b, i) {
-                return v as f32;
-            }
+        if is_number_start(b[i])
+            && let Some((_, v)) = number_at(b, i)
+        {
+            return v as f32;
         }
         i += 1;
     }

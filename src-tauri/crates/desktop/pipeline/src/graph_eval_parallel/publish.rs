@@ -145,17 +145,17 @@ pub(super) fn publish_port_batches(
             if !acc.values.is_empty() {
                 let (key, _) = &plan_arcs[b].port_routes[acc.route];
                 let port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
-                if eval_state.recording.is_bound(&port) {
-                    if let Err(error) = eval_state.recording.record_next(
+                if eval_state.recording.is_bound(&port)
+                    && let Err(error) = eval_state.recording.record_next(
                         &port,
                         eval_state.execution.snapshot().epoch,
                         acc.timestamps.clone(),
                         recording::BatchPayload::Float {
                             values: acc.values.clone(),
                         },
-                    ) {
-                        log::error!("parallel numeric recording stopped accepting data: {error}");
-                    }
+                    )
+                {
+                    log::error!("parallel numeric recording stopped accepting data: {error}");
                 }
                 if eval_state.bus.is_active(key) {
                     eval_state.bus.publish_samples(
@@ -169,17 +169,17 @@ pub(super) fn publish_port_batches(
     }
     for (key, ts, value) in static_publish {
         let port = recording::PortIdentity::new(&key.source_node_id, &key.source_handle);
-        if eval_state.recording.is_bound(&port) {
-            if let Err(error) = eval_state.recording.record_next(
+        if eval_state.recording.is_bound(&port)
+            && let Err(error) = eval_state.recording.record_next(
                 &port,
                 eval_state.execution.snapshot().epoch,
                 vec![ts],
                 recording::BatchPayload::Float {
                     values: vec![value],
                 },
-            ) {
-                log::error!("parallel static recording stopped accepting data: {error}");
-            }
+            )
+        {
+            log::error!("parallel static recording stopped accepting data: {error}");
         }
         if eval_state.bus.is_active(&key) {
             eval_state

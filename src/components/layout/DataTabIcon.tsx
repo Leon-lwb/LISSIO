@@ -5,6 +5,7 @@ import {
   BarChart3 as BarChart3Icon,
   Box as BoxIcon,
   CircuitBoard as CircuitBoardIcon,
+  Database as DatabaseIcon,
   Cpu as CpuIcon,
   History as HistoryIcon,
   Image as ImageIcon,
@@ -53,6 +54,8 @@ export function DataTabIcon({ type, size = 12 }: { type: string; size?: number }
       return <HistoryIcon size={size} />;
     case 'node-properties':
       return <SettingsIcon size={size} />;
+    case 'recording-database':
+      return <DatabaseIcon size={size} />;
     default:
       return null;
   }

@@ -23,6 +23,8 @@ export interface DataTabSlice {
   addOperationHistoryTab: () => void;
   /// 新增 — 节点属性面板 (选中画布节点后自动激活, 恒定单例)
   addNodePropertiesTab: () => void;
+  /// 新增 — 录制数据库面板 (恒定单例, 由侧边栏入口打开)
+  addRecordingDatabaseTab: () => void;
   /// 新增 — 由控件 id 构造对应窗口 Tab (已存在则激活, 否则新建并激活)
   addWidgetTab: (widget: WidgetConfig) => void;
 }
@@ -144,6 +146,24 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
         id: `operation-history-${Date.now()}`,
         type: 'operation-history',
         name: t(get().lang, 'operationHistoryTitle'),
+        closable: true,
+      };
+      set({
+        dataTabs: [...get().dataTabs, tab],
+        activeDataTabId: tab.id,
+      });
+    },
+
+    addRecordingDatabaseTab: () => {
+      const existing = get().dataTabs.find((t: DataTab) => t.type === 'recording-database');
+      if (existing) {
+        set({ activeDataTabId: existing.id });
+        return;
+      }
+      const tab: DataTab = {
+        id: 'recording-database',
+        type: 'recording-database',
+        name: t(get().lang, 'recordingDatabaseTitle'),
         closable: true,
       };
       set({

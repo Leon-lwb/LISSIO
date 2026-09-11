@@ -120,7 +120,7 @@ impl ProtocolEngine for FireWaterEngine {
         let boundaries: Vec<usize> = data
             .iter()
             .enumerate()
-            .filter(|(_, &b)| b == b'\n')
+            .filter(|&(_, b)| *b == b'\n')
             .map(|(i, _)| i + 1)
             .collect();
         Some(split_at_boundaries(&boundaries, workers))

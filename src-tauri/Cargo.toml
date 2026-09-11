@@ -153,6 +153,12 @@ significant_drop_tightening = "allow"
 # Tauri 命令保持 async 以在 tokio 运行时执行 (sync 命令会跑在主线程, 持锁路径
 # 会阻塞 UI); 大量命令无 await 点属正常形态
 unused_async = "allow"
+# 同上: Tauri 命令/AppState 方法保持 async 签名, 无 await 点属正常形态
+# (新版 clippy 将 impl 块内该形态拆分为独立 lint)
+unused_async_trait_impl = "allow"
+# 测试断言 `assert!(x.is_empty())` 语义清晰且不要求集合实现 PartialEq,
+# 改写为 assert_eq 需逐类型适配且对自定义集合不可行
+assert_is_empty = "allow"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -229,7 +235,7 @@ windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices
 rustfft = "6"
 realfft = "3"
 bytemuck = { version = "1", features = ["derive"] }
-duckdb = { version = "1.5.5", features = ["bundled"] }
+duckdb = { version = "1.5.5", features = ["bundled", "parquet"] }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
 # ---- workspace 内部 crate (路径 = crates/<domain>/<crate>) ----
 # L0 foundation
@@ -262,9 +268,6 @@ can_transport = { package = "can-transport", path = "crates/transport/can-transp
 transport = { path = "crates/transport/transport" }
 network = { path = "crates/transport/network" }
 serial = { path = "crates/transport/serial" }
-automotive_isotp = { path = "crates/transport/automotive_isotp" }
-automotive_diag = { path = "crates/transport/automotive_diag" }
-automotive = { path = "crates/transport/automotive" }
 modbus-adapter = { path = "crates/transport/modbus-adapter" }
 # L1 node
 graph = { package = "graph", path = "crates/graph/graph" }
@@ -361,3 +364,6 @@ tauri-plugin-updater = { workspace = true }
 # security-framework 仅 keychain.rs 的 macOS 分支用于细分钥匙串授权拒绝错误码
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { workspace = true }
+
+[lints]
+workspace = true

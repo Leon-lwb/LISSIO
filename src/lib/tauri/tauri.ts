@@ -169,7 +169,7 @@ export interface RecordingSession {
 }
 
 export interface RecordingHistoryPage {
-  rows: Array<{
+  rows: {
     row_id: number;
     session_id: string;
     binding_id: string;
@@ -183,8 +183,70 @@ export interface RecordingHistoryPage {
     effective_bytes: number;
     checksum: number;
     payload?: Record<string, unknown> | null;
-  }>;
+  }[];
   next_row_id: number | null;
+}
+
+export interface RecordingBinding {
+  id: string;
+  session_id: string;
+  component_id: string;
+  source_node_id: string;
+  source_handle: string;
+  domain: 'bytes' | 'string' | 'float' | 'spectrum';
+  capability: 'scalar' | 'text' | 'records' | 'curve' | 'raw';
+  bound_at_us: number;
+  unbound_at_us: number | null;
+}
+
+export interface RecordingSessionSummary {
+  session: RecordingSession;
+  binding_count: number;
+  batch_count: number;
+  item_count: number;
+  effective_bytes: number;
+  first_timestamp_us: number | null;
+  last_timestamp_us: number | null;
+}
+
+export interface RecordingDatabaseInfo {
+  path: string;
+  file_size_bytes: number;
+  session_count: number;
+  batch_count: number;
+  item_count: number;
+  effective_bytes: number;
+}
+
+export type RecordingExportFormat = 'csv' | 'json' | 'parquet';
+
+export interface RecordingExportRequest {
+  session_id: string;
+  binding_id: string | null;
+  from_us: number | null;
+  to_us: number | null;
+  format: RecordingExportFormat;
+  path: string;
+}
+
+export interface RecordingExportResult {
+  rows: number;
+  bytes: number;
+}
+
+export interface RecordingCleanupPolicy {
+  session_ids: string[];
+  delete_stopped: boolean;
+  delete_failed: boolean;
+  older_than_us: number | null;
+  keep_latest: number | null;
+}
+
+export interface RecordingCleanupResult {
+  deleted_sessions: number;
+  deleted_batches: number;
+  deleted_items: number;
+  deleted_bytes: number;
 }
 
 export interface RecordingSqlResult {
@@ -601,19 +663,33 @@ export const api = {
   getRecordingHealth: () => invoke<RecordingHealth>('get_recording_health'),
   listRecordingSessions: () =>
     invoke<RecordingSession[]>('list_recording_sessions'),
+  listRecordingSessionSummaries: () =>
+    invoke<RecordingSessionSummary[]>('list_recording_session_summaries'),
+  listRecordingBindings: (sessionId: string) =>
+    invoke<RecordingBinding[]>('list_recording_bindings', { sessionId }),
+  getRecordingDatabaseInfo: () =>
+    invoke<RecordingDatabaseInfo>('get_recording_database_info'),
   queryRecordingHistory: (
     sessionId: string,
     bindingId: string | null,
     afterRowId = 0,
     limit = 500,
     includePayload = false,
+    fromUs: number | null = null,
+    toUs: number | null = null,
   ) => invoke<RecordingHistoryPage>('query_recording_history', {
     sessionId,
     bindingId,
     afterRowId,
     limit,
     includePayload,
+    fromUs,
+    toUs,
   }),
+  cleanupRecordingSessions: (policy: RecordingCleanupPolicy) =>
+    invoke<RecordingCleanupResult>('cleanup_recording_sessions', { policy }),
+  exportRecordingData: (request: RecordingExportRequest) =>
+    invoke<RecordingExportResult>('export_recording_data', { request }),
   queryRecordingSql: (queryId: string, sql: string, maxRows = 10_000) =>
     invoke<RecordingSqlResult>('query_recording_sql', {
       queryId,

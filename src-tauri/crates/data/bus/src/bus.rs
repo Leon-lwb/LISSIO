@@ -227,7 +227,7 @@ impl DataBus {
             let previous =
                 topic
                     .subscribers
-                    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
+                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |count| {
                         Some(count.saturating_sub(1))
                     });
             if previous == Ok(1) {

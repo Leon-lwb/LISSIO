@@ -97,8 +97,8 @@ impl WindowSnapshot {
             for series in &self.series {
                 let mut min: Option<(usize, f32)> = None;
                 let mut max: Option<(usize, f32)> = None;
-                for index in bucket_start..bucket_end {
-                    let value = series.values[index];
+                for (offset, &value) in series.values[bucket_start..bucket_end].iter().enumerate() {
+                    let index = bucket_start + offset;
                     if !value.is_finite() {
                         continue;
                     }
@@ -173,8 +173,8 @@ impl WindowSnapshot {
             let mut average_x = 0.0;
             let mut average_y = 0.0;
             let mut average_count = 0usize;
-            for index in average_start..average_end {
-                let value = series.values[index];
+            for (offset, &value) in series.values[average_start..average_end].iter().enumerate() {
+                let index = average_start + offset;
                 if value.is_finite() {
                     average_x += x(index);
                     average_y += f64::from(value);
@@ -201,9 +201,10 @@ impl WindowSnapshot {
             if !anchor_y.is_finite() {
                 anchor_y = 0.0;
             }
+            let range_limit = range_end.min(points - 1);
             let mut best: Option<(usize, f64)> = None;
-            for index in range_start..range_end.min(points - 1) {
-                let value = series.values[index];
+            for (offset, &value) in series.values[range_start..range_limit].iter().enumerate() {
+                let index = range_start + offset;
                 if !value.is_finite() {
                     continue;
                 }

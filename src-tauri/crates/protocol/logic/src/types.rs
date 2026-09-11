@@ -194,10 +194,10 @@ impl DecodedEventFilter {
 
     /// 判断指定事件是否匹配本过滤条件
     pub fn matches(&self, event: &DecodedEvent) -> bool {
-        if let Some(kind) = &self.kind {
-            if !Self::kind_matches(event.kind(), kind) {
-                return false;
-            }
+        if let Some(kind) = &self.kind
+            && !Self::kind_matches(event.kind(), kind)
+        {
+            return false;
         }
         if let Some(pattern) = &self.byte_pattern {
             let payload = Self::payload(event);

@@ -8,8 +8,8 @@ use parking_lot::{Mutex, RwLock};
 use thiserror::Error;
 
 use crate::{
-    DisplayBinding, Domain, RecordBatch, RecordingHealth, RecordingLimits, RecordingStore,
-    SessionInfo, SessionState,
+    DisplayBinding, Domain, RecordBatch, RecordingCleanupResult, RecordingHealth, RecordingLimits,
+    RecordingStore, SessionInfo, SessionState,
 };
 
 #[derive(Debug, Error)]
@@ -48,6 +48,10 @@ enum Command {
     Bind(DisplayBinding, mpsc::Sender<Result<(), String>>),
     Unbind(String, mpsc::Sender<Result<(), String>>),
     State(SessionState, mpsc::Sender<Result<(), String>>),
+    DeleteSessions(
+        Vec<String>,
+        mpsc::Sender<Result<RecordingCleanupResult, String>>,
+    ),
     Flush(mpsc::Sender<Result<(), String>>),
     Shutdown(mpsc::Sender<Result<(), String>>),
 }
@@ -185,6 +189,20 @@ impl Recorder {
         receive_result(response)
     }
 
+    pub fn delete_sessions(
+        &self,
+        session_ids: Vec<String>,
+    ) -> Result<RecordingCleanupResult, RecordingError> {
+        let (reply, response) = mpsc::channel();
+        self.sender
+            .send(Command::DeleteSessions(session_ids, reply))
+            .map_err(|_| RecordingError::Closed)?;
+        response
+            .recv()
+            .map_err(|_| RecordingError::Closed)?
+            .map_err(RecordingError::Failed)
+    }
+
     pub fn shutdown(&self) -> Result<(), RecordingError> {
         let mut thread = self.thread.lock();
         let Some(handle) = thread.take() else {
@@ -285,6 +303,18 @@ fn run_writer_inner(
                         transaction_open = false;
                     }
                     RecordingStore::update_session(&connection, session_id, state)
+                })()
+                .map_err(|error| error.to_string());
+                let _ = reply.send(result);
+                last_commit = Instant::now();
+            }
+            Ok(Command::DeleteSessions(session_ids, reply)) => {
+                let result = (|| {
+                    if transaction_open {
+                        commit(&connection, health, &mut pending, &mut pending_bytes)?;
+                        transaction_open = false;
+                    }
+                    crate::maintenance::delete_sessions_on(&connection, session_id, &session_ids)
                 })()
                 .map_err(|error| error.to_string());
                 let _ = reply.send(result);

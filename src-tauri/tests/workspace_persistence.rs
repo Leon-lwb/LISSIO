@@ -28,7 +28,7 @@ fn widget_document(
     }
 }
 
-fn auto_layout(x: f64, y: f64) -> NodeLayout {
+const fn auto_layout(x: f64, y: f64) -> NodeLayout {
     NodeLayout {
         x,
         y,

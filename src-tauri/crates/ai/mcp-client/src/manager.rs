@@ -193,7 +193,7 @@ impl McpManager {
             let count = used.entry(base.clone()).or_insert(0);
             *count += 1;
             info.prefixed_name = if *count == 1 {
-                base.clone()
+                base
             } else {
                 format!("{base}_{count}")
             };
@@ -382,10 +382,10 @@ fn connect_error(name: &str, source: Box<dyn std::error::Error + Send + Sync>) -
 
 /// 工具结果 → 文本 (优先 structured_content, 否则拼接 Text 块)。
 fn extract_result_text(result: &rmcp::model::CallToolResult) -> String {
-    if let Some(sc) = &result.structured_content {
-        if let Ok(s) = serde_json::to_string(sc) {
-            return s;
-        }
+    if let Some(sc) = &result.structured_content
+        && let Ok(s) = serde_json::to_string(sc)
+    {
+        return s;
     }
     result
         .content

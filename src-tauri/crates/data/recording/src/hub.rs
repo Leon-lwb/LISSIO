@@ -1,12 +1,13 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
 
 use crate::{
-    BatchPayload, DisplayBinding, PortIdentity, RecordBatch, Recorder, RecordingError,
-    RecordingHealth, RecordingLimits, RecordingStore, SessionInfo, SessionState,
+    BatchPayload, BindingInfo, DisplayBinding, PortIdentity, RecordBatch, Recorder,
+    RecordingCleanupPolicy, RecordingCleanupResult, RecordingDatabaseInfo, RecordingError,
+    RecordingHealth, RecordingLimits, RecordingStore, SessionInfo, SessionState, SessionSummary,
 };
 
 #[derive(Debug, Default)]
@@ -60,19 +61,19 @@ impl RecordingHub {
         let mut state = self.state.write();
         if let Some(recorder) = &state.recorder {
             for (port, binding) in &state.active {
-                if !next.contains_key(port) {
-                    if let Err(error) = recorder.unbind(&binding.id) {
-                        state.fault = Some(error.to_string());
-                        return Err(error);
-                    }
+                if !next.contains_key(port)
+                    && let Err(error) = recorder.unbind(&binding.id)
+                {
+                    state.fault = Some(error.to_string());
+                    return Err(error);
                 }
             }
             for (port, binding) in &next {
-                if !state.active.contains_key(port) {
-                    if let Err(error) = recorder.bind(binding.clone()) {
-                        state.fault = Some(error.to_string());
-                        return Err(error);
-                    }
+                if !state.active.contains_key(port)
+                    && let Err(error) = recorder.bind(binding.clone())
+                {
+                    state.fault = Some(error.to_string());
+                    return Err(error);
                 }
             }
         }
@@ -148,22 +149,22 @@ impl RecordingHub {
 
     pub fn set_state(&self, state: SessionState) -> Result<(), RecordingError> {
         let mut hub = self.state.write();
-        if let Some(recorder) = &hub.recorder {
-            if let Err(error) = recorder.set_state(state) {
-                hub.fault = Some(error.to_string());
-                return Err(error);
-            }
+        if let Some(recorder) = &hub.recorder
+            && let Err(error) = recorder.set_state(state)
+        {
+            hub.fault = Some(error.to_string());
+            return Err(error);
         }
         Ok(())
     }
 
     pub fn flush(&self) -> Result<(), RecordingError> {
         let mut state = self.state.write();
-        if let Some(recorder) = &state.recorder {
-            if let Err(error) = recorder.flush() {
-                state.fault = Some(error.to_string());
-                return Err(error);
-            }
+        if let Some(recorder) = &state.recorder
+            && let Err(error) = recorder.flush()
+        {
+            state.fault = Some(error.to_string());
+            return Err(error);
         }
         Ok(())
     }
@@ -177,17 +178,44 @@ impl RecordingHub {
     }
 
     pub fn delete_session(&self, session_id: &str) -> Result<(), RecordingError> {
-        let store = {
+        self.cleanup_sessions(RecordingCleanupPolicy {
+            session_ids: Vec::from([session_id.to_string()]),
+            ..RecordingCleanupPolicy::default()
+        })
+        .map(|_| ())
+    }
+
+    pub fn list_bindings(&self, session_id: &str) -> Result<Vec<BindingInfo>, RecordingError> {
+        let store = self.store().ok_or(RecordingError::Closed)?;
+        store.list_bindings(session_id)
+    }
+
+    pub fn list_session_summaries(&self) -> Result<Vec<SessionSummary>, RecordingError> {
+        let store = self.store().ok_or(RecordingError::Closed)?;
+        store.list_session_summaries()
+    }
+
+    pub fn database_info(&self) -> Result<RecordingDatabaseInfo, RecordingError> {
+        let store = self.store().ok_or(RecordingError::Closed)?;
+        store.database_info()
+    }
+
+    pub fn cleanup_sessions(
+        &self,
+        policy: RecordingCleanupPolicy,
+    ) -> Result<RecordingCleanupResult, RecordingError> {
+        let store = self.store().ok_or(RecordingError::Closed)?;
+        let sessions = store.list_sessions()?;
+        let recorder = {
             let state = self.state.read();
-            let recorder = state.recorder.as_ref().ok_or(RecordingError::Closed)?;
-            if recorder.session().id == session_id {
-                return Err(RecordingError::Invalid(
-                    "the current recording session cannot be deleted".into(),
-                ));
-            }
-            recorder.store().clone()
+            state.recorder.clone().ok_or(RecordingError::Closed)?
         };
-        store.delete_session(session_id)
+        let current_id = recorder.session().id.clone();
+        let session_ids = cleanup_session_ids(&sessions, &current_id, &policy)?;
+        if session_ids.is_empty() {
+            return Ok(RecordingCleanupResult::default());
+        }
+        recorder.delete_sessions(session_ids)
     }
 
     #[must_use]
@@ -261,4 +289,58 @@ fn unique_bindings(bindings: Vec<DisplayBinding>) -> HashMap<PortIdentity, Displ
         .into_iter()
         .map(|binding| (binding.port.clone(), binding))
         .collect()
+}
+
+fn cleanup_session_ids(
+    sessions: &[SessionInfo],
+    current_session_id: &str,
+    policy: &RecordingCleanupPolicy,
+) -> Result<Vec<String>, RecordingError> {
+    let by_id: HashMap<&str, &SessionInfo> = sessions
+        .iter()
+        .map(|session| (session.id.as_str(), session))
+        .collect();
+    for id in &policy.session_ids {
+        if id == current_session_id {
+            return Err(RecordingError::Invalid(
+                "the current recording session cannot be deleted".into(),
+            ));
+        }
+        if !(by_id.contains_key(id.as_str())) {
+            return Err(RecordingError::Invalid(format!(
+                "recording session was not found: {id}"
+            )));
+        }
+    }
+    let mut selected: HashSet<String> = policy.session_ids.iter().cloned().collect();
+    let is_terminal = |session: &SessionInfo| {
+        session.state == SessionState::Stopped || session.state == SessionState::Failed
+    };
+    for session in sessions {
+        if session.id == current_session_id || !(is_terminal(session)) {
+            continue;
+        }
+        if (policy.delete_stopped && session.state == SessionState::Stopped)
+            || (policy.delete_failed && session.state == SessionState::Failed)
+        {
+            selected.insert(session.id.clone());
+        }
+        if let Some(threshold) = policy.older_than_us {
+            let ended_at = session.ended_at_us.unwrap_or(session.started_at_us);
+            if ended_at < threshold {
+                selected.insert(session.id.clone());
+            }
+        }
+    }
+    if let Some(keep_latest) = policy.keep_latest {
+        let mut terminal: Vec<&SessionInfo> = sessions
+            .iter()
+            .filter(|session| session.id != current_session_id && is_terminal(session))
+            .collect();
+        terminal.sort_by_key(|session| std::cmp::Reverse(session.started_at_us));
+        for session in terminal.into_iter().skip(keep_latest) {
+            selected.insert(session.id.clone());
+        }
+    }
+    Ok(selected.into_iter().collect())
 }

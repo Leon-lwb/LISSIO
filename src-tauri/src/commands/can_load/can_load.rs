@@ -19,10 +19,10 @@ async fn extract_can_bitrate_from_transport(state: &AppState, node_id: &str) -> 
 ///
 /// 抽出为无 IO 纯函数供单测覆盖优先级; IO 侧只负责取 transport 配置值。
 fn resolve_can_bitrate_choice(override_bps: Option<u32>, transport_bps: Option<u32>) -> u32 {
-    if let Some(bps) = override_bps {
-        if bps > 0 {
-            return bps;
-        }
+    if let Some(bps) = override_bps
+        && bps > 0
+    {
+        return bps;
     }
     transport_bps.unwrap_or(500_000)
 }
@@ -147,7 +147,7 @@ fn secs_to_local_components(secs: u64) -> (u32, u32, u32, u32, u32, u32) {
     #[cfg(unix)]
     {
         use std::os::raw::{c_char, c_int, c_long};
-        extern "C" {
+        unsafe extern "C" {
             fn localtime_r(time: *const c_long, result: *mut libc_tm) -> *mut libc_tm;
         }
         #[repr(C)]

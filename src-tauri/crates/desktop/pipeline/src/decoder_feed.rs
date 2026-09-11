@@ -20,7 +20,7 @@ pub type DecoderParseConfig = (Vec<kind::DecoderBlockDef>, bool, bool, bool, boo
 fn collect_decoder_configs(eval_state: &GraphEvalState) -> HashMap<String, DecoderParseConfig> {
     let graphs = eval_state.graphs.lock();
     let mut configs: HashMap<String, DecoderParseConfig> = HashMap::new();
-    for (_, graph) in graphs.iter() {
+    for graph in graphs.values() {
         for dec_id in graph.decoder_node_ids() {
             if let Some(cfg) = graph.decoder_config(dec_id) {
                 configs.insert(dec_id.clone(), (cfg.0.to_vec(), cfg.1, cfg.2, cfg.3, cfg.4));

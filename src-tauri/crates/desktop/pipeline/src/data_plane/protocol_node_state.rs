@@ -166,12 +166,11 @@ impl ProtocolNodeState {
                 }),
                 Some((SampleClockBasis::SerialNominal, _, batch_bytes)),
             ) = (&mut self.sample_clock, hint)
+                && !*anchored
+                && batch_bytes > 0
             {
-                if !*anchored && batch_bytes > 0 {
-                    *next_us += f64::from(u32::try_from(batch_bytes).unwrap_or(u32::MAX))
-                        * 1_000_000.0
-                        / *rate;
-                }
+                *next_us +=
+                    f64::from(u32::try_from(batch_bytes).unwrap_or(u32::MAX)) * 1_000_000.0 / *rate;
             }
             return;
         }
