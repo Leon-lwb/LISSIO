@@ -38,6 +38,15 @@ pub struct ToolRunDto {
     pub done: bool,
 }
 
+/// 用户附件 (文本文件) — 与前端 `AiAttachment` 对齐。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AttachmentDto {
+    /// 文件名 (含扩展名, 仅展示与上下文标注)。
+    pub name: String,
+    /// 文本内容。
+    pub content: String,
+}
+
 /// 对话视图条目 — 与前端 `AiViewItem` 对齐。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ViewItemDto {
@@ -46,6 +55,9 @@ pub struct ViewItemDto {
     /// 文本内容。
     #[serde(default)]
     pub text: String,
+    /// 用户条目携带的附件 (派生 LLM 历史时并入 user 消息文本)。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attachments: Option<Vec<AttachmentDto>>,
     /// 助手条目携带的工具调用记录。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tools: Option<Vec<ToolRunDto>>,

@@ -1,5 +1,6 @@
 import { Channel, invoke } from '@tauri-apps/api/core';
 import type {
+  AiAttachment,
   AiChatEvent,
   AiChatSession,
   AiProviderConfig,
@@ -704,11 +705,12 @@ export const api = {
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。
-  /// 会话所有权在后端: text 非空时追加用户条目, regenerate 时截断待重试回合。
+  /// 会话所有权在后端: text 非空或携带 attachments 时追加用户条目, regenerate 时截断待重试回合。
   /// useBuiltinTools 启用内置原生工具 (软件自有能力 + 知识库, uiLang 注入系统提示词)
   aiChatSend: (
     sessionId: string,
     text: string | null,
+    attachments: AiAttachment[] | null,
     regenerate: boolean,
     config: AiProviderConfig,
     system: string | null,
@@ -721,6 +723,7 @@ export const api = {
     invoke<string>('ai_chat_send', {
       sessionId,
       text,
+      attachments: attachments ?? null,
       regenerate,
       config,
       system: system ?? null,

@@ -219,6 +219,24 @@ aiErrUnknownSession: 会话不存在 (可能已被删除)
 aiErrPersist: 对话记录写入失败
 aiSendBlocked: 无法发送 —
 aiOpenSettings: 打开设置
+aiExportChat: 导出会话为 Markdown
+aiImportChat: 导入 Markdown 到输入框
+aiChatExportSuccess: 会话已导出
+aiChatExportSuccessDesc: Markdown 文件已保存
+aiChatExportFailed: 会话导出失败
+aiChatExportFailedDesc: 写入文件时出错, 请重试或更换保存位置
+aiChatImportFailed: Markdown 导入失败
+aiChatImportEmpty: 文件内容为空
+aiChatExportMeta: 导出时间:{time} · 来源:Lissio AI 对话
+aiChatExportUser: 🧑 用户
+aiChatExportAssistant: 🤖 助手
+aiAttach: 添加附件
+aiRemoveAttachment: 移除附件
+aiAttachmentUnsupported: 不支持的文件类型 (仅限文本文件):{n}
+aiAttachmentTooLarge: 文件过大 (文本上限 256KB):{n}
+aiAttachmentTooMany: 附件数量超限 (每条消息最多 5 个):{n}
+aiAttachmentReadFailed: 读取文件失败:{n}
+aiChatExportAttachment: 附件
 
 # 控件区
 noWidgets: 暂无控件, 从左侧面板添加
@@ -615,7 +633,20 @@ settingAiTemperatureDesc: 采样温度 (0-2), 留空使用服务商默认
 settingAiMaxTokens: 最大生成长度
 settingAiMaxTokensDesc: 单次回复的最大 token 数, 留空使用服务商默认
 settingAiSystemPrompt: 系统提示词
-settingAiSystemPromptDesc: 发送给模型的系统级指令 (可描述设备协议, 让 AI 更懂上下文)
+settingAiSystemPromptDesc: 发送给模型的系统级指令, 支持 Markdown (可描述设备协议, 让 AI 更懂上下文)
+promptEditorOpen: 编辑提示词
+promptEditorTitle: 系统提示词编辑器
+promptEditorImport: 导入 .md
+promptEditorExport: 导出 .md
+promptEditorSource: 源码
+promptEditorPreview: 预览
+promptEditorSave: 保存
+promptEditorChars: "{n} 字符"
+promptEditorExportSuccess: 提示词已导出
+promptEditorExportSuccessDesc: Markdown 文件已保存
+promptEditorExportFailed: 提示词导出失败
+promptEditorImportFailed: 提示词导入失败
+promptEditorImportEmpty: 文件内容为空
 settingAiMaxToolRounds: 工具调用轮次上限
 settingAiMaxToolRoundsDesc: 单次对话允许的最大"模型调用工具→回填结果"循环轮数
 settingAiBuiltinTools: 启用内置工具

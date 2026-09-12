@@ -68,10 +68,20 @@ export interface AiToolRun {
   done: boolean;
 }
 
+/// 用户附件 (文本文件) — 与后端 `ai_session::AttachmentDto` 对齐。
+export interface AiAttachment {
+  /** 文件名 (含扩展名) */
+  name: string;
+  /** 文本内容 */
+  content: string;
+}
+
 /// 对话视图条目 — 与后端 `ai_session::ViewItemDto` 对齐 (user / assistant 含工具卡片)。
 export interface AiViewItem {
   role: 'user' | 'assistant';
   text: string;
+  /** 用户条目携带的附件 (发送时并入 LLM 上下文) */
+  attachments?: AiAttachment[];
   tools?: AiToolRun[];
   /** 错误条目 (仅 UI 展示, 不入 LLM 历史) */
   error?: boolean;

@@ -8,6 +8,7 @@ import { useSettingsStore } from './settingsStore';
 import { useAppStore } from './appStore';
 import { t } from '../i18n';
 import type {
+  AiAttachment,
   AiChatEvent,
   AiSessionMeta,
   AiToolRun,
@@ -48,7 +49,7 @@ interface AiChatState {
   switchSession: (id: string) => Promise<void>;
   renameSession: (id: string, title: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
-  send: (text: string) => Promise<void>;
+  send: (text: string, attachments?: AiAttachment[]) => Promise<void>;
   /** 重新生成 — 截掉最后一条用户条目之后的回合并重跑 */
   regenerate: () => Promise<void>;
   cancel: () => Promise<void>;
@@ -102,7 +103,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
    */
   const startTask = async (
     sessionId: string,
-    payload: { text: string | null; regenerate: boolean },
+    payload: { text: string | null; attachments: AiAttachment[] | null; regenerate: boolean },
     failLocal: (err: unknown) => void
   ) => {
     const ai = useSettingsStore.getState().settings.ai;
@@ -143,6 +144,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       const taskId = await api.aiChatSend(
         sessionId,
         payload.text,
+        payload.attachments,
         payload.regenerate,
         providerConfigFromSettings(),
         ai.systemPrompt.trim() || null,
@@ -277,10 +279,11 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       }
     },
 
-    send: async (text) => {
+    send: async (text, attachments = []) => {
       const { streaming, activeSessionId, viewItems } = get();
       const body = text.trim();
-      if (streaming || !body || !activeSessionId) return;
+      const atts = attachments.filter((a) => a.content);
+      if (streaming || (!body && atts.length === 0) || !activeSessionId) return;
 
       // 发送前检查 (与后端 validate_config 同规则): 配置缺失直接拦截, 不发请求
       const issue = checkAiProviderSettings(useSettingsStore.getState().settings.ai);
@@ -292,7 +295,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       }
 
       set({
-        viewItems: [...viewItems, { role: 'user', text: body }],
+        viewItems: [...viewItems, { role: 'user', text: body, attachments: atts.length > 0 ? atts : undefined }],
         streaming: true,
         streamingSessionId: activeSessionId,
         streamingText: '',
@@ -302,7 +305,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
 
       await startTask(
         activeSessionId,
-        { text: body, regenerate: false },
+        { text: body || null, attachments: atts.length > 0 ? atts : null, regenerate: false },
         // 命令级失败: 后端未写入, 本地呈现结构化错误条目 (kind/data 透传供本地化)
         (err) =>
           set((s) => ({
@@ -347,7 +350,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
 
       await startTask(
         activeSessionId,
-        { text: null, regenerate: true },
+        { text: null, attachments: null, regenerate: true },
         (err) =>
           set((s) => ({
             streaming: false,

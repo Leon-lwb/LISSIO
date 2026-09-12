@@ -219,6 +219,24 @@ aiErrUnknownSession: Session not found (it may have been deleted)
 aiErrPersist: Failed to write chat history
 aiSendBlocked: Cannot send —
 aiOpenSettings: Open Settings
+aiExportChat: Export chat as Markdown
+aiImportChat: Import Markdown into input
+aiChatExportSuccess: Chat exported
+aiChatExportSuccessDesc: Markdown file saved
+aiChatExportFailed: Failed to export chat
+aiChatExportFailedDesc: Error writing the file — try again or pick another location
+aiChatImportFailed: Failed to import Markdown
+aiChatImportEmpty: File is empty
+aiChatExportMeta: "Exported at {time} · Source: Lissio AI chat"
+aiChatExportUser: 🧑 User
+aiChatExportAssistant: 🤖 Assistant
+aiAttach: Attach file
+aiRemoveAttachment: Remove attachment
+aiAttachmentUnsupported: "Unsupported file type — text files only: {n}"
+aiAttachmentTooLarge: "File too large (256KB text limit): {n}"
+aiAttachmentTooMany: "Too many attachments (max 5 per message): {n}"
+aiAttachmentReadFailed: "Failed to read file: {n}"
+aiChatExportAttachment: Attached file
 
 # Control Area
 noWidgets: No widgets. Add from the left panel.
@@ -615,7 +633,20 @@ settingAiTemperatureDesc: Sampling temperature (0-2); leave empty for the provid
 settingAiMaxTokens: Max Output Tokens
 settingAiMaxTokensDesc: Maximum tokens per reply; leave empty for the provider default
 settingAiSystemPrompt: System Prompt
-settingAiSystemPromptDesc: System-level instruction for the model (describe your device protocol for better context)
+settingAiSystemPromptDesc: System-level instruction for the model, Markdown supported (describe your device protocol for better context)
+promptEditorOpen: Edit Prompt
+promptEditorTitle: System Prompt Editor
+promptEditorImport: Import .md
+promptEditorExport: Export .md
+promptEditorSource: Source
+promptEditorPreview: Preview
+promptEditorSave: Save
+promptEditorChars: "{n} chars"
+promptEditorExportSuccess: Prompt exported
+promptEditorExportSuccessDesc: Markdown file saved
+promptEditorExportFailed: Failed to export prompt
+promptEditorImportFailed: Failed to import prompt
+promptEditorImportEmpty: File is empty
 settingAiMaxToolRounds: Tool Round Limit
 settingAiMaxToolRoundsDesc: Maximum tool-call loop rounds (model calls tool -> result fed back) per chat
 settingAiBuiltinTools: Enable Built-in Tools

@@ -7,7 +7,7 @@ use chat::{
     TurnRecorder, run_chat,
 };
 use chat_session::{
-    ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
+    AttachmentDto, ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
 };
 use error::{McpError, Result};
 use llm::{AdapterInfo, AiProviderConfig, ToolSpecDto, validate_config};
@@ -135,10 +135,10 @@ pub fn ai_list_providers() -> Vec<AdapterInfo> {
 
 /// 发起一次对话 (可含多轮工具调用), 增量事件经 Channel 推送。
 ///
-/// 会话所有权在后端:`text` 非空时先追加用户条目, `regenerate` 时截掉
-/// 最后一条用户条目之后的待重试回合;LLM 历史由会话条目派生, 回合终态后
-/// 产物落盘。返回 task_id 供 `ai_chat_cancel` 取消。错误事件同样走 Channel,
-/// 命令本身只在配置/参数非法时失败。
+/// 会话所有权在后端:`text` 非空或携带 `attachments` 时先追加用户条目,
+/// `regenerate` 时截掉最后一条用户条目之后的待重试回合;LLM 历史由会话条目
+/// 派生, 回合终态后产物落盘。返回 task_id 供 `ai_chat_cancel` 取消。
+/// 错误事件同样走 Channel, 命令本身只在配置/参数非法时失败。
 ///
 /// 工具来源两组独立开关:`use_builtin_tools` 启用内置原生工具 (软件自有能力 +
 /// 知识库, 系统提示词按 `ui_lang` 注入索引);`use_mcp_tools` 启用外部 MCP 工具。
@@ -151,6 +151,7 @@ pub async fn ai_chat_send(
     app: AppHandle,
     session_id: String,
     text: Option<String>,
+    attachments: Option<Vec<AttachmentDto>>,
     regenerate: bool,
     config: AiProviderConfig,
     system: Option<String>,
@@ -165,18 +166,24 @@ pub async fn ai_chat_send(
     // 回合前置: 先落盘用户输入 / 截断待重试回合, 派生的历史才是权威上下文
     if regenerate {
         state.sessions.truncate_after_last_user(&session_id)?;
-    } else if let Some(body) = text.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
-        state.sessions.append_items(
-            &session_id,
-            vec![ViewItemDto {
-                role: ViewRoleDto::User,
-                text: body.to_string(),
-                tools: None,
-                error: None,
-                error_kind: None,
-                error_data: None,
-            }],
-        )?;
+    } else {
+        let body = text.as_deref().map(str::trim).unwrap_or_default();
+        let attachments = attachments.filter(|list| !list.is_empty());
+        // 文本与附件至少其一非空才构成用户条目 (允许仅附件无文本)
+        if !body.is_empty() || attachments.is_some() {
+            state.sessions.append_items(
+                &session_id,
+                vec![ViewItemDto {
+                    role: ViewRoleDto::User,
+                    text: body.to_string(),
+                    attachments,
+                    tools: None,
+                    error: None,
+                    error_kind: None,
+                    error_data: None,
+                }],
+            )?;
+        }
     }
     let history = derive_history(
         &state

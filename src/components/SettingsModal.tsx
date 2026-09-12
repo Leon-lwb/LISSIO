@@ -22,6 +22,7 @@ import {
   Database,
   Gauge,
   Pencil,
+  FileText,
   Download,
   Upload,
   RefreshCw,
@@ -37,6 +38,7 @@ import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
 import { ThemeEditor } from './ThemeEditor';
+import { SystemPromptEditor } from './SystemPromptEditor';
 import { BUILT_IN_THEMES, type ThemeDefinition } from '../settings/theme';
 import type { SettingFieldDef} from './settingFields';
 import { SETTING_FIELDS } from './settingFields';
@@ -81,6 +83,7 @@ export function SettingsModal() {
   const reset = useSettingsStore((s) => s.reset);
   const resetCategory = useSettingsStore((s) => s.resetCategory);
   const [themeEditorOpen, setThemeEditorOpen] = useState(false);
+  const [promptEditorOpen, setPromptEditorOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
   const [appVersion, setAppVersion] = useState('');
   /// 更新状态 — 与状态栏/更新弹窗共享 updateStore
@@ -267,6 +270,17 @@ export function SettingsModal() {
             value={String(value)}
             onChange={(e) => handleChange(e.target.value)}
           />
+        );
+      case 'promptEditor':
+        return (
+          <button
+            className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
+            onClick={() => setPromptEditorOpen(true)}
+            title={t(lang, 'promptEditorOpen')}
+          >
+            <FileText size={12} />
+            <span>{t(lang, 'promptEditorOpen')}</span>
+          </button>
         );
       case 'theme': {
         const themeOptions = [
@@ -586,6 +600,18 @@ export function SettingsModal() {
             'appearance',
             'cssTheme',
             id
+          )
+        }
+      />
+      <SystemPromptEditor
+        isOpen={promptEditorOpen}
+        initialText={settings.ai.systemPrompt}
+        onClose={() => setPromptEditorOpen(false)}
+        onSave={(text) =>
+          (update as (c: keyof AppSettings, f: string, v: unknown) => void)(
+            'ai',
+            'systemPrompt',
+            text
           )
         }
       />

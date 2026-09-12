@@ -257,6 +257,7 @@ mod tests {
         ViewItemDto {
             role: ViewRoleDto::User,
             text: text.to_string(),
+            attachments: None,
             tools: None,
             error: None,
             error_kind: None,
@@ -268,6 +269,7 @@ mod tests {
         ViewItemDto {
             role: ViewRoleDto::Assistant,
             text: text.to_string(),
+            attachments: None,
             tools: None,
             error: None,
             error_kind: None,
@@ -288,6 +290,7 @@ mod tests {
                 ViewItemDto {
                     role: ViewRoleDto::Assistant,
                     text: "回答".to_string(),
+                    attachments: None,
                     tools: Some(vec![ToolRunDto {
                         id: "c1".to_string(),
                         name: "probe".to_string(),

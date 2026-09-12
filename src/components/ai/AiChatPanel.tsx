@@ -5,7 +5,10 @@ import {
   Check,
   ChevronDown,
   Copy,
+  Download,
   Eraser,
+  FileText,
+  Paperclip,
   Pencil,
   Plug,
   Plus,
@@ -13,6 +16,7 @@ import {
   Send,
   Square,
   Trash2,
+  Upload,
   Wrench,
   X,
 } from 'lucide-react';
@@ -22,11 +26,20 @@ import { useLayoutStore } from '../../store/layoutStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { dockDrag } from '../../lib/dockDrag';
 import { formatAiKindError } from '../../lib/ai/aiErrors';
+import { sessionFilename, sessionToMarkdown } from '../../lib/ai/chatMarkdown';
+import { readMdFile, saveMdFile } from '../../lib/tauri/mdFile';
+import {
+  pickAttachments,
+  readDroppedFiles,
+  type AttachmentPickResult,
+  type AttachmentRejections,
+} from '../../lib/tauri/attachments';
 import { checkAiProviderSettings } from '../../settings/aiProvider';
+import { notify, formatError } from '../../lib/tauri/notifications';
 import { t } from '../../i18n';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
 import { AiMarkdown } from './AiMarkdown';
-import type { AiToolRun, AiViewItem } from '../../types';
+import type { AiAttachment, AiToolRun, AiViewItem } from '../../types';
 
 /// 工具名缩短展示 (去掉 mcp_ 前缀与 server 段)
 function shortToolName(name: string): string {
@@ -432,6 +445,9 @@ export function AiChatPanel() {
   // 发送前检查: 配置缺失时输入区上方常驻横幅并禁用发送
   const sendIssue = useMemo(() => checkAiProviderSettings(aiSettings), [aiSettings]);
   const [input, setInput] = useState('');
+  const [attachments, setAttachments] = useState<AiAttachment[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const dragDepth = useRef(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const pinnedBottom = useRef(true);
@@ -463,15 +479,91 @@ export function AiChatPanel() {
 
   const onSend = () => {
     const text = input.trim();
-    if (!text || streaming) return;
+    if ((!text && attachments.length === 0) || streaming) return;
     setInput('');
-    void send(text);
+    const atts = attachments;
+    setAttachments([]);
+    void send(text, atts);
+  };
+
+  // 附件被拒提示 — 按原因分组聚合为逐条通知
+  const notifyRejections = (rejections: AttachmentRejections) => {
+    const groups: Array<[keyof AttachmentRejections, string]> = [
+      ['unsupported', 'aiAttachmentUnsupported'],
+      ['tooLarge', 'aiAttachmentTooLarge'],
+      ['tooMany', 'aiAttachmentTooMany'],
+      ['readFailed', 'aiAttachmentReadFailed'],
+    ];
+    const sep = lang === 'zh' ? '、' : ', ';
+    for (const [key, i18nKey] of groups) {
+      const names = rejections[key];
+      if (names.length > 0) {
+        notify.warn(t(lang, 'aiAttach'), t(lang, i18nKey).replace('{n}', names.join(sep)), {
+          source: 'ai-attach',
+        });
+      }
+    }
+  };
+
+  // 合并一次添加结果 (对话框 / 拖放共用)
+  const mergePicked = (result: AttachmentPickResult | null) => {
+    if (!result) return; // 用户取消
+    if (result.attachments.length > 0) {
+      setAttachments((prev) => [...prev, ...result.attachments]);
+    }
+    notifyRejections(result.rejections);
+  };
+
+  const onPickAttachments = async () => {
+    try {
+      mergePicked(await pickAttachments(attachments));
+    } catch (e) {
+      notify.error(t(lang, 'aiAttach'), formatError(e), { source: 'ai-attach' });
+    }
+  };
+
+  const onDropFiles = async (files: FileList) => {
+    try {
+      mergePicked(await readDroppedFiles(files, attachments));
+    } catch (e) {
+      notify.error(t(lang, 'aiAttach'), formatError(e), { source: 'ai-attach' });
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       onSend();
+    }
+  };
+
+  // 导出当前会话为 Markdown 文件 (标准对话格式)
+  const onExportChat = async () => {
+    if (!activeSessionId || viewItems.length === 0) return;
+    const title =
+      useAiChatStore.getState().sessions.find((s) => s.id === activeSessionId)?.title ??
+      t(lang, 'aiSessionNew');
+    const result = await saveMdFile(sessionFilename(title), sessionToMarkdown(title, viewItems, lang));
+    if (result === 'ok') {
+      notify.info(t(lang, 'aiChatExportSuccess'), t(lang, 'aiChatExportSuccessDesc'), { source: 'ai-export' });
+    } else if (result === 'error') {
+      notify.error(t(lang, 'aiChatExportFailed'), t(lang, 'aiChatExportFailedDesc'), { source: 'ai-export' });
+    }
+    // 用户取消不提示
+  };
+
+  // 导入 Markdown 文件内容到输入框 (可编辑后再手动发送)
+  const onImportChat = async () => {
+    try {
+      const text = await readMdFile();
+      if (text == null) return; // 用户取消
+      if (!text.trim()) {
+        notify.warn(t(lang, 'aiChatImportFailed'), t(lang, 'aiChatImportEmpty'), { source: 'ai-import' });
+        return;
+      }
+      setInput(text);
+    } catch (e) {
+      notify.error(t(lang, 'aiChatImportFailed'), formatError(e), { source: 'ai-import' });
     }
   };
 
@@ -516,6 +608,22 @@ export function AiChatPanel() {
         <div className="ml-auto flex items-center gap-0.5 shrink-0">
           <button
             className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            onClick={() => void onImportChat()}
+            disabled={streaming}
+            title={t(lang, 'aiImportChat')}
+          >
+            <Upload size={12} />
+          </button>
+          <button
+            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            onClick={() => void onExportChat()}
+            disabled={streaming || viewItems.length === 0}
+            title={t(lang, 'aiExportChat')}
+          >
+            <Download size={12} />
+          </button>
+          <button
+            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
             onClick={() => void clearSession()}
             disabled={streaming || viewItems.length === 0}
             title={t(lang, 'aiClear')}
@@ -547,8 +655,22 @@ export function AiChatPanel() {
         {viewItems.map((item, i) =>
           item.role === 'user' ? (
             <div key={i} className="flex justify-end animate-ai-msg-in">
-              <div className="max-w-[85%] rounded-lg px-2.5 py-1.5 bg-accent text-accent-foreground whitespace-pre-wrap break-words">
-                {item.text}
+              <div className="max-w-[85%] rounded-lg px-2.5 py-1.5 bg-accent text-accent-foreground space-y-1">
+                {item.attachments && item.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {item.attachments.map((att, j) => (
+                      <span
+                        key={j}
+                        title={att.name}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/15 text-[11px] max-w-[180px]"
+                      >
+                        <FileText size={10} className="shrink-0" />
+                        <span className="truncate">{att.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {item.text && <div className="whitespace-pre-wrap break-words">{item.text}</div>}
               </div>
             </div>
           ) : (
@@ -592,34 +714,88 @@ export function AiChatPanel() {
         </div>
       )}
 
-      {/* 输入区 */}
-      <div className="flex items-end gap-2 px-3 py-2 border-t border-border-subtle shrink-0">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={onKeyDown}
-          placeholder={t(lang, 'inputMessage')}
-          rows={1}
-          className="flex-1 resize-none bg-bg-hover rounded px-2 py-1.5 text-xs outline-none focus:ring-1 ring-accent max-h-24"
-        />
-        {streaming ? (
-          <button
-            className="h-7 px-2.5 rounded bg-danger text-white text-xs flex items-center gap-1 shrink-0"
-            onClick={() => void cancel()}
-          >
-            <Square size={11} />
-            {t(lang, 'aiStop')}
-          </button>
-        ) : (
-          <button
-            className="h-7 px-2.5 rounded bg-accent text-accent-foreground text-xs flex items-center gap-1 shrink-0 disabled:opacity-40"
-            onClick={onSend}
-            disabled={!input.trim() || !activeSessionId || !!sendIssue}
-          >
-            <Send size={11} />
-            {t(lang, 'aiSend')}
-          </button>
+      {/* 输入区 — 支持拖放文本文件作为附件 (拖入时高亮) */}
+      <div
+        className={`border-t border-border-subtle shrink-0 ${dragOver ? 'ring-1 ring-inset ring-accent' : ''}`}
+        onDragEnter={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return;
+          e.preventDefault();
+          dragDepth.current += 1;
+          setDragOver(true);
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes('Files')) return;
+          e.preventDefault();
+        }}
+        onDragLeave={() => {
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setDragOver(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          dragDepth.current = 0;
+          setDragOver(false);
+          if (!streaming && e.dataTransfer.files.length > 0) void onDropFiles(e.dataTransfer.files);
+        }}
+      >
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-1 px-3 pt-2">
+            {attachments.map((att, i) => (
+              <span
+                key={`${att.name}-${i}`}
+                className="flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded bg-bg-hover text-[11px] max-w-[200px]"
+              >
+                <FileText size={10} className="text-accent shrink-0" />
+                <span className="truncate" title={att.name}>
+                  {att.name}
+                </span>
+                <button
+                  className="p-0.5 rounded text-text-secondary hover:text-text-primary shrink-0"
+                  onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                  title={t(lang, 'aiRemoveAttachment')}
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
         )}
+        <div className="flex items-end gap-2 px-3 py-2">
+          <button
+            className="p-1.5 mb-px rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40 shrink-0"
+            onClick={() => void onPickAttachments()}
+            disabled={streaming}
+            title={t(lang, 'aiAttach')}
+          >
+            <Paperclip size={13} />
+          </button>
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder={t(lang, 'inputMessage')}
+            rows={1}
+            className="flex-1 resize-none bg-bg-hover rounded px-2 py-1.5 text-xs outline-none focus:ring-1 ring-accent max-h-24"
+          />
+          {streaming ? (
+            <button
+              className="h-7 px-2.5 rounded bg-danger text-white text-xs flex items-center gap-1 shrink-0"
+              onClick={() => void cancel()}
+            >
+              <Square size={11} />
+              {t(lang, 'aiStop')}
+            </button>
+          ) : (
+            <button
+              className="h-7 px-2.5 rounded bg-accent text-accent-foreground text-xs flex items-center gap-1 shrink-0 disabled:opacity-40"
+              onClick={onSend}
+              disabled={(!input.trim() && attachments.length === 0) || !activeSessionId || !!sendIssue}
+            >
+              <Send size={11} />
+              {t(lang, 'aiSend')}
+            </button>
+          )}
+        </div>
       </div>
 
       {drawerOpen && <McpDrawer onClose={() => setDrawerOpen(false)} />}

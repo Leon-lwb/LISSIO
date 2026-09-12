@@ -9,7 +9,8 @@ export type ControlType =
   | { kind: 'toggle' }
   | { kind: 'number'; min?: number; max?: number; step?: number }
   | { kind: 'text' }
-  | { kind: 'theme' };
+  | { kind: 'theme' }
+  | { kind: 'promptEditor' };
 
 export interface SettingFieldDef {
   category: keyof AppSettings;
@@ -473,8 +474,8 @@ export const SETTING_FIELDS: SettingFieldDef[] = [
     field: 'systemPrompt',
     labelKey: 'settingAiSystemPrompt',
     descKey: 'settingAiSystemPromptDesc',
-    control: { kind: 'text' },
-    keywords: ['ai', 'system prompt', '提示词'],
+    control: { kind: 'promptEditor' },
+    keywords: ['ai', 'system prompt', '提示词', 'md', 'markdown'],
   },
   {
     category: 'ai',

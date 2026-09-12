@@ -116,6 +116,7 @@ impl TurnRecorder {
             out.push(ViewItemDto {
                 role: ViewRoleDto::Assistant,
                 text: self.text.clone(),
+                attachments: None,
                 tools: (!tools.is_empty()).then_some(tools),
                 error: None,
                 error_kind: None,
@@ -126,6 +127,7 @@ impl TurnRecorder {
             out.push(ViewItemDto {
                 role: ViewRoleDto::Assistant,
                 text: err.message.clone(),
+                attachments: None,
                 tools: None,
                 error: Some(true),
                 error_kind: (!err.kind.is_empty()).then(|| err.kind.clone()),
