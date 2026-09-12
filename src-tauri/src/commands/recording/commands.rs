@@ -1,10 +1,49 @@
-use app::AppState;
+use app::{AppState, RunState};
 use recording::{
     BindingInfo, HistoryPage, HistoryQuery, RecordingCleanupPolicy, RecordingCleanupResult,
     RecordingDatabaseInfo, RecordingExportRequest, RecordingExportResult, RecordingHealth,
-    SessionInfo, SessionSummary, SqlResult,
+    SessionInfo, SessionState, SessionSummary, SqlResult,
 };
 use tauri::State;
+
+/// 录制会话生命周期操作仅在运行暂停时开放 — 暂停期间管道不喂数据,切换写入目标不丢批次
+fn require_paused_run(state: &AppState) -> Result<(), String> {
+    if state.data_plane.eval.execution.snapshot().state == RunState::Paused {
+        return Ok(());
+    }
+    Err("recording sessions can only be created or switched while the run is paused".into())
+}
+
+/// 暂停时新建录制会话并使其成为当前写入目标;被替换的会话标记为已停止
+#[tauri::command]
+pub async fn create_recording_session(state: State<'_, AppState>) -> Result<SessionInfo, String> {
+    require_paused_run(state.inner())?;
+    let recording = state.eval_state().recording;
+    tokio::task::spawn_blocking(move || {
+        recording
+            .create_session(SessionState::Paused)
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+/// 暂停时把写入目标切换到指定的已停止会话(继续写入该表)
+#[tauri::command]
+pub async fn set_active_recording_session(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<SessionInfo, String> {
+    require_paused_run(state.inner())?;
+    let recording = state.eval_state().recording;
+    tokio::task::spawn_blocking(move || {
+        recording
+            .switch_session(&session_id, SessionState::Paused)
+            .map_err(|error| error.to_string())
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
 
 #[tauri::command]
 pub fn get_recording_health(state: State<'_, AppState>) -> RecordingHealth {

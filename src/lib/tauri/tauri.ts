@@ -208,6 +208,8 @@ export interface RecordingSessionSummary {
   effective_bytes: number;
   first_timestamp_us: number | null;
   last_timestamp_us: number | null;
+  /** 当前写入目标会话 */
+  active: boolean;
 }
 
 export interface RecordingDatabaseInfo {
@@ -248,6 +250,8 @@ export interface RecordingCleanupResult {
   deleted_batches: number;
   deleted_items: number;
   deleted_bytes: number;
+  /** Session that survived cleanup, or a note that the database was repaired. */
+  warning?: string | null;
 }
 
 export interface RecordingSqlResult {
@@ -702,6 +706,11 @@ export const api = {
   flushRecording: () => invoke<void>('flush_recording'),
   deleteRecordingSession: (sessionId: string) =>
     invoke<void>('delete_recording_session', { sessionId }),
+  /// 暂停时新建录制会话并切换为当前写入目标
+  createRecordingSession: () => invoke<RecordingSession>('create_recording_session'),
+  /// 暂停时把写入目标切换到指定的已停止会话
+  setActiveRecordingSession: (sessionId: string) =>
+    invoke<RecordingSession>('set_active_recording_session', { sessionId }),
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。

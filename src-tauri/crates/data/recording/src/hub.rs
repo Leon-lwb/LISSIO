@@ -1,5 +1,5 @@
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use parking_lot::RwLock;
@@ -10,12 +10,21 @@ use crate::{
     RecordingHealth, RecordingLimits, RecordingStore, SessionInfo, SessionState, SessionSummary,
 };
 
+/// Database coordinates captured at `start` so creating or resuming a session
+/// reuses the same store without the caller supplying them again.
+#[derive(Debug, Clone)]
+struct HubDatabase {
+    path: PathBuf,
+    limits: RecordingLimits,
+}
+
 #[derive(Debug, Default)]
 struct HubState {
     recorder: Option<Arc<Recorder>>,
     active: HashMap<PortIdentity, DisplayBinding>,
     sequences: HashMap<PortIdentity, u64>,
     fault: Option<String>,
+    database: Option<HubDatabase>,
 }
 
 /// Cloneable recording port shared by producers in all four domains.
@@ -32,26 +41,126 @@ impl RecordingHub {
         bindings: Vec<DisplayBinding>,
         limits: RecordingLimits,
     ) -> Result<SessionInfo, RecordingError> {
-        let store = RecordingStore::open(path)?;
+        let path = path.as_ref().to_path_buf();
         let active = unique_bindings(bindings);
-        let recorder = Arc::new(Recorder::start(
-            store,
-            active.values().cloned().collect(),
-            limits,
-        )?);
-        let session = recorder.session().clone();
-        let previous = {
-            let mut state = self.state.write();
-            let previous = state.recorder.replace(recorder);
-            state.active = active;
-            state.sequences.clear();
-            state.fault = None;
-            previous
-        };
-        if let Some(previous) = previous {
-            previous.shutdown()?;
+        self.replace_recording(&path, limits, active, None, SessionState::Running)
+    }
+
+    /// Start writing into a brand-new session in the same database, replacing
+    /// the current recorder. The replaced session is marked stopped.
+    pub fn create_session(&self, initial: SessionState) -> Result<SessionInfo, RecordingError> {
+        let (path, limits, active) = self.database_and_bindings()?;
+        self.replace_recording(&path, limits, active, None, initial)
+    }
+
+    /// Resume writing into an existing stopped session, replacing the current
+    /// recorder. The replaced session is marked stopped.
+    pub fn switch_session(
+        &self,
+        session_id: &str,
+        initial: SessionState,
+    ) -> Result<SessionInfo, RecordingError> {
+        let (path, limits, active) = self.database_and_bindings()?;
+        if self.current_session_id().as_deref() == Some(session_id) {
+            return Err(RecordingError::Invalid(
+                "session is already the active recording target".into(),
+            ));
         }
-        Ok(session)
+        {
+            let store = self.store().ok_or(RecordingError::Closed)?;
+            let target = store
+                .list_sessions()?
+                .into_iter()
+                .find(|session| session.id == session_id)
+                .ok_or_else(|| {
+                    RecordingError::Invalid(format!(
+                        "recording session was not found: {session_id}"
+                    ))
+                })?;
+            if target.state != SessionState::Stopped {
+                return Err(RecordingError::Invalid(format!(
+                    "only stopped recording sessions can be resumed: {session_id}"
+                )));
+            }
+        }
+        self.replace_recording(
+            &path,
+            limits,
+            active,
+            Some((session_id.to_string(), initial)),
+            initial,
+        )
+    }
+
+    /// Swap in a recorder writing to `target` (a brand-new session when `None`).
+    ///
+    /// The previous writer must fully close its DuckDB instance before the
+    /// replacement opens its own: `Connection::open` creates an independent
+    /// database instance, and concurrent instances on one file checkpoint over
+    /// each other, silently erasing committed writes. While the recorder is
+    /// absent no batches are produced, so this window must only be entered
+    /// while the run is paused.
+    fn replace_recording(
+        &self,
+        path: &Path,
+        limits: RecordingLimits,
+        active: HashMap<PortIdentity, DisplayBinding>,
+        target: Option<(String, SessionState)>,
+        initial: SessionState,
+    ) -> Result<SessionInfo, RecordingError> {
+        let shutdown = self.take_recorder().map(|recorder| recorder.shutdown());
+        if let Some(Err(error)) = shutdown {
+            self.state.write().fault = Some(error.to_string());
+            return Err(error);
+        }
+        let outcome = spawn_recorder(path, limits, active.clone(), target, initial);
+        match outcome {
+            Ok(recorder) => {
+                let session = recorder.session().clone();
+                let mut state = self.state.write();
+                state.recorder = Some(recorder);
+                state.active = active;
+                state.sequences.clear();
+                state.fault = None;
+                state.database = Some(HubDatabase {
+                    path: path.to_path_buf(),
+                    limits,
+                });
+                Ok(session)
+            }
+            Err(error) => {
+                self.state.write().fault = Some(error.to_string());
+                Err(error)
+            }
+        }
+    }
+
+    fn database_and_bindings(
+        &self,
+    ) -> Result<
+        (
+            PathBuf,
+            RecordingLimits,
+            HashMap<PortIdentity, DisplayBinding>,
+        ),
+        RecordingError,
+    > {
+        let state = self.state.read();
+        let database = state.database.as_ref().ok_or(RecordingError::Closed)?;
+        Ok((database.path.clone(), database.limits, state.active.clone()))
+    }
+
+    fn take_recorder(&self) -> Option<Arc<Recorder>> {
+        self.state.write().recorder.take()
+    }
+
+    #[must_use]
+    fn current_session_id(&self) -> Option<String> {
+        self.state
+            .read()
+            .recorder
+            .as_ref()
+            .map(|recorder| recorder.session().id.clone())
     }
 
     /// Replace active display bindings. Existing rows stay queryable; a removed
@@ -192,7 +301,15 @@ impl RecordingHub {
 
     pub fn list_session_summaries(&self) -> Result<Vec<SessionSummary>, RecordingError> {
         let store = self.store().ok_or(RecordingError::Closed)?;
-        store.list_session_summaries()
+        let mut summaries = store.list_session_summaries()?;
+        if let Some(current_id) = self.current_session_id() {
+            for summary in &mut summaries {
+                if summary.session.id == current_id {
+                    summary.active = true;
+                }
+            }
+        }
+        Ok(summaries)
     }
 
     pub fn database_info(&self) -> Result<RecordingDatabaseInfo, RecordingError> {
@@ -282,6 +399,30 @@ impl RecordingHub {
             true
         })
     }
+}
+
+/// Build a recorder for `target` (a brand-new session when `None`) resuming
+/// into `initial`. The caller must ensure no other database instance is open.
+fn spawn_recorder(
+    path: &Path,
+    limits: RecordingLimits,
+    active: HashMap<PortIdentity, DisplayBinding>,
+    target: Option<(String, SessionState)>,
+    initial: SessionState,
+) -> Result<Arc<Recorder>, RecordingError> {
+    let store = RecordingStore::open(path)?;
+    let bindings = active.values().cloned().collect();
+    let recorder = match target {
+        None => Recorder::start(store, bindings, limits)?,
+        Some((session_id, session_state)) => {
+            let session = store.reopen_session(&session_id, session_state)?;
+            Recorder::attach(store, session, bindings, limits)?
+        }
+    };
+    if initial != SessionState::Running {
+        recorder.set_state(initial)?;
+    }
+    Ok(Arc::new(recorder))
 }
 
 fn unique_bindings(bindings: Vec<DisplayBinding>) -> HashMap<PortIdentity, DisplayBinding> {

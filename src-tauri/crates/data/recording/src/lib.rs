@@ -10,6 +10,7 @@ mod hub;
 mod maintenance;
 mod model;
 mod read_model;
+mod repair;
 mod store;
 mod writer;
 

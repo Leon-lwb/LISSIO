@@ -116,6 +116,32 @@ impl RecordingStore {
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
     }
 
+    /// Resume a finished session for further writes: clears the end timestamp
+    /// and stores `state`. Only explicitly stopped sessions can be resumed.
+    pub(crate) fn reopen_session(
+        &self,
+        session_id: &str,
+        state: SessionState,
+    ) -> Result<SessionInfo, RecordingError> {
+        let connection = self.connect()?;
+        let updated = connection.execute(
+            "UPDATE recording_sessions SET state=?, ended_at_us=NULL \
+             WHERE id=? AND state='stopped'",
+            params![state.as_str(), session_id],
+        )?;
+        if updated == 0 {
+            return Err(RecordingError::Invalid(format!(
+                "recording session was not found or is not resumable: {session_id}"
+            )));
+        }
+        self.list_sessions()?
+            .into_iter()
+            .find(|session| session.id == session_id)
+            .ok_or_else(|| {
+                RecordingError::Invalid(format!("recording session was not found: {session_id}"))
+            })
+    }
+
     pub fn delete_session(&self, session_id: &str) -> Result<(), RecordingError> {
         let connection = self.connect()?;
         let state: String = connection

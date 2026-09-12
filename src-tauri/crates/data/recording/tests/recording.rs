@@ -318,3 +318,169 @@ fn cleanup_keep_latest_prunes_multiple_terminal_sessions() {
     hub.stop().unwrap();
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+fn create_session_while_paused_starts_a_fresh_write_target() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-create-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            vec![binding("float", Domain::Float)],
+            RecordingLimits::default(),
+        )
+        .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10, 11],
+            BatchPayload::Float {
+                values: vec![1.0, 2.0],
+            },
+        )
+        .unwrap()
+    );
+    hub.set_state(SessionState::Paused).unwrap();
+
+    let second = hub.create_session(SessionState::Paused).unwrap();
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 2);
+    let first_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == first.id)
+        .unwrap();
+    let second_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == second.id)
+        .unwrap();
+    assert_eq!(first_summary.session.state, SessionState::Stopped);
+    assert!(!first_summary.active);
+    assert_eq!(second_summary.session.state, SessionState::Paused);
+    assert!(second_summary.active);
+
+    // 后续数据进入新会话,旧会话数据保持完整可查
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            3,
+            100,
+            vec![200, 201],
+            BatchPayload::Float {
+                values: vec![3.0, 4.0],
+            },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+    let store = hub.store().unwrap();
+    assert_eq!(
+        store
+            .history_page(&first.id, None, 0, 10, false)
+            .unwrap()
+            .rows
+            .len(),
+        1
+    );
+    assert_eq!(
+        store
+            .history_page(&second.id, None, 0, 10, false)
+            .unwrap()
+            .rows
+            .len(),
+        1
+    );
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn switch_session_resumes_a_stopped_session() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-switch-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            vec![binding("float", Domain::Float)],
+            RecordingLimits::default(),
+        )
+        .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10],
+            BatchPayload::Float { values: vec![1.0] },
+        )
+        .unwrap()
+    );
+    hub.set_state(SessionState::Paused).unwrap();
+    hub.create_session(SessionState::Paused).unwrap();
+
+    let resumed = hub.switch_session(&first.id, SessionState::Paused).unwrap();
+    assert_eq!(resumed.id, first.id);
+    let summaries = hub.list_session_summaries().unwrap();
+    let first_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == first.id)
+        .unwrap();
+    assert_eq!(first_summary.session.state, SessionState::Paused);
+    assert!(first_summary.active);
+    assert!(
+        summaries
+            .iter()
+            .filter(|summary| summary.session.id != first.id)
+            .all(|summary| summary.session.state == SessionState::Stopped && !summary.active)
+    );
+
+    // 目标校验:当前写入会话与不存在的会话都拒绝
+    assert!(hub.switch_session(&first.id, SessionState::Paused).is_err());
+    assert!(
+        hub.switch_session("missing-session", SessionState::Paused)
+            .is_err()
+    );
+
+    // 恢复后继续写入原会话
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            3,
+            100,
+            vec![200],
+            BatchPayload::Float { values: vec![3.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+    let store = hub.store().unwrap();
+    assert_eq!(
+        store
+            .history_page(&first.id, None, 0, 10, false)
+            .unwrap()
+            .rows
+            .len(),
+        2
+    );
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn session_operations_require_a_started_hub() {
+    let hub = RecordingHub::default();
+    assert!(hub.create_session(SessionState::Paused).is_err());
+    assert!(
+        hub.switch_session("anything", SessionState::Paused)
+            .is_err()
+    );
+}

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::thread::JoinHandle;
-use std::time::{Duration, Instant};
 
 use parking_lot::{Mutex, RwLock};
 use thiserror::Error;
@@ -11,6 +10,8 @@ use crate::{
     DisplayBinding, Domain, RecordBatch, RecordingCleanupResult, RecordingHealth, RecordingLimits,
     RecordingStore, SessionInfo, SessionState,
 };
+
+mod worker;
 
 #[derive(Debug, Error)]
 pub enum RecordingError {
@@ -72,15 +73,28 @@ impl Recorder {
         bindings: Vec<DisplayBinding>,
         limits: RecordingLimits,
     ) -> Result<Self, RecordingError> {
-        if limits.queue_batches == 0
-            || limits.transaction_bytes == 0
-            || limits.commit_interval_ms == 0
-        {
-            return Err(RecordingError::Invalid(
-                "recording limits must be greater than zero".into(),
-            ));
-        }
+        check_limits(&limits)?;
         let session = store.create_session(&bindings)?;
+        Self::spawn(store, session, bindings, limits)
+    }
+
+    /// Attach to an existing (resumed) session instead of creating a new one.
+    pub fn attach(
+        store: RecordingStore,
+        session: SessionInfo,
+        bindings: Vec<DisplayBinding>,
+        limits: RecordingLimits,
+    ) -> Result<Self, RecordingError> {
+        check_limits(&limits)?;
+        Self::spawn(store, session, bindings, limits)
+    }
+
+    fn spawn(
+        store: RecordingStore,
+        session: SessionInfo,
+        bindings: Vec<DisplayBinding>,
+        limits: RecordingLimits,
+    ) -> Result<Self, RecordingError> {
         let binding_domains = bindings
             .into_iter()
             .map(|binding| (binding.id, binding.domain))
@@ -94,7 +108,7 @@ impl Recorder {
         let thread = std::thread::Builder::new()
             .name("recording-writer".into())
             .spawn(move || {
-                run_writer(
+                worker::run_writer(
                     &writer_store,
                     &writer_session,
                     limits,
@@ -238,146 +252,13 @@ impl Drop for Recorder {
     }
 }
 
-fn run_writer(
-    store: &RecordingStore,
-    session_id: &str,
-    limits: RecordingLimits,
-    receiver: mpsc::Receiver<Command>,
-    health: &HealthState,
-) {
-    let result = run_writer_inner(store, session_id, limits, &receiver, health);
-    if let Err(error) = result {
-        *health.failed.lock() = Some(error.to_string());
-        if let Ok(connection) = store.connect() {
-            let _ = RecordingStore::update_session(&connection, session_id, SessionState::Failed);
-        }
+fn check_limits(limits: &RecordingLimits) -> Result<(), RecordingError> {
+    if limits.queue_batches == 0 || limits.transaction_bytes == 0 || limits.commit_interval_ms == 0
+    {
+        return Err(RecordingError::Invalid(
+            "recording limits must be greater than zero".into(),
+        ));
     }
-}
-
-fn run_writer_inner(
-    store: &RecordingStore,
-    session_id: &str,
-    limits: RecordingLimits,
-    receiver: &mpsc::Receiver<Command>,
-    health: &HealthState,
-) -> Result<(), RecordingError> {
-    let connection = store.connect()?;
-    let mut row_id = RecordingStore::next_row_id(&connection)?;
-    let interval = Duration::from_millis(limits.commit_interval_ms);
-    let mut transaction_open = false;
-    let mut pending = Vec::new();
-    let mut pending_bytes = 0_usize;
-    let mut last_commit = Instant::now();
-    loop {
-        let command = receiver.recv_timeout(interval.saturating_sub(last_commit.elapsed()));
-        match command {
-            Ok(Command::Append(batch)) => {
-                if !transaction_open {
-                    connection.execute_batch("BEGIN TRANSACTION")?;
-                    transaction_open = true;
-                }
-                let bytes = RecordingStore::write_batch(&connection, session_id, row_id, &batch)?;
-                row_id = row_id.saturating_add(1);
-                pending_bytes = pending_bytes.saturating_add(bytes);
-                pending.push((batch.sequence_end(), bytes));
-                if pending_bytes >= limits.transaction_bytes {
-                    commit(&connection, health, &mut pending, &mut pending_bytes)?;
-                    transaction_open = false;
-                    last_commit = Instant::now();
-                }
-            }
-            Ok(Command::Bind(binding, reply)) => {
-                let result = RecordingStore::insert_binding(&connection, session_id, &binding)
-                    .map_err(|error| error.to_string());
-                let _ = reply.send(result);
-            }
-            Ok(Command::Unbind(binding_id, reply)) => {
-                let result = RecordingStore::close_binding(&connection, session_id, &binding_id)
-                    .map_err(|error| error.to_string());
-                let _ = reply.send(result);
-            }
-            Ok(Command::State(state, reply)) => {
-                let result = (|| {
-                    if transaction_open {
-                        commit(&connection, health, &mut pending, &mut pending_bytes)?;
-                        transaction_open = false;
-                    }
-                    RecordingStore::update_session(&connection, session_id, state)
-                })()
-                .map_err(|error| error.to_string());
-                let _ = reply.send(result);
-                last_commit = Instant::now();
-            }
-            Ok(Command::DeleteSessions(session_ids, reply)) => {
-                let result = (|| {
-                    if transaction_open {
-                        commit(&connection, health, &mut pending, &mut pending_bytes)?;
-                        transaction_open = false;
-                    }
-                    crate::maintenance::delete_sessions_on(&connection, session_id, &session_ids)
-                })()
-                .map_err(|error| error.to_string());
-                let _ = reply.send(result);
-                last_commit = Instant::now();
-            }
-            Ok(Command::Flush(reply)) => {
-                let result = if transaction_open {
-                    commit(&connection, health, &mut pending, &mut pending_bytes)
-                } else {
-                    Ok(())
-                }
-                .map_err(|error| error.to_string());
-                transaction_open = false;
-                let _ = reply.send(result);
-                last_commit = Instant::now();
-            }
-            Ok(Command::Shutdown(reply)) => {
-                let result = (|| {
-                    if transaction_open {
-                        commit(&connection, health, &mut pending, &mut pending_bytes)?;
-                    }
-                    RecordingStore::update_session(&connection, session_id, SessionState::Stopped)
-                })()
-                .map_err(|error| error.to_string());
-                let _ = reply.send(result);
-                break;
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => {
-                if transaction_open {
-                    commit(&connection, health, &mut pending, &mut pending_bytes)?;
-                    transaction_open = false;
-                }
-                last_commit = Instant::now();
-            }
-            Err(mpsc::RecvTimeoutError::Disconnected) => break,
-        }
-    }
-    Ok(())
-}
-
-fn commit(
-    connection: &duckdb::Connection,
-    health: &HealthState,
-    pending: &mut Vec<(u64, usize)>,
-    pending_bytes: &mut usize,
-) -> Result<(), RecordingError> {
-    connection.execute_batch("COMMIT")?;
-    let count = pending.len() as u64;
-    let sequence = pending
-        .iter()
-        .map(|entry| entry.0)
-        .max()
-        .unwrap_or_default();
-    health.persisted_batches.fetch_add(count, Ordering::Relaxed);
-    health
-        .persisted_bytes
-        .fetch_add(*pending_bytes as u64, Ordering::Relaxed);
-    health
-        .persisted_sequence
-        .fetch_max(sequence, Ordering::Relaxed);
-    health.queued_batches.fetch_sub(count, Ordering::Relaxed);
-    pending.clear();
-    *pending_bytes = 0;
     Ok(())
 }
 

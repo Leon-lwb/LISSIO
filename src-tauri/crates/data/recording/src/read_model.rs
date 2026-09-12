@@ -38,6 +38,7 @@ impl RecordingStore {
                 effective_bytes: row.get(7)?,
                 first_timestamp_us: row.get(8)?,
                 last_timestamp_us: row.get(9)?,
+                active: false,
             })
         })?;
         rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)

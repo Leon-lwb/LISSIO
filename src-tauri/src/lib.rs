@@ -226,6 +226,8 @@ pub fn run() {
             delete_recording_session,
             cleanup_recording_sessions,
             export_recording_data,
+            create_recording_session,
+            set_active_recording_session,
             create_waveform_snapshot,
             query_waveform_snapshot,
             release_waveform_snapshot,

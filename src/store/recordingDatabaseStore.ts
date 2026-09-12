@@ -70,13 +70,19 @@ interface RecordingDatabaseState {
   history: RecordingHistoryCacheEntry[];
   loading: boolean;
   error: string | null;
+  warning: string | null;
   loadOverview: () => Promise<void>;
   selectSession: (sessionId: string, bindingId?: string | null) => Promise<void>;
   selectBinding: (bindingId: string | null) => void;
   setIncludePayload: (includePayload: boolean) => void;
   loadHistory: (reset?: boolean) => Promise<void>;
   cleanupSessions: (policy: RecordingCleanupPolicy) => Promise<RecordingCleanupResult>;
+  /** 暂停时新建会话并切换为当前写入目标 */
+  createSession: () => Promise<void>;
+  /** 暂停时把写入目标切换到指定的已停止会话 */
+  setActiveSession: (sessionId: string) => Promise<void>;
   clearError: () => void;
+  clearWarning: () => void;
 }
 
 export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
@@ -91,6 +97,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
       history: [],
       loading: false,
       error: null,
+      warning: null,
 
       loadOverview: async () => {
         try {
@@ -189,6 +196,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
             selectedBindingId: null,
             bindings: [],
             error: null,
+            warning: result.warning ?? null,
           });
           await get().loadOverview();
           return result;
@@ -197,6 +205,28 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
           throw error;
         }
       },
+
+      createSession: async () => {
+        try {
+          await api.createRecordingSession();
+          await get().loadOverview();
+        } catch (error) {
+          set({ error: String(error) });
+          throw error;
+        }
+      },
+
+      setActiveSession: async (sessionId) => {
+        try {
+          await api.setActiveRecordingSession(sessionId);
+          await get().loadOverview();
+        } catch (error) {
+          set({ error: String(error) });
+          throw error;
+        }
+      },
+
+      clearWarning: () => set({ warning: null }),
 
       clearError: () => set({ error: null }),
     }),

@@ -237,6 +237,9 @@ pub struct SessionSummary {
     pub effective_bytes: u64,
     pub first_timestamp_us: Option<u64>,
     pub last_timestamp_us: Option<u64>,
+    /// Whether the hub is currently writing into this session.
+    #[serde(default)]
+    pub active: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -287,12 +290,15 @@ pub struct RecordingCleanupPolicy {
     pub keep_latest: Option<usize>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RecordingCleanupResult {
     pub deleted_sessions: u64,
     pub deleted_batches: u64,
     pub deleted_items: u64,
     pub deleted_bytes: u64,
+    /// Non-fatal problems: sessions that survived cleanup, or an automatic database repair.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

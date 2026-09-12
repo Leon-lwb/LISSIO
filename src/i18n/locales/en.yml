@@ -1203,6 +1203,18 @@ recordingDatabaseStateRunning: running
 recordingDatabaseStatePaused: paused
 recordingDatabaseStateStopped: stopped
 recordingDatabaseStateFailed: failed
+recordingDatabaseNewSession: New session
+recordingDatabaseSetActive: Set active
+recordingDatabaseActiveBadge: writing
+recordingDatabasePausedOnlyHint: Only available while the run is paused
+recordingDatabaseOpenSession: Open in view
+recordingDatabaseCurrentTarget: Writing to
+recordingDatabaseNoActiveTarget: none
+recordingDatabaseHintAlreadyActive: This session is already the write target
+recordingDatabaseHintNeedsPause: Pause the run first to switch the write target
+recordingDatabaseHintNeedsStopped: Only stopped sessions can become the write target
+recordingDatabaseHintDeleteActive: Switch the write target before deleting this session
+recordingDatabaseRowSelectHint: Click while paused to set as the write target; right-click for more actions
 recordingDatabaseSessionCount: Sessions
 recordingDatabaseBatchCount: Batches
 recordingDatabaseItemCount: Items
