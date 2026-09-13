@@ -47,3 +47,6 @@ dist-ssr/
 /src-tauri/perf.data*
 *.profraw
 media/
+
+# for gpuix reflactor
+third_party/
