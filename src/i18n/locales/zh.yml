@@ -1540,6 +1540,12 @@ schemaFieldWordOrder: 字序
 schemaFieldScale: 缩放系数
 schemaFieldOffset: 偏移
 schemaFieldPollPeriodMs: 轮询周期 (ms)
+schemaFieldPlcType: PLC 型号
+schemaFieldRack: 机架号
+schemaFieldSlot: 槽位号
+schemaFieldDbNumber: 数据块编号
+schemaFieldByteOffset: 字节偏移
+schemaFieldBit: 位偏移
 schemaEnumNone: 无
 schemaEnumOdd: 奇校验
 schemaEnumEven: 偶校验
@@ -1555,6 +1561,10 @@ schemaEnumCoils: 线圈
 schemaEnumDiscreteInputs: 离散输入
 schemaEnumInputRegisters: 输入寄存器
 schemaEnumHoldingRegisters: 保持寄存器
+schemaEnumInputs: 输入 (I)
+schemaEnumOutputs: 输出 (Q)
+schemaEnumMarkers: 中间寄存器 (M)
+schemaEnumDb: 数据块 (DB)
 
 devicePanelHint: 点击或拖动设备到画布，再配置通信参数并连接。
 devicePanelSearch: 搜索名称、端口、VID/PID…

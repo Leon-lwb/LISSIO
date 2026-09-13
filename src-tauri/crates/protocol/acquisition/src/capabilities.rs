@@ -15,6 +15,7 @@ pub enum ProtocolKind {
     Bytes,
     ModbusTcp,
     ModbusRtu,
+    S7,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]

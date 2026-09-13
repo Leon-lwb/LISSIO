@@ -16,9 +16,10 @@ name = "lissio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-default = ["modbus-tcp", "modbus-rtu"]
+default = ["modbus-tcp", "modbus-rtu", "s7"]
 modbus-tcp = ["dep:modbus-adapter"]
 modbus-rtu = ["dep:modbus-adapter"]
+s7 = ["dep:s7-adapter"]
 
 [profile.release]
 debug = true
@@ -58,6 +59,7 @@ members = [
   "crates/transport/transport",
   "crates/protocol/acquisition",
   "crates/transport/modbus-adapter",
+  "crates/transport/s7-adapter",
   "crates/transport/automotive",
   "crates/transport/automotive_isotp",
   "crates/transport/automotive_diag",
@@ -194,6 +196,8 @@ base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
 tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }
 tokio-serial = { version = "5.4.4", default-features = false }
+# tokio-s7: 西门子 S7comm 异步客户端 (ISO-on-TCP), PLC 采集的第二条点位源 (Apache-2.0)
+tokio-s7 = "0.1.7"
 log = "0.4"
 libc = "0.2"
 thiserror = "1"
@@ -269,6 +273,7 @@ transport = { path = "crates/transport/transport" }
 network = { path = "crates/transport/network" }
 serial = { path = "crates/transport/serial" }
 modbus-adapter = { path = "crates/transport/modbus-adapter" }
+s7-adapter = { path = "crates/transport/s7-adapter" }
 # L1 node
 graph = { package = "graph", path = "crates/graph/graph" }
 eval = { path = "crates/graph/eval" }
@@ -332,6 +337,7 @@ transport = { workspace = true }
 serial = { workspace = true }
 network = { workspace = true }
 modbus-adapter = { workspace = true, optional = true }
+s7-adapter = { workspace = true, optional = true }
 can_transport = { workspace = true }
 subscription = { workspace = true }
 menu_shell = { workspace = true }

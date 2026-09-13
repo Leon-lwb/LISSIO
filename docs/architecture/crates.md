@@ -50,7 +50,7 @@ allowed when they also satisfy the layer rule.
 | vehicle | `can`, `diagnostic` |
 | protocol | `logic`, `protocol`, `schema`, `frame-decoder`, `points`, `acquisition` |
 | graph | `trigger`, `graph`, `graph-testkit` |
-| transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `modbus-adapter` |
+| transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `modbus-adapter`, `s7-adapter` |
 | data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |

@@ -84,6 +84,8 @@ fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
     registry.register(Arc::new(modbus_adapter::ModbusFactory::default()));
     #[cfg(feature = "modbus-rtu")]
     registry.register(Arc::new(modbus_adapter::ModbusRtuFactory::default()));
+    #[cfg(feature = "s7")]
+    registry.register(Arc::new(s7_adapter::S7Factory::default()));
     acquisition::AcquisitionRuntime::new(registry)
 }
 

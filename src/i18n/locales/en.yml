@@ -1540,6 +1540,12 @@ schemaFieldWordOrder: Word order
 schemaFieldScale: Scale
 schemaFieldOffset: Offset
 schemaFieldPollPeriodMs: Poll period (ms)
+schemaFieldPlcType: PLC model
+schemaFieldRack: Rack
+schemaFieldSlot: Slot
+schemaFieldDbNumber: DB number
+schemaFieldByteOffset: Byte offset
+schemaFieldBit: Bit
 schemaEnumNone: None
 schemaEnumOdd: Odd
 schemaEnumEven: Even
@@ -1555,6 +1561,10 @@ schemaEnumCoils: Coils
 schemaEnumDiscreteInputs: Discrete inputs
 schemaEnumInputRegisters: Input registers
 schemaEnumHoldingRegisters: Holding registers
+schemaEnumInputs: Inputs (I)
+schemaEnumOutputs: Outputs (Q)
+schemaEnumMarkers: Markers (M)
+schemaEnumDb: Data blocks (DB)
 
 devicePanelHint: Click or drag a device onto the canvas, then configure and connect.
 devicePanelSearch: Search name, port, VID/PID…

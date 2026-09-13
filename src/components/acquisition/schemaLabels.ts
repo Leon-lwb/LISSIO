@@ -42,6 +42,12 @@ const FIELD_KEYS: Record<string, string> = {
   dataType: 'schemaFieldDataType',
   byteOrder: 'schemaFieldByteOrder',
   wordOrder: 'schemaFieldWordOrder',
+  plcType: 'schemaFieldPlcType',
+  rack: 'schemaFieldRack',
+  slot: 'schemaFieldSlot',
+  dbNumber: 'schemaFieldDbNumber',
+  byteOffset: 'schemaFieldByteOffset',
+  bit: 'schemaFieldBit',
   scale: 'schemaFieldScale',
   offset: 'schemaFieldOffset',
   pollPeriodMs: 'schemaFieldPollPeriodMs',
@@ -63,6 +69,10 @@ const ENUM_KEYS: Record<string, string> = {
   discreteInputs: 'schemaEnumDiscreteInputs',
   inputRegisters: 'schemaEnumInputRegisters',
   holdingRegisters: 'schemaEnumHoldingRegisters',
+  inputs: 'schemaEnumInputs',
+  outputs: 'schemaEnumOutputs',
+  markers: 'schemaEnumMarkers',
+  db: 'schemaEnumDb',
 };
 
 export function schemaFieldLabelKey(name: string): string | undefined {

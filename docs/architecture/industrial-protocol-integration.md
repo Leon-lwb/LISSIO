@@ -1,6 +1,6 @@
 # 工业协议接入架构方案
 
-> 状态：部分落地（Modbus TCP/RTU、能力描述符、采集运行时与自动设备卡片已实现；其余协议仍为提案）
+> 状态：部分落地（Modbus TCP/RTU、Siemens S7 TCP、能力描述符、采集运行时与自动设备卡片已实现；其余协议仍为提案）
 >
 > 复核日期：2026-09-08
 >
@@ -92,7 +92,7 @@ FlowHub ── 生命周期、epoch、typed lanes、有界队列、序列/缺口
 | DNP3 / OpenDNP3 等 | **暂无 Rust 默认方案** | Apache-2.0 的 OpenDNP3 是 C++ 且已归档；当前纯 Rust 替代缺乏足够维护与互操作证据。需要时单独立项，不能借 FFI 名义宣称跨平台 Rust 支持。 |
 | IEC 104 / `iec104` | **需求驱动验证** | MIT、Tokio client/server、可选 TLS；API/行为仍演进且未覆盖全部可选类型。[上游](https://github.com/mzaniolo/iec104) |
 | IEC 104 / `voltage_iec104` | **对照候选** | 纯 Rust 事件 API 合理，但更年轻、独立证据更少。[文档](https://docs.rs/voltage_iec104) |
-| Siemens S7 / `tokio-s7` | **实验候选** | Apache-2.0、纯 Rust/Tokio；首批发布始于 2026-06，尚不能称成熟首选。[发布记录](https://docs.rs/crate/tokio-s7/latest) |
+| Siemens S7 / `tokio-s7` | **已接入** | Apache-2.0、纯 Rust/Tokio。锁定 0.1.7；适配器自管重连（SDK `auto_reconnect=false`，指数退避由会话状态机控制）、自行做 DNS 解析（SDK 仅接受字面 IP）。I/Q/M/DB 绝对寻址读走 BYTE transport（位在适配器侧解码），位写走原生 BIT transport；真实设备互操作与优化块 DB 限制仍待硬件验证。[上游](https://github.com/CrayfishGo/tokio-s7) |
 | Siemens S7 / Snap7 绑定 | **不默认分发** | C/C++ FFI 加 LGPL/木兰许可证链不符合当前依赖白名单；只可作为外部互操作对照工具。 |
 | MELSEC / `melsec_mc` | **实验候选** | MIT、Tokio TCP 与类型化读取已有实现；高层批量 API 和社区采用证据仍弱。[上游](https://github.com/tyaro/melsec_mc) |
 | BACnet / `bacnet-rs` | **暂不发布** | MIT OR Apache-2.0，但上游明确未 production-ready，分段、告警/事件、趋势、调度、BACnet/SC 缺失。[状态](https://github.com/bacnet-rs/bacnet-rs) |
@@ -104,10 +104,11 @@ Stars 和下载量只用于发现候选，不是发布证据。最终门槛是�
 ### 当前推荐顺序
 
 1. `tokio-modbus` TCP/RTU client：已建立统一流平面的直接点位源和自动能力卡片基线。
-2. `async-opcua` client：验证富类型、浏览、订阅、质量、时间和方法能力。
-3. MQTT 技术验证：同一套合同测试比较 `rumqttc` 与 `mqtt5`，不预先承诺胜者。
-4. EtherNet/IP、IEC 104、S7、MELSEC、CoAP：只按明确用户需求和可用硬件接入。
-5. EtherCAT/CANopen/PROFINET：隔离为平台受限或特权进程路线。
+2. Siemens S7（`tokio-s7` 0.1.7）：已按同一合同落地 `s7-adapter`，覆盖轮询、合并读窗口、位写、退避重连与质量映射；真实设备互操作证据待补。
+3. `async-opcua` client：验证富类型、浏览、订阅、质量、时间和方法能力。
+4. MQTT 技术验证：同一套合同测试比较 `rumqttc` 与 `mqtt5`，不预先承诺胜者。
+5. EtherNet/IP、IEC 104、MELSEC、CoAP：只按明确用户需求和可用硬件接入。
+6. EtherCAT/CANopen/PROFINET：隔离为平台受限或特权进程路线。
 
 ## Crate 归属与依赖方向
 
@@ -119,6 +120,7 @@ Stars 和下载量只用于发现候选，不是发布证据。最终门槛是�
 | `points` | `protocol`，L0 | 点位 ID、富类型值、质量、Descriptor、事件和命令契约 | `flow`、`serde`、`serde_json`、`error` |
 | `acquisition` | `protocol`，L2 | Source/Driver trait、能力协商、端点生命周期、typed lanes、存储、投影和诊断 | `flow`、`points`、`error`、`tokio`、`async-trait`、`parking_lot` |
 | `modbus-adapter` | `transport`，L4 | Modbus 私有配置、地址、请求规划、TCP/RTU 会话和错误映射 | `acquisition`、`flow`、`points`、`tokio-modbus` |
+| `s7-adapter` | `transport`，L4 | Siemens S7 私有配置、大端编解码、读窗口规划、轮询会话、位写和错误映射 | `acquisition`、`flow`、`points`、`tokio-s7` |
 | `opcua-adapter`、`mqtt-adapter` 等 | `transport`，L4 | 每个 crate 隔离一个外部 SDK 和协议特性 | `acquisition`、`flow`、`points` 与对应 SDK |
 
 `lissio` 是唯一组合根，按 Cargo feature 注册第一方适配器。普通构建不拉入未启用的重依赖。消费者直接依赖类型所有者，不增加“全工业协议” facade，也不跨 crate glob re-export。现有 `transport` L2 最终改为依赖 `flow` 并产出 `FlowEnvelope<BytesChunk>`；迁移期间由组合根 adapter 包装旧 `TransportConnection`，不要求一次重写所有 backend。
@@ -443,6 +445,17 @@ RTU 与 TCP 共用点位、批量规划、质量、重连和取消语义；连�
 - retained 可配置为 State；普通 publish 默认 Event。QoS 不等于应用层 exactly-once，消费者用 endpoint epoch 加 packet/application id 去重。
 - 任一候选若存在未缓解安全公告、断线语义不一致或关键互操作失败，则不进入发行构建。
 
+### Siemens S7（已接入）
+
+- `s7-adapter`（L4，`tokio-s7` 0.1.7 锁定）；TCP 102 端口，PG 连接角色，rack/slot/plcType 显式配置。
+- I/Q/M/DB 绝对寻址（24 位 any-pointer：字节偏移 ≤ `0x1F_FFFF`）；DB 区必须显式 `dbNumber`，其余区禁止。
+- 读统一走 BYTE transport：按 `(area, db, 周期)` 合并相邻字节为一个读窗口，窗口大小受协商 PDU 约束；布尔在适配器内按位解码，多布尔共用同一字节时天然合并。
+- 位写走原生 BIT transport（BIT 变量类型 + 位地址），不触碰相邻位；tokio-s7 `write_bool` 文档警告不适用于该 wire 形态，但真实 PLC 行为仍需硬件验证。
+- 大端为协议原生，无 Modbus 式 byte/word order 配置；8-bit 值在描述符中宽化为 U16/I16，投影值保持无损。
+- 会话独占 SDK actor：`auto_reconnect=false`，断线（actor 退出/EOF/解析失败/socket 错误）由适配器指数退避重连并递增 epoch；对端 error class 应答视为请求级失败不断连。
+- SDK 仅接受字面 IP，适配器在连接前自行做 DNS 解析；连接超时后向滞留 actor 发起尽力而为的优雅断开，残余 actor 最迟随 TCP 生命周期退出。
+- S7-1200/1500 的优化访问 DB 无稳定绝对地址，需在 PLC 侧改为非优化块；适配器不做阻止，访问错误映射为 `returnCode:0x05` 级坏质量。
+
 ### 其他协议
 
 EtherNet/IP 显式消息、S7、MELSEC、IEC 104、CoAP 分别使用独立适配器和合同测试。产品能力声明必须精确到角色和服务，例如“CIP 显式标签读写”，不能只写“支持 EtherNet/IP”。
@@ -488,6 +501,7 @@ crate 自测或与一台设备通信只能证明有限互操作，不能证明�
 6. 已新增 TCP/RTU client `modbus-adapter`，完成请求规划、回环服务和受控 RTU 帧测试。
 7. 已在 `lissio` 组合根静态注册来源，并加入薄 IPC、批量订阅、能力驱动设备卡片和通用 schema 回退。
 8. 已完成工作区兼容迁移和本机门禁；三平台构建、真实设备互操作和 24 小时 soak 仍需发布流水线与硬件实验室证据。
+9. 已新增 `s7-adapter`（tokio-s7 0.1.7，单一外部 SDK 变更集）：同合同测试、mock S7 服务器回环、组合根注册与中文表单标签完成；真实 PLC 互操作待验证。
 
 一个变更集不同时引入多个外部协议 SDK。公共合同用 mock 与 Modbus 走通后，OPC UA 用来证明抽象没有被寄存器模型绑死；MQTT 候选则先完成同合同对比再落锁。
 
