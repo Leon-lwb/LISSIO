@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { tauriMock } from '../../test/setup';
 import { DEFAULT_SETTINGS, type AppSettings } from '../../settings/defaults';
-import { useSettingsStore } from '../settingsStore';
+import { toCleanupPolicy, useSettingsStore } from '../settingsStore';
+import type { RecordingCleanupPolicy } from '../../lib/tauri/tauri';
 
 const STORE_FILE = 'settings.json';
 const STORE_KEY = 'app';
@@ -11,6 +12,13 @@ function pipelineConfigCalls(): { config: Record<string, number | string> }[] {
   return (tauriMock.invoke.mock.calls as unknown as [string, ...unknown[]][])
     .filter(([cmd]) => cmd === 'set_pipeline_config')
     .map(([, args]) => args as { config: Record<string, number> });
+}
+
+/// 提取任意命令的调用参数
+function invokeCalls(cmd: string): Record<string, unknown>[] {
+  return (tauriMock.invoke.mock.calls as unknown as [string, ...unknown[]][])
+    .filter(([c]) => c === cmd)
+    .map(([, args]) => args as Record<string, unknown>);
 }
 
 describe('settingsStore', () => {
@@ -115,6 +123,80 @@ describe('settingsStore', () => {
     useSettingsStore.getState().update('notifications', 'duration', 3000);
 
     expect(pipelineConfigCalls()).toHaveLength(0);
+  });
+
+  it('replays recording storage settings and runs enabled cleanup rules on load', async () => {
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, {
+      data: { recordingDatabaseDir: '/tmp/rec-storage', cleanupDeleteFailed: true },
+    });
+
+    await useSettingsStore.getState().load();
+
+    await vi.waitFor(() => {
+      expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
+    });
+    expect(invokeCalls('apply_recording_settings')[0]).toEqual({
+      databaseDir: '/tmp/rec-storage',
+      continueEmptySession: true,
+    });
+    await vi.waitFor(() => {
+      expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(1);
+    });
+    const policy = (
+      invokeCalls('cleanup_recording_sessions')[0] as { policy: RecordingCleanupPolicy }
+    ).policy;
+    expect(policy.delete_failed).toBe(true);
+    expect(policy.delete_stopped).toBe(false);
+    expect(policy.older_than_us).toBeNull();
+    expect(policy.keep_latest).toBeNull();
+  });
+
+  it('skips the cleanup invocation when no rule is enabled', async () => {
+    await useSettingsStore.getState().load();
+
+    await vi.waitFor(() => {
+      expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
+    });
+    expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(0);
+  });
+
+  it('debounces recording side effects while cleanup numbers are edited', async () => {
+    vi.useFakeTimers();
+    try {
+      useSettingsStore.getState().update('data', 'cleanupDeleteFailed', true);
+      useSettingsStore.getState().update('data', 'cleanupKeepLatest', 5);
+      expect(invokeCalls('apply_recording_settings')).toHaveLength(0);
+
+      await vi.advanceTimersByTimeAsync(800);
+
+      expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
+      const policy = (
+        invokeCalls('cleanup_recording_sessions')[0] as { policy: RecordingCleanupPolicy }
+      ).policy;
+      expect(policy.delete_failed).toBe(true);
+      expect(policy.keep_latest).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('maps cleanup settings to a backend policy (days → us cutoff, 0 = off)', () => {
+    const enabled = toCleanupPolicy({
+      ...DEFAULT_SETTINGS.data,
+      cleanupDeleteStopped: true,
+      cleanupOlderThanDays: 7,
+      cleanupKeepLatest: 10,
+    });
+    expect(enabled.delete_stopped).toBe(true);
+    expect(enabled.keep_latest).toBe(10);
+    const beforeUs = (Date.now() - 7 * 86_400_000) * 1000;
+    expect(enabled.older_than_us).toBeGreaterThan(beforeUs - 1000);
+    expect(enabled.older_than_us).toBeLessThan(Date.now() * 1000 + 1000);
+
+    const off = toCleanupPolicy(DEFAULT_SETTINGS.data);
+    expect(off.delete_failed).toBe(false);
+    expect(off.older_than_us).toBeNull();
+    expect(off.keep_latest).toBeNull();
   });
 });
 

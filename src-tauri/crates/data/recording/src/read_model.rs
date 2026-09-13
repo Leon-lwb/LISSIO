@@ -1,4 +1,4 @@
-use duckdb::params;
+use duckdb::{Connection, params};
 
 use crate::codec;
 use crate::store::{parse_domain, parse_state, to_duckdb_error};
@@ -6,6 +6,27 @@ use crate::{
     BindingCapability, BindingInfo, HistoryPage, HistoryQuery, RecordingDatabaseInfo,
     RecordingError, RecordingStore, SessionInfo, SessionSummary, StoredBatch,
 };
+
+impl RecordingStore {
+    /// Whether the session holds no batches at all (shared by the startup
+    /// continuation probes).
+    pub(crate) fn session_is_empty(&self, session_id: &str) -> Result<bool, RecordingError> {
+        let connection = self.connect()?;
+        Self::session_is_empty_on(&connection, session_id)
+    }
+
+    pub(crate) fn session_is_empty_on(
+        connection: &Connection,
+        session_id: &str,
+    ) -> Result<bool, RecordingError> {
+        let count: i64 = connection.query_row(
+            "SELECT count(*) FROM recording_batches WHERE session_id = ?",
+            params![session_id],
+            |row| row.get(0),
+        )?;
+        Ok(count == 0)
+    }
+}
 
 impl RecordingStore {
     pub fn list_session_summaries(&self) -> Result<Vec<SessionSummary>, RecordingError> {

@@ -95,7 +95,7 @@ fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
 #[allow(clippy::large_stack_frames)]
 pub fn run() {
     println!(
-        r#"
+        r"
     -@@@@@@@@@       :@@@@@@@@@.   .@@@@@@@@:@.     @@@@@@@@:@*  @@@@@@@@@@      +@@@@@@@@-
         @@@@+            @@@@%     @@@-     *@@:   @@@%      @@#     @@@@       @@@@      @@@@
         @@@@+            @@@@%    @@@@#      .@:  +@@@@       @%     @@@@     #@@@@        @@@@-
@@ -105,7 +105,7 @@ pub fn run() {
         @@@@+       :@   @@@@%    @@        @@@@. @@        @@@@#    @@@@     @@@@@        @@@@+
         @@@@*      #@@   @@@@%    @@@       @@@@  @@@       @@@@     @@@@      *@@@%      @@@@
     m-@@@@@@@@@@@@@@@@:@@@@@@@@@. @@@@@@##@@@@    @@%@@@%#@@@@.   @@@@@@@@@@     .@@@@##@@@@
- "#
+ "
     );
 
     let app_state = AppState::with_acquisition(acquisition_runtime());
@@ -245,6 +245,7 @@ pub fn run() {
             export_recording_data,
             create_recording_session,
             set_active_recording_session,
+            apply_recording_settings,
             create_waveform_snapshot,
             query_waveform_snapshot,
             release_waveform_snapshot,

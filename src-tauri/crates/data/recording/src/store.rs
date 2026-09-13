@@ -162,12 +162,7 @@ impl RecordingStore {
         let Some((id, state)) = latest else {
             return Ok(None);
         };
-        let batches: i64 = connection.query_row(
-            "SELECT count(*) FROM recording_batches WHERE session_id = ?",
-            params![&id],
-            |row| row.get(0),
-        )?;
-        if batches > 0 {
+        if !Self::session_is_empty_on(&connection, &id)? {
             return Ok(None);
         }
         if parse_state(&state) != SessionState::Stopped {

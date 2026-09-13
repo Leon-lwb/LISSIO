@@ -394,10 +394,24 @@ settingsClose: Close
 settingsGeneral: General
 settingsAppearance: Appearance
 settingsEditor: Editor
-settingsData: Data Cache
+settingsData: Data
 settingsSerial: Serial Defaults
 settingsNotifications: Notifications
 settingsPerformance: Performance
+settingRecDatabaseDir: Recording database directory
+settingRecDatabaseDirDesc: DuckDB storage directory for acquisition data (empty = default location); changes apply while paused/stopped or on next launch, the old file is kept
+settingRecDefaultDir: Default location
+settingRecBrowse: Browse
+settingRecContinueEmpty: Continue empty session on startup
+settingRecContinueEmptyDesc: Keep writing the previous session while it holds no data, avoiding empty-session buildup (crash leftovers included)
+settingRecCleanupFailed: Clean up failed sessions on startup
+settingRecCleanupFailedDesc: Delete failed sessions (crash leftovers, including ones with data) on every startup
+settingRecCleanupStopped: Clean up stopped sessions on startup
+settingRecCleanupStoppedDesc: Delete stopped sessions (and their recorded data) on every startup — use with care
+settingRecCleanupOlderDays: Expire sessions after days
+settingRecCleanupOlderDaysDesc: Delete sessions ended more than N days ago on every startup (0 = off)
+settingRecCleanupKeepLatest: Keep latest sessions
+settingRecCleanupKeepLatestDesc: Keep only the latest N sessions on every startup (0 = off; the active session is always kept)
 backupCategory: Backup
 exportConfig: Export Config
 importConfig: Import Config

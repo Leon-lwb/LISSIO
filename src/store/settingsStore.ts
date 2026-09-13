@@ -18,7 +18,7 @@ import {
   type ThemeDefinition,
   type ThemeToken,
 } from '../settings/theme';
-import { api, type PipelineConfig } from '../lib/tauri/tauri';
+import { api, type PipelineConfig, type RecordingCleanupPolicy } from '../lib/tauri/tauri';
 import { setRawDataPreviewCapacity } from '../lib/buffers/rawDataPreviewRegistry';
 import { canFrameBuffer } from '../lib/buffers/canBuffer';
 import { logicSampleBuffer } from '../lib/buffers/logicBuffer';
@@ -161,6 +161,54 @@ function applyPipelineConfig(settings: AppSettings) {
   api.setPipelineConfig(toPipelineConfig(settings.performance)).catch((e: unknown) =>
     console.warn('[settings] 推送管道性能配置失败:', e)
   );
+}
+
+/// data 分类的录制清理设置 → 后端 RecordingCleanupPolicy;
+/// 天数转为 "结束时间早于 now-N 天" 的微秒截止线, 0 = 规则关闭
+export function toCleanupPolicy(d: AppSettings['data']): RecordingCleanupPolicy {
+  const days = Math.max(0, Math.floor(d.cleanupOlderThanDays));
+  const keep = Math.max(0, Math.floor(d.cleanupKeepLatest));
+  return {
+    session_ids: [],
+    delete_stopped: d.cleanupDeleteStopped,
+    delete_failed: d.cleanupDeleteFailed,
+    older_than_us: days > 0 ? (Date.now() - days * 86_400_000) * 1000 : null,
+    keep_latest: keep > 0 ? keep : null,
+  };
+}
+
+/// 推送录制存储设置到后端并执行一次自动清理 — 启动回放与设置变更共用。
+/// 位置/续写开关在运行中被后端拒绝 (下次启动回放时生效); 清理只作用于
+/// 终态会话 (当前活跃会话始终保留), 与运行状态无冲突。
+async function runRecordingApply(settings: AppSettings) {
+  const data = settings.data;
+  try {
+    await api.applyRecordingSettings(data.recordingDatabaseDir, data.continueEmptySession);
+  } catch (e: unknown) {
+    console.warn('[settings] 应用录制存储设置失败:', e);
+  }
+  const policy = toCleanupPolicy(data);
+  const enabled =
+    policy.delete_stopped ||
+    policy.delete_failed ||
+    policy.older_than_us !== null ||
+    policy.keep_latest !== null;
+  if (!enabled) return;
+  try {
+    await api.cleanupRecordingSessions(policy);
+  } catch (e: unknown) {
+    console.warn('[settings] 录制会话自动清理失败:', e);
+  }
+}
+
+/// 录制设置副作用防抖 — 数字输入连发编辑 (天数 3 → 30) 只触发一次清理
+let recordingApplyTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleRecordingApply(settings: AppSettings) {
+  if (recordingApplyTimer) clearTimeout(recordingApplyTimer);
+  recordingApplyTimer = setTimeout(() => {
+    recordingApplyTimer = null;
+    void runRecordingApply(settings);
+  }, 800);
 }
 
 /// 历史版本默认字体 — 若用户未自定义过(仍是旧默认), 迁移到最新默认
@@ -313,6 +361,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         applyAppearance(merged.appearance);
         applyDataCapacity(merged);
         applyPipelineConfig(merged);
+        void runRecordingApply(merged);
       } else {
         const hydrated = await hydrateApiKey(DEFAULT_SETTINGS);
         const merged = hydrated.settings;
@@ -328,6 +377,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         applyAppearance(merged.appearance);
         applyDataCapacity(merged);
         applyPipelineConfig(merged);
+        void runRecordingApply(merged);
       }
     } catch (e) {
       console.warn('[settings] 加载失败, 使用默认值:', e);
@@ -366,9 +416,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         if (category === 'appearance') {
           applyAppearance(newSettings.appearance);
         }
-        // 立即应用 data 缓存容量变更
+        // 立即应用 data 缓存容量变更; 录制存储/清理设置防抖推送
         if (category === 'data') {
           applyDataCapacity(newSettings);
+          scheduleRecordingApply(newSettings);
         }
         // 立即推送 performance 管道配置变更
         if (category === 'performance') {
@@ -406,6 +457,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     applyAppearance(DEFAULT_SETTINGS.appearance);
     applyDataCapacity(DEFAULT_SETTINGS);
     applyPipelineConfig(DEFAULT_SETTINGS);
+    scheduleRecordingApply(DEFAULT_SETTINGS);
     // 全量重置: 清掉当前适配器的钥匙串密钥
     api.aiKeychainDelete(get().settings.ai.adapter).catch((e: unknown) =>
       console.warn('[settings] 钥匙串删除失败:', e)
@@ -427,7 +479,10 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     }));
     const { settings } = get();
     if (category === 'appearance') applyAppearance(settings.appearance);
-    if (category === 'data') applyDataCapacity(settings);
+    if (category === 'data') {
+      applyDataCapacity(settings);
+      scheduleRecordingApply(settings);
+    }
     if (category === 'performance') applyPipelineConfig(settings);
     // AI 分类重置: 同步清掉当前适配器的钥匙串密钥
     if (category === 'ai') {

@@ -672,3 +672,158 @@ fn start_creates_a_new_session_once_the_last_holds_data() {
     hub.stop().unwrap();
     let _ = std::fs::remove_file(path);
 }
+
+#[test]
+fn apply_settings_moves_the_database_and_keeps_the_old_file() {
+    let base =
+        std::env::temp_dir().join(format!("lissio-recording-relocate-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&base);
+    let first_path = base.join("a").join("acquisition.duckdb");
+    let second_path = base.join("b").join("acquisition.duckdb");
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &first_path,
+            vec![binding("float", Domain::Float)],
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
+        .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10],
+            BatchPayload::Float { values: vec![1.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+
+    let swapped = hub
+        .apply_settings(Some(second_path.clone()), true, SessionState::Paused)
+        .unwrap();
+    assert!(swapped);
+
+    // 旧文件原地保留, 旧会话可查 (replace 时已标记 stopped)
+    assert!(first_path.exists());
+    let old_store = RecordingStore::open(&first_path).unwrap();
+    let old_sessions = old_store.list_sessions().unwrap();
+    assert_eq!(old_sessions.len(), 1);
+    assert_eq!(old_sessions[0].id, first.id);
+    assert_eq!(old_sessions[0].state, SessionState::Stopped);
+
+    // 新位置: 空库 → 新建会话 (paused 开局), 后续写入进入新文件
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_ne!(summaries[0].session.id, first.id);
+    assert_eq!(summaries[0].session.state, SessionState::Paused);
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            3,
+            0,
+            vec![20],
+            BatchPayload::Float { values: vec![2.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+    let info = hub.database_info().unwrap();
+    assert_eq!(info.path, second_path.to_string_lossy());
+    assert_eq!(info.batch_count, 1);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_dir_all(base);
+}
+
+#[test]
+fn apply_settings_without_continuation_abandons_an_empty_session() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-no-continue-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+
+    // 续写关闭 + 当前会话仍为空: 换成全新会话, 恢复"每次启动一会话"
+    let swapped = hub
+        .apply_settings(Some(path.clone()), false, SessionState::Paused)
+        .unwrap();
+    assert!(swapped);
+    let summaries = hub.list_session_summaries().unwrap();
+    let current = summaries
+        .iter()
+        .find(|summary| summary.active)
+        .unwrap()
+        .session
+        .id
+        .clone();
+    assert_ne!(current, first.id);
+    let first_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == first.id)
+        .unwrap();
+    assert_eq!(first_summary.session.state, SessionState::Stopped);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn apply_settings_is_a_noop_when_preferences_match() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-noop-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    hub.start(
+        &path,
+        vec![binding("float", Domain::Float)],
+        RecordingLimits::default(),
+        SessionState::Running,
+    )
+    .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10],
+            BatchPayload::Float { values: vec![1.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+    let summaries = hub.list_session_summaries().unwrap();
+    let active_id = summaries
+        .iter()
+        .find(|summary| summary.active)
+        .unwrap()
+        .session
+        .id
+        .clone();
+
+    // 同路径: 续写开启无操作; 关闭但会话已有数据 (续写本来就不会命中) 也无操作
+    assert!(
+        !hub.apply_settings(Some(path.clone()), true, SessionState::Paused)
+            .unwrap()
+    );
+    assert!(
+        !hub.apply_settings(Some(path.clone()), false, SessionState::Paused)
+            .unwrap()
+    );
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].session.id, active_id);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}

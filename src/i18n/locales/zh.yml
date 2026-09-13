@@ -394,10 +394,24 @@ settingsClose: 关闭
 settingsGeneral: 通用
 settingsAppearance: 外观
 settingsEditor: 编辑器
-settingsData: 数据缓存
+settingsData: 数据
 settingsSerial: 串口默认值
 settingsNotifications: 通知
 settingsPerformance: 性能
+settingRecDatabaseDir: 录制数据库目录
+settingRecDatabaseDirDesc: 采集数据 DuckDB 的保存目录（空 = 默认位置）；运行中修改在暂停或下次启动时生效，旧文件保留
+settingRecDefaultDir: 默认位置
+settingRecBrowse: 浏览
+settingRecContinueEmpty: 启动续写空会话
+settingRecContinueEmptyDesc: 上次会话没有写入任何数据时继续写同一会话，避免空会话堆积（含崩溃遗留）
+settingRecCleanupFailed: 启动清理失败会话
+settingRecCleanupFailedDesc: 每次启动自动删除 failed 状态的会话（崩溃遗留，含其中有数据的）
+settingRecCleanupStopped: 启动清理已停止会话
+settingRecCleanupStoppedDesc: 每次启动自动删除 stopped 状态的会话（连带删除其已录数据，谨慎开启）
+settingRecCleanupOlderDays: 启动清理过期会话（天）
+settingRecCleanupOlderDaysDesc: 每次启动删除结束时间早于 N 天的会话（0 = 关闭）
+settingRecCleanupKeepLatest: 启动保留最近会话数
+settingRecCleanupKeepLatestDesc: 每次启动只保留最近 N 个会话，其余删除（0 = 关闭；当前活跃会话始终保留）
 backupCategory: 备份
 exportConfig: 导出配置
 importConfig: 导入配置

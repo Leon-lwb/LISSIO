@@ -28,8 +28,10 @@ import {
   RefreshCw,
   Sparkles,
   ExternalLink,
+  FolderOpen,
 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
+import { open as openDirectoryDialog } from '@tauri-apps/plugin-dialog';
 import { ORCAROUTER_OFFERS_URL, ORCAROUTER_REFERRAL_URL } from '../settings/defaults';
 import { getVersion } from '@tauri-apps/api/app';
 import { useSettingsStore } from '../store/settingsStore';
@@ -270,6 +272,33 @@ export function SettingsModal() {
             value={String(value)}
             onChange={(e) => handleChange(e.target.value)}
           />
+        );
+      case 'path':
+        return (
+          <div className="flex items-center gap-2 min-w-[240px]">
+            <input
+              type="text"
+              className="flex-1 min-w-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
+              value={typeof value === 'string' ? value : ''}
+              placeholder={t(lang, 'settingRecDefaultDir')}
+              onChange={(e) => handleChange(e.target.value)}
+            />
+            <button
+              className="flex-shrink-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
+              onClick={() => {
+                void openDirectoryDialog({
+                  directory: true,
+                  title: t(lang, 'settingRecDatabaseDir'),
+                }).then((dir) => {
+                  if (typeof dir === 'string' && dir) handleChange(dir);
+                });
+              }}
+              title={t(lang, 'settingRecBrowse')}
+            >
+              <FolderOpen size={12} />
+              <span>{t(lang, 'settingRecBrowse')}</span>
+            </button>
+          </div>
         );
       case 'promptEditor':
         return (

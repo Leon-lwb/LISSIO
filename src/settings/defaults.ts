@@ -66,6 +66,18 @@ export interface AppSettings {
     rawDataBufferBytes: number;
     canBufferFrames: number;
     logicBufferSamples: number;
+    /// 录制数据库目录 (空 = 默认: 应用配置目录下 recordings/); 修改后旧文件保留
+    recordingDatabaseDir: string;
+    /// 启动时上次会话为空则继续写同一会话 (避免空会话堆积, 含崩溃遗留)
+    continueEmptySession: boolean;
+    /// 启动时自动删除 failed 会话 (含其中有数据的)
+    cleanupDeleteFailed: boolean;
+    /// 启动时自动删除 stopped 会话 (连带删除其已录数据)
+    cleanupDeleteStopped: boolean;
+    /// 启动时删除结束时间早于 N 天的会话 (0 = 关闭)
+    cleanupOlderThanDays: number;
+    /// 启动时只保留最近 N 个会话 (0 = 关闭; 当前活跃会话始终保留)
+    cleanupKeepLatest: number;
   };
   serial: {
     defaultBaudRate: number;
@@ -165,6 +177,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
     rawDataBufferBytes: 1_048_576,
     canBufferFrames: 100_000,
     logicBufferSamples: 20_000,
+    recordingDatabaseDir: '',
+    continueEmptySession: true,
+    cleanupDeleteFailed: false,
+    cleanupDeleteStopped: false,
+    cleanupOlderThanDays: 0,
+    cleanupKeepLatest: 0,
   },
   serial: {
     defaultBaudRate: 115200,

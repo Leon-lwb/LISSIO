@@ -9,6 +9,7 @@ export type ControlType =
   | { kind: 'toggle' }
   | { kind: 'number'; min?: number; max?: number; step?: number }
   | { kind: 'text' }
+  | { kind: 'path' }
   | { kind: 'theme' }
   | { kind: 'promptEditor' };
 
@@ -250,6 +251,55 @@ export const SETTING_FIELDS: SettingFieldDef[] = [
     labelKey: 'settingLogicBufferSamples',
     descKey: 'settingLogicBufferSamplesDesc',
     control: { kind: 'number', min: 1000, max: 500_000, step: 1000 },
+  },
+  // Data — 录制存储与启动行为 (与上面的数据缓存同分类: 统一缓存/保存/浏览)
+  {
+    category: 'data',
+    field: 'recordingDatabaseDir',
+    labelKey: 'settingRecDatabaseDir',
+    descKey: 'settingRecDatabaseDirDesc',
+    control: { kind: 'path' },
+    keywords: ['recording', 'database', 'duckdb', 'storage', '录制', '数据库', '保存', '位置'],
+  },
+  {
+    category: 'data',
+    field: 'continueEmptySession',
+    labelKey: 'settingRecContinueEmpty',
+    descKey: 'settingRecContinueEmptyDesc',
+    control: { kind: 'toggle' },
+    keywords: ['recording', 'session', 'empty', 'resume', '录制', '会话', '续写', '空'],
+  },
+  {
+    category: 'data',
+    field: 'cleanupDeleteFailed',
+    labelKey: 'settingRecCleanupFailed',
+    descKey: 'settingRecCleanupFailedDesc',
+    control: { kind: 'toggle' },
+    keywords: ['recording', 'cleanup', 'failed', 'crash', '录制', '清理', '失败', '崩溃'],
+  },
+  {
+    category: 'data',
+    field: 'cleanupDeleteStopped',
+    labelKey: 'settingRecCleanupStopped',
+    descKey: 'settingRecCleanupStoppedDesc',
+    control: { kind: 'toggle' },
+    keywords: ['recording', 'cleanup', 'stopped', '录制', '清理', '已停止'],
+  },
+  {
+    category: 'data',
+    field: 'cleanupOlderThanDays',
+    labelKey: 'settingRecCleanupOlderDays',
+    descKey: 'settingRecCleanupOlderDaysDesc',
+    control: { kind: 'number', min: 0, max: 3650, step: 1 },
+    keywords: ['recording', 'cleanup', 'expire', 'days', '录制', '清理', '过期', '天数'],
+  },
+  {
+    category: 'data',
+    field: 'cleanupKeepLatest',
+    labelKey: 'settingRecCleanupKeepLatest',
+    descKey: 'settingRecCleanupKeepLatestDesc',
+    control: { kind: 'number', min: 0, max: 10_000, step: 1 },
+    keywords: ['recording', 'cleanup', 'keep', 'latest', '录制', '清理', '保留', '最近'],
   },
   // Serial
   {

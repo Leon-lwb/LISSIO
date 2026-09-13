@@ -109,6 +109,19 @@ impl RecordingHub {
         )
     }
 
+    /// Apply persisted storage preferences replayed from settings: the
+    /// database path and the empty-session continuation toggle. Only swaps
+    /// the recorder when the effective target changed; must not be called
+    /// while the run is active (see [`RecordingHub::create_session`]).
+    pub fn apply_settings(
+        &self,
+        database_path: Option<PathBuf>,
+        continue_empty: bool,
+        initial: SessionState,
+    ) -> Result<bool, RecordingError> {
+        spawn::apply_settings(self, database_path, continue_empty, initial)
+    }
+
     /// Swap in a recorder for `target`, resuming into `initial`.
     ///
     /// The previous writer must fully close its DuckDB instance before the

@@ -711,6 +711,10 @@ export const api = {
   /// 暂停时把写入目标切换到指定的已停止会话
   setActiveRecordingSession: (sessionId: string) =>
     invoke<RecordingSession>('set_active_recording_session', { sessionId }),
+  /// 应用录制存储设置 (数据库目录 + 空会话续写开关); 空目录 = 默认位置。
+  /// 运行中被后端拒绝, 下次启动设置回放时生效
+  applyRecordingSettings: (databaseDir: string, continueEmptySession: boolean) =>
+    invoke<void>('apply_recording_settings', { databaseDir, continueEmptySession }),
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。
