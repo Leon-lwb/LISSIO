@@ -1,6 +1,6 @@
 use recording::{
     BatchPayload, BindingCapability, DisplayBinding, Domain, PortIdentity, RecordingCleanupPolicy,
-    RecordingHub, RecordingLimits,
+    RecordingHub, RecordingLimits, SessionState,
 };
 
 fn binding() -> DisplayBinding {
@@ -22,8 +22,13 @@ fn cleanup_deletes_terminal_sessions_with_batches() {
     let _ = std::fs::remove_file(&path);
     let hub = RecordingHub::default();
     for index in 0..3_u8 {
-        hub.start(&path, Vec::from([binding()]), RecordingLimits::default())
-            .unwrap();
+        hub.start(
+            &path,
+            Vec::from([binding()]),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
+        .unwrap();
         hub.record(
             &PortIdentity::new("source", "bytes"),
             1,
@@ -38,7 +43,12 @@ fn cleanup_deletes_terminal_sessions_with_batches() {
         hub.stop().unwrap();
     }
     let current = hub
-        .start(&path, Vec::new(), RecordingLimits::default())
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
         .unwrap();
     assert_eq!(hub.list_session_summaries().unwrap().len(), 4);
 
@@ -84,8 +94,13 @@ fn cleanup_deletes_large_terminal_session_with_batches() {
     ));
     let _ = std::fs::remove_file(&path);
     let hub = RecordingHub::default();
-    hub.start(&path, Vec::from([binding()]), RecordingLimits::default())
-        .unwrap();
+    hub.start(
+        &path,
+        Vec::from([binding()]),
+        RecordingLimits::default(),
+        SessionState::Running,
+    )
+    .unwrap();
     let port = PortIdentity::new("source", "bytes");
     for index in 0..2_500_u64 {
         loop {
@@ -112,7 +127,12 @@ fn cleanup_deletes_large_terminal_session_with_batches() {
     hub.flush().unwrap();
     hub.stop().unwrap();
     let _current = hub
-        .start(&path, Vec::new(), RecordingLimits::default())
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
         .unwrap();
     let deleted = hub
         .cleanup_sessions(RecordingCleanupPolicy {

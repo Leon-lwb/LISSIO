@@ -142,6 +142,43 @@ impl RecordingStore {
             })
     }
 
+    /// Startup continuation probe: returns the newest session's id when it
+    /// holds no batches at all. An empty session carries no data to lose
+    /// (including one left `failed` by crash recovery), so resuming it keeps
+    /// restarts from piling up empty sessions; a session with batches returns
+    /// `None` and the caller creates a new one. The empty session is
+    /// normalized to `stopped` first so `reopen_session` accepts it.
+    pub(crate) fn resumable_empty_session(&self) -> Result<Option<String>, RecordingError> {
+        let connection = self.connect()?;
+        let latest = match connection.query_row(
+            "SELECT id, state FROM recording_sessions ORDER BY started_at_us DESC LIMIT 1",
+            [],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        ) {
+            Ok(row) => Some(row),
+            Err(duckdb::Error::QueryReturnedNoRows) => None,
+            Err(error) => return Err(error.into()),
+        };
+        let Some((id, state)) = latest else {
+            return Ok(None);
+        };
+        let batches: i64 = connection.query_row(
+            "SELECT count(*) FROM recording_batches WHERE session_id = ?",
+            params![&id],
+            |row| row.get(0),
+        )?;
+        if batches > 0 {
+            return Ok(None);
+        }
+        if parse_state(&state) != SessionState::Stopped {
+            connection.execute(
+                "UPDATE recording_sessions SET state='stopped', ended_at_us=? WHERE id=?",
+                params![now_us(), &id],
+            )?;
+        }
+        Ok(Some(id))
+    }
+
     pub fn delete_session(&self, session_id: &str) -> Result<(), RecordingError> {
         let connection = self.connect()?;
         let state: String = connection

@@ -10,6 +10,10 @@ use crate::{
     RecordingHealth, RecordingLimits, RecordingStore, SessionInfo, SessionState, SessionSummary,
 };
 
+mod spawn;
+
+use spawn::{RecordingTarget, spawn_recorder};
+
 /// Database coordinates captured at `start` so creating or resuming a session
 /// reuses the same store without the caller supplying them again.
 #[derive(Debug, Clone)]
@@ -35,22 +39,35 @@ pub struct RecordingHub {
 }
 
 impl RecordingHub {
+    /// Start recording at `path` with initial session state `initial`.
+    ///
+    /// The newest session is resumed when it holds no batches (see
+    /// [`RecordingStore::resumable_empty_session`]), so restarts without any
+    /// recorded data keep writing into one session instead of accumulating
+    /// empty ones; otherwise a brand-new session is created.
     pub fn start(
         &self,
         path: impl AsRef<Path>,
         bindings: Vec<DisplayBinding>,
         limits: RecordingLimits,
+        initial: SessionState,
     ) -> Result<SessionInfo, RecordingError> {
         let path = path.as_ref().to_path_buf();
         let active = unique_bindings(bindings);
-        self.replace_recording(&path, limits, active, None, SessionState::Running)
+        self.replace_recording(
+            &path,
+            limits,
+            active,
+            RecordingTarget::ContinueEmpty,
+            initial,
+        )
     }
 
     /// Start writing into a brand-new session in the same database, replacing
     /// the current recorder. The replaced session is marked stopped.
     pub fn create_session(&self, initial: SessionState) -> Result<SessionInfo, RecordingError> {
         let (path, limits, active) = self.database_and_bindings()?;
-        self.replace_recording(&path, limits, active, None, initial)
+        self.replace_recording(&path, limits, active, RecordingTarget::New, initial)
     }
 
     /// Resume writing into an existing stopped session, replacing the current
@@ -87,12 +104,12 @@ impl RecordingHub {
             &path,
             limits,
             active,
-            Some((session_id.to_string(), initial)),
+            RecordingTarget::Resume(session_id.to_string()),
             initial,
         )
     }
 
-    /// Swap in a recorder writing to `target` (a brand-new session when `None`).
+    /// Swap in a recorder for `target`, resuming into `initial`.
     ///
     /// The previous writer must fully close its DuckDB instance before the
     /// replacement opens its own: `Connection::open` creates an independent
@@ -105,7 +122,7 @@ impl RecordingHub {
         path: &Path,
         limits: RecordingLimits,
         active: HashMap<PortIdentity, DisplayBinding>,
-        target: Option<(String, SessionState)>,
+        target: RecordingTarget,
         initial: SessionState,
     ) -> Result<SessionInfo, RecordingError> {
         let shutdown = self.take_recorder().map(|recorder| recorder.shutdown());
@@ -399,30 +416,6 @@ impl RecordingHub {
             true
         })
     }
-}
-
-/// Build a recorder for `target` (a brand-new session when `None`) resuming
-/// into `initial`. The caller must ensure no other database instance is open.
-fn spawn_recorder(
-    path: &Path,
-    limits: RecordingLimits,
-    active: HashMap<PortIdentity, DisplayBinding>,
-    target: Option<(String, SessionState)>,
-    initial: SessionState,
-) -> Result<Arc<Recorder>, RecordingError> {
-    let store = RecordingStore::open(path)?;
-    let bindings = active.values().cloned().collect();
-    let recorder = match target {
-        None => Recorder::start(store, bindings, limits)?,
-        Some((session_id, session_state)) => {
-            let session = store.reopen_session(&session_id, session_state)?;
-            Recorder::attach(store, session, bindings, limits)?
-        }
-    };
-    if initial != SessionState::Running {
-        recorder.set_state(initial)?;
-    }
-    Ok(Arc::new(recorder))
 }
 
 fn unique_bindings(bindings: Vec<DisplayBinding>) -> HashMap<PortIdentity, DisplayBinding> {

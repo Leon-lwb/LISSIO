@@ -228,8 +228,13 @@ fn analytical_query_can_be_cancelled() {
     ));
     let _ = std::fs::remove_file(&path);
     let hub = recording::RecordingHub::default();
-    hub.start(&path, Vec::new(), RecordingLimits::default())
-        .unwrap();
+    hub.start(
+        &path,
+        Vec::new(),
+        RecordingLimits::default(),
+        SessionState::Running,
+    )
+    .unwrap();
     let query_hub = hub.clone();
     let query = std::thread::spawn(move || {
         query_hub.query_sql(
@@ -255,12 +260,34 @@ fn cleanup_prunes_only_terminal_sessions() {
     ));
     let _ = std::fs::remove_file(&path);
     let hub = RecordingHub::default();
+    // 第一个会话写入数据, 这样第二次 start 才会新建会话 (空会话会被续写)
     let _first = hub
-        .start(&path, Vec::new(), RecordingLimits::default())
+        .start(
+            &path,
+            Vec::from([binding("float", Domain::Float)]),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
         .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10],
+            BatchPayload::Float { values: vec![1.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
     hub.stop().unwrap();
     let second = hub
-        .start(&path, Vec::new(), RecordingLimits::default())
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
         .unwrap();
     assert_eq!(hub.list_session_summaries().unwrap().len(), 2);
     let deleted = hub
@@ -286,13 +313,36 @@ fn cleanup_keep_latest_prunes_multiple_terminal_sessions() {
     ));
     let _ = std::fs::remove_file(&path);
     let hub = RecordingHub::default();
-    for _ in 0..3 {
-        hub.start(&path, Vec::new(), RecordingLimits::default())
-            .unwrap();
+    for index in 0..3_u8 {
+        hub.start(
+            &path,
+            Vec::from([binding("float", Domain::Float)]),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
+        .unwrap();
+        assert!(
+            hub.record(
+                &PortIdentity::new("source", "float"),
+                2,
+                0,
+                vec![10],
+                BatchPayload::Float {
+                    values: vec![f64::from(index)],
+                },
+            )
+            .unwrap()
+        );
+        hub.flush().unwrap();
         hub.stop().unwrap();
     }
     let current = hub
-        .start(&path, Vec::new(), RecordingLimits::default())
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
         .unwrap();
     assert_eq!(hub.list_session_summaries().unwrap().len(), 4);
 
@@ -332,6 +382,7 @@ fn create_session_while_paused_starts_a_fresh_write_target() {
             &path,
             vec![binding("float", Domain::Float)],
             RecordingLimits::default(),
+            SessionState::Running,
         )
         .unwrap();
     assert!(
@@ -412,6 +463,7 @@ fn switch_session_resumes_a_stopped_session() {
             &path,
             vec![binding("float", Domain::Float)],
             RecordingLimits::default(),
+            SessionState::Running,
         )
         .unwrap();
     assert!(
@@ -483,4 +535,140 @@ fn session_operations_require_a_started_hub() {
         hub.switch_session("anything", SessionState::Paused)
             .is_err()
     );
+}
+
+#[test]
+fn start_continues_the_last_session_while_it_stays_empty() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-continue-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+    hub.stop().unwrap();
+
+    // 上次会话没有写入任何批次: 继续写同一会话并以 paused 开局, 不新增空会话
+    let second = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+    assert_eq!(second.id, first.id);
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].session.id, first.id);
+    assert_eq!(summaries[0].session.state, SessionState::Paused);
+    assert!(summaries[0].active);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn start_resumes_an_empty_session_left_by_a_crash() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-crash-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
+        .unwrap();
+    hub.stop().unwrap();
+
+    // 模拟崩溃遗留: 把空会话改回 running, 下次 RecordingStore::open 的孤儿
+    // 清理会把它标为 failed — 空会话仍应被续用
+    {
+        let connection = duckdb::Connection::open(&path).unwrap();
+        connection
+            .execute("UPDATE recording_sessions SET state='running'", [])
+            .unwrap();
+    }
+
+    let resumed = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+    assert_eq!(resumed.id, first.id);
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert_eq!(summaries[0].session.state, SessionState::Paused);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+#[test]
+fn start_creates_a_new_session_once_the_last_holds_data() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-new-after-data-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    let first = hub
+        .start(
+            &path,
+            vec![binding("float", Domain::Float)],
+            RecordingLimits::default(),
+            SessionState::Running,
+        )
+        .unwrap();
+    assert!(
+        hub.record(
+            &PortIdentity::new("source", "float"),
+            2,
+            0,
+            vec![10],
+            BatchPayload::Float { values: vec![1.0] },
+        )
+        .unwrap()
+    );
+    hub.flush().unwrap();
+    hub.stop().unwrap();
+
+    // 上次会话有数据: 新建会话, 旧数据保持可查
+    let second = hub
+        .start(
+            &path,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+    assert_ne!(second.id, first.id);
+    let summaries = hub.list_session_summaries().unwrap();
+    assert_eq!(summaries.len(), 2);
+    let first_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == first.id)
+        .unwrap();
+    assert_eq!(first_summary.session.state, SessionState::Stopped);
+    let second_summary = summaries
+        .iter()
+        .find(|summary| summary.session.id == second.id)
+        .unwrap();
+    assert_eq!(second_summary.session.state, SessionState::Paused);
+    assert!(second_summary.active);
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
 }

@@ -24,7 +24,14 @@ pub fn spawn_background_tasks(app: &AppHandle, config_dir: PathBuf) {
 fn start_recording(app: &AppHandle, config_dir: &std::path::Path) {
     let path = config_dir.join("recordings").join("acquisition.duckdb");
     let recording = app.state::<AppState>().eval_state().recording;
-    match recording.start(path, Vec::new(), recording::RecordingLimits::default()) {
+    // 管线尚未运行, 会话以 paused 开局 (等待运行控制同步为 running);
+    // 上次会话没有写入任何数据时继续写同一会话, 避免每次启动都新增空会话
+    match recording.start(
+        path,
+        Vec::new(),
+        recording::RecordingLimits::default(),
+        recording::SessionState::Paused,
+    ) {
         Ok(session) => log::info!("recording session started: {}", session.id),
         Err(error) => log::error!("recording unavailable: {error}"),
     }
