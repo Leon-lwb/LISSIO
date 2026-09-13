@@ -10,7 +10,6 @@ import { Fragment, useEffect, useMemo, useRef, useState, useActionState } from '
 import { activateOnKeyboard } from '../lib/utils/a11y';
 import {
   X,
-  Search,
   RotateCcw,
   Check,
   Settings as SettingsIcon,
@@ -48,6 +47,7 @@ import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
 import { formatError } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
+import { SearchInput } from './ui/SearchInput';
 
 const CATEGORY_ICONS: Record<keyof AppSettings, React.ReactNode> = {
   general: <SettingsIcon size={16} />,
@@ -368,17 +368,15 @@ export function SettingsModal() {
             <Type size={16} />
             <span>{t(lang, 'settingsTitle')}</span>
           </div>
-          <div className="flex-1 flex items-center gap-1.5 bg-bg-input border border-border rounded px-2 py-1 focus-within:border-accent transition-colors">
-            <Search size={14} className="text-text-secondary flex-shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              className="search-input flex-1 bg-transparent border-none outline-none text-text-primary text-sm font-ui"
-              placeholder={t(lang, 'settingsSearch')}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {/* ESC 先清空搜索, 空值才冒泡到 window 关闭弹窗 (SearchInput 内处理) */}
+          <SearchInput
+            size="md"
+            className="flex-1"
+            inputRef={searchInputRef}
+            placeholder={t(lang, 'settingsSearch')}
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
           <button className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer" onClick={close} title={t(lang, 'settingsClose')}>
             <X size={16} />
           </button>

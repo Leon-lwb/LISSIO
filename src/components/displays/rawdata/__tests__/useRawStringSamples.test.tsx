@@ -22,6 +22,7 @@ describe('useRawStringSamples - 字符串通道历史', () => {
     expect(result.current.rows).toHaveLength(1);
     expect(result.current.rows[0].text).toBe('hello');
     expect(result.current.rows[0].ts).toBeGreaterThan(0);
+    expect(result.current.rows[0].seq).toBeGreaterThan(0);
 
     // latest-value 平面: 相同值再次推送 → 不重复入列
     pushText({ 'w-trigger': { text: 'hello' } });
@@ -30,6 +31,8 @@ describe('useRawStringSamples - 字符串通道历史', () => {
     pushText({ 'w-trigger': { text: 'world' } });
     expect(result.current.rows).toHaveLength(2);
     expect(result.current.rows.map((r) => r.text)).toEqual(['hello', 'world']);
+    // seq 单调递增 — 虚拟列表稳定 key
+    expect(result.current.rows[1].seq).toBeGreaterThan(result.current.rows[0].seq);
   });
 
   it('未订阅端口 (sourceId 为空) 时不累积', () => {

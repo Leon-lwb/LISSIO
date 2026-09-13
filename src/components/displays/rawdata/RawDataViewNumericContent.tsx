@@ -1,15 +1,9 @@
 import { t } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import { formatTime } from './rawDataViewHelpers';
+import type { RawDataStringRow } from './useRawDataBuffer';
 import type { PortSampleStatus } from '../../../lib/data/sampleProtocol';
 import { useVirtualizer } from '@tanstack/react-virtual';
-
-/// 字符串通道行 (值变化历史) — 与数值行共用同一虚拟列表 (二选一)
-export interface RawDataStringRow {
-  /// 前端接收时刻 (字符串平面为 latest-value 快照, 无逐次时间戳)
-  ts: number;
-  text: string;
-}
 
 interface Props {
   numRows: { seq: number; ts: number; value: number }[];
@@ -56,7 +50,7 @@ export function RawDataViewNumericContent({
       measureElement: (el: HTMLElement) => el.getBoundingClientRect().height,
     }),
     getItemKey: (index) =>
-      isString ? `${rows[index]?.ts ?? 0}-${index}` : numRows[index]?.seq ?? index,
+      isString ? rows[index]?.seq ?? index : numRows[index]?.seq ?? index,
   });
   const labels =
     lang === 'zh'

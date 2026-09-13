@@ -1,4 +1,4 @@
-import { useState, memo } from 'react';
+import { memo } from 'react';
 import { type RawDataLineSource, RAWDATA_BYTES_PER_ROW } from '../../../lib/buffers/dataBuffer';
 import { ROW_HEIGHT, GROUP_SIZE, formatTime, byteToHex, byteToAscii, isPrintable, hexColorClass, directionColorClass, directionSymbol, type HexColorMode, type RawDataGrouping, type RawDataRepr } from './rawDataViewHelpers';
 
@@ -33,7 +33,6 @@ export const Row = memo(function Row({
 }: RowProps) {
   const isLine = grouping === 'line';
   const line = isLine ? buffer.getNewlineLine(originalIndex) : buffer.getLine(originalIndex);
-  const [hovered, setHovered] = useState<number | null>(null);
 
   const hexWidth = 22;
   const asciiWidth = 18;
@@ -59,16 +58,16 @@ export const Row = memo(function Row({
     return (
       <span
         key={i}
+        data-present={present ? 'true' : undefined}
         className={`
+          rawdata-cell
           inline-flex items-center justify-center font-mono text-xs rounded-sm cursor-default
           transition-colors
           ${type === 'ascii' ? 'whitespace-pre' : ''}
           ${color}
-          ${present && hovered === i ? 'bg-bg-active text-text-bright' : ''}
           ${!isCompact && isGroupEnd ? 'mr-2' : ''}
         `}
         style={isCompact ? { minWidth: 0 } : { width, height: ROW_HEIGHT - 4 }}
-        onMouseEnter={() => present && setHovered(i)}
       >
         {present ? text : ''}
       </span>
@@ -80,7 +79,6 @@ export const Row = memo(function Row({
       className={`flex items-center gap-2 px-2 select-text ${isSelected ? 'bg-accent/20' : 'hover:bg-bg-hover'}`}
       style={{ height: ROW_HEIGHT }}
       onMouseDown={(e) => onMouseDown(e, filteredIndex)}
-      onMouseLeave={() => setHovered(null)}
       role="presentation"
     >
       <span

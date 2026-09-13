@@ -33,6 +33,8 @@ export function useRawNumericSamples(channel?: RawDataChannelRef) {
 // ---- 字符串通道 ----
 
 export interface RawDataStringRow {
+  /// 单调递增序号 — 虚拟列表稳定 key (历史淘汰最旧行时 index 错位, ts 可能重复)
+  seq: number;
   /// 前端接收时刻 (字符串平面为 latest-value 快照, 无逐次时间戳)
   ts: number;
   text: string;
@@ -51,6 +53,8 @@ export function useRawStringSamples(channel?: RawDataChannelRef) {
   const [rows, setRows] = useState<RawDataStringRow[]>([]);
   // 去重基线: seen=false 表示尚无基线 (首次出现/清空后) — 下一次快照无条件入列
   const baselineRef = useRef<{ text: string; seen: boolean }>({ text: '', seen: false });
+  // 行序号跨通道切换/清空单调递增, 保证虚拟列表 key 唯一
+  const seqRef = useRef(0);
 
   useEffect(() => {
     baselineRef.current = { text: '', seen: false };
@@ -64,7 +68,7 @@ export function useRawStringSamples(channel?: RawDataChannelRef) {
     const baseline = baselineRef.current;
     if (baseline.seen && baseline.text === text) return;
     baselineRef.current = { text, seen: true };
-    const row: RawDataStringRow = { ts: Date.now(), text };
+    const row: RawDataStringRow = { seq: ++seqRef.current, ts: Date.now(), text };
     setRows((prev) =>
       prev.length >= RAW_STRING_HISTORY_CAP
         ? [...prev.slice(prev.length - RAW_STRING_HISTORY_CAP + 1), row]

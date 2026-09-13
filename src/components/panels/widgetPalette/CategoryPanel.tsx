@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Loader2, Search, X } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { createWidget } from '../../../lib/utils/widgetDefaults';
 import { t } from '../../../i18n';
@@ -14,6 +14,7 @@ import { loadAdapterCapabilities } from '../../../lib/acquisition/capabilityCata
 import { buildDeviceCards, type DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
 import { applyTestAttribute } from '../../../lib/acquisition/simulation';
 import { addPaletteNode } from '../../../lib/utils/paletteCreation';
+import { SearchInput } from '../../ui/SearchInput';
 
 export function CategoryPanel() {
   const lang = useAppStore((s) => s.lang);
@@ -133,25 +134,20 @@ export function CategoryPanel() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-1.5" data-tour="palette-root">
       <div className="relative flex-shrink-0 px-1">
-        <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-disabled pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => { setSearchQuery(e.target.value); if (listRef.current) listRef.current.scrollTop = 0; }}
-          onKeyDown={(e) => { if (e.key === 'Escape') { scrollSelection.current = null; setSearchQuery(''); setJumpRequest((value) => value + 1); } }}
-          aria-label={t(lang, 'paletteSearchAll')}
+        <SearchInput
+          className="w-full"
           placeholder={t(lang, 'paletteSearchAll')}
-          className="w-full pl-6 pr-6 py-1 text-xs bg-bg-input text-text-primary border border-border rounded-sm focus:outline-none focus:border-accent placeholder:text-text-disabled"
+          value={searchQuery}
+          onChange={(value) => {
+            setSearchQuery(value);
+            if (listRef.current) listRef.current.scrollTop = 0;
+          }}
+          // ESC 清空后仍回调: 重置滚动跳转锚点, 让列表回到当前分类
+          onEscape={() => {
+            scrollSelection.current = null;
+            setJumpRequest((value) => value + 1);
+          }}
         />
-        {searchQuery && (
-          <button
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-text-disabled hover:text-text-primary"
-            onClick={() => setSearchQuery('')}
-            title={t(lang, 'paletteClearSearch')}
-          >
-            <X size={11} />
-          </button>
-        )}
       </div>
 
       <nav aria-label={t(lang, 'paletteJumpTo')} className="flex flex-wrap gap-1 px-1 pb-2 border-b border-border-subtle">

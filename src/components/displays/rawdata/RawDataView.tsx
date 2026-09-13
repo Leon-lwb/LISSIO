@@ -10,6 +10,7 @@ import type { RawDataGrouping, RawDataRepr, DirectionFilter, HexColorMode, Appen
 import { byteToHex, byteToAscii, formatTime } from './rawDataViewHelpers';
 import { useLongTaskMonitor, useRawDataBuffer, useRawNumericSamples, useRawStringSamples } from './useRawDataBuffer';
 import { useRawDataChannel } from './useRawDataChannel';
+import { useAutoScrollBottom } from './useAutoScrollBottom';
 import { DroppedInfoPopover } from '../../common/DroppedInfoPopover';
 import { RawDataViewHeader } from './RawDataViewHeader';
 import { RawDataViewContent } from './RawDataViewContent';
@@ -125,51 +126,29 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   const droppedBytes = buffer.droppedBytes;
 
   const parentRef = useRef<HTMLDivElement>(null);
-  const userScrolledRef = useRef(false);
-  const isAutoScrollingRef = useRef(false);
-  const scrollAnimRef = useRef<number | null>(null);
 
   const { clear: clearSelection, ...selection } = useSelection(modeCount);
 
+  // 平滑自动滚动: 字节/数值/字符串三通道共用, 按当前模式选容器
+  const getScrollEl = useCallback(() => {
+    if (isNum) return numScrollRef.current;
+    if (isStr) return strScrollRef.current;
+    return parentRef.current;
+  }, [isNum, isStr]);
+  const { userScrolledRef, scheduleToBottom, handleScroll, resetUserScroll } = useAutoScrollBottom(autoScroll, getScrollEl);
+
   useEffect(() => {
     clearSelection();
-    userScrolledRef.current = false;
-  }, [clearSelection, grouping, channel]);
+    resetUserScroll();
+  }, [clearSelection, grouping, channel, resetUserScroll]);
 
-  // 自动滚动到最新结果：每次数据帧只安排一次末尾锚定，不做会持续追赶的平滑动画。
+  // 自动滚动到最新结果: 数据帧到来时安排一次平滑追底 (useAutoScrollBottom
+  // 内部合并高频帧为单一 rAF 循环; reduced-motion 下瞬时跳底)
   useEffect(() => {
-    if (!autoScroll) {
-      isAutoScrollingRef.current = false;
-      return;
-    }
     const activeCount = isNum ? numRows.length : isStr ? filteredStringRows.length : modeCount;
-    if (userScrolledRef.current || activeCount === 0) return;
-    if (scrollAnimRef.current !== null) cancelAnimationFrame(scrollAnimRef.current);
-    scrollAnimRef.current = requestAnimationFrame(() => {
-      scrollAnimRef.current = null;
-      const el = isNum ? numScrollRef.current : isStr ? strScrollRef.current : parentRef.current;
-      if (!el) return;
-      isAutoScrollingRef.current = true;
-      el.scrollTop = el.scrollHeight;
-      requestAnimationFrame(() => {
-        isAutoScrollingRef.current = false;
-      });
-    });
-    return () => {
-      if (scrollAnimRef.current !== null) {
-        cancelAnimationFrame(scrollAnimRef.current);
-        scrollAnimRef.current = null;
-      }
-    };
-  }, [modeCount, numRows.length, sampleSnapshot.version, isNum, isStr, filteredStringRows.length, autoScroll, version, buffer]);
-
-  const handleScroll = useCallback(() => {
-    if (isAutoScrollingRef.current) return;
-    const el = isNum ? numScrollRef.current : isStr ? strScrollRef.current : parentRef.current;
-    if (!el) return;
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
-    userScrolledRef.current = !atBottom;
-  }, [isNum, isStr]);
+    if (activeCount === 0) return;
+    scheduleToBottom();
+  }, [modeCount, numRows.length, sampleSnapshot.version, isNum, isStr, filteredStringRows.length, version, buffer, scheduleToBottom]);
 
   const handleClear = () => {
     if (isStr) {
@@ -183,7 +162,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     void clearData();
     buffer.clear();
     clearSelection();
-    userScrolledRef.current = false;
+    resetUserScroll();
   };
 
   const handleSend = () => {
@@ -347,9 +326,6 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
                   selection={selection}
                   onRowMouseDown={handleRowMouseDown}
                   parentRef={parentRef}
-                  userScrolledRef={userScrolledRef}
-                  isAutoScrollingRef={isAutoScrollingRef}
-                  scrollAnimRef={scrollAnimRef}
                   onScroll={handleScroll}
                   onKeyDown={handleKeyDown}
                 />
@@ -405,9 +381,6 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
                 selection={selection}
                 onRowMouseDown={handleRowMouseDown}
                 parentRef={parentRef}
-                userScrolledRef={userScrolledRef}
-                isAutoScrollingRef={isAutoScrollingRef}
-                scrollAnimRef={scrollAnimRef}
                 onScroll={handleScroll}
                 onKeyDown={handleKeyDown}
               />

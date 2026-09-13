@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
-import { RefreshCw, Search, Usb } from 'lucide-react';
+import { RefreshCw, Usb } from 'lucide-react';
 import type { PortInfo } from '../../types';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
+import { SearchInput } from '../ui/SearchInput';
 
 /// 端口条目 (端口信息 + 在原始列表中的索引)
 interface PortEntry {
@@ -98,24 +99,20 @@ export function PortPicker({
           <RefreshCw size={13} />
         </button>
       </div>
-      <div className="flex items-center gap-1.5 h-7 bg-bg-input border border-border rounded-md px-2 mb-2 text-text-secondary focus-within:border-accent transition-colors">
-        <Search size={12} className="flex-shrink-0" />
-        <input
-          type="text"
-          className="search-input bg-transparent border-none h-full flex-1 focus:outline-none text-text-primary text-xs"
-          placeholder={lang === 'zh' ? '筛选端口...' : 'Filter ports...'}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-      </div>
+      <SearchInput
+        className="w-full mb-2"
+        placeholder={t(lang, 'portFilterPlaceholder')}
+        value={filter}
+        onChange={setFilter}
+      />
       <div className="flex flex-col gap-1">
         {ports.length === 0 ? (
           <div className="p-3 text-text-secondary text-xs text-center">
-            {lang === 'zh' ? '未发现串口' : 'No ports found'}
+            {t(lang, 'portsNoneFound')}
           </div>
         ) : filteredGroups.length === 0 ? (
           <div className="p-3 text-text-secondary text-xs text-center">
-            {lang === 'zh' ? '无匹配端口' : 'No matching ports'}
+            {t(lang, 'portsNoMatch')}
           </div>
         ) : (
           filteredGroups.map((group) => {

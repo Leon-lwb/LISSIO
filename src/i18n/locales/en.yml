@@ -21,6 +21,9 @@ connError: Connection error
 
 # Port Config
 portName: Port
+portFilterPlaceholder: Filter ports…
+portsNoneFound: No ports found
+portsNoMatch: No matching ports
 baudRate: Baud Rate
 dataBits: Data Bits
 parity: Parity
@@ -272,7 +275,7 @@ rawDataStringEmpty: No string output yet (logged on value change)
 rawDataDirectionAll: All
 rawDataDirectionRx: RX
 rawDataDirectionTx: TX
-rawDataSearchPlaceholder: Search...
+rawDataSearchPlaceholder: Search…
 displayOptions: Display
 
 # Node Editor
@@ -386,7 +389,7 @@ errorGuideSerde: Data serialization failed. Check the payload or configuration f
 # Settings system
 settings: Settings
 settingsTitle: Settings
-settingsSearch: Search settings...
+settingsSearch: Search settings…
 settingsReset: Reset to Defaults
 settingsResetCategory: Reset this category
 settingsDone: Done
@@ -1117,6 +1120,7 @@ helpAiSteps: |-
 
 # CAN
 canFrames: CAN Frames
+canFilterById: Filter by ID (HEX)
 canSender: CAN Sender
 frameList: Frame List
 busActivity: Bus Activity
@@ -1308,6 +1312,7 @@ trigger: Trigger
 paletteSearchPlaceholder: Search widgets…
 paletteNoResults: No matches
 paletteClearSearch: Clear
+clearSearch: Clear search
 fdModeLive: Live Mode
 fdModeManual: Manual Test
 fdSettings: Global Settings

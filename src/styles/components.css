@@ -998,26 +998,33 @@ body.dragging-dock * {
   }
 }
 
-/* 数值行入场: 淡入 + 轻微下滑 (新行挂载时播放, 已有行不重放) */
-@keyframes rawdata-row-enter {
+/* 一次性入场动画无需常驻合成层: will-change 终身保留会持续占用显存,
+   浏览器在 animation 进行期间会自行提升图层 */
+.animate-rawdata-enter {
+  animation: rawdata-enter 150ms ease-out;
+}
+
+/* RawData 单元格 hover 高亮 — 纯 CSS 实现, 替代 cell 级 React state
+   (鼠标扫过一行会触发最多 32 次整行重渲染) */
+.rawdata-cell[data-present='true']:hover {
+  background: var(--color-bg-active);
+  color: var(--color-text-bright);
+}
+
+/* ============ 共享搜索框 (SearchInput) ============ */
+@keyframes search-clear-in {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: scale(0.6);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1);
   }
 }
 
-.animate-rawdata-enter {
-  animation: rawdata-enter 150ms ease-out;
-  will-change: transform, opacity;
-}
-
-.animate-rawdata-row {
-  animation: rawdata-row-enter 120ms ease-out;
-  will-change: transform, opacity;
+.animate-search-clear-in {
+  animation: search-clear-in 120ms var(--ease-out-cubic);
 }
 
 /* ============ 控件面板行动画 ============ */
@@ -1057,9 +1064,9 @@ body.dragging-dock * {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-rawdata-enter,
-  .animate-rawdata-row,
   .animate-palette-row,
-  .animate-palette-row-exit {
+  .animate-palette-row-exit,
+  .animate-search-clear-in {
     animation: none;
   }
 }
@@ -1071,6 +1078,7 @@ body.dragging-dock * {
   .context-menu-item,
   .form-input,
   .form-select,
+  .search-box,
   .knob-dial,
   .step-knob-dial,
   .slider-input,
@@ -1086,9 +1094,9 @@ body.dragging-dock * {
     transition: none;
   }
   .animate-rawdata-enter,
-  .animate-rawdata-row,
   .animate-palette-row,
   .animate-palette-row-exit,
+  .animate-search-clear-in,
   .animate-led-pulse,
   .notif-progress {
     animation: none;

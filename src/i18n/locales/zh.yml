@@ -21,6 +21,9 @@ connError: 连接错误
 
 # 串口配置
 portName: 端口
+portFilterPlaceholder: 筛选端口…
+portsNoneFound: 未发现串口
+portsNoMatch: 无匹配端口
 baudRate: 波特率
 dataBits: 数据位
 parity: 校验
@@ -272,7 +275,7 @@ rawDataStringEmpty: 暂无字符串输出 (值变化时记录)
 rawDataDirectionAll: 全部
 rawDataDirectionRx: 接收
 rawDataDirectionTx: 发送
-rawDataSearchPlaceholder: 搜索...
+rawDataSearchPlaceholder: 搜索…
 displayOptions: 显示选项
 
 # 节点编辑器
@@ -386,7 +389,7 @@ errorGuideSerde: 数据序列化失败, 请检查发送内容或配置格式是�
 # 设置系统
 settings: 设置
 settingsTitle: 设置
-settingsSearch: 搜索设置...
+settingsSearch: 搜索设置…
 settingsReset: 重置为默认
 settingsResetCategory: 重置此项
 settingsDone: 完成
@@ -1117,6 +1120,7 @@ helpAiSteps: |-
 
 # CAN
 canFrames: CAN 帧
+canFilterById: 按 ID 过滤 (HEX)
 canSender: CAN 发送器
 frameList: 帧列表
 busActivity: 总线活动
@@ -1308,6 +1312,7 @@ trigger: 触发器
 paletteSearchPlaceholder: 搜索控件…
 paletteNoResults: 无匹配控件
 paletteClearSearch: 清空
+clearSearch: 清除搜索
 fdModeLive: 实时模式
 fdModeManual: 手动测试
 fdSettings: 全局设置

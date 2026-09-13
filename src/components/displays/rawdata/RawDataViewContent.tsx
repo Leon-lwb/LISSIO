@@ -21,9 +21,6 @@ interface Props {
   onRowMouseDown: (e: React.MouseEvent, index: number) => void;
   // scroll
   parentRef: React.RefObject<HTMLDivElement | null>;
-  userScrolledRef: React.MutableRefObject<boolean>;
-  isAutoScrollingRef: React.MutableRefObject<boolean>;
-  scrollAnimRef: React.MutableRefObject<number | null>;
   onScroll: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
 }
@@ -49,6 +46,8 @@ export function RawDataViewContent({
     getScrollElement: () => parentRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 5,
+    // 位置 key: 环形缓冲滑动后同 index 内容会变, 与 version 击穿配合保证刷新 —
+    // 刻意牺牲 React 复用语义换取正确性
     getItemKey: (index) => index,
   });
 

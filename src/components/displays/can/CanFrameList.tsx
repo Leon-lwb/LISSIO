@@ -7,7 +7,8 @@ import { useSelection } from '../../../lib/hooks/useSelection';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
-import { Trash2, ArrowDown, Filter, Download, Copy, Check, X } from 'lucide-react';
+import { SearchInput } from '../../ui/SearchInput';
+import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
 import type { CanFrame } from '../../../types';
 
 const ROW_HEIGHT = 24;
@@ -270,16 +271,13 @@ export function CanFrameList() {
     <div className="h-full flex flex-col overflow-hidden bg-bg-editor">
       {/* 工具栏 */}
       <div className="flex flex-wrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header shrink-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Filter size={12} className="text-text-secondary shrink-0" />
-          <input
-            type="text"
-            className="w-24 sm:w-28 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-xs focus:outline-none focus:border-accent font-mono"
-            placeholder="ID (HEX)"
-            value={filterId}
-            onChange={(e) => setFilterId(e.target.value)}
-          />
-        </div>
+        <SearchInput
+          mono
+          className="w-24 sm:w-28"
+          placeholder={t(lang, 'canFilterById')}
+          value={filterId}
+          onChange={setFilterId}
+        />
 
         <div className="flex items-center gap-0.5">
           {(['all', 'Rx', 'Tx'] as const).map((d) => (

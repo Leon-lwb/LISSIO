@@ -3,7 +3,6 @@ import {
   ArrowDown,
   Clock,
   Settings2,
-  Search,
   X,
   Copy,
   Check,
@@ -14,6 +13,7 @@ import type { Lang } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter } from './rawDataViewHelpers';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import { directionColorClass } from './rawDataViewHelpers';
+import { SearchInput } from '../../ui/SearchInput';
 
 const GROUPING_OPTIONS: { value: RawDataGrouping; label: string }[] = [
   { value: 'grid', label: 'gridView' },
@@ -163,25 +163,16 @@ export function RawDataViewHeader({
           ))}
         </div>
 
-        <div className={`flex items-center gap-1 bg-bg-input rounded px-1.5 py-0.5 border border-border ${isNum ? 'opacity-40 pointer-events-none' : ''}`}>
-          <Search size={12} className="text-text-secondary shrink-0" />
-          <input
-            type="text"
-            disabled={isNum}
-            className="bg-transparent border-none outline-none text-xs text-text-primary placeholder:text-text-disabled min-w-[80px] w-[120px]"
-            placeholder={t(lang, 'rawDataSearchPlaceholder')}
-            value={searchTerm}
-            onChange={(e) => onSearchTermChange(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              className="text-text-secondary hover:text-text-primary"
-              onClick={() => onSearchTermChange('')}
-            >
-              <X size={12} />
-            </button>
-          )}
-        </div>
+        {/* 150ms 防抖: 高速打字只重建一次后端过滤订阅 (acquire/release + 匹配历史重推) */}
+        <SearchInput
+          size="sm"
+          className="w-[140px]"
+          debounceMs={150}
+          disabled={isNum}
+          placeholder={t(lang, 'rawDataSearchPlaceholder')}
+          value={searchTerm}
+          onChange={onSearchTermChange}
+        />
 
         {/* 选中源连接状态徽章 — Connected 不显示 (避免常驻噪音); Error 红灯 */}
         {connState && connState !== 'Connected' && (
