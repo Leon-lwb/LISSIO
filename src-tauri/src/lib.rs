@@ -2,6 +2,7 @@
 //!
 //! 层级: L5 (顶端)。全部业务逻辑位于 `crates/<层>/*`; 后台任务 (ticker /
 //! 工作区防抖落盘 / 启动页兜底) 在 [`app_state`] 的 `runtime` 模块。
+//!
 
 mod commands;
 mod config_migration;
@@ -93,6 +94,20 @@ fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
 // tauri::generate_context! 展开生成的闭包栈占用无法由本仓库控制
 #[allow(clippy::large_stack_frames)]
 pub fn run() {
+    println!(
+        r#"
+    -@@@@@@@@@       :@@@@@@@@@.   .@@@@@@@@:@.     @@@@@@@@:@*  @@@@@@@@@@      +@@@@@@@@-
+        @@@@+            @@@@%     @@@-     *@@:   @@@%      @@#     @@@@       @@@@      @@@@
+        @@@@+            @@@@%    @@@@#      .@:  +@@@@       @%     @@@@     #@@@@        @@@@-
+        @@@@+            @@@@%    =@@@@@@@-        @@@@@@@+          @@@@     @@@@*        @@@@@
+        @@@@+            @@@@%      @@@@@@@@@@@     @@@@@@@@@@@      @@@@    *@@@@-        %@@@@.
+        @@@@+            @@@@%          #@@@@@@@        +@@@@@@@:    @@@@    -@@@@+        @@@@@
+        @@@@+       :@   @@@@%    @@        @@@@. @@        @@@@#    @@@@     @@@@@        @@@@+
+        @@@@*      #@@   @@@@%    @@@       @@@@  @@@       @@@@     @@@@      *@@@%      @@@@
+    m-@@@@@@@@@@@@@@@@:@@@@@@@@@. @@@@@@##@@@@    @@%@@@%#@@@@.   @@@@@@@@@@     .@@@@##@@@@
+ "#
+    );
+
     let app_state = AppState::with_acquisition(acquisition_runtime());
     let acquisition = app_state.transport.clone();
     acquisition.set_observer(std::sync::Arc::new(
