@@ -1,6 +1,6 @@
 import { t } from '../../../i18n';
 import type { Lang } from '../../../i18n';
-import { formatTime } from './rawDataViewHelpers';
+import { EscapedText, formatTime } from './rawDataViewHelpers';
 import type { RawDataStringRow } from './useRawDataBuffer';
 import type { PortSampleStatus } from '../../../lib/data/sampleProtocol';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -115,7 +115,7 @@ export function RawDataViewNumericContent({
                       </span>
                     )}
                     <span className="text-text-primary whitespace-pre-wrap break-all min-w-0">
-                      {s.text}
+                      <EscapedText text={s.text} />
                     </span>
                   </div>
                 );

@@ -48,6 +48,7 @@ import { formatError } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
 import { SearchInput } from './ui/SearchInput';
+import { DraftInput, DraftNumberInput } from './ui/fields';
 
 const CATEGORY_ICONS: Record<keyof AppSettings, React.ReactNode> = {
   general: <SettingsIcon size={16} />,
@@ -251,37 +252,33 @@ export function SettingsModal() {
         );
       case 'number':
         return (
-          <input
-            type="number"
+          <DraftNumberInput
             className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors w-[120px]"
-            value={value as number}
+            value={typeof value === 'number' ? value : null}
             min={ctrl.min}
             max={ctrl.max}
             step={ctrl.step}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (!Number.isNaN(n)) handleChange(n);
-            }}
+            onCommit={(n) => handleChange(n)}
           />
         );
       case 'text':
         return (
-          <input
+          <DraftInput
             type="text"
             className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
             value={String(value)}
-            onChange={(e) => handleChange(e.target.value)}
+            onCommit={handleChange}
           />
         );
       case 'path':
         return (
           <div className="flex items-center gap-2 min-w-[240px]">
-            <input
+            <DraftInput
               type="text"
               className="flex-1 min-w-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
               value={typeof value === 'string' ? value : ''}
               placeholder={t(lang, 'settingRecDefaultDir')}
-              onChange={(e) => handleChange(e.target.value)}
+              onCommit={handleChange}
             />
             <button
               className="flex-shrink-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"

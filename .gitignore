@@ -50,3 +50,6 @@ media/
 
 # for gpuix reflactor
 third_party/
+
+# paper
+docs/paper/

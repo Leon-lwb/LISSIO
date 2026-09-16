@@ -8,6 +8,7 @@ import type {
 } from '../../../types';
 import type { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
+import { DraftInput, DraftNumberInput, DraftTextarea, parseDraftNumber } from '../../ui/fields';
 import {
   CHECKSUM_OPTIONS,
   CHECKSUM_POSITION_OPTIONS,
@@ -33,10 +34,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* 通用: label */}
       <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
         <label className={labelClass}>{t(lang, 'cmdBlockLabel')}</label>
-        <input
+        <DraftInput
           type="text"
           value={block.label ?? ''}
-          onChange={(e) => updateBlock(bid, { label: e.target.value })}
+          onCommit={(label) => updateBlock(bid, { label })}
           className={inputClass}
           placeholder={t(lang, 'cmdBlockLabelPlaceholder')}
         />
@@ -46,11 +47,11 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {(block.type === 'header' || block.type === 'tail') && (
         <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
           <label htmlFor={`decoder-block-${bid}-hex`} className={labelClass}>HEX</label>
-          <input
+          <DraftInput
             id={`decoder-block-${bid}-hex`}
             type="text"
             value={block.hex ?? ''}
-            onChange={(e) => updateBlock(bid, { hex: e.target.value })}
+            onCommit={(hex) => updateBlock(bid, { hex })}
             className={inputClass}
             placeholder="AA BB"
             spellCheck={false}
@@ -75,10 +76,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           </div>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
-            <input
+            <DraftInput
               type="text"
               value={block.portName ?? ''}
-              onChange={(e) => updateBlock(bid, { portName: e.target.value })}
+              onCommit={(portName) => updateBlock(bid, { portName })}
               className={inputClass}
               placeholder={block.type === 'length' ? 'length' : block.type === 'id' ? 'id_value' : 'field_1'}
               spellCheck={false}
@@ -106,10 +107,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {block.type === 'field' && (
         <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
           <label className={labelClass}>{t(lang, 'fdLengthRef')}</label>
-          <input
+          <DraftInput
             type="text"
             value={block.lengthRef ?? ''}
-            onChange={(e) => updateBlock(bid, { lengthRef: e.target.value || null })}
+            onCommit={(draft) => updateBlock(bid, { lengthRef: draft || null })}
             className={inputClass}
             placeholder={t(lang, 'fdLengthRefPlaceholder')}
             spellCheck={false}
@@ -122,33 +123,33 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
         <>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'fdByteOffset')}</label>
-            <input
-              type="number"
+            <DraftNumberInput
               min={0}
+              integer
               value={block.byteOffset ?? 0}
-              onChange={(e) => updateBlock(bid, { byteOffset: parseInt(e.target.value, 10) || 0 })}
+              onCommit={(byteOffset) => updateBlock(bid, { byteOffset })}
               className={inputClass}
             />
           </div>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'fdBitOffset')}</label>
-            <input
-              type="number"
+            <DraftNumberInput
               min={0}
               max={7}
+              integer
               value={block.bitOffset ?? 0}
-              onChange={(e) => updateBlock(bid, { bitOffset: parseInt(e.target.value, 10) || 0 })}
+              onCommit={(bitOffset) => updateBlock(bid, { bitOffset })}
               className={inputClass}
             />
           </div>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'fdBitLength')}</label>
-            <input
-              type="number"
+            <DraftNumberInput
               min={1}
               max={32}
+              integer
               value={block.bitLength ?? 4}
-              onChange={(e) => updateBlock(bid, { bitLength: parseInt(e.target.value, 10) || 1 })}
+              onCommit={(bitLength) => updateBlock(bid, { bitLength })}
               className={inputClass}
             />
           </div>
@@ -163,10 +164,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           </div>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
-            <input
+            <DraftInput
               type="text"
               value={block.portName ?? ''}
-              onChange={(e) => updateBlock(bid, { portName: e.target.value })}
+              onCommit={(portName) => updateBlock(bid, { portName })}
               className={inputClass}
               placeholder="bits_1"
               spellCheck={false}
@@ -210,21 +211,21 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             <>
               <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
                 <label className={labelClass}>{t(lang, 'fdCoverStart')}</label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
+                  integer
                   value={block.coverStart ?? 0}
-                  onChange={(e) => updateBlock(bid, { coverStart: parseInt(e.target.value, 10) || 0 })}
+                  onCommit={(coverStart) => updateBlock(bid, { coverStart })}
                   className={inputClass}
                 />
               </div>
               <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
                 <label className={labelClass}>{t(lang, 'fdCoverEnd')}</label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
+                  integer
                   value={block.coverEnd ?? 0}
-                  onChange={(e) => updateBlock(bid, { coverEnd: parseInt(e.target.value, 10) || 0 })}
+                  onCommit={(coverEnd) => updateBlock(bid, { coverEnd })}
                   className={inputClass}
                 />
               </div>
@@ -247,10 +248,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           {block.algorithm === 'custom' && (
             <div className="flex flex-col gap-1">
               <label className={labelClass}>{t(lang, 'cmdCustomScript')}</label>
-              <textarea
+              <DraftTextarea
                 className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-1.5 py-1 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
                 value={block.customScript ?? ''}
-                onChange={(e) => updateBlock(bid, { customScript: e.target.value })}
+                onCommit={(customScript) => updateBlock(bid, { customScript })}
                 spellCheck={false}
                 rows={4}
                 placeholder={'// bytes: 输入字节数组\n// 返回: 校验字节数组\nlet s = 0;\nfor (const b of bytes) s = (s + b) & 0xff;\nreturn [s];'}
@@ -269,10 +270,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
         <>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'fdCsvSeparator')}</label>
-            <input
+            <DraftInput
               type="text"
               value={block.separator}
-              onChange={(e) => updateBlock(bid, { separator: e.target.value })}
+              onCommit={(separator) => updateBlock(bid, { separator })}
               className={inputClass}
               placeholder=","
               spellCheck={false}
@@ -280,10 +281,10 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           </div>
           <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
             <label className={labelClass}>{t(lang, 'fdCsvPorts')}</label>
-            <input
+            <DraftInput
               type="text"
               value={block.ports.join(',')}
-              onChange={(e) => updateBlock(bid, { ports: e.target.value.split(',').map((p) => p.trim()).filter(Boolean) })}
+              onCommit={(draft) => updateBlock(bid, { ports: draft.split(',').map((p) => p.trim()).filter(Boolean) })}
               className={inputClass}
               placeholder="ch0,ch1,ch2"
               spellCheck={false}
@@ -296,13 +297,11 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {block.type !== 'id' && block.type !== 'csv' && block.type !== 'asciiField' && block.type !== 'samples' && (
         <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
           <label className={labelClass}>{t(lang, 'fdMatchId')}</label>
-          <input
+          <DraftInput
             type="number"
-            value={block.matchId ?? ''}
-            onChange={(e) => {
-              const v = e.target.value === '' ? null : parseInt(e.target.value, 10);
-              updateBlock(bid, { matchId: v });
-            }}
+            value={block.matchId != null ? String(block.matchId) : ''}
+            validate={(draft) => draft.trim() === '' || parseDraftNumber(draft, { integer: true }) != null}
+            onCommit={(draft) => updateBlock(bid, { matchId: parseDraftNumber(draft, { integer: true }) })}
             className={inputClass}
             placeholder={t(lang, 'fdMatchIdPlaceholder')}
           />

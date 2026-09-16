@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { RAWDATA_BYTES_PER_ROW } from '../../../lib/buffers/dataBuffer';
 import type { RawDataDirection } from '../../../types';
 
@@ -64,6 +65,72 @@ export function directionColorClass(direction: RawDataDirection): string {
 export function directionSymbol(direction: RawDataDirection): string {
   return direction === 'tx' ? '↑' : '↓';
 }
+
+// ---- 字符串视图不可见字符转义 (字节网格 ASCII 列仍用 '.' 占位, 两视图刻意不同) ----
+
+/// 不可见字符: C0/C1 控制字符与 DEL (软连字符等零宽符号有意不转义, 避免误伤正常文本)
+export function isInvisibleChar(ch: string): boolean {
+  const code = ch.codePointAt(0) ?? 0;
+  return code < 0x20 || code === 0x7f || (code >= 0x80 && code <= 0x9f);
+}
+
+/// 不可见字符 → 单字符宽度可见符号 (⇥ ↵ ␍ / C0 控制图片 ␀…␟ ␡ / 其余 □)
+export function escapeControlChar(ch: string): string {
+  const code = ch.codePointAt(0) ?? 0;
+  if (code === 0x09) return '⇥';
+  if (code === 0x0a) return '↵';
+  if (code === 0x0d) return '␍';
+  if (code === 0x7f) return '␡';
+  if (code < 0x20) return String.fromCharCode(0x2400 + code);
+  return '□';
+}
+
+export interface EscapedSegment {
+  text: string;
+  escaped: boolean;
+}
+
+/// 把文本切分为 [原样 | 转义符号] 交替段 — 无不可见字符时返回单段原样 (零开销路径)
+export function segmentEscapedText(text: string): EscapedSegment[] {
+  const segments: EscapedSegment[] = [];
+  let plain = '';
+  let escaped = '';
+  for (const ch of text) {
+    if (isInvisibleChar(ch)) {
+      if (plain) {
+        segments.push({ text: plain, escaped: false });
+        plain = '';
+      }
+      escaped += escapeControlChar(ch);
+    } else {
+      if (escaped) {
+        segments.push({ text: escaped, escaped: true });
+        escaped = '';
+      }
+      plain += ch;
+    }
+  }
+  if (plain) segments.push({ text: plain, escaped: false });
+  if (escaped) segments.push({ text: escaped, escaped: true });
+  return segments;
+}
+
+/// 字符串视图文本 — 不可见字符渲染为弱化的可见转义符号, 各占一个字符位
+export const EscapedText = memo(function EscapedText({ text }: { text: string }) {
+  const segments = useMemo(() => segmentEscapedText(text), [text]);
+  if (segments.length <= 1 && !segments[0]?.escaped) return <>{text}</>;
+  return (
+    <>
+      {segments.map((segment, index) =>
+        segment.escaped ? (
+          <span key={index} className="text-text-secondary">{segment.text}</span>
+        ) : (
+          <span key={index}>{segment.text}</span>
+        )
+      )}
+    </>
+  );
+});
 
 /// 表头：00 01 02 ... 0F
 export function HeaderBytes({ width }: { width: number }) {

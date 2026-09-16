@@ -1,6 +1,7 @@
 import type { JsonSchema } from '../../types';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
+import { DraftInput, DraftNumberInput } from '../ui/fields';
 import { defaultsFromSchema } from '../../lib/acquisition/schemaForm';
 import { schemaEnumLabel, schemaFieldLabel } from './schemaLabels';
 
@@ -116,28 +117,28 @@ export function SchemaFields({
 
   if (schema.type === 'integer' || schema.type === 'number') {
     return (
-      <input
+      <DraftNumberInput
         id={path}
         className="form-input"
-        type="number"
         disabled={disabled}
         step={schema.type === 'integer' ? 1 : 'any'}
+        integer={schema.type === 'integer'}
         min={schema.minimum}
         max={schema.maximum}
-        value={typeof value === 'number' ? value : ''}
-        onChange={(event) => onChange(event.target.value === '' ? 0 : Number(event.target.value))}
+        value={typeof value === 'number' ? value : null}
+        onCommit={onChange}
       />
     );
   }
 
   return (
-    <input
+    <DraftInput
       id={path}
-      className="form-input"
       type="text"
+      className="form-input"
       disabled={disabled}
       value={typeof value === 'string' ? value : ''}
-      onChange={(event) => onChange(event.target.value)}
+      onCommit={onChange}
     />
   );
 }

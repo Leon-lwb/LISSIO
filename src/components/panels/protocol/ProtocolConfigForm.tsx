@@ -7,6 +7,7 @@ import { t, type Lang } from '../../../i18n';
 import { Info } from 'lucide-react';
 import type { ProtocolConfig, ProtocolSchema, LogicDecoderConfig } from '../../../types';
 import { schemaFromProtocolConfig, schemaPortNames } from '../../../lib/utils/protocolSchema';
+import { DraftNumberInput } from '../../ui/fields';
 import { ProtocolBlocksEditor } from './ProtocolBlocksEditor';
 
 interface ProtocolConfigFormProps {
@@ -208,11 +209,11 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
 
           {!isAuto && (
             <div className="mb-2.5">
-              <input
-                type="number"
+              <DraftNumberInput
                 min={1}
+                integer
                 value={value.channels ?? 4}
-                onChange={(e) => updateManualChannels(parseInt(e.target.value) || 1)}
+                onCommit={updateManualChannels}
                 className={inputClass}
               />
             </div>
@@ -299,12 +300,12 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                 </div>
                 <div className="mb-2.5 flex-1">
                   <label className="block text-xs text-text-secondary mb-1">{t(lang, 'channel')}</label>
-                  <input
-                    type="number"
+                  <DraftNumberInput
                     min={0}
                     max={15}
+                    integer
                     value={value.decoder.params.channel}
-                    onChange={(e) => updateDecoderParams('Uart', { channel: parseInt(e.target.value) || 0 })}
+                    onCommit={(channel) => updateDecoderParams('Uart', { channel })}
                     className={inputClass}
                   />
                 </div>
@@ -316,23 +317,23 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
             <div className="flex gap-2">
               <div className="mb-2.5 flex-1">
                 <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sdaChannel')}</label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
                   max={15}
+                  integer
                   value={value.decoder.params.sda_channel}
-                  onChange={(e) => updateDecoderParams('I2c', { sda_channel: parseInt(e.target.value) || 0 })}
+                  onCommit={(sda_channel) => updateDecoderParams('I2c', { sda_channel })}
                   className={inputClass}
                 />
               </div>
               <div className="mb-2.5 flex-1">
                 <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sclChannel')}</label>
-                <input
-                  type="number"
+                <DraftNumberInput
                   min={0}
                   max={15}
+                  integer
                   value={value.decoder.params.scl_channel}
-                  onChange={(e) => updateDecoderParams('I2c', { scl_channel: parseInt(e.target.value) || 0 })}
+                  onCommit={(scl_channel) => updateDecoderParams('I2c', { scl_channel })}
                   className={inputClass}
                 />
               </div>
@@ -344,23 +345,23 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
                   <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sclkChannel')}</label>
-                  <input
-                    type="number"
+                  <DraftNumberInput
                     min={0}
                     max={15}
+                    integer
                     value={value.decoder.params.sclk_channel}
-                    onChange={(e) => updateDecoderParams('Spi', { sclk_channel: parseInt(e.target.value) || 0 })}
+                    onCommit={(sclk_channel) => updateDecoderParams('Spi', { sclk_channel })}
                     className={inputClass}
                   />
                 </div>
                 <div className="mb-2.5 flex-1">
                   <label className="block text-xs text-text-secondary mb-1">{t(lang, 'mosiChannel')}</label>
-                  <input
-                    type="number"
+                  <DraftNumberInput
                     min={0}
                     max={15}
+                    integer
                     value={value.decoder.params.mosi_channel}
-                    onChange={(e) => updateDecoderParams('Spi', { mosi_channel: parseInt(e.target.value) || 0 })}
+                    onCommit={(mosi_channel) => updateDecoderParams('Spi', { mosi_channel })}
                     className={inputClass}
                   />
                 </div>
@@ -368,23 +369,23 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
                   <label className="block text-xs text-text-secondary mb-1">{t(lang, 'misoChannel')}</label>
-                  <input
-                    type="number"
+                  <DraftNumberInput
                     min={0}
                     max={15}
+                    integer
                     value={value.decoder.params.miso_channel}
-                    onChange={(e) => updateDecoderParams('Spi', { miso_channel: parseInt(e.target.value) || 0 })}
+                    onCommit={(miso_channel) => updateDecoderParams('Spi', { miso_channel })}
                     className={inputClass}
                   />
                 </div>
                 <div className="mb-2.5 flex-1">
                   <label className="block text-xs text-text-secondary mb-1">{t(lang, 'csChannel')}</label>
-                  <input
-                    type="number"
+                  <DraftNumberInput
                     min={0}
                     max={15}
+                    integer
                     value={value.decoder.params.cs_channel}
-                    onChange={(e) => updateDecoderParams('Spi', { cs_channel: parseInt(e.target.value) || 0 })}
+                    onCommit={(cs_channel) => updateDecoderParams('Spi', { cs_channel })}
                     className={inputClass}
                   />
                 </div>
