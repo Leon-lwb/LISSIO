@@ -1,23 +1,33 @@
 //! MCP 工具 handler — `rmcp::tool_router` 宏生成路由与分发
+//!
+//! 只做参数解包与错误映射; 工具实现在 [`control_api`], 事件端口由组合根注入。
+//! 工具按域拆分在子模块 (data / recording), 各自生成路由后与主路由 `+` 合并。
 
+mod data;
+mod recording;
+
+use control_api::{Toolbox, control, tools};
+use events::EventSinkHandle;
 use rmcp::ServerHandler;
+use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerInfo};
-use tauri::AppHandle;
 
 use super::params::{
-    BufferInfoParams, CanFramesParams, ConnectEdgeParams, DisconnectEdgeParams, InjectBytesParams,
-    LogicParams, RawDataParams, SendBytesParams, SendCanFrameParams, SendStringParams,
+    BufferInfoParams, CanFramesParams, CloseEndpointParams, ConnectEdgeParams,
+    DisconnectEdgeParams, InjectBytesParams, LogicParams, OpenEndpointParams, RawDataParams,
+    ReadPointsParams, RunWorkspaceParams, SendBytesParams, SendCanFrameParams, SendStringParams,
     SetInputValueParams, UpdateGraphParams, WaveformParams, WaveformWindowParams,
+    WritePointsParams,
 };
-use super::toolbox::Toolbox;
-use crate::tools;
 
 /// MCP server handler — 以宏生成工具路由与分发。
 #[derive(Clone)]
 pub struct VofaMcpServer {
     toolbox: Toolbox,
-    app: AppHandle,
+    sink: EventSinkHandle,
+    /// 合并后的完整工具路由 (主路由 + data + recording)。
+    tool_router: ToolRouter<Self>,
 }
 
 /// 序列化值的工具结果统一包装。
@@ -34,8 +44,12 @@ fn internal(e: impl std::fmt::Display) -> rmcp::ErrorData {
 #[rmcp::tool_router]
 impl VofaMcpServer {
     /// 构造 handler。
-    pub const fn new(toolbox: Toolbox, app: AppHandle) -> Self {
-        Self { toolbox, app }
+    pub fn new(toolbox: Toolbox, sink: EventSinkHandle) -> Self {
+        Self {
+            toolbox,
+            sink,
+            tool_router: Self::tool_router() + Self::data_router() + Self::recording_router(),
+        }
     }
 
     /// 列出全部已打开设备会话及其连接状态。
@@ -49,7 +63,7 @@ impl VofaMcpServer {
         description = "列出系统可用串口 [{name, port_type, vid, pid, serial_number, manufacturer, product}]。连接串口前先用它确定端口名"
     )]
     async fn list_serial_ports(&self) -> Result<CallToolResult, rmcp::ErrorData> {
-        tools::list_serial_ports()
+        tools::list_serial_ports(&self.toolbox)
             .map_err(internal)
             .and_then(tool_result)
     }
@@ -92,7 +106,7 @@ impl VofaMcpServer {
     ) -> Result<CallToolResult, rmcp::ErrorData> {
         tools::inject_bytes(
             &self.toolbox,
-            &self.app,
+            self.sink.as_ref(),
             &params.source_node_id,
             &params.data,
         )
@@ -186,10 +200,11 @@ impl VofaMcpServer {
     ) -> Result<CallToolResult, rmcp::ErrorData> {
         tools::update_graph(
             &self.toolbox,
-            &self.app,
+            self.sink.as_ref(),
             &params.tab_id,
             params.documents,
             params.edges,
+            None,
         )
         .await
         .map_err(internal)
@@ -221,7 +236,7 @@ impl VofaMcpServer {
     ) -> Result<CallToolResult, rmcp::ErrorData> {
         tools::connect_edge(
             &self.toolbox,
-            &self.app,
+            self.sink.as_ref(),
             params.tab_id,
             &params.source,
             &params.target,
@@ -243,7 +258,7 @@ impl VofaMcpServer {
     ) -> Result<CallToolResult, rmcp::ErrorData> {
         tools::disconnect_edge(
             &self.toolbox,
-            &self.app,
+            self.sink.as_ref(),
             params.edge_id,
             params.source,
             params.target,
@@ -297,18 +312,102 @@ impl VofaMcpServer {
             params.max_bytes,
         ))
     }
+
+    /// 列出全部已打开端点快照。
+    #[rmcp::tool(
+        description = "列出全部已打开采集端点快照 (含能力/点位/连接参数)。连接前先用它确认状态"
+    )]
+    async fn list_endpoints(&self) -> Result<CallToolResult, rmcp::ErrorData> {
+        tool_result(control::list_endpoints(&self.toolbox))
+    }
+
+    /// 打开采集端点。
+    #[rmcp::tool(
+        description = "按图中设备节点 id 打开采集端点 (读取节点内 EndpointSpec 并挂载数据平面读任务)。成功返回端点快照"
+    )]
+    async fn open_endpoint(
+        &self,
+        Parameters(params): Parameters<OpenEndpointParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        control::open_endpoint(&self.toolbox, &self.sink, &params.node_id)
+            .await
+            .map_err(internal)
+            .and_then(tool_result)
+    }
+
+    /// 关闭采集端点。
+    #[rmcp::tool(description = "关闭采集端点 (endpoint_id 为图中设备节点 id)")]
+    async fn close_endpoint(
+        &self,
+        Parameters(params): Parameters<CloseEndpointParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        control::close_endpoint(&self.toolbox, self.sink.as_ref(), &params.endpoint_id)
+            .await
+            .map_err(internal)
+            .and_then(tool_result)
+    }
+
+    /// 读取端点点位值。
+    #[rmcp::tool(
+        description = "读取指定端点的点位值 (point_ids 为点位 id 数组)。返回 {batch: {samples: [...]}}"
+    )]
+    async fn read_points(
+        &self,
+        Parameters(params): Parameters<ReadPointsParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let point_ids = params
+            .point_ids
+            .into_iter()
+            .map(points::PointId)
+            .collect::<Vec<_>>();
+        control::read_points(&self.toolbox, &params.endpoint_id, point_ids)
+            .await
+            .map_err(internal)
+            .and_then(tool_result)
+    }
+
+    /// 写入端点点位值。
+    #[rmcp::tool(
+        description = "写入指定端点的点位值。request 为 WriteRequest JSON: {correlationId, deadlineUnixNs, idempotencyKey?, items:[{pointId, value}]}"
+    )]
+    async fn write_points(
+        &self,
+        Parameters(params): Parameters<WritePointsParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let request: points::WriteRequest =
+            serde_json::from_value(params.request).map_err(internal)?;
+        control::write_points(&self.toolbox, &params.endpoint_id, request)
+            .await
+            .map_err(internal)
+            .and_then(tool_result)
+    }
+
+    /// 工作区运行控制。
+    #[rmcp::tool(
+        description = "工作区运行控制: start (启动/恢复) / pause / stop。返回 {state, epoch}; 启动后采集与图求值才处理数据"
+    )]
+    async fn run_workspace(
+        &self,
+        Parameters(params): Parameters<RunWorkspaceParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        control::run_workspace(&self.toolbox, self.sink.as_ref(), params.action.into())
+            .await
+            .map_err(internal)
+            .and_then(tool_result)
+    }
 }
 
-#[rmcp::tool_handler]
+#[rmcp::tool_handler(router = self.tool_router)]
 impl ServerHandler for VofaMcpServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
             .with_server_info(Implementation::new("lissio", env!("CARGO_PKG_VERSION")))
             .with_instructions(
-                "Lissio 串口/波形调试上位机。可发送指令到设备 (send_string/send_bytes/send_can_frame)、\
+                "Lissio 串口/波形调试上位机。可打开设备 (open_endpoint)、启动采集 (run_workspace start)、\
+                 发送指令到设备 (send_string/send_bytes/send_can_frame)、\
                  读取波形与图输出 (get_recent_waveform/get_graph_outputs)、\
                  修改节点图 (update_graph 整图替换 / connect_edge+disconnect_edge 增量连线, \
-                 编译校验失败会返回真实原因)。先用 list_devices/list_data_sources/list_tabs 了解可用资源。",
+                 编译校验失败会返回真实原因)。先用 list_devices/list_endpoints/list_data_sources/list_tabs 了解可用资源。",
             )
     }
 }

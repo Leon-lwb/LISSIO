@@ -27,16 +27,23 @@ mod app_state;
 mod background;
 mod measure;
 mod protocol_ops;
+mod run_ops;
 mod transport_ops;
 mod workspace;
 
 // ---- 本 crate 核心 ----
-pub use app_state::{AppState, WaveformSnapshot};
-pub use background::{flush_workspace_on_exit, spawn_background_tasks};
+pub use app_state::{AppState, SerialDiscovery, SerialDiscoveryUnavailable, WaveformSnapshot};
+pub use background::{
+    TaskSpawner, flush_workspace, spawn_backend_tasks, start_recording, stop_recording,
+    workspace_autosave_loop,
+};
+pub use transport_ops::{close_device_session, open_device_session};
+
 pub use measure::{
     ChannelMeasurement, SourceMeasurements, compute_autoset_suggestion, compute_source_measurements,
 };
 pub use measurement::AutoSetSuggestion;
+pub use run_ops::apply_workspace_run;
 pub use transport_ops::LoopbackResult;
 pub use workspace::{
     DataTabMeta, Position, TabGraphFile, TabMeta, WORKSPACE_FILE_NAME, WorkspaceFile,

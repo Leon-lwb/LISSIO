@@ -11,7 +11,7 @@
 //!   `bounded_drain_size(backlog, min_batch, MAX_DRAIN)` 批量。
 //! - **顺序**: 增量流前端按 seq 严格重组; 快照流 (波形) 按 "最新 seq 胜出"。
 
-use crate::dispatcher::{AdaptiveRate, adaptive_channel_loop};
+use crate::dispatcher::{AdaptiveRate, StreamSink, adaptive_stream_loop};
 use can::{CanBuffer, CanFrameBatch};
 use data_model::{Error, Result};
 use error::ConfigError;
@@ -23,7 +23,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
-use tauri::ipc::Channel;
 use tokio::sync::oneshot;
 
 mod waveform;
@@ -64,29 +63,26 @@ pub trait StreamSource: Send + 'static {
 
 /// 统一分片推送循环 — 所有数据流共用
 ///
-/// 由 subscribe_* 命令按分片 spawn; 取消信号或 Channel 关闭时退出。
-#[allow(clippy::too_many_arguments)]
+/// 由订阅方按分片 spawn; 取消信号或对端关闭时退出。
 pub async fn sharded_stream_loop<S: StreamSource>(
     name: String,
     source: Arc<Mutex<S>>,
-    on_event: Channel<S::Batch>,
+    sink: Arc<dyn StreamSink>,
     shard_idx: usize,
     seq: Arc<AtomicU64>,
     interval: Duration,
     min_batch: usize,
     cancel_rx: oneshot::Receiver<()>,
 ) {
-    let channel_id = on_event.id();
     let rate = AdaptiveRate::new(
         Duration::from_millis(16),
         interval.max(Duration::from_millis(100)),
     );
     let log_name = name.clone();
     let mut was_active = shard_idx == 0;
-    adaptive_channel_loop(
+    adaptive_stream_loop(
         &name,
-        channel_id,
-        on_event,
+        sink,
         rate,
         move || {
             let mut src = source.lock();
@@ -111,7 +107,7 @@ pub async fn sharded_stream_loop<S: StreamSource>(
             let mut batch = src.drain(bounded_drain_size(backlog, min_batch, S::MAX_DRAIN))?;
             // seq 在源锁内分配, 保证全局单调且与 drain 顺序一致
             S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-            Some(batch)
+            serde_json::to_value(&batch).ok()
         },
         cancel_rx,
     )
@@ -120,12 +116,12 @@ pub async fn sharded_stream_loop<S: StreamSource>(
 
 /// 带载荷映射的统一分片推送循环。
 ///
-/// 数据源保持自己的强类型批次，IPC 边界可将其无拷贝地包装进统一事件枚举。
+/// 数据源保持自己的强类型批次，出口边界可将其包装进统一事件枚举。
 #[allow(clippy::too_many_arguments)]
 pub async fn sharded_stream_loop_map<S, E, F>(
     name: String,
     source: Arc<Mutex<S>>,
-    on_event: Channel<E>,
+    sink: Arc<dyn StreamSink>,
     shard_idx: usize,
     seq: Arc<AtomicU64>,
     interval: Duration,
@@ -137,17 +133,15 @@ pub async fn sharded_stream_loop_map<S, E, F>(
     E: serde::Serialize + Send + 'static,
     F: Fn(S::Batch) -> E + Send + 'static,
 {
-    let channel_id = on_event.id();
     let rate = AdaptiveRate::new(
         Duration::from_millis(16),
         interval.max(Duration::from_millis(100)),
     );
     let log_name = name.clone();
     let mut was_active = shard_idx == 0;
-    adaptive_channel_loop(
+    adaptive_stream_loop(
         &name,
-        channel_id,
-        on_event,
+        sink,
         rate,
         move || {
             let mut src = source.lock();
@@ -169,7 +163,7 @@ pub async fn sharded_stream_loop_map<S, E, F>(
             }
             let mut batch = src.drain(bounded_drain_size(backlog, min_batch, S::MAX_DRAIN))?;
             S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-            Some(map(batch))
+            serde_json::to_value(map(batch)).ok()
         },
         cancel_rx,
     )

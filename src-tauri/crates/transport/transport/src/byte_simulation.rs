@@ -133,7 +133,7 @@ pub fn open(
     }))
 }
 
-#[allow(clippy::cast_precision_loss)] // Simulation rates are validated to at most 700 kHz.
+#[allow(clippy::cast_precision_loss)] // Simulation rates are validated to at most 5 MHz.
 const fn legacy_sample_rate(sample_rate: u32) -> f32 {
     sample_rate as f32
 }

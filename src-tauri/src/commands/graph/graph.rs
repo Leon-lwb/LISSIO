@@ -27,13 +27,14 @@ pub async fn update_tab_graph(
     edges: Vec<Edge>,
     base_version: Option<u64>,
 ) -> Result<GraphDerived> {
+    let sink = crate::event_sink::TauriEventSink::new(app);
     apply_document(
         &state.graphs,
         &state.graphs_version,
         &state.data_plane,
         &state.source_graphs,
         &state.workspace,
-        Some(&app),
+        Some(&sink),
         tab_id,
         documents,
         edges,
@@ -49,7 +50,8 @@ pub async fn remove_tab_graph(
     app: AppHandle,
     tab_id: String,
 ) -> Result<GraphDerived> {
-    apply_remove_tab_graph(&state, Some(&app), &tab_id).await
+    let sink = crate::event_sink::TauriEventSink::new(app);
+    apply_remove_tab_graph(&state, Some(&sink), &tab_id).await
 }
 
 /// 设置输入控件当前值 (Knob/Slider/Button/Radio/Checkbox 拖动时调用)
@@ -149,13 +151,14 @@ pub async fn inject_bytes(
     source_node_id: String,
     data: Vec<u8>,
 ) -> Result<usize> {
+    let sink = crate::event_sink::TauriEventSink::new(app);
     let plane = state.data_plane.clone();
     let target_count = plane.byte_plan.lock().routes_for(&source_node_id).len();
 
     let mut cache = DecoderFeedCache::new();
     let summary = byte_router::route_bytes(
         &plane,
-        Some(&app),
+        Some(&sink),
         &source_node_id,
         &data,
         0,

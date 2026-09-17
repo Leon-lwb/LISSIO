@@ -60,7 +60,8 @@ pub async fn open_acquisition_endpoint(
             _ => None,
         })
         .ok_or("device node does not exist")?;
-    state.open_device(&app, spec).await
+    let sink = crate::event_sink::TauriEventSink::handle(&app);
+    state.open_device(&sink, spec).await
 }
 
 #[tauri::command]
@@ -69,8 +70,9 @@ pub async fn close_acquisition_endpoint(
     state: State<'_, AppState>,
     endpoint_id: String,
 ) -> CommandResult<()> {
+    let sink = crate::event_sink::TauriEventSink::new(app);
     state
-        .close_transport(&app, &endpoint_id)
+        .close_transport(&sink, &endpoint_id)
         .await
         .map_err(|e| e.to_string())
 }

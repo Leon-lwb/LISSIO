@@ -7,66 +7,42 @@ use std::collections::HashMap;
 
 use app::AppState;
 use app::CommandFrameDto;
-use app::apply_run_action;
-use app::{RunAction, RunState};
-use app::{RunSnapshot, SendMode, SendStatus, SendTask};
+use app::apply_workspace_run;
+use app::{RunAction, RunSnapshot};
+use app::{SendMode, SendStatus, SendTask};
 use data_model::{Error, Result};
 use error::ConfigError;
 use events::emit_workspace_run;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tauri::{AppHandle, State};
-
-/// `workspace:run` 事件载荷 — 运行快照 (状态 + epoch)。
-/// 前端订阅收敛运行态显示; 命令返回值与事件载荷同构。
-#[derive(Debug, Clone, Serialize)]
-pub struct WorkspaceRunEvent {
-    pub state: RunState,
-    pub epoch: u64,
-}
-
-impl From<RunSnapshot> for WorkspaceRunEvent {
-    fn from(snapshot: RunSnapshot) -> Self {
-        Self {
-            state: snapshot.state,
-            epoch: snapshot.epoch,
-        }
-    }
-}
 
 /// 工作区运行控制 — start (启动/恢复) / pause / stop。
 ///
 /// 幂等: 目标态与当前态相同时不推进 epoch, 原样返回快照。
+/// 返回/事件载荷为 [`RunSnapshot`] (`{state, epoch}`), 前端契约不变。
 #[tauri::command]
 pub async fn workspace_run(
     app: AppHandle,
     state: State<'_, AppState>,
     acquisition: State<'_, std::sync::Arc<acquisition::AcquisitionRuntime>>,
     action: RunAction,
-) -> Result<WorkspaceRunEvent> {
-    let acquisition_state = match action {
-        RunAction::Start => acquisition::AcquisitionRunState::Running,
-        RunAction::Pause => acquisition::AcquisitionRunState::Paused,
-        RunAction::Stop => acquisition::AcquisitionRunState::Stopped,
-    };
-    if !matches!(action, RunAction::Start) {
-        acquisition.set_run_state(acquisition_state);
-    }
-    let (plane, groups) = {
-        let s = state.inner();
-        (s.data_plane.clone(), s.stream_groups.clone())
-    };
-    let snapshot = apply_run_action(&plane, &groups, action).await;
-    if matches!(action, RunAction::Start) {
-        acquisition.set_run_state(acquisition_state);
-    }
-    emit_workspace_run(&app, &WorkspaceRunEvent::from(snapshot));
-    Ok(snapshot.into())
+) -> Result<RunSnapshot> {
+    let snapshot = apply_workspace_run(
+        &acquisition,
+        &state.data_plane,
+        &state.stream_groups,
+        action,
+    )
+    .await;
+    let sink = crate::event_sink::TauriEventSink::new(app);
+    emit_workspace_run(&sink, &snapshot);
+    Ok(snapshot)
 }
 
 /// 读取当前运行快照 (前端水合用 — 不产生事件)
 #[tauri::command]
-pub fn get_workspace_run_state(state: State<'_, AppState>) -> Result<WorkspaceRunEvent> {
-    Ok(state.data_plane.eval.execution.snapshot().into())
+pub fn get_workspace_run_state(state: State<'_, AppState>) -> Result<RunSnapshot> {
+    Ok(state.data_plane.eval.execution.snapshot())
 }
 
 /// 前端注册的后台自动发送任务 (Command widget 每个非手动帧一条)

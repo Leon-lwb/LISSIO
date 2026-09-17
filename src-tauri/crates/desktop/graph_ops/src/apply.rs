@@ -1,13 +1,13 @@
 //! 图提交核心 — 页签图整体编译提交 / 合并 BytePlan 重建
 //!
-//! 层级: L3 app。不含任何 `#[tauri::command]`; `app` 参数仅用于可选的事件
-//! emit (`None` 供测试与启动恢复静默提交)。
+//! 层级: L3 app。不含任何 `#[tauri::command]`; `sink` 参数仅用于可选的事件
+//! emit (`None` 供测试与启动恢复静默提交), 端口实现由组合根注入。
 
 use app::{AppState, SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord, WorkspaceState};
 use buffer_graph::Edge;
 use data_model::{Error, Result};
 use error::ConfigError;
-use events::emit_graph_derived;
+use events::{BackendEventSink, emit_graph_derived, emit_payload};
 use pipeline::BytePlan;
 use pipeline::DataPlaneState;
 use pipeline::data_plane::frame_dispatch;
@@ -15,7 +15,6 @@ use pipeline::decoder_feed::sync_decoders_now;
 use pipeline::{NodeDef, NodeKind};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter};
 
 use crate::{
     CompileState, GRAPH_SOURCE_EVENT, GraphCompileEvent, GraphDerived, GraphSourceEvent,
@@ -71,7 +70,7 @@ fn rebuild_byte_plan(
 #[allow(clippy::too_many_arguments)]
 pub async fn apply_tab_graph(
     state: &AppState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     tab_id: String,
     nodes: Vec<NodeDef>,
     edges: Vec<Edge>,
@@ -85,7 +84,7 @@ pub async fn apply_tab_graph(
         &state.data_plane,
         &state.source_graphs,
         &state.workspace,
-        app,
+        sink,
         tab_id,
         nodes,
         edges,
@@ -114,7 +113,7 @@ pub async fn apply_tab_graph_parts(
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
     workspace: &WorkspaceState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     tab_id: String,
     nodes: Vec<NodeDef>,
     edges: Vec<Edge>,
@@ -174,10 +173,11 @@ pub async fn apply_tab_graph_parts(
             Ok(g) => g,
             Err(e) => {
                 let report = error::CompileReport::new(e.clone());
-                if let Some(app) = app {
-                    let _ = app.emit(
+                if let Some(sink) = sink {
+                    emit_payload(
+                        sink,
                         crate::GRAPH_COMPILE_EVENT,
-                        GraphCompileEvent {
+                        &GraphCompileEvent {
                             tab_id: tab_id.clone(),
                             state: CompileState::Error,
                             queued_seq: 0,
@@ -257,8 +257,8 @@ pub async fn apply_tab_graph_parts(
         nodes: derived_nodes,
         version,
     };
-    if let Some(app) = app {
-        emit_graph_derived(app, &derived);
+    if let Some(sink) = sink {
+        emit_graph_derived(sink, &derived);
         // 权威源图回推 — 前端画布据此收敛 (多写入方: 前端提交 / 拓扑 op / MCP)。
         // 携带 widget 配置记录与画布位置: 画布按此重建该 tab 完整视图
         // (外部提交的纯 widget 图也可完整渲染)
@@ -267,18 +267,20 @@ pub async fn apply_tab_graph_parts(
             .get(&tab_id)
             .map(|g| (g.documents.clone(), g.edges.clone()))
             .unwrap_or_default();
-        let _ = app.emit(
+        emit_payload(
+            sink,
             GRAPH_SOURCE_EVENT,
-            GraphSourceEvent {
+            &GraphSourceEvent {
                 tab_id: tab_id.clone(),
                 version,
                 documents,
                 edges,
             },
         );
-        let _ = app.emit(
+        emit_payload(
+            sink,
             crate::GRAPH_COMPILE_EVENT,
-            GraphCompileEvent {
+            &GraphCompileEvent {
                 tab_id: tab_id.clone(),
                 state: CompileState::Ok,
                 queued_seq: 0,
@@ -372,7 +374,7 @@ fn recording_domain(source: &NodeDef, handle: &str) -> Option<recording::Domain>
 /// `graph::remove_tab_graph`, 本体抽出以便复用与测试
 pub async fn apply_remove_tab_graph(
     state: &AppState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     tab_id: &str,
 ) -> Result<GraphDerived> {
     state.graphs.lock().remove(tab_id);
@@ -407,8 +409,8 @@ pub async fn apply_remove_tab_graph(
         nodes: derived_nodes,
         version,
     };
-    if let Some(app) = app {
-        emit_graph_derived(app, &derived);
+    if let Some(sink) = sink {
+        emit_graph_derived(sink, &derived);
     }
     Ok(derived)
 }

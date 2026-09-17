@@ -148,15 +148,10 @@ impl From<CanFrameDto> for CanFrame {
             Some("tx" | "Tx" | "TX") => can::CanDirection::Tx,
             _ => can::CanDirection::Rx,
         };
-        Self {
-            timestamp: data_model::now_us(),
-            id: dto.id,
-            extended: dto.extended,
-            rtr: dto.rtr,
-            dlc: u8::try_from(dto.data.len().min(8)).unwrap_or(8),
-            data: dto.data.into_iter().take(8).collect(),
-            direction,
-        }
+        let mut frame = control_api::tools::build_can_frame(dto.id, dto.data, dto.extended);
+        frame.rtr = dto.rtr;
+        frame.direction = direction;
+        frame
     }
 }
 
@@ -174,4 +169,177 @@ pub(super) struct RawDataParams {
     pub(super) source: String,
     /// 最大读取字节数 (上限 64KiB)。
     pub(super) max_bytes: u32,
+}
+
+/// 打开端点入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct OpenEndpointParams {
+    /// 图中设备节点 id (Acquisition 节点)。
+    pub(super) node_id: String,
+}
+
+/// 关闭端点入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct CloseEndpointParams {
+    /// 端点 id (即图中设备节点 id)。
+    pub(super) endpoint_id: String,
+}
+
+/// 点位读取入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct ReadPointsParams {
+    /// 端点 id。
+    pub(super) endpoint_id: String,
+    /// 点位 id 数组。
+    pub(super) point_ids: Vec<String>,
+}
+
+/// 点位写入入参 — `request` 为 `points::WriteRequest` JSON。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct WritePointsParams {
+    /// 端点 id。
+    pub(super) endpoint_id: String,
+    /// 写入请求: {correlationId, deadlineUnixNs, idempotencyKey?, items:[{pointId, value}]}。
+    pub(super) request: Value,
+}
+
+/// 运行控制动作入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum RunActionDto {
+    /// 启动 / 恢复。
+    Start,
+    /// 暂停。
+    Pause,
+    /// 停止。
+    Stop,
+}
+
+impl From<RunActionDto> for pipeline::RunAction {
+    fn from(dto: RunActionDto) -> Self {
+        match dto {
+            RunActionDto::Start => Self::Start,
+            RunActionDto::Pause => Self::Pause,
+            RunActionDto::Stop => Self::Stop,
+        }
+    }
+}
+
+/// 运行控制入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct RunWorkspaceParams {
+    /// 目标动作。
+    pub(super) action: RunActionDto,
+}
+
+/// 停止快照创建入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct SnapshotCreateParams {
+    /// 数据源 (协议/FrameDecoder 节点 id)。
+    pub(super) source: String,
+}
+
+/// 停止快照查询入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct SnapshotQueryParams {
+    /// 快照 id (create_waveform_snapshot 返回)。
+    pub(super) snapshot_id: String,
+    /// 窗口起点 (相对最新时间戳的毫秒偏移, 负数=过去)。
+    pub(super) start_ms: f64,
+    /// 窗口终点 (同上)。
+    pub(super) end_ms: f64,
+    /// 视觉采样点数 (LTTB 降采样)。
+    pub(super) max_points: u32,
+    /// 通道选择 (前端同构 JSON, 缺省 = 全部通道)。
+    #[serde(default)]
+    pub(super) selection: Option<Value>,
+}
+
+/// 停止快照释放入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct SnapshotReleaseParams {
+    /// 快照 id。
+    pub(super) snapshot_id: String,
+}
+
+/// 波形 CSV 文件导出入参 (绝对时间范围, 面向无人值守落盘)。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct WaveformCsvExportParams {
+    /// 数据源 (协议/FrameDecoder 节点 id)。
+    pub(super) source: String,
+    /// 停止快照 id (缺省 = 当前实时缓冲)。
+    pub(super) snapshot_id: Option<String>,
+    /// 起始绝对时间戳 (微秒)。
+    pub(super) start_timestamp_us: u64,
+    /// 结束绝对时间戳 (微秒)。
+    pub(super) end_timestamp_us: u64,
+    /// 目标 CSV 文件路径。
+    pub(super) path: String,
+    /// 通道选择 (前端同构 JSON, 缺省 = 全部通道)。
+    #[serde(default)]
+    pub(super) selection: Option<Value>,
+}
+
+/// 命令帧字节打包入参 — frame 为前端同构的 CommandFrameDto JSON。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct CommandFrameParams {
+    /// 命令帧定义 (CommandFrameDto JSON: blocks 等, 与前端 CommandFrame 同构)。
+    pub(super) frame: Value,
+    /// var_ref 端口输入值 (按端口名索引)。
+    #[serde(default)]
+    pub(super) inputs: std::collections::HashMap<String, f64>,
+}
+
+/// 命令帧发送入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct SendCommandFrameParams {
+    /// 命令发送器 widget 节点 id (字节边起点)。
+    pub(super) widget_id: String,
+    /// 命令帧定义 (CommandFrameDto JSON)。
+    pub(super) frame: Value,
+    /// var_ref 端口输入值 (按端口名索引)。
+    #[serde(default)]
+    pub(super) inputs: std::collections::HashMap<String, f64>,
+}
+
+/// 录制会话 id 入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct RecordingSessionParams {
+    /// 录制会话 id (list_recording_sessions 返回)。
+    pub(super) session_id: String,
+}
+
+/// 录制历史分页查询入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct RecordingHistoryParams {
+    /// 录制会话 id。
+    pub(super) session_id: String,
+    /// 通道绑定 id (list_recording_bindings 返回; 缺省 = 全部绑定)。
+    pub(super) binding_id: Option<String>,
+    /// 起始行 id 之后 (配合分页翻页)。
+    pub(super) after_row_id: Option<i64>,
+    /// 起始时间 (微秒, 含)。
+    pub(super) from_us: Option<u64>,
+    /// 结束时间 (微秒, 含)。
+    pub(super) to_us: Option<u64>,
+    /// 页大小 (缺省 500)。
+    pub(super) limit: Option<u32>,
+    /// 是否携带 payload 字节。
+    pub(super) include_payload: Option<bool>,
+}
+
+/// 录制只读 SQL 查询入参。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct RecordingSqlParams {
+    /// SQL 语句 (只读; 表名见 list_recording_sessions / get_recording_database_info)。
+    pub(super) sql: String,
+    /// 最大返回行数 (缺省 10000)。
+    pub(super) max_rows: Option<u32>,
+}
+
+/// 录制数据导出入参 — request 为前端同构的 RecordingExportRequest JSON。
+#[derive(Debug, Deserialize, schemars::JsonSchema)]
+pub(super) struct RecordingExportParams {
+    /// 导出请求: {sessionId, bindingId?, format, path, ...} (与 IPC 同构)。
+    pub(super) request: Value,
 }

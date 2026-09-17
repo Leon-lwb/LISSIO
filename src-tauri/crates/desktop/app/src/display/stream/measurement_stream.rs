@@ -1,12 +1,13 @@
 //! 后端测量流 — 权威缓冲金字塔快照上的统计/周期计算, version 门控 + 自适应速率
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::AppState;
-use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::{display_rate, send_json};
 use crate::display::DisplayEvent;
+use crate::display::stream_sink::StreamSink;
 use waveform::DerivedSeriesSelector;
 
 pub(super) fn spawn_measurement_stream(
@@ -14,7 +15,7 @@ pub(super) fn spawn_measurement_stream(
     source: &str,
     window_ms: f64,
     derived: Vec<DerivedSeriesSelector>,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
 ) {
     let buffer = state.data_plane.buffer_for(source);
@@ -53,7 +54,7 @@ pub(super) fn spawn_measurement_stream(
                         rate.on_idle();
                         continue;
                     };
-                    if !send_json(&on_event, &DisplayEvent::Measurements(measurement)) {
+                    if !send_json(on_event.as_ref(), &DisplayEvent::Measurements(measurement)) {
                         break;
                     }
                     rate.on_send();

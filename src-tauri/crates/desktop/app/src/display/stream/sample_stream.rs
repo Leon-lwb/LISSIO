@@ -1,17 +1,18 @@
 //! 样本预览流 — bus Topic 订阅 → VNDP 二进制推送 (最新批胜出)
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::AppState;
 use bus::{SampleBatch, TopicKey};
-use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::binary::encode_samples;
+use crate::display::stream_sink::{StreamPayload, StreamSink};
 
 pub(super) async fn spawn_sample_stream(
     state: &AppState,
     key: TopicKey,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
     max_items: usize,
 ) -> bool {
@@ -50,7 +51,7 @@ pub(super) async fn spawn_sample_stream(
                         bus.record_preview_skipped(&key, skipped_since_report);
                         skipped_since_report = 0;
                     }
-                    if on_event.send(InvokeResponseBody::Raw(encode_samples(&limited))).is_err() {
+                    if !on_event.send(StreamPayload::Binary(encode_samples(&limited))) {
                         break;
                     }
                 }

@@ -1,16 +1,14 @@
-//! MCP server 实现 — 工具箱抽象、工具 handler 与 HTTP 生命周期。
+//! MCP server 实现 — rmcp 工具 handler 与 HTTP 生命周期。
 //!
-//! 工具 handler 操作从 [`AppState`] 拆出的 [`Toolbox`] (各字段本就是
-//! `Arc` 共享句柄,与 Tauri 管理的是同一份状态);图提交复用
-//! [`graph_ops::apply_tab_graph_parts`] (L3 应用核心, 与 L4 命令层同一实现)。
-//! 工具具体实现统一在 [`crate::tools`] (内置 AI 原生工具执行器共用),此处
-//! 仅做参数包装与错误映射。
+//! 工具实现与状态切片在 [`control_api`]; 本模块只做协议适配、HTTP 宿主与
+//! 监听端口配置。
 
 mod handlers;
 mod params;
 mod runtime;
-mod toolbox;
+
+/// MCP HTTP 端点路径 (外部客户端配置的 URL 需指向它)。
+pub const MCP_ENDPOINT_PATH: &str = "/mcp";
 
 pub use handlers::VofaMcpServer;
-pub use runtime::{McpServerHandle, start};
-pub use toolbox::{MCP_ENDPOINT_PATH, Toolbox};
+pub use runtime::{DEFAULT_MCP_PORT, MCP_PORT_ENV, McpServerHandle, resolve_port, start};

@@ -1,24 +1,25 @@
-//! 波形包络流 — 快照语义 (buffer 版本变化即推送), GPU 加速 + CPU 回退
+//! 波形包络流 — 快照语义 (buffer 版本变化即推送), 组合根注入的包络引擎
+//! (GPU 加速 + CPU 回退, 见 `waveform::EnvelopeEngine` 端口)
 
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::AppState;
-use gpu::{GpuContext, envelope_minmax_cpu};
 use parking_lot::Mutex;
-use tauri::ipc::{Channel, InvokeResponseBody};
 use waveform::DataBuffer;
 
 use super::binary::{ENVELOPE_WINDOW_CAP, encode_envelope};
 use super::display_rate;
+use crate::display::stream_sink::{StreamPayload, StreamSink};
 
 pub(super) fn spawn_envelope_stream(
     state: &AppState,
     buffer: Arc<Mutex<DataBuffer>>,
     columns: usize,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
 ) {
+    let engine = state.envelope_engine();
     let channel_id = on_event.id();
     let mut cancel = subscription::register_cancel(&state.subscriptions, channel_id);
     let subscriptions = state.subscriptions.clone();
@@ -29,7 +30,6 @@ pub(super) fn spawn_envelope_stream(
     tokio::spawn(async move {
         let mut seq: u64 = 0;
         let mut last_version: u64 = 0;
-        let mut gpu: Option<std::sync::Arc<GpuContext>> = None;
         loop {
             tokio::select! {
                 _ = &mut cancel => break,
@@ -52,28 +52,18 @@ pub(super) fn spawn_envelope_stream(
                         continue;
                     };
                     last_version = version;
-                    // GPU 上下文惰性获取 (pollster 阻塞, 须在 blocking 区)
+                    // 包络引擎含 GPU 路径 — 阻塞区执行, 不占并发 worker
                     let envelopes = tokio::task::block_in_place(|| {
-                        if gpu.is_none() {
-                            gpu = GpuContext::acquire();
-                        }
                         let columns = columns.max(1);
-                        window.channels.iter().map(|channel| {
-                            gpu.as_ref().map_or_else(
-                                || envelope_minmax_cpu(channel, columns),
-                                |ctx| {
-                                    gpu::envelope_minmax(ctx, channel, columns)
-                                        .unwrap_or_else(|_| {
-                                            envelope_minmax_cpu(channel, columns)
-                                        })
-                                },
-                            )
-                        })
-                        .collect::<Vec<_>>()
+                        window
+                            .channels
+                            .iter()
+                            .map(|channel| engine.envelope_minmax(channel, columns))
+                            .collect::<Vec<_>>()
                     });
                     seq += 1;
                     let frame = encode_envelope(seq, &window, columns.max(1), &envelopes);
-                    if on_event.send(InvokeResponseBody::Raw(frame)).is_err() {
+                    if !on_event.send(StreamPayload::Binary(frame)) {
                         break;
                     }
                     rate.on_send();

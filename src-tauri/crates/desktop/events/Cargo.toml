@@ -1,6 +1,6 @@
 [package]
 name = "events"
-description = "Lissio 前端事件契约 + 系统通知封装 (tauri-plugin-notification) — 供数据平面读任务 emit 事件 + 命令触发通知"
+description = "Lissio 前端事件契约 + 后端事件端口 (BackendEventSink) — 无 Tauri 依赖, 由组合根注入 Tauri/CLI 实现"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,12 +11,9 @@ workspace = true
 [dependencies]
 data_model = { workspace = true }
 serde = { workspace = true }
-tauri = { workspace = true }
-tauri-plugin-notification = { workspace = true }
-[dev-dependencies]
 serde_json = { workspace = true }
 
 [package.metadata.lissio]
 domain = "desktop"
-layer = 5
-responsibility = "Lissio 前端事件契约 + 系统通知封装 (tauri-plugin-notification) — 供数据平面读任务 emit 事件 + 命令触发通知"
+layer = 1
+responsibility = "前端事件契约 + 后端事件端口 (BackendEventSink/NullEventSink) — 事件名与 payload 的唯一定义处, 无 Tauri 依赖"

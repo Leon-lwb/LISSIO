@@ -57,7 +57,7 @@ impl LiveNodeHandle {
 }
 
 impl TransportHandle {
-    #[allow(clippy::cast_precision_loss)] // Runtime rates are bounded to 700 kHz.
+    #[allow(clippy::cast_precision_loss)] // Runtime rates are bounded to 5 MHz.
     pub fn set_sample_rate(&self, sample_rate: u32) {
         if let TransportConfig::TestData(config) = &mut *self.config.write() {
             config.sample_rate = sample_rate as f32;

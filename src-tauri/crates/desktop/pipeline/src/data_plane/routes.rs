@@ -3,10 +3,10 @@
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 
+use events::EventSinkHandle;
 use kind::NodeKind;
 use parking_lot::Mutex;
 use schema_types::ProtocolConfig;
-use tauri::AppHandle;
 
 use super::read_task;
 use super::{
@@ -139,7 +139,7 @@ impl DataPlaneState {
     }
 
     /// 挂载设备节点读任务 (open 成功后调用; 同 id 重复调用先 detach)
-    pub async fn attach(&self, app: AppHandle, node_id: &str) {
+    pub async fn attach(&self, sink: EventSinkHandle, node_id: &str) {
         self.ensure_eval_worker();
         self.detach(node_id);
         let rx = self.transport.subscribe_flow(node_id);
@@ -151,7 +151,7 @@ impl DataPlaneState {
         self.raw_collector_for(node_id);
         let plane = self.clone();
         let id = node_id.to_string();
-        let handle = tokio::spawn(read_task::read_task(app, plane, id.clone(), rx));
+        let handle = tokio::spawn(read_task::read_task(sink, plane, id.clone(), rx));
         self.read_tasks.lock().insert(id, handle);
     }
 

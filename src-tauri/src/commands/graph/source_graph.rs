@@ -25,13 +25,14 @@ pub async fn connect_edge(
     source_handle: Option<String>,
     target_handle: Option<String>,
 ) -> Result<ConnectedEdge> {
+    let sink = crate::event_sink::TauriEventSink::new(app);
     apply_connect_edge(
         &state.graphs,
         &state.graphs_version,
         &state.data_plane,
         &state.source_graphs,
         &state.workspace,
-        Some(&app),
+        Some(&sink),
         tab_id,
         source,
         target,
@@ -62,13 +63,14 @@ pub async fn disconnect_edge(
     source: Option<String>,
     target: Option<String>,
 ) -> Result<DisconnectedEdge> {
+    let sink = crate::event_sink::TauriEventSink::new(app);
     apply_disconnect_edge(
         &state.graphs,
         &state.graphs_version,
         &state.data_plane,
         &state.source_graphs,
         &state.workspace,
-        Some(&app),
+        Some(&sink),
         edge_id,
         source,
         target,

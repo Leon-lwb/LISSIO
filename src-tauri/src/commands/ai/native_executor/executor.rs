@@ -5,10 +5,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use chat::ToolExecutor;
+use control_api::Toolbox;
+use control_api::tools;
 use error::Result;
+use events::EventSinkHandle;
 use llm::ToolSpecDto;
-use mcp_server::Toolbox;
-use mcp_server::tools;
 use parking_lot::Mutex;
 use serde_json::{Value, json};
 use tauri::{AppHandle, Emitter};
@@ -42,16 +43,20 @@ pub type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<ToolOutcome>>>
 pub struct NativeToolExecutor {
     toolbox: Toolbox,
     app: AppHandle,
+    /// 事件端口 — 后端直连能力 (字节注入/连线) 复用与 MCP server 同一份实现。
+    sink: EventSinkHandle,
     pending: PendingCalls,
     lang: Lang,
 }
 
 impl NativeToolExecutor {
     /// 构造 (toolbox 从 `AppState` 提取, pending 注册表由 `AiState` 持有)。
-    pub const fn new(toolbox: Toolbox, app: AppHandle, pending: PendingCalls, lang: Lang) -> Self {
+    pub fn new(toolbox: Toolbox, app: AppHandle, pending: PendingCalls, lang: Lang) -> Self {
+        let sink = crate::event_sink::TauriEventSink::handle(&app);
         Self {
             toolbox,
             app,
+            sink,
             pending,
             lang,
         }
@@ -93,7 +98,7 @@ impl NativeToolExecutor {
         let tb = &self.toolbox;
         let out = match name {
             "list_devices" => tools::list_devices(tb).await,
-            "list_serial_ports" => shared(name, tools::list_serial_ports())?,
+            "list_serial_ports" => shared(name, tools::list_serial_ports(tb))?,
             "send_bytes" => {
                 let node_id = arg_str(name, args, "node_id")?;
                 let data = arg_vec_u8(name, args, "data")?;
@@ -125,7 +130,7 @@ impl NativeToolExecutor {
                 let data = arg_vec_u8(name, args, "data")?;
                 shared(
                     name,
-                    tools::inject_bytes(tb, &self.app, source, &data).await,
+                    tools::inject_bytes(tb, self.sink.as_ref(), source, &data).await,
                 )?
             }
             "get_graph_outputs" => tools::get_graph_outputs(tb),
@@ -175,7 +180,7 @@ impl NativeToolExecutor {
                     name,
                     tools::connect_edge(
                         tb,
-                        &self.app,
+                        self.sink.as_ref(),
                         tab_id,
                         source,
                         target,
@@ -191,7 +196,7 @@ impl NativeToolExecutor {
                 let target = arg_opt_str(args, "target").map(str::to_string);
                 shared(
                     name,
-                    tools::disconnect_edge(tb, &self.app, edge_id, source, target).await,
+                    tools::disconnect_edge(tb, self.sink.as_ref(), edge_id, source, target).await,
                 )?
             }
             _ => return Ok(None),

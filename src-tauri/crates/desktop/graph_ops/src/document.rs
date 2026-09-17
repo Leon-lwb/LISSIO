@@ -7,6 +7,7 @@ use data_model::{
     Error, Result,
     device::{DevicePort, DevicePortDirection, DevicePortDomain},
 };
+use events::BackendEventSink;
 use flow::PayloadKind;
 use kind::document::{NodeBusiness, NodeDocument};
 use pipeline::DataPlaneState;
@@ -14,7 +15,6 @@ use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, atomic::AtomicU64},
 };
-use tauri::AppHandle;
 
 #[allow(clippy::implicit_hasher, clippy::too_many_arguments)]
 pub async fn apply_document(
@@ -23,7 +23,7 @@ pub async fn apply_document(
     plane: &DataPlaneState,
     sources: &SourceGraphs,
     workspace: &WorkspaceState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     tab_id: String,
     documents: Vec<NodeDocument>,
     edges: Vec<Edge>,
@@ -185,7 +185,7 @@ pub async fn apply_document(
         plane,
         sources,
         workspace,
-        app,
+        sink,
         tab_id,
         nodes,
         edges,

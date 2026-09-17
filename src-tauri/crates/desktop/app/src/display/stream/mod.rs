@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
@@ -13,11 +14,10 @@ use stream::{
     AdaptiveRate, CanStreamSource, DecodedStreamSource, LogicStreamSource, RawDataSource,
     StreamSource, WaveformSource,
 };
-use tauri::State;
-use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
 use super::snapshot::spawn_snapshot;
+use super::stream_sink::{StreamPayload, StreamSink};
 
 mod binary;
 mod envelope_stream;
@@ -45,12 +45,12 @@ fn direction(value: &str) -> DirectionFilter {
     }
 }
 
-pub fn send_json(channel: &Channel<InvokeResponseBody>, event: &DisplayEvent) -> bool {
+pub fn send_json(sink: &dyn StreamSink, event: &DisplayEvent) -> bool {
     let Ok(json) = serde_json::to_string(event) else {
         log::error!("显示事件序列化失败");
         return false;
     };
-    channel.send(InvokeResponseBody::Json(json)).is_ok()
+    sink.send(StreamPayload::Json(json))
 }
 
 async fn can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>) -> u32 {
@@ -66,7 +66,7 @@ async fn can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>)
 }
 
 /// JSON 事件编码器 — 低频流 (原始数据/CAN/逻辑/解码事件) 沿用 JSON 联合事件
-fn json_event<E, F>(map: F) -> impl Fn(E) -> InvokeResponseBody + Send + 'static
+fn json_event<E, F>(map: F) -> impl Fn(E) -> StreamPayload + Send + 'static
 where
     E: serde::Serialize,
     F: Fn(E) -> DisplayEvent + Send + 'static,
@@ -74,23 +74,23 @@ where
     move |event| {
         let Ok(json) = serde_json::to_string(&map(event)) else {
             log::error!("显示事件序列化失败");
-            return InvokeResponseBody::Json("{}".into());
+            return StreamPayload::Json("{}".into());
         };
-        InvokeResponseBody::Json(json)
+        StreamPayload::Json(json)
     }
 }
 
 fn spawn_stream<S, F>(
     state: &AppState,
     mut source: S,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
     min_batch: usize,
     name: &'static str,
     encode: F,
 ) where
     S: StreamSource,
-    F: Fn(S::Batch) -> InvokeResponseBody + Send + 'static,
+    F: Fn(S::Batch) -> StreamPayload + Send + 'static,
 {
     let channel_id = on_event.id();
     let mut cancel = subscription::register_cancel(&state.subscriptions, channel_id);
@@ -118,7 +118,7 @@ fn spawn_stream<S, F>(
                         continue;
                     };
                     S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-                    if on_event.send(encode(batch)).is_err() { break; }
+                    if !on_event.send(encode(batch)) { break; }
                     rate.on_send();
                 }
             }
@@ -132,7 +132,7 @@ async fn spawn_can_load(
     state: &AppState,
     node_id: &str,
     bitrate_bps: Option<u32>,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
 ) {
     let bitrate = can_bitrate(state, node_id, bitrate_bps).await;
@@ -151,7 +151,7 @@ async fn spawn_can_load(
                         value.sample_history(bitrate, data_model::now_us());
                         value.snapshot(bitrate)
                     };
-                    if !send_json(&on_event, &DisplayEvent::CanLoad(snapshot)) { break; }
+                    if !send_json(on_event.as_ref(), &DisplayEvent::CanLoad(snapshot)) { break; }
                 }
             }
         }
@@ -159,11 +159,11 @@ async fn spawn_can_load(
     });
 }
 
-/// 统一显示订阅。每个逻辑订阅只使用一个 Tauri Channel。
+/// 统一显示订阅。每个逻辑订阅只使用一个 [`StreamSink`] 实例。
 pub async fn subscribe_data(
-    state: State<'_, AppState>,
+    state: &AppState,
     request: DisplayRequest,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval_ms: Option<u64>,
     max_items: Option<usize>,
 ) -> Result<SubscriptionInfo> {
@@ -175,7 +175,7 @@ pub async fn subscribe_data(
         snapshot @ (DisplayRequest::GraphOutputs
         | DisplayRequest::CustomInputs
         | DisplayRequest::StringOutputs
-        | DisplayRequest::Spectrum) => spawn_snapshot(&state, snapshot, on_event, interval),
+        | DisplayRequest::Spectrum) => spawn_snapshot(state, snapshot, on_event, interval),
         DisplayRequest::PortSamples {
             source_node_id,
             source_handle,
@@ -185,7 +185,7 @@ pub async fn subscribe_data(
             let fps = u64::from(limits.preview_fps_limit.max(1));
             let minimum_ms = 1_000_u64.saturating_add(fps - 1) / fps;
             let _ = spawn_sample_stream(
-                &state,
+                state,
                 TopicKey::new(source_node_id, source_handle),
                 on_event,
                 interval.max(Duration::from_millis(minimum_ms)),
@@ -197,7 +197,7 @@ pub async fn subscribe_data(
             mode = "binary";
             let columns = usize::try_from(columns).unwrap_or(2048).clamp(16, 4096);
             spawn_envelope_stream(
-                &state,
+                state,
                 state.data_plane.buffer_for(&source),
                 columns,
                 on_event,
@@ -209,7 +209,7 @@ pub async fn subscribe_data(
             window_ms,
             derived,
         } => {
-            spawn_measurement_stream(&state, &source, window_ms, derived, on_event, interval);
+            spawn_measurement_stream(state, &source, window_ms, derived, on_event, interval);
         }
         DisplayRequest::Waveform {
             source,
@@ -231,14 +231,14 @@ pub async fn subscribe_data(
             };
             mode = "binary";
             spawn_stream(
-                &state,
+                state,
                 waveform_source,
                 on_event,
                 interval,
                 max_items,
                 "波形",
                 |batch| {
-                    InvokeResponseBody::Raw(super::waveform_binary::encode_waveform_window(&batch))
+                    StreamPayload::Binary(super::waveform_binary::encode_waveform_window(&batch))
                 },
             );
         }
@@ -262,7 +262,7 @@ pub async fn subscribe_data(
             };
             if filter_direction.is_empty() && search.trim().is_empty() {
                 spawn_stream(
-                    &state,
+                    state,
                     RawDataSource::new(collector),
                     on_event,
                     interval,
@@ -272,7 +272,7 @@ pub async fn subscribe_data(
                 );
             } else {
                 spawn_stream(
-                    &state,
+                    state,
                     FilteredRawDataSource::new(
                         collector,
                         direction(&filter_direction),
@@ -288,7 +288,7 @@ pub async fn subscribe_data(
         }
         DisplayRequest::CanFrames { filter } => match filter {
             Some(filter) => spawn_stream(
-                &state,
+                state,
                 FilteredCanStreamSource::new(state.can_buffer.clone(), filter),
                 on_event,
                 interval,
@@ -297,7 +297,7 @@ pub async fn subscribe_data(
                 json_event(DisplayEvent::CanFrames),
             ),
             None => spawn_stream(
-                &state,
+                state,
                 CanStreamSource::new(state.can_buffer.clone(), max_items),
                 on_event,
                 interval,
@@ -308,7 +308,7 @@ pub async fn subscribe_data(
         },
         DisplayRequest::LogicSamples { filter } => match filter {
             Some(filter) => spawn_stream(
-                &state,
+                state,
                 FilteredLogicStreamSource::new(state.logic_buffer.clone(), filter),
                 on_event,
                 interval,
@@ -317,7 +317,7 @@ pub async fn subscribe_data(
                 json_event(DisplayEvent::LogicSamples),
             ),
             None => spawn_stream(
-                &state,
+                state,
                 LogicStreamSource::new(state.logic_buffer.clone(), max_items),
                 on_event,
                 interval,
@@ -328,7 +328,7 @@ pub async fn subscribe_data(
         },
         DisplayRequest::DecodedEvents { filter } => match filter {
             Some(filter) => spawn_stream(
-                &state,
+                state,
                 FilteredDecodedStreamSource::new(state.decoded_buffer.clone(), filter),
                 on_event,
                 interval,
@@ -337,7 +337,7 @@ pub async fn subscribe_data(
                 json_event(DisplayEvent::DecodedEvents),
             ),
             None => spawn_stream(
-                &state,
+                state,
                 DecodedStreamSource::new(state.decoded_buffer.clone(), max_items),
                 on_event,
                 interval,
@@ -349,7 +349,7 @@ pub async fn subscribe_data(
         DisplayRequest::CanLoad {
             node_id,
             bitrate_bps,
-        } => spawn_can_load(&state, &node_id, bitrate_bps, on_event, interval).await,
+        } => spawn_can_load(state, &node_id, bitrate_bps, on_event, interval).await,
     }
     Ok(SubscriptionInfo {
         subscription_id: channel_id,
@@ -358,14 +358,14 @@ pub async fn subscribe_data(
     })
 }
 
-pub async fn unsubscribe_data(state: State<'_, AppState>, channel_id: u32) -> Result<()> {
+pub async fn unsubscribe_data(state: &AppState, channel_id: u32) -> Result<()> {
     subscription::cancel_subscription(&state.subscriptions, channel_id);
     Ok(())
 }
 
 /// 前端消费反馈。目前以运行时 Topic 保存控制状态。
 pub fn ack_data(
-    state: State<'_, AppState>,
+    state: &AppState,
     subscription_id: u32,
     sequence: u64,
     buffered_bytes: usize,
@@ -380,7 +380,7 @@ pub fn ack_data(
     Ok(())
 }
 
-pub fn get_data_health(state: State<'_, AppState>) -> Result<RuntimeHealth> {
+pub fn get_data_health(state: &AppState) -> Result<RuntimeHealth> {
     Ok(state.data_plane.eval.bus.health())
 }
 

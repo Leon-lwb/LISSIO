@@ -6,13 +6,13 @@
 
 use bus::{AdaptiveController, RuntimeLimits};
 use data_model::{ConnectionState, TransportStats};
+use events::{EventSinkHandle, emit_transport_rx, emit_transport_state};
 use flow::{Boundary, Framing};
 use kind::NodeKind;
 use raw_data::RawDataDirection;
 use std::collections::{HashSet, VecDeque};
 use std::sync::atomic::Ordering;
 use std::time::Instant;
-use tauri::AppHandle;
 
 use super::{DataPlaneState, STATS_THROTTLE_MS, byte_router, frame_dispatch};
 use crate::feed_parallel::FEED_PARALLEL_UNIT;
@@ -143,7 +143,7 @@ fn note_test_data_gap(
 
 /// 设备节点读任务
 pub(super) async fn read_task(
-    app: AppHandle,
+    sink: EventSinkHandle,
     plane: DataPlaneState,
     node_id: String,
     mut rx: acquisition::LegacyFlowReceiver,
@@ -260,7 +260,7 @@ pub(super) async fn read_task(
             }
             byte_router::route_bytes(
                 &plane,
-                Some(&app),
+                Some(sink.as_ref()),
                 &node_id,
                 &data,
                 depth_hint,
@@ -323,8 +323,8 @@ pub(super) async fn read_task(
 
         // 统计节流 emit (100ms 窗口)
         if last_stats.elapsed().as_millis() >= STATS_THROTTLE_MS {
-            events::emit_transport_rx(
-                &app,
+            emit_transport_rx(
+                sink.as_ref(),
                 &node_id,
                 TransportStats {
                     rx_bytes: acc_bytes,
@@ -348,6 +348,6 @@ pub(super) async fn read_task(
     }
 
     mark_downstream_disconnected(&plane, &node_id);
-    events::emit_transport_state(&app, &node_id, ConnectionState::Disconnected);
+    emit_transport_state(sink.as_ref(), &node_id, ConnectionState::Disconnected);
     log::debug!("数据读任务已退出: {node_id}");
 }

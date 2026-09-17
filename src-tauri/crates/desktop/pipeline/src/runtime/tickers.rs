@@ -186,7 +186,7 @@ pub fn resolve_widget_inputs(
 /// 去重/合并/跳周期 → 持 boundary 读锁经字节路由下发 (与手动发送同一条路) →
 /// 簿记回写。票据在发送前校验 — 运行状态切换后旧 epoch 的待发任务直接作废。
 pub async fn send_scheduler_ticker(
-    app: tauri::AppHandle,
+    sink: events::EventSinkHandle,
     plane: crate::DataPlaneState,
     source_graphs: super::source_graph::SourceGraphs,
 ) {
@@ -264,7 +264,7 @@ pub async fn send_scheduler_ticker(
             }
             let summary = crate::byte_router::route_bytes(
                 &plane,
-                Some(&app),
+                Some(sink.as_ref()),
                 &widget_id,
                 &bytes,
                 0,

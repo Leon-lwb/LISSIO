@@ -10,16 +10,26 @@ capabilities visually adjacent without encoding two concepts in one directory.
 
 | Layer | Meaning | Examples |
 |---|---|---|
-| L0 | Stable contracts and configuration | `data-model`, `config`, `events`, `can`, `diagnostic` |
+| L0 | Stable contracts and configuration | `data-model`, `points`, `events`, `can`, `diagnostic` |
 | L1 | Deterministic engines and in-memory structures | `waveform`, `schema`, `graph`, `bus` |
-| L2 | Stateful runtimes, storage, and orchestration ports | `transport`, `pipeline`, `workspace`, `chat` |
-| L3 | Product use cases and application state | `app` |
-| L4 | Hardware, OS, SDK, and external-service adapters | `serial`, `gpu`, `llm`, `mcp-server` |
-| L5 | Tauri composition root | `lissio` |
+| L2 | Stateful runtimes, storage, and orchestration ports | `transport`, `pipeline`, `stream`, `evaluator`, `recording`, `acquisition` |
+| L3 | Product use cases and application state | `app`, `graph_ops`, `control-api` |
+| L4 | Hardware, OS, SDK, and external-service adapters | `serial`, `gpu`, `llm`, `mcp-server`, `backend-host` |
+| L5 | Composition roots | `lissio` (Tauri), `backend-cli` (headless) |
 
 A crate may depend on the same layer or any lower layer. Direct dependencies
 across multiple layers are preferred to forwarding facades. L0-L3 must not
-depend on Tauri or adapter SDKs.
+depend on Tauri or adapter SDKs; adapter-backed capabilities (serial
+discovery, GPU envelope, event/stream push) are defined as ports in lower
+layers and their L4 implementations are injected by the composition root.
+
+## Software exits
+
+UI (Tauri IPC), MCP (`mcp-server`), and headless CLI (`backend-cli`) are three
+thin protocol adapters over one capability core (`control-api`), one shared
+headless assembly (`backend-host`), and two push ports (`events::BackendEventSink`,
+`app::display::StreamSink`). Capability coverage matrix and conventions:
+[exits.md](exits.md).
 
 ## Domains
 
@@ -54,7 +64,7 @@ allowed when they also satisfy the layer rule.
 | data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `menu_shell`, `update_flow`, `mcp-server`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |
 
 `graph` keeps `compiler::{hir, plane, lower}` and `eval` as private
 implementation stages. Do not split compiler phases into crates.

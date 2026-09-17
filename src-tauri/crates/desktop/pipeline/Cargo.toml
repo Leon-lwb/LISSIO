@@ -42,7 +42,6 @@ serde_json = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 parking_lot = { workspace = true }
-tauri = { workspace = true }
 # 数据平面读任务调前端事件契约 (events.rs 迁出后从 events 取)
 events = { workspace = true }
 
@@ -66,5 +65,5 @@ harness = false
 
 [package.metadata.lissio]
 domain = "desktop"
-layer = 5
+layer = 2
 responsibility = "Lissio 数据平面 (字节路由 + 数值平面评估 + 每源数据缓冲 + 解析引擎状态) — 两平面节点图重构核心"

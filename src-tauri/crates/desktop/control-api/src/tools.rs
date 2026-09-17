@@ -1,19 +1,19 @@
-//! 共享工具实现 — [`VofaMcpServer`](crate::server::VofaMcpServer) 的 rmcp handler
-//! 与内置 AI 原生工具执行器 (`ai::native_executor`) 共用的普通异步函数层。
+//! 共享工具实现 — 后端控制能力核心 (MCP / CLI / 内置 AI 共用的普通异步函数层)。
 //!
-//! 统一返回 `Result<Value, String>`:rmcp 侧映射为 MCP 错误,原生执行器侧
-//! 映射为工具失败回填 (is_error),两侧零重复。
+//! 统一返回 `Result<Value, String>`:rmcp 侧映射为 MCP 错误, 原生执行器侧
+//! 映射为工具失败回填 (is_error), CLI 侧映射为退出码 + stderr, 多处零重复。
+//! 事件/通知经 [`BackendEventSink`] 端口注入, 本 crate 不依赖 Tauri。
 
 use std::sync::atomic::Ordering;
 
 use can::CanFrame;
+use events::BackendEventSink;
 use pipeline::data_plane::{byte_router, frame_dispatch};
 use pipeline::decoder_feed::DecoderFeedCache;
 use raw_data::RawDataDirection;
 use serde_json::{Value, json};
-use tauri::AppHandle;
 
-use crate::server::Toolbox;
+use crate::toolbox::Toolbox;
 
 /// 波形读取点数上限 (防止超长返回撑爆上下文)。
 const MAX_WAVEFORM_POINTS: u32 = 10_000;
@@ -60,16 +60,23 @@ pub async fn send_string(tb: &Toolbox, node_id: &str, text: &str) -> Result<Valu
 /// 字节注入 — 沿全局字节平面路由 (喂协议引擎 / FrameDecoder / Transport.tx)。
 pub async fn inject_bytes(
     tb: &Toolbox,
-    app: &AppHandle,
+    sink: &dyn BackendEventSink,
     source_node_id: &str,
     data: &[u8],
 ) -> Result<Value, String> {
     let plane = tb.data_plane.clone();
     let hit = plane.byte_plan.lock().routes_for(source_node_id).len();
     let mut cache = DecoderFeedCache::new();
-    let summary =
-        byte_router::route_bytes(&plane, Some(app), source_node_id, data, 0, &mut cache, None)
-            .await;
+    let summary = byte_router::route_bytes(
+        &plane,
+        Some(sink),
+        source_node_id,
+        data,
+        0,
+        &mut cache,
+        None,
+    )
+    .await;
     if summary.decoders_fed {
         frame_dispatch::refresh_snapshot(&plane);
     }
@@ -145,12 +152,14 @@ pub fn list_tabs(tb: &Toolbox) -> Value {
 /// 提交 (替换) 指定 tab 的节点图 — 与前端提交同一路径,返回派生端口表。
 ///
 /// 文档包含节点业务配置、属性与布局；运行时节点和端口由提交路径统一派生。
+/// `base_version` 为乐观并发基线 (CLI/MCP 缺省 None 不校验)。
 pub async fn update_graph(
     tb: &Toolbox,
-    app: &AppHandle,
+    sink: &dyn BackendEventSink,
     tab_id: &str,
     documents: Vec<Value>,
     edges: Vec<Value>,
+    base_version: Option<u64>,
 ) -> Result<Value, String> {
     #![allow(clippy::implicit_hasher)] // serde_json::Value 反序列化约定 std hasher, 仅内部工具入口
 
@@ -170,11 +179,11 @@ pub async fn update_graph(
         &tb.data_plane,
         &tb.source_graphs,
         &tb.workspace,
-        Some(app),
+        Some(sink),
         tab_id.to_string(),
         documents,
         edges,
-        None,
+        base_version,
     )
     .await
     .map_err(|e| e.to_string())?;
@@ -187,7 +196,7 @@ pub async fn update_graph(
 /// `src:<source>:<handle>`。编译失败 (环/端口域不匹配) 返回真实原因, 不建边。
 pub async fn connect_edge(
     tb: &Toolbox,
-    app: &AppHandle,
+    sink: &dyn BackendEventSink,
     tab_id: Option<String>,
     source: &str,
     target: &str,
@@ -200,7 +209,7 @@ pub async fn connect_edge(
         &tb.data_plane,
         &tb.source_graphs,
         &tb.workspace,
-        Some(app),
+        Some(sink),
         tab_id,
         source.to_string(),
         target.to_string(),
@@ -215,7 +224,7 @@ pub async fn connect_edge(
 /// 删线 — 按 edge_id 或 source/target 组合 (可只给一端) 查找删除。
 pub async fn disconnect_edge(
     tb: &Toolbox,
-    app: &AppHandle,
+    sink: &dyn BackendEventSink,
     edge_id: Option<String>,
     source: Option<String>,
     target: Option<String>,
@@ -226,7 +235,7 @@ pub async fn disconnect_edge(
         &tb.data_plane,
         &tb.source_graphs,
         &tb.workspace,
-        Some(app),
+        Some(sink),
         edge_id,
         source,
         target,
@@ -297,6 +306,20 @@ pub async fn send_can_frame(
     Ok(json!({ "sent_bytes": data.len(), "protocol_node": proto_id }))
 }
 
+/// 从出口无关的裸参数构建 CAN 帧出口 DTO (`mcp-server` 与 `backend-cli`
+/// 共用; 时间戳取当前, direction = Tx, dlc/数据截断到 8 字节)。
+pub fn build_can_frame(id: u32, data: Vec<u8>, extended: bool) -> CanFrame {
+    CanFrame {
+        timestamp: data_model::now_us(),
+        id,
+        extended,
+        rtr: false,
+        dlc: u8::try_from(data.len().min(8)).unwrap_or(8),
+        data: data.into_iter().take(8).collect(),
+        direction: can::CanDirection::Tx,
+    }
+}
+
 /// 读取最近逻辑采样与解码事件 (UART/I2C/SPI 等)。
 pub fn get_logic_data(tb: &Toolbox, count: u32) -> Value {
     let n = count.clamp(1, MAX_LOGIC_ITEMS) as usize;
@@ -342,9 +365,10 @@ pub fn get_raw_data(tb: &Toolbox, source: &str, max_bytes: u32) -> Value {
     })
 }
 
-/// 列出可用串口 (名称/类型/USB 信息)。
-pub fn list_serial_ports() -> Result<Value, String> {
-    let ports = serial::serial::list_ports().map_err(|e| e.to_string())?;
+/// 列出可用串口 (名称/类型/USB 信息) — 经注入的 [`crate::toolbox::Toolbox`]
+/// 串口发现端口 (L4 实现由宿主装配注入)。
+pub fn list_serial_ports(tb: &Toolbox) -> Result<Value, String> {
+    let ports = tb.serial_discovery.list_ports()?;
     serde_json::to_value(&ports).map_err(|e| e.to_string())
 }
 

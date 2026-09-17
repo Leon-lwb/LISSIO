@@ -171,7 +171,6 @@ dependencies = [
  "evaluator",
  "events",
  "filter",
- "gpu",
  "kind",
  "log",
  "logic",
@@ -188,7 +187,6 @@ dependencies = [
  "spectrum",
  "stream",
  "subscription",
- "tauri",
  "tokio",
  "waveform",
 ]
@@ -688,6 +686,46 @@ dependencies = [
 ]
 
 [[package]]
+name = "backend-cli"
+version = "0.6.1"
+dependencies = [
+ "app",
+ "backend-host",
+ "clap",
+ "control-api",
+ "env_logger",
+ "events",
+ "log",
+ "mcp-server",
+ "pipeline",
+ "points",
+ "serde_json",
+ "tokio",
+ "waveform",
+]
+
+[[package]]
+name = "backend-host"
+version = "0.6.1"
+dependencies = [
+ "acquisition",
+ "app",
+ "can-transport",
+ "data-model",
+ "events",
+ "gpu",
+ "graph_ops",
+ "log",
+ "modbus-adapter",
+ "network",
+ "pipeline",
+ "points",
+ "s7-adapter",
+ "serial",
+ "transport",
+]
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1112,6 +1150,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "473c7e07f409a8d772161724aa8db6a765a2532a70f9667eeb7b49d3d02fbdca"
 dependencies = [
  "clap_builder",
+ "clap_derive",
 ]
 
 [[package]]
@@ -1120,8 +1159,22 @@ version = "4.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7b48fea5a88e9ae728a2dcbedbfc0e730f7d60da42e1cb049a83c9fb8b789889"
 dependencies = [
+ "anstream",
  "anstyle",
  "clap_lex",
+ "strsim",
+]
+
+[[package]]
+name = "clap_derive"
+version = "4.6.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d012d2b9d65aca7f18f4d9878a045bc17899bba951561ba5ec3c2ba1eed9a061"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 3.0.5",
 ]
 
 [[package]]
@@ -1221,6 +1274,30 @@ dependencies = [
  "getrandom 0.2.17",
  "once_cell",
  "tiny-keccak",
+]
+
+[[package]]
+name = "control-api"
+version = "0.6.1"
+dependencies = [
+ "acquisition",
+ "app",
+ "buffer_graph",
+ "can",
+ "data-model",
+ "events",
+ "graph_ops",
+ "kind",
+ "logic",
+ "parking_lot",
+ "pipeline",
+ "points",
+ "raw-data",
+ "recording",
+ "serde",
+ "serde_json",
+ "tokio",
+ "waveform",
 ]
 
 [[package]]
@@ -2013,8 +2090,6 @@ dependencies = [
  "data-model",
  "serde",
  "serde_json",
- "tauri",
- "tauri-plugin-notification",
 ]
 
 [[package]]
@@ -2607,6 +2682,7 @@ dependencies = [
  "log",
  "pollster",
  "thiserror 1.0.69",
+ "waveform",
  "wgpu",
 ]
 
@@ -2679,7 +2755,6 @@ dependencies = [
  "schema_types",
  "serde",
  "serde_json",
- "tauri",
  "tokio",
 ]
 
@@ -3682,12 +3757,14 @@ dependencies = [
  "acquisition",
  "app",
  "async-trait",
+ "backend-host",
  "buffer_graph",
  "bus",
  "can",
  "can-transport",
  "chat",
  "chat-session",
+ "control-api",
  "data-model",
  "error",
  "evaluator",
@@ -3702,7 +3779,6 @@ dependencies = [
  "mcp-client",
  "mcp-server",
  "menu_shell",
- "modbus-adapter",
  "network",
  "parking_lot",
  "petgraph",
@@ -3710,7 +3786,6 @@ dependencies = [
  "points",
  "recording",
  "reqwest",
- "s7-adapter",
  "schema_types",
  "security-framework 3.7.0",
  "semver",
@@ -3890,26 +3965,18 @@ dependencies = [
 name = "mcp-server"
 version = "0.6.1"
 dependencies = [
- "acquisition",
- "app",
- "async-trait",
  "axum",
- "buffer_graph",
  "can",
+ "control-api",
  "data-model",
  "error",
- "graph_ops",
- "kind",
+ "events",
  "log",
- "logic",
- "parking_lot",
  "pipeline",
- "raw-data",
+ "points",
  "rmcp",
  "serde",
  "serde_json",
- "serial",
- "tauri",
  "tokio",
  "waveform",
 ]
@@ -4809,7 +4876,6 @@ dependencies = [
  "serde",
  "serde_json",
  "spectrum",
- "tauri",
  "tokio",
  "transport",
  "trigger",
@@ -5643,9 +5709,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.44"
+version = "0.23.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6725596c3f2c3a0aef021139e145d4eafe314a6623e4680ca83852b2c67ab2ba"
+checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -6386,7 +6452,6 @@ dependencies = [
  "raw-data",
  "serde",
  "serde_json",
- "tauri",
  "tokio",
  "waveform",
 ]
@@ -7058,7 +7123,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
+ "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.4",
  "windows-sys 0.61.2",

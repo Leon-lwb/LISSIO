@@ -8,82 +8,103 @@
 use can::CanFrame;
 use data_model::{ConnectionState, Error, Result, WidgetBinding};
 use error::ConfigError;
-use events::{emit_transport_state, notify};
+use events::{BackendEventSink, EventSinkHandle, NotifyLevel, emit_transport_state};
 use schema_types::{ProtocolConfig, ProtocolSchema, TestDataLink};
 use serde::Serialize;
-use tauri::AppHandle;
 
 use crate::app_state::AppState;
+
+/// 打开设备会话并在可用时挂载字节流读任务。
+///
+/// 无 Tauri 版本 — [`AppState::open_device`]、MCP `open_endpoint` 工具与 CLI 共用
+/// 同一条打开路径 (open + attach 配对、断连事件、订阅编排的不变量只此一份)。
+///
+/// `protocol` 与 `schema` 仅被 TestData 用作生成数据的线缆格式参考, 其他传输类型忽略。
+pub async fn open_device_session(
+    transport: &acquisition::AcquisitionRuntime,
+    data_plane: &pipeline::DataPlaneState,
+    sink: &EventSinkHandle,
+    spec: data_model::device::EndpointSpec,
+) -> std::result::Result<acquisition::EndpointSnapshot, String> {
+    let id = spec.id.0.clone();
+    let snapshot = transport
+        .open_endpoint(spec)
+        .await
+        .map_err(|e| e.to_string())?;
+    if snapshot
+        .capabilities
+        .as_ref()
+        .is_some_and(|c| c.available.byte_source)
+    {
+        data_plane.attach(sink.clone(), &id).await;
+    }
+    if snapshot
+        .capabilities
+        .as_ref()
+        .is_some_and(|c| c.available.subscribe)
+    {
+        let points = snapshot
+            .points
+            .iter()
+            .filter(|p| p.access != points::AccessLevel::WriteOnly)
+            .map(|p| p.id.clone())
+            .collect::<Vec<_>>();
+        if !points.is_empty() {
+            let intent = acquisition::SubscriptionIntent {
+                points,
+                acquisition: points::AcquisitionIntent {
+                    mode: points::AcquisitionMode::Auto,
+                    requested_period_ms: None,
+                    deadband: None,
+                    priority: points::Priority::Normal,
+                    delivery: points::DeliveryClass::State,
+                },
+            };
+            if let Err(error) = transport
+                .subscribe(&data_model::device::EndpointId(id.clone()), intent)
+                .await
+            {
+                data_plane.detach(&id);
+                transport.close(&id).await;
+                return Err(error.to_string());
+            }
+        }
+    }
+    emit_transport_state(sink.as_ref(), &id, ConnectionState::Connected);
+    Ok(snapshot)
+}
+
+/// 关闭设备连接 (node_id = 图中设备节点 id) — 无 Tauri 版本。
+pub async fn close_device_session(
+    transport: &acquisition::AcquisitionRuntime,
+    data_plane: &pipeline::DataPlaneState,
+    sink: &dyn BackendEventSink,
+    node_id: &str,
+) -> Result<()> {
+    data_plane.mark_source_disconnected(node_id);
+    data_plane.detach(node_id);
+    transport.close(node_id).await;
+    emit_transport_state(sink, node_id, ConnectionState::Disconnected);
+    log::info!("连接已关闭: {node_id}");
+    sink.notify(NotifyLevel::Info, "连接已断开");
+    Ok(())
+}
 
 impl AppState {
     /// Open a device session and attach its byte stream when available.
     ///
-    /// `protocol` 与 `schema` 仅被 TestData 用作生成数据的线缆格式参考, 其他传输类型忽略。
     /// 成功后挂载数据平面读任务 (subscribe → 字节路由 → 数值平面)。
     pub async fn open_device(
         &self,
-        app: &AppHandle,
+        sink: &EventSinkHandle,
         spec: data_model::device::EndpointSpec,
     ) -> std::result::Result<acquisition::EndpointSnapshot, String> {
-        let id = spec.id.0.clone();
-        let snapshot = self
-            .transport
-            .open_endpoint(spec)
-            .await
-            .map_err(|e| e.to_string())?;
-        if snapshot
-            .capabilities
-            .as_ref()
-            .is_some_and(|c| c.available.byte_source)
-        {
-            self.data_plane.attach(app.clone(), &id).await;
-        }
-        if snapshot
-            .capabilities
-            .as_ref()
-            .is_some_and(|c| c.available.subscribe)
-        {
-            let points = snapshot
-                .points
-                .iter()
-                .filter(|p| p.access != points::AccessLevel::WriteOnly)
-                .map(|p| p.id.clone())
-                .collect::<Vec<_>>();
-            if !points.is_empty() {
-                let intent = acquisition::SubscriptionIntent {
-                    points,
-                    acquisition: points::AcquisitionIntent {
-                        mode: points::AcquisitionMode::Auto,
-                        requested_period_ms: None,
-                        deadband: None,
-                        priority: points::Priority::Normal,
-                        delivery: points::DeliveryClass::State,
-                    },
-                };
-                if let Err(error) = self
-                    .transport
-                    .subscribe(&data_model::device::EndpointId(id.clone()), intent)
-                    .await
-                {
-                    self.data_plane.detach(&id);
-                    self.transport.close(&id).await;
-                    return Err(error.to_string());
-                }
-            }
-        }
-        emit_transport_state(app, &id, ConnectionState::Connected);
-        Ok(snapshot)
+        open_device_session(&self.transport, &self.data_plane, sink, spec).await
     }
 
     /// 关闭设备连接 (node_id = 图中设备节点 id)
-    pub async fn close_transport(&self, app: &AppHandle, node_id: &str) -> Result<()> {
-        self.data_plane.mark_source_disconnected(node_id);
-        self.data_plane.detach(node_id);
-        self.transport.close(node_id).await;
-        emit_transport_state(app, node_id, ConnectionState::Disconnected);
-        log::info!("连接已关闭: {node_id}");
-        notify::disconnected(app);
-        Ok(())
+    pub async fn close_transport(&self, sink: &dyn BackendEventSink, node_id: &str) -> Result<()> {
+        close_device_session(&self.transport, &self.data_plane, sink, node_id).await
     }
 
     /// 发送原始字节 (node_id = 目标设备节点 id)

@@ -1,10 +1,11 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::AppState;
 use pipeline::{CustomInputBatch, GraphEvalState};
-use tauri::ipc::{Channel, InvokeResponseBody};
 
 use super::protocol::{DisplayEvent, DisplayRequest};
+use super::stream_sink::{StreamPayload, StreamSink};
 
 /// 收集 Custom 节点输入快照。
 ///
@@ -26,7 +27,7 @@ fn collect_custom_inputs(eval: &GraphEvalState) -> CustomInputBatch {
 pub fn spawn_snapshot(
     state: &AppState,
     request: DisplayRequest,
-    on_event: Channel<InvokeResponseBody>,
+    on_event: Arc<dyn StreamSink>,
     interval: Duration,
 ) {
     let eval = state.eval_state();
@@ -68,13 +69,13 @@ pub fn spawn_snapshot(
                         _ => unreachable!("stream request routed to snapshot task"),
                     };
                     let body = match serde_json::to_string(&event) {
-                        Ok(json) => InvokeResponseBody::Json(json),
+                        Ok(json) => StreamPayload::Json(json),
                         Err(error) => {
                             log::error!("显示快照序列化失败: {error}");
                             break;
                         }
                     };
-                    if on_event.send(body).is_err() { break; }
+                    if !on_event.send(body) { break; }
                 }
             }
         }

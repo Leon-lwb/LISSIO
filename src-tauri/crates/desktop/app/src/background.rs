@@ -1,30 +1,42 @@
-//! 运行时装配 — 二进制组合根 (lissio lib.rs) 调用的后台任务启动与退出 flush
+//! 运行时装配 — 组合根调用的后台任务启动与退出 flush
 //!
-//! 层级: L3 app。把工作区防抖落盘、3 个推送 ticker、启动页兜底等进程级
-//! 后台任务集中在此; 二进制只剩插件装配与命令注册。
+//! 层级: L3 app。任务体本身不含 Tauri: 工作区防抖落盘、录制启动、3 个推送
+//! ticker、自动发送调度都只依赖 [`AppState`] 与 [`EventSinkHandle`], 由组合根
+//! 提供的 [`TaskSpawner`] 孵化 (Tauri 组合根用 `tauri::async_runtime::spawn`,
+//! 无界面 CLI 用 `tokio::spawn`)。GUI 专有的退出 flush 与启动页兜底在组合根。
 
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use std::future::Future;
+use std::path::{Path, PathBuf};
+use std::pin::Pin;
+
+use events::EventSinkHandle;
 
 use crate::app_state::AppState;
-use crate::{collect_workspace_file, save_workspace};
+use crate::{SourceGraphs, WorkspaceState, collect_workspace_file, save_workspace};
 use crate::{send_scheduler_ticker, spectrum_ticker, text_output_ticker, textout_sender_ticker};
 
-/// setup 阶段启动全部后台任务: 工作区防抖落盘 / 文本输出 & TextOut & 频谱 ticker /
-/// 启动页兜底。
+/// 任务孵化器 — 把任务体交给组合根的运行时 (Tauri / tokio)。
+pub type TaskSpawner = dyn Fn(Pin<Box<dyn Future<Output = ()> + Send + 'static>>) + Send + Sync;
+
+/// 启动全部后端后台任务: 录制会话 / 工作区防抖落盘 / 文本输出 & TextOut & 频谱
+/// ticker / 自动发送调度。
 ///
-/// `config_dir`: workspace.json 所在目录 (app config dir)。
-pub fn spawn_background_tasks(app: &AppHandle, config_dir: PathBuf) {
-    start_recording(app, &config_dir);
-    spawn_workspace_autosave(app, config_dir);
-    spawn_push_tickers(app);
-    spawn_splashscreen_fallback(app);
+/// `config_dir`: workspace.json 与 recordings/ 所在目录 (app config dir)。
+pub fn spawn_backend_tasks(
+    state: &AppState,
+    sink: EventSinkHandle,
+    config_dir: PathBuf,
+    spawn: &TaskSpawner,
+) {
+    start_recording(state, &config_dir);
+    spawn_workspace_autosave(state, config_dir, spawn);
+    spawn_push_tickers(state, sink, spawn);
 }
 
-fn start_recording(app: &AppHandle, config_dir: &std::path::Path) {
+/// 启动录制会话 (管线尚未运行, 会话以 paused 开局)。
+pub fn start_recording(state: &AppState, config_dir: &Path) {
     let path = config_dir.join("recordings").join("acquisition.duckdb");
-    let recording = app.state::<AppState>().eval_state().recording;
-    // 管线尚未运行, 会话以 paused 开局 (等待运行控制同步为 running);
+    let recording = state.eval_state().recording;
     // 上次会话没有写入任何数据时继续写同一会话, 避免每次启动都新增空会话
     match recording.start(
         path,
@@ -38,120 +50,91 @@ fn start_recording(app: &AppHandle, config_dir: &std::path::Path) {
 }
 
 /// 工作区防抖落盘任务 — 图提交 / 位置上报 / tab 变更置 dirty,
-/// 此任务周期性检查并整体覆盖写 (800ms 合并连发编辑)
-fn spawn_workspace_autosave(app: &AppHandle, dir: PathBuf) {
-    let (ws, graphs) = {
-        let state = app.state::<AppState>();
-        (
-            state.workspace.clone(),
-            std::sync::Arc::clone(&state.source_graphs),
-        )
-    };
-    let app = app.clone();
-    tauri::async_runtime::spawn(async move {
-        // 启动恢复为后台异步任务 — 落盘先等恢复完成门, 避免把恢复中途的
-        // 半成品状态 (部分 tab 图已应用) 写回 workspace.json
-        let mut restore_done = {
-            let state = app.state::<AppState>();
-            state.subscribe_restore_done()
+/// 此任务周期性检查并整体覆盖写 (800ms 合并连发编辑)。
+pub async fn workspace_autosave_loop(
+    workspace: WorkspaceState,
+    source_graphs: SourceGraphs,
+    dir: PathBuf,
+    mut restore_done: tokio::sync::watch::Receiver<bool>,
+) {
+    // 启动恢复为后台异步任务 — 落盘先等恢复完成门, 避免把恢复中途的
+    // 半成品状态 (部分 tab 图已应用) 写回 workspace.json
+    while !*restore_done.borrow_and_update() {
+        if restore_done.changed().await.is_err() {
+            break;
+        }
+    }
+    loop {
+        tokio::time::sleep(std::time::Duration::from_millis(800)).await;
+        let should_save = {
+            let mut w = workspace.lock();
+            if w.dirty {
+                w.dirty = false;
+                true
+            } else {
+                false
+            }
         };
-        while !*restore_done.borrow_and_update() {
-            if restore_done.changed().await.is_err() {
-                break;
+        if should_save {
+            let file = collect_workspace_file(&workspace, &source_graphs);
+            if let Err(e) = save_workspace(&dir, &file) {
+                log::warn!("工作区落盘失败: {e}");
             }
         }
-        loop {
-            tokio::time::sleep(std::time::Duration::from_millis(800)).await;
-            let should_save = {
-                let mut w = ws.lock();
-                if w.dirty {
-                    w.dirty = false;
-                    true
-                } else {
-                    false
-                }
-            };
-            if should_save {
-                let file = collect_workspace_file(&ws, &graphs);
-                if let Err(e) = save_workspace(&dir, &file) {
-                    log::warn!("工作区落盘失败: {e}");
-                }
-            }
-        }
-    });
+    }
 }
 
-/// 启动字符串输出 (30 FPS) / TextOut 发送 / 频谱分析三个推送 ticker
-fn spawn_push_tickers(app: &AppHandle) {
+/// 启动字符串输出 (30 FPS) / TextOut 发送 / 频谱分析 / 自动发送调度 ticker。
+fn spawn_push_tickers(state: &AppState, sink: EventSinkHandle, spawn: &TaskSpawner) {
     // 启动字符串输出 ticker (30 FPS 推送给 TextDisplay)
-    let eval_state_for_text = app.state::<AppState>().eval_state();
-    tauri::async_runtime::spawn(text_output_ticker(eval_state_for_text));
+    let eval_state_for_text = state.eval_state();
+    spawn(Box::pin(text_output_ticker(eval_state_for_text)));
 
     // 启动 TextOut 发送 ticker (图内字符串限速写回目标 Transport 的 tx)
-    let (eval_state_for_textout, transport_for_textout) = {
-        let state = app.state::<AppState>();
-        (
-            state.eval_state(),
-            std::sync::Arc::clone(&state.data_plane.transport),
-        )
-    };
-    tauri::async_runtime::spawn(textout_sender_ticker(
+    let eval_state_for_textout = state.eval_state();
+    let transport_for_textout = std::sync::Arc::clone(&state.data_plane.transport);
+    spawn(Box::pin(textout_sender_ticker(
         eval_state_for_textout,
         transport_for_textout,
-    ));
+    )));
 
     // 启动频谱分析 ticker (30 FFT 计算 + 推送 SpectrumBatch)
-    let eval_state_for_spectrum = app.state::<AppState>().eval_state();
-    tauri::async_runtime::spawn(spectrum_ticker(eval_state_for_spectrum));
+    let eval_state_for_spectrum = state.eval_state();
+    spawn(Box::pin(spectrum_ticker(eval_state_for_spectrum)));
 
     // 启动后台自动发送调度 ticker (Timer/OnChange; 手动发送走统一内核命令)
-    let (app_handle_for_send, plane_for_send, graphs_for_send) = {
-        let state = app.state::<AppState>();
-        (
-            app.clone(),
-            state.data_plane.clone(),
-            std::sync::Arc::clone(&state.source_graphs),
-        )
-    };
-    tauri::async_runtime::spawn(send_scheduler_ticker(
-        app_handle_for_send,
-        plane_for_send,
-        graphs_for_send,
-    ));
+    spawn(Box::pin(send_scheduler_ticker(
+        sink,
+        state.data_plane.clone(),
+        std::sync::Arc::clone(&state.source_graphs),
+    )));
 }
 
-/// 启动页兜底: 前端应在初始化完成后调用 close_splashscreen 关闭启动页;
-/// 若前端异常迟迟未调用, 超时强制切换, 防止永远卡在启动页
-fn spawn_splashscreen_fallback(app: &AppHandle) {
-    let fallback_handle = app.clone();
-    std::thread::spawn(move || {
-        std::thread::sleep(std::time::Duration::from_secs(10));
-        if let Some(splash) = fallback_handle.get_webview_window("splashscreen") {
-            log::warn!("splashscreen fallback: force closing after timeout");
-            let _ = splash.close();
-        }
-        if let Some(main) = fallback_handle.get_webview_window("main") {
-            let _ = main.show();
-            let _ = main.set_focus();
-        }
-    });
+fn spawn_workspace_autosave(state: &AppState, dir: PathBuf, spawn: &TaskSpawner) {
+    let workspace = state.workspace.clone();
+    let source_graphs = std::sync::Arc::clone(&state.source_graphs);
+    let restore_done = state.subscribe_restore_done();
+    spawn(Box::pin(workspace_autosave_loop(
+        workspace,
+        source_graphs,
+        dir,
+        restore_done,
+    )));
 }
 
-/// 退出 flush: 防抖任务最长 800ms 间隔, 正常退出前把未落盘的
-/// 工作区变更同步写盘, 避免丢最后一次编辑
-pub fn flush_workspace_on_exit(app: &AppHandle) {
-    let state = app.state::<AppState>();
+/// 停止录制会话 (退出/关闭时调用; 幂等)。
+pub fn stop_recording(state: &AppState) {
     if let Err(error) = state.eval_state().recording.stop() {
         log::error!("recording shutdown failed: {error}");
     }
+}
+
+/// 把未落盘的工作区变更同步写盘 (防抖任务最长 800ms 间隔, 退出前补齐)。
+pub fn flush_workspace(state: &AppState, dir: &Path) {
     let ws = &state.workspace;
     if ws.lock().dirty {
         let file = collect_workspace_file(ws, &state.source_graphs);
-        let dir = app
-            .path()
-            .app_config_dir()
-            .unwrap_or_else(|_| std::path::PathBuf::from("."));
-        if let Err(e) = save_workspace(&dir, &file) {
+        if let Err(e) = save_workspace(dir, &file) {
             log::warn!("工作区退出落盘失败: {e}");
         }
     }

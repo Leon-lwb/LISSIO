@@ -26,7 +26,7 @@ export function SimulationProperties({ node }: { node: Node }) {
     <div className="flex justify-between"><span>测试数据 · 不访问真实硬件</span><button className="text-red" onClick={() => updateAcquisitionNode(node.id, { ...spec, simulation: null })}>移除</button></div>
     {signalFields(config.signal, signal => update({ signal }), 'sim-signal')}
     <div className="grid grid-cols-2 gap-2">
-      <label htmlFor="sim-sampleRate">生成速率 / 秒<DraftNumberInput id="sim-sampleRate" className="form-input" min={1} max={700000} value={config.sampleRate} onCommit={sampleRate => update({ sampleRate })} /></label>
+      <label htmlFor="sim-sampleRate">生成速率 / 秒<DraftNumberInput id="sim-sampleRate" className="form-input" min={1} max={5000000} value={config.sampleRate} onCommit={sampleRate => update({ sampleRate })} /></label>
       <label htmlFor="sim-seed">随机种子<DraftNumberInput id="sim-seed" className="form-input" min={0} max={4294967295} integer value={config.seed} onCommit={seed => update({ seed })} /></label>
       {!pointSource && <label htmlFor="sim-channels">通道数<DraftNumberInput id="sim-channels" className="form-input" min={1} max={256} integer value={config.channels} onCommit={channels => update({ channels })} /></label>}
     </div>

@@ -5,9 +5,8 @@
 
 use data_model::{ConnectionState, Error, Result, TransportConfig};
 use error::ConfigError;
-use events::emit_transport_state;
+use events::{BackendEventSink, emit_transport_state};
 use schema_types::ProtocolConfig;
-use tauri::AppHandle;
 
 use crate::app_state::AppState;
 
@@ -22,7 +21,7 @@ impl AppState {
     /// 生成格式与解析引擎不匹配, 因此强制断连让用户 reconnect。
     pub async fn set_protocol(
         &self,
-        app: &AppHandle,
+        sink: &dyn BackendEventSink,
         node_id: &str,
         config: ProtocolConfig,
     ) -> Result<()> {
@@ -38,7 +37,7 @@ impl AppState {
                 for id in &test_nodes {
                     self.data_plane.detach(id);
                     manager.close(id).await;
-                    emit_transport_state(app, id, ConnectionState::Disconnected);
+                    emit_transport_state(sink, id, ConnectionState::Disconnected);
                 }
                 log::info!(
                     "协议切换: 自动断开 TestData 连接 ({} 个), 请重新连接",

@@ -29,7 +29,6 @@ logic = { workspace = true }
 waveform = { workspace = true }
 buffer_graph = { workspace = true }
 raw-data = { workspace = true }
-gpu = { workspace = true }
 filter = { workspace = true }
 spectrum = { workspace = true }
 measurement = { workspace = true }
@@ -45,7 +44,6 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
-tauri = { workspace = true }
 [dev-dependencies]
 criterion = { workspace = true }
 
@@ -55,5 +53,5 @@ harness = false
 
 [package.metadata.lissio]
 domain = "desktop"
-layer = 5
+layer = 3
 responsibility = "Lissio 应用核心 (L3): 全局状态容器 + 显示订阅服务 + 传输/协议操作 + 工作区持久化"

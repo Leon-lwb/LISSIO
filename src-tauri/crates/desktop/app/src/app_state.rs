@@ -82,12 +82,35 @@ pub struct AppState {
     pub pipeline_config: Arc<RwLock<PipelineConfig>>,
     /// Stop 波形快照注册表；快照拥有独立的原始环形缓存副本。
     pub waveform_snapshots: Arc<Mutex<HashMap<String, WaveformSnapshot>>>,
-    /// 快照 id 单调序号。
-    pub next_waveform_snapshot_id: AtomicU64,
+    /// 快照 id 单调序号 (Arc 共享 — Toolbox/命令层与状态本体同源)。
+    pub next_waveform_snapshot_id: Arc<AtomicU64>,
     /// 启动工作区恢复完成门 — setup 阶段恢复在后台任务执行 (不阻塞主线程,
     /// 事件循环可立即绘制启动页); `workspace_get` / 落盘任务 await 此门,
     /// 保持"恢复先于前端水合"的时序语义
     restore_done_tx: tokio::sync::watch::Sender<bool>,
+    /// 包络计算引擎 — 端口注入点 (默认纯 CPU; GPU 加速实现由组合根经
+    /// `set_envelope_engine` 注入, 见 `waveform::EnvelopeEngine`)
+    envelope_engine: std::sync::OnceLock<std::sync::Arc<dyn waveform::EnvelopeEngine>>,
+    /// 串口发现服务 — 端口注入点 (L4 `serial` crate 的实现由组合根注入,
+    /// 见 [`SerialDiscovery`]); 未注入时能力调用返回明确错误
+    serial_discovery: std::sync::OnceLock<std::sync::Arc<dyn SerialDiscovery>>,
+}
+
+/// 串口发现端口 — 列举系统串口 (依赖倒置: L3 以下不依赖 `serialport` 等
+/// adapter SDK; L4 实现由组合根注入)。
+pub trait SerialDiscovery: Send + Sync + 'static {
+    /// 列举系统可用串口 (经平台信息富化与去重, 见 `serial` crate)。
+    fn list_ports(&self) -> Result<Vec<data_model::PortInfo>, String>;
+}
+
+/// 未装配时的占位实现 — 返回明确错误 (不静默空列表, 便于诊断装配遗漏)。
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SerialDiscoveryUnavailable;
+
+impl SerialDiscovery for SerialDiscoveryUnavailable {
+    fn list_ports(&self) -> Result<Vec<data_model::PortInfo>, String> {
+        Err("串口发现服务未装配 (组合根未调用 install_serial_discovery)".into())
+    }
 }
 
 impl AppState {
@@ -184,8 +207,10 @@ impl AppState {
             decoded_buffer,
             pipeline_config,
             waveform_snapshots: Arc::new(Mutex::new(HashMap::new())),
-            next_waveform_snapshot_id: AtomicU64::new(1),
+            next_waveform_snapshot_id: Arc::new(AtomicU64::new(1)),
             restore_done_tx,
+            envelope_engine: std::sync::OnceLock::new(),
+            serial_discovery: std::sync::OnceLock::new(),
         }
     }
 
@@ -197,6 +222,32 @@ impl AppState {
     /// 标记启动恢复已完成 (无论成败) — 放行所有 await 方
     pub fn signal_restore_done(&self) {
         let _ = self.restore_done_tx.send(true);
+    }
+
+    /// 注入包络计算引擎 (GPU 加速实现由组合根在装配期调用一次)。
+    pub fn set_envelope_engine(&self, engine: std::sync::Arc<dyn waveform::EnvelopeEngine>) {
+        let _ = self.envelope_engine.set(engine);
+    }
+
+    /// 当前包络引擎 — 未注入时回落纯 CPU 实现 (测试 / 无界面兜底)。
+    pub fn envelope_engine(&self) -> std::sync::Arc<dyn waveform::EnvelopeEngine> {
+        self.envelope_engine
+            .get()
+            .cloned()
+            .unwrap_or_else(|| std::sync::Arc::new(waveform::CpuEnvelopeEngine))
+    }
+
+    /// 注入串口发现服务 (L4 实现由组合根在装配期调用一次)。
+    pub fn set_serial_discovery(&self, discovery: std::sync::Arc<dyn SerialDiscovery>) {
+        let _ = self.serial_discovery.set(discovery);
+    }
+
+    /// 当前串口发现服务 — 未注入时返回占位实现 (调用报明确错误)。
+    pub fn serial_discovery(&self) -> std::sync::Arc<dyn SerialDiscovery> {
+        self.serial_discovery
+            .get()
+            .cloned()
+            .unwrap_or_else(|| std::sync::Arc::new(SerialDiscoveryUnavailable))
     }
 
     /// 抽取图评估所需的 Arc 字段 (供 ticker / 数据平面持有)

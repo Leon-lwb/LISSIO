@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
+use events::{BackendEventSink, NotifyLevel};
 use schema_types::{ProtocolConfig, SchemaPreset};
-use tauri::AppHandle;
 
 use super::DataPlaneState;
 use super::byte_router::{RouteSummary, route_inner};
@@ -28,7 +28,7 @@ fn channels_detection_change(last_pushed: Option<usize>, current: Option<usize>)
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn feed_protocol(
     plane: &DataPlaneState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     source_id: &str,
     proto_id: &str,
     members: &[String],
@@ -169,12 +169,12 @@ pub(super) async fn feed_protocol(
         drop(s);
         (notify_once, push)
     };
-    if let (Some(app), Some(n)) = (app, notify_once) {
-        events::notify::channels_detected(app, n);
+    if let (Some(sink), Some(n)) = (sink, notify_once) {
+        sink.notify(NotifyLevel::Info, &format!("检测到 {n} 个通道"));
     }
     if let Some(n) = push {
-        if let Some(app) = app {
-            events::emit_protocol_channels_detected(app, proto_id, n);
+        if let Some(sink) = sink {
+            events::emit_protocol_channels_detected(sink, proto_id, n);
         }
         plane.buffer_for(proto_id).lock().set_channels(n);
     }
@@ -254,7 +254,7 @@ pub(super) async fn feed_protocol(
     if !converted.is_empty() {
         Box::pin(route_inner(
             plane,
-            app,
+            sink,
             proto_id,
             &converted,
             0,
@@ -270,7 +270,7 @@ pub(super) async fn feed_protocol(
         // 避免设置 convert_to 后原文被静默丢弃
         Box::pin(route_inner(
             plane,
-            app,
+            sink,
             proto_id,
             data,
             0,

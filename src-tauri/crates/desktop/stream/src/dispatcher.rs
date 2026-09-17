@@ -6,10 +6,25 @@
 //!
 //! 变化检测由调用方提供的 `make_batch` 闭包完成 (返回 `None` 表示无变化),
 //! 通常基于各缓冲区的单调 version 计数器, 零额外拷贝。
+//!
+//! 推送经 [`StreamSink`] 端口 (本 crate 不依赖 Tauri): 组合根注入 Channel
+//! 适配实现, 无界面宿主注入自己的实现。
 
+use std::sync::Arc;
 use std::time::Duration;
-use tauri::ipc::Channel;
 use tokio::sync::oneshot;
+
+/// 流推送端口 — 一个逻辑订阅一个实现实例 (与 `app::display::StreamSink`
+/// 同角色; 本 crate 不依赖 app, 独立定义)。
+///
+/// 实现约定: `send` 失败 (对端关闭) 返回 `false`, 推送循环据此退出;
+/// 实现不得 panic、不得在热路径上无界阻塞。
+pub trait StreamSink: Send + Sync + 'static {
+    /// 订阅 id — 取消注册 / 日志的键。
+    fn id(&self) -> u32;
+    /// 推送一条 JSON payload; `false` = 订阅应终止。
+    fn send(&self, payload: serde_json::Value) -> bool;
+}
 
 /// 自适应推送速率控制器
 ///
@@ -52,25 +67,21 @@ impl AdaptiveRate {
 
 /// 单订阅者自适应推送循环
 ///
-/// 每个 wake 调用 `make_batch` (同步闭包, 内部做变化检测与快照):
-/// - `Some(batch)` → 通过 Channel 发送, `rate.on_send()`; Channel 关闭则退出
+/// 每次 wake 调用 `make_payload` (同步闭包, 内部做变化检测与快照):
+/// - `Some(payload)` → 通过 sink 发送, `rate.on_send()`; 对端关闭则退出
 /// - `None` → 不发送, `rate.on_idle()` 退避
 ///
-/// 收到 `cancel_rx` 信号优雅退出。
-///
-/// `name` 仅用于日志。
-#[allow(clippy::too_many_arguments)]
-pub async fn adaptive_channel_loop<T, F>(
+/// 收到 `cancel_rx` 信号优雅退出。`name` 仅用于日志。
+pub async fn adaptive_stream_loop<F>(
     name: &str,
-    channel_id: u32,
-    on_event: Channel<T>,
+    sink: Arc<dyn StreamSink>,
     mut rate: AdaptiveRate,
-    mut make_batch: F,
+    mut make_payload: F,
     mut cancel_rx: oneshot::Receiver<()>,
 ) where
-    T: serde::Serialize,
-    F: FnMut() -> Option<T>,
+    F: FnMut() -> Option<serde_json::Value>,
 {
+    let channel_id = sink.id();
     log::debug!(
         "{} 订阅已启动, channel_id={}, 初始间隔={}ms",
         name,
@@ -84,9 +95,9 @@ pub async fn adaptive_channel_loop<T, F>(
                 break;
             }
             () = tokio::time::sleep(rate.current()) => {
-                match make_batch() {
-                    Some(batch) => {
-                        if on_event.send(batch).is_err() {
+                match make_payload() {
+                    Some(payload) => {
+                        if !sink.send(payload) {
                             log::debug!("{name} 订阅通道已关闭, channel_id={channel_id}");
                             break;
                         }

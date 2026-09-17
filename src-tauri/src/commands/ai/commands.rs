@@ -9,10 +9,11 @@ use chat::{
 use chat_session::{
     AttachmentDto, ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
 };
+use control_api::Toolbox;
 use error::{McpError, Result};
 use llm::{AdapterInfo, AiProviderConfig, ToolSpecDto, validate_config};
 use mcp_client::{McpManager, McpServerConfig, McpToolInfo};
-use mcp_server::{McpServerHandle, Toolbox};
+use mcp_server::McpServerHandle;
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::Value;
@@ -475,7 +476,11 @@ pub fn mcp_server_status(state: State<'_, AiState>) -> McpServerStatus {
 /// # Errors
 /// 端口被占用 ([`McpError::ServerStart`])。
 #[tauri::command]
-pub async fn mcp_server_start(state: State<'_, AiState>, app: AppHandle, port: u16) -> Result<u16> {
+pub async fn mcp_server_start(
+    state: State<'_, AiState>,
+    app: AppHandle,
+    port: Option<u16>,
+) -> Result<u16> {
     {
         let mut guard = state.server.lock();
         if let Some(handle) = guard.as_mut()
@@ -488,7 +493,9 @@ pub async fn mcp_server_start(state: State<'_, AiState>, app: AppHandle, port: u
 
     let app_state: State<AppState> = app.state();
     let toolbox = Toolbox::from_state(&app_state);
-    let handle = mcp_server::start(toolbox, app, port).await?;
+    let sink = crate::event_sink::TauriEventSink::handle(&app);
+    // 端口配置归后端: 显式设置 > LISSIO_MCP_PORT > DEFAULT_MCP_PORT
+    let handle = mcp_server::start(toolbox, sink, mcp_server::resolve_port(port)).await?;
     let bound = handle.port;
     *state.server.lock() = Some(handle);
     Ok(bound)

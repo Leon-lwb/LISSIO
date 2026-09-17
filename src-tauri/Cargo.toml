@@ -16,10 +16,11 @@ name = "lissio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
+# 适配器装配在 backend-host (GUI 与 CLI 共用); 根只做 feature 转发
 default = ["modbus-tcp", "modbus-rtu", "s7"]
-modbus-tcp = ["dep:modbus-adapter"]
-modbus-rtu = ["dep:modbus-adapter"]
-s7 = ["dep:s7-adapter"]
+modbus-tcp = ["backend-host/modbus-tcp"]
+modbus-rtu = ["backend-host/modbus-rtu"]
+s7 = ["backend-host/s7"]
 
 [profile.release]
 debug = true
@@ -89,7 +90,10 @@ members = [
   "crates/ai/chat-session",
   "crates/ai/chat",
   "crates/ai/mcp-client",
+  "crates/desktop/control-api",
+  "crates/desktop/backend-host",
   "crates/desktop/mcp-server",
+  "crates/desktop/backend-cli",
   # L4 cmd — Tauri IPC 命令薄适配层，不承载核心逻辑；禁止被任何非 cmd crate 依赖
 ]
 
@@ -199,6 +203,9 @@ tokio-serial = { version = "5.4.4", default-features = false }
 # tokio-s7: 西门子 S7comm 异步客户端 (ISO-on-TCP), PLC 采集的第二条点位源 (Apache-2.0)
 tokio-s7 = "0.1.7"
 log = "0.4"
+# clap: backend-cli 子命令解析 (derive); env_logger: 无界面宿主的 stderr 日志
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.11"
 libc = "0.2"
 thiserror = "1"
 regex = "1"
@@ -301,6 +308,9 @@ chat = { path = "crates/ai/chat" }
 chat-session = { path = "crates/ai/chat-session" }
 mcp-client = { path = "crates/ai/mcp-client" }
 mcp-server = { path = "crates/desktop/mcp-server" }
+control-api = { path = "crates/desktop/control-api" }
+backend-host = { path = "crates/desktop/backend-host" }
+# backend-cli 是叶子 bin (无消费方), 仅经 [workspace].members 纳入构建
 # L4 cmd
 libautomotive = "0.1"
 
@@ -328,6 +338,8 @@ llm = { workspace = true }
 logic = { workspace = true }
 mcp-client = { workspace = true }
 mcp-server = { workspace = true }
+control-api = { workspace = true }
+backend-host = { workspace = true, default-features = false }
 petgraph = { workspace = true }
 schema_types = { workspace = true }
 stream = { workspace = true }
@@ -336,8 +348,6 @@ app = { workspace = true }
 transport = { workspace = true }
 serial = { workspace = true }
 network = { workspace = true }
-modbus-adapter = { workspace = true, optional = true }
-s7-adapter = { workspace = true, optional = true }
 can_transport = { workspace = true }
 subscription = { workspace = true }
 menu_shell = { workspace = true }

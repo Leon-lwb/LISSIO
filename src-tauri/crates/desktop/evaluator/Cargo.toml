@@ -29,5 +29,5 @@ serde = { workspace = true }
 
 [package.metadata.lissio]
 domain = "desktop"
-layer = 5
+layer = 2
 responsibility = "Lissio 频谱/Ifft 同步 (spectrum_sync) + 按源过滤订阅支持 (filtered_sources)"

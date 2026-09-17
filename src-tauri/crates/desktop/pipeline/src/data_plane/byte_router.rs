@@ -11,11 +11,11 @@
 //! - FrameDecoder 节点 `in`: 走 feed_one_decoder 语义 (按边路由)
 //! - 设备节点 `tx`: AcquisitionRuntime.send (协议转换回注 / 命令发送落地)
 
+use events::BackendEventSink;
 use kind::{
     FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, NodeKind, PROTOCOL_IN_HANDLE,
     PROTOCOL_OUT_HANDLE, TRANSPORT_TX_HANDLE,
 };
-use tauri::AppHandle;
 
 use super::DataPlaneState;
 use super::protocol_feed::feed_protocol;
@@ -41,11 +41,11 @@ pub struct RouteSummary {
 ///
 /// - `source_id`: 字节源节点 (设备节点 id / widget loopbackOut 所在 widget id)
 /// - `depth_hint`: 源端积压深度 (并行解析判定用; 命令注入路径传 0)
-/// - `app`: 自动通道检测的系统通知与 `protocol:channels-detected` 事件推送用
+/// - `sink`: 自动通道检测的系统通知与 `protocol:channels-detected` 事件推送用
 ///   (测试/无界面路径传 None, 跳过 emit 但 buffer 通道数对齐仍生效)
 pub async fn route_bytes(
     plane: &DataPlaneState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     source_id: &str,
     data: &[u8],
     depth_hint: usize,
@@ -55,7 +55,7 @@ pub async fn route_bytes(
     let mut summary = RouteSummary::default();
     route_inner(
         plane,
-        app,
+        sink,
         source_id,
         data,
         depth_hint,
@@ -71,7 +71,7 @@ pub async fn route_bytes(
 #[allow(clippy::too_many_arguments)]
 pub(super) async fn route_inner(
     plane: &DataPlaneState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     source_id: &str,
     data: &[u8],
     depth_hint: usize,
@@ -145,7 +145,7 @@ pub(super) async fn route_inner(
         // 每组只喂代表节点一次, 组员 fan-out
         for (_, repr, members) in &groups {
             feed_protocol(
-                plane, app, source_id, repr, members, data, depth_hint, dec_cache, summary, depth,
+                plane, sink, source_id, repr, members, data, depth_hint, dec_cache, summary, depth,
                 live,
             )
             .await;
@@ -163,7 +163,7 @@ pub(super) async fn route_inner(
             (NodeKind::Protocol { .. }, PROTOCOL_IN_HANDLE) => {
                 feed_protocol(
                     plane,
-                    app,
+                    sink,
                     source_id,
                     &route.target,
                     std::slice::from_ref(&route.target),

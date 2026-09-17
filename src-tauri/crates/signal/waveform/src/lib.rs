@@ -10,12 +10,14 @@
 
 mod data_buffer;
 mod derived;
+pub mod envelope;
 mod ring;
 pub mod tier;
 mod window;
 
 pub use data_buffer::DataBuffer;
 pub use derived::DerivedWriter;
+pub use envelope::{CpuEnvelopeEngine, Envelope, EnvelopeEngine, column_of, envelope_minmax_cpu};
 pub use ring::RingBuffer;
 pub use window::{
     DerivedSeriesSelector, WaveformSampling, WaveformSeriesSelection, WaveformWindow,

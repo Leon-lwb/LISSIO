@@ -1,10 +1,10 @@
 //! 工作区持久化集成测试：每个页签只保存节点文档与连线。
 
 use app::{AppState, collect_workspace_file, save_workspace};
+use backend_host::restore_workspace;
 use buffer_graph::Edge;
 use graph_ops::{apply_connect_edge, apply_document, apply_remove_tab_graph};
 use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};
-use lissio_lib::restore_workspace;
 use serde_json::json;
 
 fn widget_document(
@@ -114,7 +114,7 @@ async fn workspace_survives_save_and_restore_roundtrip() {
     assert_eq!(file.graphs["tab1"].documents.len(), 2);
 
     let fresh = AppState::new();
-    assert!(restore_workspace(&fresh, &dir).await, "应报告已恢复");
+    assert!(restore_workspace(&fresh, &dir, None).await, "应报告已恢复");
     {
         let ws = fresh.workspace.lock();
         assert!(ws.restored && !ws.dirty, "恢复后不应立即触发重写");
@@ -136,7 +136,7 @@ async fn workspace_survives_save_and_restore_roundtrip() {
 
     let empty_dir = temp_dir("empty");
     let fresh2 = AppState::new();
-    assert!(!restore_workspace(&fresh2, &empty_dir).await);
+    assert!(!restore_workspace(&fresh2, &empty_dir, None).await);
     assert!(!fresh2.workspace.lock().restored);
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&empty_dir);

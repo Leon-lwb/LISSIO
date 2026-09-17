@@ -5,7 +5,8 @@
 //!
 
 mod commands;
-mod config_migration;
+mod event_sink;
+mod gui_host;
 
 // 必须 glob 导入: `#[tauri::command]` 生成的 `__cmd__*` / `__tauri_command_name_*`
 // 宏 (`#[macro_export]`, doc-hidden) 只在 glob 导入时进入本 crate 宏命名空间,
@@ -29,67 +30,6 @@ pub use update_flow::*;
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
-fn acquisition_runtime() -> acquisition::AcquisitionRuntime {
-    use data_model::{
-        CandleConfig, SerialConfig, SlcanConfig, TcpClientConfig, TcpServerConfig, TransportConfig,
-        UdpConfig,
-    };
-    use std::sync::Arc;
-    use transport::device_factory::ByteDeviceFactory;
-    let registry = Arc::new(acquisition::SourceRegistry::default());
-    let serial = Arc::new(serial::SerialBackend) as Arc<dyn acquisition::TransportBackend>;
-    let network = Arc::new(network::NetworkBackend) as Arc<dyn acquisition::TransportBackend>;
-    let can =
-        Arc::new(can_transport::CanTransportBackend) as Arc<dyn acquisition::TransportBackend>;
-    for (id, label, config, backend) in [
-        (
-            "serial",
-            "Serial",
-            TransportConfig::Serial(SerialConfig::default()),
-            serial,
-        ),
-        (
-            "tcp-client",
-            "TCP Client",
-            TransportConfig::TcpClient(TcpClientConfig::default()),
-            network.clone(),
-        ),
-        (
-            "tcp-server",
-            "TCP Server",
-            TransportConfig::TcpServer(TcpServerConfig::default()),
-            network.clone(),
-        ),
-        (
-            "udp",
-            "UDP",
-            TransportConfig::Udp(UdpConfig::default()),
-            network,
-        ),
-        (
-            "slcan",
-            "Slcan",
-            TransportConfig::Slcan(SlcanConfig::default()),
-            can.clone(),
-        ),
-        (
-            "candle-light",
-            "CandleLight",
-            TransportConfig::CandleLight(CandleConfig::default()),
-            can,
-        ),
-    ] {
-        registry.register(Arc::new(ByteDeviceFactory::new(id, label, config, backend)));
-    }
-    #[cfg(feature = "modbus-tcp")]
-    registry.register(Arc::new(modbus_adapter::ModbusFactory::default()));
-    #[cfg(feature = "modbus-rtu")]
-    registry.register(Arc::new(modbus_adapter::ModbusRtuFactory::default()));
-    #[cfg(feature = "s7")]
-    registry.register(Arc::new(s7_adapter::S7Factory::default()));
-    acquisition::AcquisitionRuntime::new(registry)
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 // tauri::generate_context! 展开生成的闭包栈占用无法由本仓库控制
 #[allow(clippy::large_stack_frames)]
@@ -108,14 +48,11 @@ pub fn run() {
  "
     );
 
-    let app_state = AppState::with_acquisition(acquisition_runtime());
+    let app_state = AppState::with_acquisition(backend_host::build_acquisition_runtime());
     let acquisition = app_state.transport.clone();
-    acquisition.set_observer(std::sync::Arc::new(
-        commands::acquisition::FourDomainPointObserver::new(
-            &app_state.data_plane,
-            app_state.source_graphs.clone(),
-        ),
-    ));
+    backend_host::install_point_observer(&app_state);
+    backend_host::install_envelope_engine(&app_state);
+    backend_host::install_serial_discovery(&app_state);
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -160,7 +97,7 @@ pub fn run() {
                 .path()
                 .app_config_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
-            match config_migration::migrate_legacy_config(&ai_config_dir) {
+            match backend_host::migrate_legacy_config(&ai_config_dir) {
                 Ok(files) if !files.is_empty() => {
                     log::info!("migrated legacy Lissio state: {}", files.join(", "));
                 }
@@ -178,7 +115,7 @@ pub fn run() {
             let restore_dir = ai_config_dir.clone();
             tauri::async_runtime::spawn(async move {
                 let state = app_handle.state::<AppState>();
-                let restored = commands::graph::restore_workspace(&state, &restore_dir).await;
+                let restored = backend_host::restore_workspace(&state, &restore_dir, None).await;
                 state.signal_restore_done();
                 log::info!(
                     "workspace restore: {}",
@@ -187,7 +124,15 @@ pub fn run() {
             });
 
             // 后台任务: 工作区防抖落盘 / 推送 ticker / 启动页兜底
-            app::spawn_background_tasks(app.handle(), ai_config_dir);
+            // (任务体无 Tauri 依赖, 由本组合根提供 tauri::async_runtime 孵化器)
+            {
+                let state = app.state::<AppState>();
+                let sink = event_sink::TauriEventSink::handle(app.handle());
+                app::spawn_backend_tasks(&state, sink, ai_config_dir, &|future| {
+                    tauri::async_runtime::spawn(future);
+                });
+            }
+            gui_host::spawn_splashscreen_fallback(app.handle());
 
             Ok(())
         })
@@ -339,9 +284,9 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // 退出 flush: 把未落盘的工作区变更同步写盘 (逻辑在 app::runtime)
+            // 退出 flush: 把未落盘的工作区变更同步写盘 (GUI 专有, 见 gui_host)
             if matches!(event, tauri::RunEvent::Exit) {
-                app::flush_workspace_on_exit(app);
+                gui_host::flush_workspace_on_exit(app);
             }
         });
 }

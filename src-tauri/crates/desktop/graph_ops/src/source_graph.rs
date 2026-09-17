@@ -19,8 +19,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use data_model::{Error, Result};
+use events::BackendEventSink;
 use pipeline::DataPlaneState;
-use tauri::AppHandle;
 
 use crate::apply_document;
 
@@ -161,7 +161,7 @@ pub async fn apply_connect_edge(
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
     workspace: &WorkspaceState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     tab_id: Option<String>,
     source: String,
     target: String,
@@ -213,7 +213,7 @@ pub async fn apply_connect_edge(
         data_plane,
         source_graphs,
         workspace,
-        app,
+        sink,
         tab,
         graph.documents,
         edges,
@@ -231,7 +231,7 @@ pub async fn apply_disconnect_edge(
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
     workspace: &WorkspaceState,
-    app: Option<&AppHandle>,
+    sink: Option<&dyn BackendEventSink>,
     edge_id: Option<String>,
     source: Option<String>,
     target: Option<String>,
@@ -268,7 +268,7 @@ pub async fn apply_disconnect_edge(
         data_plane,
         source_graphs,
         workspace,
-        app,
+        sink,
         tab,
         graph.documents,
         edges,

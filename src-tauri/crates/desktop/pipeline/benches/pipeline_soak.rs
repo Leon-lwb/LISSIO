@@ -227,7 +227,7 @@ fn main() {
         }
         times
     });
-    let (lagged, diag, throughput, preview_lagged) = runtime.block_on(async {
+    let (lagged, diag, throughput, preview_lagged, frames, max_queue_frames) = runtime.block_on(async {
         // 真实订阅触发端口 staging、DataBus 批处理和消费路径。
         let key = TopicKey::new(if computed { "math0" } else { "pt" }, if computed { "result" } else { "ch0" });
         let mut preview = plane.eval.bus.subscribe(key.clone(), 0).await.unwrap();
@@ -252,11 +252,15 @@ fn main() {
         });
         // 连接即生成: generator 场景 spawn 后数据流即持续产出;
         // 非 generator 场景不启动生成器 (其 CPU 负载会污染注入基线), 由本地节拍合成 chunk。
-        let (mut rx, cancel) = if generator {
-            let (_write, tx, cancel, _watch) = transport::test_data::spawn(config(), TestDataLink { protocol: protocol(), schema: None }).unwrap();
-            (Some(tx.subscribe()), Some(cancel))
+        // 生成器的三个句柄必须活到长跑结束，因此绑定在外层作用域而不是 if 分支内：
+        // 丢弃 write_tx 会让生成器在 `write_rx.recv()` 处收到 None 而退出，丢弃
+        // runtime watch 的发送端会让 `runtime_rx.changed()` 立刻返回 Err，两者都会
+        // 提前结束生成任务并关闭广播通道，表现为 `RecvError::Closed` panic。
+        let (mut rx, cancel, _generator_handles) = if generator {
+            let (write, tx, cancel, watch) = transport::test_data::spawn(config(), TestDataLink { protocol: protocol(), schema: None }).unwrap();
+            (Some(tx.subscribe()), Some(cancel), Some((write, watch)))
         } else {
-            (None, None)
+            (None, None, None)
         };
         let chunk: Vec<u8> = (0..3_500_u64).flat_map(|i| transport::test_data::generate_bytes(4, TestSignal::Sine, i as f64 / 700_000.0, &protocol(), i)).collect();
         let start = Instant::now();
@@ -328,7 +332,7 @@ fn main() {
         println!("{}", serde_json::json!({"preview_batches":preview_batches.load(Ordering::Relaxed), "preview_lagged_batches":preview_lagged.load(Ordering::Relaxed), "bus":plane.eval.bus.health()}));
         println!("{}", serde_json::json!({"graph":if computed {"math4"} else {"raw4"}, "generator":generator, "elapsed_s":elapsed, "bytes":bytes, "frames":frames, "rx_MB_s":bytes as f64/elapsed/1e6, "lagged_messages":lagged, "eval_completed":diag.completed_frames, "eval_dropped":diag.dropped_frames, "max_queue_frames":max_queue_frames, "max_queue_estimated_bytes":max_queue_bytes, "queue_wait_max_ms":diag.queue_wait_max_ns as f64/1e6, "dispatch_wait_max_ms":diag.dispatch_wait_max_ns as f64/1e6, "eval_service_max_ms":diag.eval_service_max_ns as f64/1e6, "drain_ms":drain.elapsed().as_secs_f64()*1000.0, "ingest":summary(latencies)}));
         assert_eq!(bytes / 20, frames, "JustFloat 不得静默丢帧");
-        (lagged, diag, bytes as f64/elapsed/1e6, preview_lagged.load(Ordering::Relaxed))
+        (lagged, diag, bytes as f64/elapsed/1e6, preview_lagged.load(Ordering::Relaxed), frames, max_queue_frames)
     });
     println!(
         "{}",
@@ -344,7 +348,6 @@ fn main() {
         assert!(count > 0, "人为停顿场景必须实际注入至少一次");
     }
     assert_eq!(lagged, 0, "接收广播不得丢消息");
-    assert_eq!(diag.dropped_frames, 0, "评估队列不得丢帧");
     assert_eq!(preview_lagged, 0, "样本订阅不得丢批");
     assert_eq!(
         plane.eval.bus.health().ingress_dropped,
@@ -355,4 +358,26 @@ fn main() {
         throughput > 10.0,
         "实收吞吐必须超过 10 MB/s，实际 {throughput}"
     );
+
+    // 摄入停顿场景会人为制造 500ms 的补交突发：生成器在停顿期间继续产出，恢复后
+    // 一次性补交约 7 MB（约 35 万帧），必然超出每源 14 万帧的积压预算。此时
+    // "丢最旧整批 + 置缺口标记" 正是设计内的降级路径，而不是缺陷；因此这个场景
+    // 断言的是**有界且可记账**，其余场景仍然要求零丢弃。
+    if ingest_stall_ms > 0 {
+        assert!(
+            diag.dropped_frames > 0,
+            "500ms 补交突发必须实际触发降级路径，否则该场景没有测到目标分支"
+        );
+        assert_eq!(
+            diag.completed_frames + diag.dropped_frames,
+            frames,
+            "求值侧必须收支平衡：每个摄入帧要么被求值，要么被显式计为丢弃"
+        );
+        assert!(
+            max_queue_frames <= 140_000,
+            "求值队列峰值 {max_queue_frames} 超出每源 14 万帧预算（应有界）"
+        );
+    } else {
+        assert_eq!(diag.dropped_frames, 0, "评估队列不得丢帧");
+    }
 }

@@ -1,9 +1,11 @@
 //! 原始数据 Tauri 命令 — 缓冲区容量/清空入口
 //!
 //! 原始数据订阅统一走 [`display`] 的 `subscribe_data` 单一入口 (VNDP 协议);
-//! 本模块仅保留各缓冲区的容量设置与收集器清空命令。
+//! 本模块仅保留各缓冲区的容量设置与收集器清空命令 (实现在
+//! [`control_api::data`], 与 MCP/CLI 共用)。
 
 use app::AppState;
+use control_api::data;
 use data_model::Result;
 use tauri::State;
 
@@ -14,17 +16,8 @@ pub async fn clear_raw_data_collector(
     state: State<'_, AppState>,
     source: Option<String>,
 ) -> Result<()> {
-    match source {
-        Some(s) => state.data_plane.raw_collector_for(&s).lock().clear(),
-        None => {
-            for c in state.data_plane.raw_collectors.lock().values() {
-                c.lock().clear();
-            }
-        }
-    }
-    for collector in state.decoder_raw_collectors.lock().values() {
-        collector.lock().clear();
-    }
+    let tb = control_api::Toolbox::from_state(state.inner());
+    data::clear_raw_data_collector(&tb, source.as_deref());
     Ok(())
 }
 
@@ -35,24 +28,23 @@ pub async fn set_rawdata_buffer_capacity(
     source: String,
     capacity: usize,
 ) -> Result<()> {
-    state
-        .data_plane
-        .raw_collector_for(&source)
-        .lock()
-        .set_capacity(capacity);
+    let tb = control_api::Toolbox::from_state(state.inner());
+    data::set_rawdata_buffer_capacity(&tb, &source, capacity);
     Ok(())
 }
 
 /// 设置 CAN 帧缓冲区最大帧数
 #[tauri::command]
 pub async fn set_can_buffer_capacity(state: State<'_, AppState>, capacity: usize) -> Result<()> {
-    state.can_buffer.lock().set_max_size(capacity);
+    let tb = control_api::Toolbox::from_state(state.inner());
+    data::set_can_buffer_capacity(&tb, capacity);
     Ok(())
 }
 
 /// 设置逻辑采样缓冲区最大采样数
 #[tauri::command]
 pub async fn set_logic_buffer_capacity(state: State<'_, AppState>, capacity: usize) -> Result<()> {
-    state.logic_buffer.lock().set_max_size(capacity);
+    let tb = control_api::Toolbox::from_state(state.inner());
+    data::set_logic_buffer_capacity(&tb, capacity);
     Ok(())
 }

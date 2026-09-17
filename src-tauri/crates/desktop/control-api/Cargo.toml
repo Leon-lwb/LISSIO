@@ -1,0 +1,34 @@
+[package]
+name = "control-api"
+description = "Lissio 后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制的工具实现与状态切片 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+kind = { workspace = true }
+acquisition = { workspace = true }
+points = { workspace = true }
+pipeline = { workspace = true }
+app = { workspace = true }
+graph_ops = { workspace = true }
+buffer_graph = { workspace = true }
+raw-data = { workspace = true }
+can = { workspace = true }
+logic = { workspace = true }
+recording = { workspace = true }
+waveform = { workspace = true }
+data_model = { workspace = true }
+events = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+parking_lot = { workspace = true }
+tokio = { workspace = true }
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 3
+responsibility = "后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制/录制/波形快照的工具实现与状态切片 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"

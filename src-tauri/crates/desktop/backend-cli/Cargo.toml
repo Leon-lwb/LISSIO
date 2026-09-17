@@ -1,0 +1,33 @@
+[package]
+name = "backend-cli"
+description = "Lissio 无界面宿主 — 与 Tauri 组合根共用 backend-host 装配, 把 control-api 能力暴露为子命令与 serve 常驻 (含进程内 MCP server)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "backend-cli"
+path = "src/main.rs"
+
+[dependencies]
+app = { workspace = true }
+backend-host = { workspace = true }
+control-api = { workspace = true }
+events = { workspace = true }
+mcp-server = { workspace = true }
+pipeline = { workspace = true }
+points = { workspace = true }
+waveform = { workspace = true }
+clap = { workspace = true }
+env_logger = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 5
+responsibility = "无界面宿主 (组合根级) — CLI 子命令与 serve 常驻: 复用 backend-host 装配 + control-api 能力 + 事件/流端口, 可进程内启动 MCP server"

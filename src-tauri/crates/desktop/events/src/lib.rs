@@ -1,14 +1,17 @@
-//! `events` — 前端事件契约 + 系统通知封装
+//! `events` — 前端事件契约 + 后端事件端口
 //!
-//! 层级: L0 foundation — 前端事件契约 + 系统通知封装; 禁止依赖任何上层。
+//! 层级: L1 (desktop 域)。本 crate 不依赖 Tauri: 事件名常量、payload 结构与
+//! [`BackendEventSink`] 依赖倒置端口在此定义。Tauri 实现 (`TauriEventSink`) 由
+//! 桌面组合根注入; 无界面后端注入 [`NullEventSink`] 或 CLI 侧的事件实现。
 //!
-//! 数据平面读任务 ([`emit_transport_state`] / [`emit_transport_rx`]) 通过本 crate
-//! 向前端发送传输连接状态变化与统计节流事件; Tauri 命令 (open_transport 等)
-//! 通过 [`notify`] 模块向用户推送系统通知。
+//! 数据平面读任务 ([`emit_transport_state`] / [`emit_transport_rx`])、图提交
+//! ([`emit_graph_derived`])、运行控制 ([`emit_workspace_run`]) 都只依赖端口,
+//! 不再把 `tauri::AppHandle` 带进 L1-L3。
 
 use data_model::{ConnectionState, TransportStats};
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use serde_json::Value;
+use std::sync::Arc;
 
 /// `transport:state` 事件名
 pub const TRANSPORT_STATE_EVENT: &str = "transport:state";
@@ -22,6 +25,39 @@ pub const GRAPH_DERIVED_EVENT: &str = "graph:derived";
 pub const GRAPH_COMPILE_EVENT: &str = "graph:compile";
 /// `workspace:run` 事件名 — 工作区运行状态广播 (state + epoch, 启动/暂停/停止)
 pub const WORKSPACE_RUN_EVENT: &str = "workspace:run";
+
+/// 系统通知级别。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotifyLevel {
+    /// 普通信息。
+    Info,
+    /// 错误 (标题标注错误)。
+    Error,
+}
+
+/// 后端事件端口 — 后端向外 (前端界面 / CLI / 其它宿主) 推送事件与系统通知的
+/// 依赖倒置点。
+///
+/// 实现约定: **失败安全** — 发送失败只记录不向上传播, 不得 panic, 不得在
+/// 数据平面热路径上阻塞。
+pub trait BackendEventSink: Send + Sync {
+    /// 推送一个前端事件 (payload 已序列化为 JSON)。
+    fn emit_event(&self, event: &str, payload: Value);
+    /// 推送一条系统通知。
+    fn notify(&self, level: NotifyLevel, message: &str);
+}
+
+/// 事件端口共享句柄 — 需要跨任务 (`tokio::spawn`) 持有端口时使用。
+pub type EventSinkHandle = Arc<dyn BackendEventSink>;
+
+/// 静默端口 — 无界面后端与测试使用 (丢弃全部事件与通知)。
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NullEventSink;
+
+impl BackendEventSink for NullEventSink {
+    fn emit_event(&self, _event: &str, _payload: Value) {}
+    fn notify(&self, _level: NotifyLevel, _message: &str) {}
+}
 
 /// `transport:state` payload — 连接状态变化 (携带来源设备节点 id)
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -39,11 +75,19 @@ pub struct TransportRxEvent {
     pub stats: TransportStats,
 }
 
-/// emit `transport:state` (失败安全: 忽略 emit 错误)
-pub fn emit_transport_state(app: &AppHandle, node_id: &str, state: ConnectionState) {
-    let _ = app.emit(
+/// 通用事件派发 — payload 序列化失败时静默丢弃 (失败安全)。
+pub fn emit_payload<P: Serialize + ?Sized>(sink: &dyn BackendEventSink, event: &str, payload: &P) {
+    if let Ok(value) = serde_json::to_value(payload) {
+        sink.emit_event(event, value);
+    }
+}
+
+/// emit `transport:state`
+pub fn emit_transport_state(sink: &dyn BackendEventSink, node_id: &str, state: ConnectionState) {
+    emit_payload(
+        sink,
         TRANSPORT_STATE_EVENT,
-        TransportStateEvent {
+        &TransportStateEvent {
             node_id: node_id.to_string(),
             state,
         },
@@ -57,22 +101,28 @@ pub struct ProtocolChannelsDetectedEvent {
     pub channels: usize,
 }
 
-/// emit `transport:rx` (失败安全: 忽略 emit 错误)
-pub fn emit_transport_rx(app: &AppHandle, node_id: &str, stats: TransportStats) {
-    let _ = app.emit(
+/// emit `transport:rx`
+pub fn emit_transport_rx(sink: &dyn BackendEventSink, node_id: &str, stats: TransportStats) {
+    emit_payload(
+        sink,
         TRANSPORT_RX_EVENT,
-        TransportRxEvent {
+        &TransportRxEvent {
             node_id: node_id.to_string(),
             stats,
         },
     );
 }
 
-/// emit `protocol:channels-detected` (失败安全: 忽略 emit 错误)
-pub fn emit_protocol_channels_detected(app: &AppHandle, node_id: &str, channels: usize) {
-    let _ = app.emit(
+/// emit `protocol:channels-detected`
+pub fn emit_protocol_channels_detected(
+    sink: &dyn BackendEventSink,
+    node_id: &str,
+    channels: usize,
+) {
+    emit_payload(
+        sink,
         PROTOCOL_CHANNELS_DETECTED_EVENT,
-        ProtocolChannelsDetectedEvent {
+        &ProtocolChannelsDetectedEvent {
             node_id: node_id.to_string(),
             channels,
         },
@@ -84,25 +134,47 @@ pub fn emit_protocol_channels_detected(app: &AppHandle, node_id: &str, channels:
 /// payload 结构由调用方 (`graph::derived::GraphDerived`) 提供 — 本 crate
 /// 不依赖 graph 以避免循环依赖; emit 函数接受任意可序列化的 payload。
 /// 调用方约定 payload 形如 `{ "nodes": [{ "node_id": "...", "ports": [...], "effective_channels": N }] }`。
-pub fn emit_graph_derived<P: Serialize + Clone>(app: &AppHandle, payload: &P) {
-    let _ = app.emit(GRAPH_DERIVED_EVENT, payload.clone());
+pub fn emit_graph_derived<P: Serialize + ?Sized>(sink: &dyn BackendEventSink, payload: &P) {
+    emit_payload(sink, GRAPH_DERIVED_EVENT, payload);
 }
 
 /// emit `graph:compile` 事件 payload — 编译队列状态广播.
-pub fn emit_graph_compiled<P: Serialize + Clone>(app: &AppHandle, payload: &P) {
-    let _ = app.emit(GRAPH_COMPILE_EVENT, payload.clone());
+pub fn emit_graph_compiled<P: Serialize + ?Sized>(sink: &dyn BackendEventSink, payload: &P) {
+    emit_payload(sink, GRAPH_COMPILE_EVENT, payload);
 }
 
 /// emit `workspace:run` 事件 payload — 工作区运行状态广播.
-pub fn emit_workspace_run<P: Serialize + Clone>(app: &AppHandle, payload: &P) {
-    let _ = app.emit(WORKSPACE_RUN_EVENT, payload.clone());
+pub fn emit_workspace_run<P: Serialize + ?Sized>(sink: &dyn BackendEventSink, payload: &P) {
+    emit_payload(sink, WORKSPACE_RUN_EVENT, payload);
 }
-
-pub mod notify;
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Mutex;
+
+    /// 记录型端口 — 断言派发行为 (测试专用)。
+    #[derive(Default)]
+    struct RecordingSink {
+        events: Mutex<Vec<(String, Value)>>,
+        notes: Mutex<Vec<(NotifyLevel, String)>>,
+    }
+
+    impl BackendEventSink for RecordingSink {
+        fn emit_event(&self, event: &str, payload: Value) {
+            self.events
+                .lock()
+                .expect("recording sink lock")
+                .push((event.to_string(), payload));
+        }
+
+        fn notify(&self, level: NotifyLevel, message: &str) {
+            self.notes
+                .lock()
+                .expect("recording sink lock")
+                .push((level, message.to_string()));
+        }
+    }
 
     /// 事件契约: payload JSON 结构必须与前端约定严格一致
     #[test]
@@ -154,5 +226,27 @@ mod tests {
                 }
             })
         );
+    }
+
+    /// 端口派发: 事件名与 payload 原样到达实现方。
+    #[test]
+    fn emit_transport_state_reaches_sink() {
+        let sink = RecordingSink::default();
+        emit_transport_state(&sink, "tp1", ConnectionState::Disconnected);
+        let events = sink.events.lock().unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0, TRANSPORT_STATE_EVENT);
+        assert_eq!(
+            events[0].1,
+            serde_json::json!({"node_id": "tp1", "state": "Disconnected"})
+        );
+    }
+
+    /// 静默端口: 不产生任何副作用 (无界面后端路径)。
+    #[test]
+    fn null_sink_swallows_events() {
+        let sink = NullEventSink;
+        emit_transport_state(&sink, "tp1", ConnectionState::Connected);
+        sink.notify(NotifyLevel::Error, "ignored");
     }
 }

@@ -20,75 +20,9 @@
 use crate::error::{GpuError, GpuResult};
 use crate::pool::ReadbackStaging;
 
-/// 逐列包络 — 长度均为 `columns` (空列: min=+inf / max=-inf / count=0)
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct Envelope {
-    /// 列内非 NaN 样本最小值 (空列 +inf)
-    pub min: Vec<f32>,
-    /// 列内非 NaN 样本最大值 (空列 -inf)
-    pub max: Vec<f32>,
-    /// 列内非 NaN 样本数
-    pub count: Vec<u32>,
-}
-
-impl Envelope {
-    /// 列是否为空 (无有效样本)
-    #[must_use]
-    pub fn is_empty_column(&self, col: usize) -> bool {
-        self.count.get(col).is_none_or(|&c| c == 0)
-    }
-}
-
-/// 列映射 — CPU/GPU 共用的 f32 同式实现 (见模块注释)
-///
-/// cast lint 有意豁免: usize→f32 截断与 f32→u32 转换是 CPU/GPU 位级一致的
-/// 前提 (WGSL 侧同为 f32/u32 运算), 不可用更宽类型替代
-#[allow(
-    clippy::cast_precision_loss,
-    clippy::cast_possible_truncation,
-    clippy::cast_sign_loss
-)]
-#[must_use]
-pub fn column_of(i: usize, n: usize, columns: usize) -> usize {
-    let scale = columns as f32 / n as f32;
-    let col = ((i as f32 + 0.5) * scale).floor();
-    if col < 0.0 {
-        0
-    } else {
-        usize::try_from(col as u32)
-            .unwrap_or(columns - 1)
-            .min(columns - 1)
-    }
-}
-
-/// ±0 归一 — 保序位键的前置条件 (CPU/WGSL 同语义)
-fn normalize(v: f32) -> f32 {
-    if v == 0.0 { 0.0 } else { v }
-}
-
-/// CPU 参考实现 — 线性扫描 (GPU 不可用时的回退路径与等价性仲裁基准)
-// cast 豁免理由同 [`column_of`]
-#[allow(clippy::cast_precision_loss)]
-#[must_use]
-pub fn envelope_minmax_cpu(values: &[f32], columns: usize) -> Envelope {
-    let mut out = Envelope {
-        min: vec![f32::INFINITY; columns],
-        max: vec![f32::NEG_INFINITY; columns],
-        count: vec![0; columns],
-    };
-    let n = values.len();
-    for (i, &v0) in values.iter().enumerate() {
-        if v0.is_nan() {
-            continue;
-        }
-        let v = normalize(v0);
-        let col = column_of(i, n, columns);
-        out.min[col] = out.min[col].min(v);
-        out.max[col] = out.max[col].max(v);
-        out.count[col] += 1;
-    }
-    out
-}
+// 包络类型、列映射与 CPU 参考实现已下沉 L1 `waveform` (GPU 加速端口的
+// 契约层); 此处再导出保持既有公共路径不变。
+pub use waveform::{Envelope, envelope_minmax_cpu};
 
 /// 有序浮点位键 (编码) — 负数全位取反 / 非负仅翻符号位, 全域单调双射
 ///
@@ -334,6 +268,7 @@ pub fn envelope_minmax(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use waveform::column_of;
 
     /// 列映射: 单调不减、范围合法、0.5 偏移近似等宽
     #[test]

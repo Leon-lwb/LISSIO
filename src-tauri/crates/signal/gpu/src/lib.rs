@@ -20,6 +20,9 @@ pub use pool::{GpuBuffer, ReadbackStaging};
 pub use wgpu;
 
 mod device;
+mod engine;
 mod envelope;
 mod error;
 mod pool;
+
+pub use engine::AdaptiveEnvelopeEngine;

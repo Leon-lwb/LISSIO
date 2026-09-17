@@ -19,7 +19,8 @@ pub async fn close_transport(
     state: State<'_, AppState>,
     node_id: String,
 ) -> Result<()> {
-    state.close_transport(&app, &node_id).await
+    let sink = crate::event_sink::TauriEventSink::new(app);
+    state.close_transport(&sink, &node_id).await
 }
 
 /// 发送原始字节 (node_id = 目标设备节点 id)
@@ -62,7 +63,8 @@ pub async fn set_protocol(
     node_id: String,
     config: ProtocolConfig,
 ) -> Result<()> {
-    state.set_protocol(&app, &node_id, config).await
+    let sink = crate::event_sink::TauriEventSink::new(app);
+    state.set_protocol(&sink, &node_id, config).await
 }
 
 /// 获取指定 Protocol 节点的当前协议配置

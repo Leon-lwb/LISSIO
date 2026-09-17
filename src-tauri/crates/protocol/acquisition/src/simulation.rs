@@ -3,7 +3,9 @@ use crate::{AcquisitionError, AcquisitionResult};
 use data_model::device::{SignalParameters, SimulationConfig, TestWaveform};
 
 pub fn validate(config: &SimulationConfig) -> AcquisitionResult<()> {
-    if !(1..=700_000).contains(&config.sample_rate) || !(1..=256).contains(&config.channels) {
+    // 上限 5 MHz 为 4ch JustFloat 100 MB/s 压测留余量；更高会单 tick 生成
+    // 巨量字节，属误配而非合法仿真。
+    if !(1..=5_000_000).contains(&config.sample_rate) || !(1..=256).contains(&config.channels) {
         return Err(AcquisitionError::InvalidConfig(
             "simulation rate/channels out of range".into(),
         ));

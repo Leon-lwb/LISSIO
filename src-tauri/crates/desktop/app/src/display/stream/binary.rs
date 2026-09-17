@@ -74,7 +74,7 @@ pub(super) fn encode_envelope(
     seq: u64,
     window: &waveform::WaveformWindow,
     columns: usize,
-    envelopes: &[gpu::Envelope],
+    envelopes: &[waveform::Envelope],
 ) -> Vec<u8> {
     let channel_count = envelopes.len();
     let per_channel = columns * 12;
