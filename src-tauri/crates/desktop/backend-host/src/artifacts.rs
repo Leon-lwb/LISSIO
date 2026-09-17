@@ -63,7 +63,15 @@ impl ArtifactStaging {
             .lock()
             .map_err(|_| "下载登记表已损坏".to_string())?;
         // 顺带回收过期条目 (无需后台任务)
-        entries.retain(|_, entry| entry.created.elapsed() < ARTIFACT_TTL);
+        // 顺带回收过期条目: 登记表条目与磁盘文件都要清掉, 否则导出目录只增不减
+        let mut expired: Vec<PathBuf> = Vec::new();
+        entries.retain(|_, entry| {
+            let alive = entry.created.elapsed() < ARTIFACT_TTL;
+            if !alive {
+                expired.push(entry.path.clone());
+            }
+            alive
+        });
         entries.insert(
             token.clone(),
             Entry {
@@ -71,6 +79,10 @@ impl ArtifactStaging {
                 created: Instant::now(),
             },
         );
+        drop(entries);
+        for path in expired {
+            let _ = std::fs::remove_file(path);
+        }
         Ok((token, path))
     }
 

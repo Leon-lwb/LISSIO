@@ -36,6 +36,7 @@ pub fn router(state: Arc<ServerState>) -> Router {
         .route("/api/v1/rpc", post(rpc_handler))
         .route("/api/v1/ws", get(ws_handler))
         .route("/api/v1/download/{token}", get(download_handler))
+        .route("/api/v1/settings", get(get_settings).put(put_settings))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             require_token,
@@ -71,7 +72,12 @@ fn cors_layer(origins: &[String]) -> CorsLayer {
         .collect();
     CorsLayer::new()
         .allow_origin(AllowOrigin::list(allowed))
-        .allow_methods([axum::http::Method::GET, axum::http::Method::POST])
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            // 设置整表覆盖用 PUT — 跨源部署时预检必须放行
+            axum::http::Method::PUT,
+        ])
         .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
 }
 
@@ -137,6 +143,43 @@ fn download_file_name(path: &std::path::Path) -> String {
         }
         _ => raw,
     }
+}
+
+/// 读取设置文档 — 与桌面 `plugin-store` 的 `settings.json` 同一文件与形状。
+///
+/// 浏览器端没有 Tauri store, 设置改由服务端持久化 (P3)。文件形状保持
+/// `{ "app": … }`, 因此持久化格式对前端不变, 桌面与 Web 出口读写同一份设置。
+async fn get_settings(State(state): State<Arc<ServerState>>) -> Response {
+    match settings_store(&state).read() {
+        Ok(document) => Json(Value::Object(document)).into_response(),
+        Err(error) => error_response(StatusCode::INTERNAL_SERVER_ERROR, "IoError", &error),
+    }
+}
+
+/// 整表覆盖设置文档 (与桌面 `LazyStore.set('app', …)` 等价)。
+async fn put_settings(State(state): State<Arc<ServerState>>, body: Bytes) -> Response {
+    let parsed: Value = match serde_json::from_slice(&body) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            return error_response(StatusCode::BAD_REQUEST, "InvalidBody", &error.to_string());
+        }
+    };
+    let Value::Object(document) = parsed else {
+        return error_response(
+            StatusCode::BAD_REQUEST,
+            "InvalidBody",
+            "设置文档必须是 JSON 对象 (与 plugin-store 同一形状)",
+        );
+    };
+    match settings_store(&state).write(&document) {
+        Ok(()) => Json(json!({ "ok": true })).into_response(),
+        Err(error) => error_response(StatusCode::INTERNAL_SERVER_ERROR, "IoError", &error),
+    }
+}
+
+/// 设置存储 — 落在已装配宿主的配置目录 (与桌面壳同一位置)。
+fn settings_store(state: &ServerState) -> crate::settings::SettingsStore {
+    crate::settings::SettingsStore::new(&state.host.config_dir)
 }
 
 /// HTTP-RPC — 单条或数组 (数组用于启动时的并发突发, 减少往返)。

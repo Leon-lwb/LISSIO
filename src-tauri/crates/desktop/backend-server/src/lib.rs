@@ -19,6 +19,7 @@ pub mod config;
 pub mod frames;
 pub mod http;
 pub mod session;
+pub mod settings;
 pub mod sink;
 
 use std::net::IpAddr;

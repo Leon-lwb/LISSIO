@@ -126,6 +126,8 @@ reject)。帧级错误没有归属, 省略该字段。
 | `POST /api/v1/rpc` | 命令派发 (单条 / 数组) |
 | `GET /api/v1/ws` | 事件 + 订阅 + 单连接 RPC |
 | `GET /api/v1/download/{token}` | 导出产物下载 — 只服务暂存区登记过的 token, **不接受任意服务器路径** (P3) |
+| `GET /api/v1/settings` | 设置读取 — 与桌面 `plugin-store` 的 `settings.json` 同一文件与形状 (P3) |
+| `PUT /api/v1/settings` | 设置整表覆盖 (与 `LazyStore.set('app', …)` 等价, P3) |
 | `GET /api/v1/health` | 健康检查 (无鉴权) |
 | `GET /api/v1/capabilities` | `{supported, pending, desktop_only, protocol}` — 前端据此降级 UI (P3 接入; 当前未接入的命令由服务端直接返回 `UnsupportedCommand`) |
 | `--static-dir` | 同进程托管前端 `dist/` (SPA 回落 `index.html`) |
