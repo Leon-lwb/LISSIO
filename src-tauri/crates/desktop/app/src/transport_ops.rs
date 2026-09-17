@@ -336,3 +336,73 @@ impl AppState {
         })
     }
 }
+
+/// CAN 波特率决策 (纯函数) — 优先级: 显式覆盖 (>0) > 传输配置 > 500k 默认。
+///
+/// 默认值不可省略: 前端可能提交 0, 直接用于负载率换算会除零。
+pub const fn can_bitrate_choice(override_bps: Option<u32>, transport_bps: Option<u32>) -> u32 {
+    if let Some(bps) = override_bps
+        && bps > 0
+    {
+        return bps;
+    }
+    match transport_bps {
+        Some(bps) => bps,
+        None => 500_000,
+    }
+}
+
+/// 读取指定设备节点的 CAN 波特率与来源标签 (`slcan` / `candle` / `default`)。
+///
+/// 前端设置面板据此展示默认值; 与 [`can_bitrate_bps`] 共用同一份配置匹配。
+pub fn can_bitrate_with_source(state: &AppState, node_id: &str) -> (u32, &'static str) {
+    match state.transport.config(node_id) {
+        Some(data_model::TransportConfig::Slcan(config)) => (config.can_bitrate.bps(), "slcan"),
+        Some(data_model::TransportConfig::CandleLight(config)) => {
+            (config.can_bitrate.bps(), "candle")
+        }
+        _ => (can_bitrate_choice(None, None), "default"),
+    }
+}
+
+/// 解析有效 CAN 波特率 (bps) — 取传输配置后按 [`can_bitrate_choice`] 决策。
+///
+/// 传输配置仅 Slcan / CandleLight 携带 CAN 波特率, 其他连接方式回落默认值。
+/// 桌面 IPC 与 HTTP-RPC 的 CAN 负载统计共用此判定。
+pub fn can_bitrate_bps(state: &AppState, node_id: &str, override_bps: Option<u32>) -> u32 {
+    let transport_bps = match state.transport.config(node_id) {
+        Some(data_model::TransportConfig::Slcan(config)) => Some(config.can_bitrate.bps()),
+        Some(data_model::TransportConfig::CandleLight(config)) => Some(config.can_bitrate.bps()),
+        _ => None,
+    };
+    can_bitrate_choice(override_bps, transport_bps)
+}
+
+#[cfg(test)]
+mod bitrate_tests {
+    use super::can_bitrate_choice;
+
+    #[test]
+    fn override_bitrate_wins_over_transport() {
+        assert_eq!(
+            can_bitrate_choice(Some(1_000_000), Some(500_000)),
+            1_000_000
+        );
+    }
+
+    #[test]
+    fn zero_override_falls_through_to_transport() {
+        assert_eq!(can_bitrate_choice(Some(0), Some(250_000)), 250_000);
+    }
+
+    #[test]
+    fn transport_config_used_when_no_override() {
+        assert_eq!(can_bitrate_choice(None, Some(250_000)), 250_000);
+    }
+
+    #[test]
+    fn default_500k_prevents_division_by_zero() {
+        assert_eq!(can_bitrate_choice(None, None), 500_000);
+        assert_eq!(can_bitrate_choice(Some(0), None), 500_000);
+    }
+}

@@ -6,6 +6,13 @@
 
 ### 新增
 
+- **Web 出口(服务后端拆分)**:把服务后端从 Tauri 宿主中拆出为可独立运行的服务,前端一份构建既可跑在桌面壳也可跑在浏览器(设计见 `docs/architecture/web-exit.md`)
+  - 新增 `rpc-api`(L4):出口无关的命令派发表——桌面 IPC 与 HTTP-RPC 拥有同一套命令名、参数名与错误契约;`catalog` 声明 `SUPPORTED`/`PENDING`/`DESKTOP_ONLY`/`CHANNEL` 四类能力边界
+  - 新增 `backend-server`(L5)与二进制 `lissio-server`:axum HTTP-RPC + WebSocket 推送、Bearer 与子协议令牌鉴权、`/health` 与 `/capabilities`、可选内嵌 MCP 与静态站点托管;后端事件经 `BroadcastEventSink` 广播、显示流经 `WsStreamSink` 推送,二进制帧(`WWB1`/`VNDP`/`VENV`)加固定头部后原样透传
+  - `backend-host` 新增 `BackendHost`/`assemble`/`teardown`:装配与生命周期从 `backend-cli` 上移,GUI 与全部无界面出口共用同一份实现
+  - `backend-cli` 新增 `serve --http`(默认同时提供 Web 出口与 MCP)与 `rpc <cmd> [--args <json|@file>]` 通用逃生口,原有子命令面保持不变
+  - 契约门禁 `pnpm check:web-contract`:校验四个能力清单两两不相交且并集覆盖 `generate_handler!` 注册的全部命令,`SUPPORTED` 与派发分支一一对应,前端 `invoke` 名均在 IPC 注册表内
+  - 逻辑收敛:工作区水合快照组装下沉到 `app::workspace_snapshot`、流水线配置钳制下沉到 `PipelineConfig::sanitized`、CAN 波特率决策下沉到 `app::can_bitrate_bps`,消除出口间重复
 - **软件出口统一(UI / CLI / MCP)**:一份能力核心 + 一份无界面装配 + 两个推送端口,三个薄协议适配器,零业务重复(详见 `docs/architecture/exits.md`)
   - 无界面宿主 `backend-cli`:子命令(devices/send/inject/endpoint/graph/data/snapshot/frame/run/record)+ `serve` 常驻(恢复工作区、启动录制、进程内 MCP server),装配与 GUI 组合根同源(`backend-host`)
   - 能力核心 `control-api` 补齐无头场景能力:录制会话生命周期/历史/SQL/导出(含暂停态门控)、波形停止快照与 CSV 导出、命令帧编码与统一发送内核、缓冲容量控制;Tauri IPC 的 buffer/recording/rawdata 命令体改为委托同一实现(签名与错误文案不变)

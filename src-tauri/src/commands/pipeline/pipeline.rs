@@ -1,29 +1,17 @@
 //! 自动流水线安全上限配置。
+//!
+//! 钳制规则属配置自身语义, 定义在 [`PipelineConfig::sanitized`] (data-model);
+//! 本模块只做状态写入与运行时上限同步。
 
 use app::AppState;
 use app::RuntimeLimits;
 use data_model::{PipelineConfig, Result};
 use tauri::State;
 
-/// 配置钳制 (纯函数) — 前端可提交任意值, 后端统一收敛到安全区间:
-/// max_workers 1-64 / eval_workers 1-16 / memory 32-4096 MB / fps 1-120 / bandwidth 1-1024 MB/s
-fn sanitize_pipeline_config(config: &PipelineConfig) -> PipelineConfig {
-    PipelineConfig {
-        mode: config.mode,
-        max_workers: config.max_workers.clamp(1, 64),
-        eval_workers: config.eval_workers.clamp(1, 16),
-        eval_simd: config.eval_simd,
-        memory_budget_mb: config.memory_budget_mb.clamp(32, 4096),
-        preview_fps_limit: config.preview_fps_limit.clamp(1, 120),
-        preview_bandwidth_mb_per_sec: config.preview_bandwidth_mb_per_sec.clamp(1, 1024),
-    }
-}
-
-/// 设置流水线参数
-///
+/// 设置流水线参数 (提交值统一钳制到安全区间)。
 #[tauri::command]
 pub fn set_pipeline_config(state: State<'_, AppState>, config: PipelineConfig) -> Result<()> {
-    let cfg = sanitize_pipeline_config(&config);
+    let cfg = config.sanitized();
     state.data_plane.eval.bus.set_limits(RuntimeLimits {
         max_workers: cfg.max_workers,
         memory_budget_mb: cfg.memory_budget_mb,
@@ -60,7 +48,7 @@ mod tests {
 
     #[test]
     fn in_range_config_passes_through() {
-        let cfg = sanitize_pipeline_config(&config());
+        let cfg = config().sanitized();
         assert_eq!(cfg.max_workers, 8);
         assert_eq!(cfg.eval_workers, 4);
         assert_eq!(cfg.memory_budget_mb, 256);
@@ -78,7 +66,7 @@ mod tests {
         cfg.memory_budget_mb = 0;
         cfg.preview_fps_limit = 0;
         cfg.preview_bandwidth_mb_per_sec = 0;
-        let cfg = sanitize_pipeline_config(&cfg);
+        let cfg = cfg.sanitized();
         assert_eq!(cfg.max_workers, 1);
         assert_eq!(cfg.eval_workers, 1);
         assert_eq!(cfg.memory_budget_mb, 32);
@@ -94,7 +82,7 @@ mod tests {
         cfg.memory_budget_mb = 1_000_000;
         cfg.preview_fps_limit = 1_000;
         cfg.preview_bandwidth_mb_per_sec = 1_000_000;
-        let cfg = sanitize_pipeline_config(&cfg);
+        let cfg = cfg.sanitized();
         assert_eq!(cfg.max_workers, 64);
         assert_eq!(cfg.eval_workers, 16);
         assert_eq!(cfg.memory_budget_mb, 4096);

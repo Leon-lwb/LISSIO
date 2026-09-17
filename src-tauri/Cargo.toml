@@ -91,6 +91,8 @@ members = [
   "crates/ai/chat",
   "crates/ai/mcp-client",
   "crates/desktop/control-api",
+  "crates/desktop/rpc-api",
+  "crates/desktop/backend-server",
   "crates/desktop/backend-host",
   "crates/desktop/mcp-server",
   "crates/desktop/backend-cli",
@@ -192,12 +194,15 @@ rmcp = { version = "3.1", default-features = false, features = [
 # 系统凭据库才是正确方案
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 security-framework = "3"
-axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio"] }
+# axum: Web 出口 (backend-server) 的 HTTP-RPC + WebSocket 宿主, 以及 MCP server
+axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "ws"] }
+# tower-http: Web 出口的 CORS 白名单 / 请求体上限 / 静态站点托管
+tower-http = { version = "0.6", default-features = false, features = ["cors", "limit", "fs", "trace"] }
 futures = "0.3"
 async-trait = "0.1"
 bytes = { version = "1", features = ["serde"] }
 base64 = "0.22"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs", "signal"] }
 tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }
 tokio-serial = { version = "5.4.4", default-features = false }
 # tokio-s7: 西门子 S7comm 异步客户端 (ISO-on-TCP), PLC 采集的第二条点位源 (Apache-2.0)
@@ -309,6 +314,8 @@ chat-session = { path = "crates/ai/chat-session" }
 mcp-client = { path = "crates/ai/mcp-client" }
 mcp-server = { path = "crates/desktop/mcp-server" }
 control-api = { path = "crates/desktop/control-api" }
+rpc-api = { path = "crates/desktop/rpc-api" }
+backend-server = { path = "crates/desktop/backend-server" }
 backend-host = { path = "crates/desktop/backend-host" }
 # backend-cli 是叶子 bin (无消费方), 仅经 [workspace].members 纳入构建
 # L4 cmd

@@ -168,6 +168,90 @@ pub fn collect_workspace_file(
     }
 }
 
+/// 前端水合快照 — 图形与 `graph:source` 事件同构, 另带 tab 元数据与全局版本号。
+///
+/// 两个出口共用同一形状: 桌面 IPC (`workspace_get`) 与 HTTP-RPC 返回逐字段
+/// 一致, 前端水合路径不需要按宿主分支。
+#[derive(Debug, Clone, Serialize)]
+pub struct WorkspaceSnapshot {
+    pub version: u64,
+    pub tabs: Vec<TabMeta>,
+    pub data_tabs: Vec<DataTabMeta>,
+    pub graphs: Vec<TabGraphSnapshot>,
+}
+
+/// 单 tab 快照 — 权威源图 (节点文档 + 连线)。
+#[derive(Debug, Clone, Serialize)]
+pub struct TabGraphSnapshot {
+    pub documents: Vec<kind::document::NodeDocument>,
+    pub tab_id: String,
+    pub edges: Vec<Edge>,
+}
+
+/// 等待工作区恢复完成 — 恢复失败或无持久化也会放行。
+///
+/// 启动恢复是后台任务 (不阻塞事件循环), 前端水合前必须先过这道门, 否则会
+/// 把"尚未恢复"误判为"全新安装"。
+pub async fn await_restore_done(state: &crate::AppState) {
+    let mut restore_done = state.subscribe_restore_done();
+    while !*restore_done.borrow_and_update() {
+        // 发送端丢弃 (AppState 常驻, 理论不发生) 时按未恢复处理
+        if restore_done.changed().await.is_err() {
+            break;
+        }
+    }
+}
+
+/// 读取工作区水合快照; 未恢复过持久化工作区返回 None (前端走默认启动)。
+///
+/// tab 元数据顺序优先, 孤儿源图 (tab 已删但未清理) 按字典序补后。
+pub async fn workspace_snapshot(state: &crate::AppState) -> Option<WorkspaceSnapshot> {
+    await_restore_done(state).await;
+    let (tabs, data_tabs) = {
+        let ws = state.workspace.lock();
+        if !ws.restored {
+            return None;
+        }
+        (ws.tabs.clone(), ws.data_tabs.clone())
+    };
+    let graphs = {
+        let store = state.source_graphs.lock();
+        let mut ordered: Vec<TabGraphSnapshot> = Vec::new();
+        for tab in &tabs {
+            if let Some(graph) = store.get(&tab.id) {
+                ordered.push(TabGraphSnapshot {
+                    documents: graph.documents.clone(),
+                    tab_id: tab.id.clone(),
+                    edges: graph.edges.clone(),
+                });
+            }
+        }
+        let mut rest: Vec<&String> = store.keys().collect();
+        rest.sort();
+        for tab_id in rest {
+            if tabs.iter().any(|tab| &tab.id == tab_id) {
+                continue;
+            }
+            let graph = &store[tab_id];
+            ordered.push(TabGraphSnapshot {
+                documents: graph.documents.clone(),
+                tab_id: tab_id.clone(),
+                edges: graph.edges.clone(),
+            });
+        }
+        ordered
+    };
+    let version = state
+        .graphs_version
+        .load(std::sync::atomic::Ordering::Relaxed);
+    Some(WorkspaceSnapshot {
+        version,
+        tabs,
+        data_tabs,
+        graphs,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

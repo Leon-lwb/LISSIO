@@ -45,3 +45,23 @@ impl Default for PipelineConfig {
         }
     }
 }
+
+impl PipelineConfig {
+    /// 收敛到安全区间 — 调用方可提交任意值, 后端统一钳制。
+    ///
+    /// max_workers 1-64 / eval_workers 1-16 / memory 32-4096 MB /
+    /// fps 1-120 / bandwidth 1-1024 MB/s。出口无关: 桌面 IPC 与 HTTP-RPC
+    /// 提交的配置走同一份钳制, 避免两个出口对同一字段给出不同上限。
+    #[must_use]
+    pub fn sanitized(self) -> Self {
+        Self {
+            mode: self.mode,
+            max_workers: self.max_workers.clamp(1, 64),
+            eval_workers: self.eval_workers.clamp(1, 16),
+            eval_simd: self.eval_simd,
+            memory_budget_mb: self.memory_budget_mb.clamp(32, 4096),
+            preview_fps_limit: self.preview_fps_limit.clamp(1, 120),
+            preview_bandwidth_mb_per_sec: self.preview_bandwidth_mb_per_sec.clamp(1, 1024),
+        }
+    }
+}

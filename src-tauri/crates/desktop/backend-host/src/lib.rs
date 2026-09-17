@@ -9,6 +9,7 @@
 
 mod assembly;
 mod config;
+mod host;
 mod lifecycle;
 
 pub use assembly::{
@@ -18,4 +19,5 @@ pub use assembly::{
 pub use config::{
     APP_IDENTIFIER, CONFIG_DIR_ENV, migrate_legacy_config, platform_config_dir, resolve_config_dir,
 };
+pub use host::{BackendHost, assemble, teardown};
 pub use lifecycle::{restore_workspace, shutdown};

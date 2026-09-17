@@ -400,25 +400,83 @@ pub enum Command {
         #[command(subcommand)]
         action: RecordAction,
     },
-    /// 常驻服务: 恢复工作区 + 启动录制 + 进程内 MCP server, 直至 Ctrl-C
+    /// 常驻服务: 恢复工作区 + 启动录制 + 进程内 MCP server 与 Web 出口, 直至退出信号
     Serve {
+        /// 监听地址 (缺省 127.0.0.1, 可被 LISSIO_BIND 覆盖)
+        #[arg(long)]
+        bind: Option<std::net::IpAddr>,
+        /// Web 出口端口 (缺省 8790, 可被 LISSIO_HTTP_PORT 覆盖)
+        #[arg(long)]
+        http_port: Option<u16>,
+        /// 访问令牌 (缺省读 LISSIO_TOKEN, 再缺省读/生成配置目录下的 server-token)
+        #[arg(long)]
+        token: Option<String>,
+        /// 令牌文件路径 (缺省 <配置目录>/server-token)
+        #[arg(long)]
+        token_file: Option<std::path::PathBuf>,
+        /// 静态站点目录 (前端 dist/)
+        #[arg(long)]
+        static_dir: Option<std::path::PathBuf>,
+        /// 允许的跨源来源 (可重复)
+        #[arg(long = "cors-origin")]
+        cors_origins: Vec<String>,
         /// MCP 监听端口 (缺省 8765, 可被 LISSIO_MCP_PORT 覆盖)
         #[arg(long)]
         mcp_port: Option<u16>,
+        /// 不启动 MCP server
+        #[arg(long)]
+        no_mcp: bool,
+        /// 只启动 MCP server, 不监听 Web 出口 (旧行为)
+        #[arg(long)]
+        no_http: bool,
+    },
+    /// 直接调用 Web 出口命令派发表 (与 IPC 命令名/参数同构的通用逃生口)
+    Rpc {
+        /// 命令名 (与 `invoke` 名称一致, 见 `lissio-server` 的 /api/v1/capabilities)
+        cmd: String,
+        /// 参数 JSON (内联字符串或 `@文件路径`; 缺省 `{}`)
+        #[arg(long)]
+        args: Option<String>,
     },
 }
 
 /// 分发入口 — `serve` 之外的命令按 装配→执行→收尾 一次性完成。
 pub async fn execute(cli: Cli) -> Result<(), String> {
-    if let Command::Serve { mcp_port } = cli.command {
-        return run::serve(mcp_port, cli.no_restore).await;
+    match cli.command {
+        Command::Serve {
+            bind,
+            http_port,
+            token,
+            token_file,
+            static_dir,
+            cors_origins,
+            mcp_port,
+            no_mcp,
+            no_http,
+        } => {
+            run::serve(run::ServeOptions {
+                bind,
+                http_port,
+                token,
+                token_file,
+                static_dir,
+                cors_origins,
+                mcp_port,
+                no_mcp,
+                no_http,
+                no_restore: cli.no_restore,
+            })
+            .await
+        }
+        command => {
+            let host = crate::assemble(!cli.no_restore).await?;
+            let result = dispatch(&host, command).await;
+            crate::teardown(&host);
+            let value = result?;
+            crate::print_json(&value);
+            Ok(())
+        }
     }
-    let host = crate::assemble(!cli.no_restore).await?;
-    let result = dispatch(&host, cli.command).await;
-    crate::teardown(&host);
-    let value = result?;
-    crate::print_json(&value);
-    Ok(())
 }
 
 /// 命令分发 — 每个域委托对应子模块 (全部走 control-api 共享实现)。
@@ -440,6 +498,12 @@ async fn dispatch(host: &Host, command: Command) -> Result<Value, String> {
         Command::Frame { action } => transfer::frame(tb, &action).await,
         Command::Run { action } => run::run_control(host, &action).await,
         Command::Record { action } => record::record(tb, &action).await,
+        Command::Rpc { cmd, args } => {
+            let args = crate::parse_json_arg(args.as_deref())?;
+            rpc_api::dispatch(host, &cmd, args)
+                .await
+                .map_err(|error| format!("{}: {}", error.kind, error.message))
+        }
         Command::Serve { .. } => unreachable!("serve 在 execute 中单独处理"),
     }
 }

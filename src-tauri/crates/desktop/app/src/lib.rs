@@ -37,7 +37,10 @@ pub use background::{
     TaskSpawner, flush_workspace, spawn_backend_tasks, start_recording, stop_recording,
     workspace_autosave_loop,
 };
-pub use transport_ops::{close_device_session, open_device_session};
+pub use transport_ops::{
+    can_bitrate_bps, can_bitrate_choice, can_bitrate_with_source, close_device_session,
+    open_device_session,
+};
 
 pub use measure::{
     ChannelMeasurement, SourceMeasurements, compute_autoset_suggestion, compute_source_measurements,
@@ -46,9 +49,9 @@ pub use measurement::AutoSetSuggestion;
 pub use run_ops::apply_workspace_run;
 pub use transport_ops::LoopbackResult;
 pub use workspace::{
-    DataTabMeta, Position, TabGraphFile, TabMeta, WORKSPACE_FILE_NAME, WorkspaceFile,
-    WorkspaceInner, WorkspaceState, collect_workspace_file, load_workspace, save_workspace,
-    workspace_path,
+    DataTabMeta, Position, TabGraphFile, TabGraphSnapshot, TabMeta, WORKSPACE_FILE_NAME,
+    WorkspaceFile, WorkspaceInner, WorkspaceSnapshot, WorkspaceState, await_restore_done,
+    collect_workspace_file, load_workspace, save_workspace, workspace_path, workspace_snapshot,
 };
 
 // ---- 源图数据模型 (权威定义在 L2 runtime, 此处转发保持既有公共路径) ----

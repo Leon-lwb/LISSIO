@@ -25,9 +25,11 @@ gpu = { workspace = true }
 network = { workspace = true }
 can_transport = { workspace = true }
 data_model = { workspace = true }
+control-api = { workspace = true }
 events = { workspace = true }
 graph_ops = { workspace = true }
 log = { workspace = true }
+tokio = { workspace = true }
 modbus-adapter = { workspace = true, optional = true }
 s7-adapter = { workspace = true, optional = true }
 

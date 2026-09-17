@@ -25,11 +25,13 @@ layers and their L4 implementations are injected by the composition root.
 
 ## Software exits
 
-UI (Tauri IPC), MCP (`mcp-server`), and headless CLI (`backend-cli`) are three
-thin protocol adapters over one capability core (`control-api`), one shared
-headless assembly (`backend-host`), and two push ports (`events::BackendEventSink`,
-`app::display::StreamSink`). Capability coverage matrix and conventions:
-[exits.md](exits.md).
+UI (Tauri IPC), Web (HTTP-RPC + WebSocket, `backend-server`), MCP (`mcp-server`),
+and headless CLI (`backend-cli`) are four thin protocol adapters over one
+capability core (`control-api`), one command dispatch table (`rpc-api`), one
+shared assembly (`backend-host`), and two push ports
+(`events::BackendEventSink`, `app::display::StreamSink`). Capability coverage
+matrix and conventions: [exits.md](exits.md); Web protocol contract and the
+per-command capability matrix: [web-exit.md](web-exit.md).
 
 ## Domains
 
@@ -64,10 +66,18 @@ allowed when they also satisfy the layer rule.
 | data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `rpc-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, `backend-server`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |
 
 `graph` keeps `compiler::{hir, plane, lower}` and `eval` as private
 implementation stages. Do not split compiler phases into crates.
+
+## Command-name contract
+
+`rpc-api::catalog` is the single authority for which IPC command names each
+software exit implements. Its four lists (`SUPPORTED`, `PENDING`,
+`DESKTOP_ONLY`, `CHANNEL`) must stay disjoint and must cover every command
+registered in `generate_handler!`. `pnpm check:web-contract` enforces this, plus
+that every name the frontend invokes exists in the IPC registry.
 
 ## Machine-readable contract
 

@@ -15,7 +15,9 @@ path = "src/main.rs"
 [dependencies]
 app = { workspace = true }
 backend-host = { workspace = true }
+backend-server = { workspace = true }
 control-api = { workspace = true }
+rpc-api = { workspace = true }
 events = { workspace = true }
 mcp-server = { workspace = true }
 pipeline = { workspace = true }

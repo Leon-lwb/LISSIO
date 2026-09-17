@@ -16,12 +16,15 @@
 pub mod cmd;
 pub mod sink;
 
-use std::path::PathBuf;
 use std::sync::Arc;
 
-use app::AppState;
-use control_api::Toolbox;
 use events::EventSinkHandle;
+
+/// 已装配的无界面后端宿主 — 一次性子命令与 `serve` 共用。
+///
+/// 装配本体在 [`backend_host::assemble`] (GUI 与全部无界面出口同源); 本出口
+/// 只提供 stderr JSON-lines 事件端口。
+pub use backend_host::BackendHost as Host;
 
 /// CLI 入口 — 解析参数并在多线程 tokio 运行时上执行。
 ///
@@ -50,54 +53,18 @@ pub fn run() -> i32 {
     }
 }
 
-/// 已装配的无界面后端宿主 — 一次性子命令与 `serve` 共用。
-pub struct Host {
-    /// 应用全局状态。
-    pub state: AppState,
-    /// 控制能力切片 (与 `state` 共享同一批 `Arc` 句柄)。
-    pub toolbox: Toolbox,
-    /// stderr 事件端口。
-    pub sink: EventSinkHandle,
-    /// 配置目录 (workspace.json 与 recordings/ 所在处)。
-    pub config_dir: PathBuf,
-}
-
 /// 装配无界面后端 (适配器注册 + 点位观察者 + 可选工作区恢复 + 后台任务)。
 ///
 /// 与 GUI 组合根 `.setup` 的顺序一致: 装配 → 观察者 → 恢复 (后台语义此处
 /// 同步 await) → `signal_restore_done` → 录制启动 → 后台任务。
 pub async fn assemble(restore: bool) -> Result<Host, String> {
-    let config_dir = backend_host::resolve_config_dir(None);
-    let state = AppState::with_acquisition(backend_host::build_acquisition_runtime());
-    backend_host::install_point_observer(&state);
-    backend_host::install_envelope_engine(&state);
-    backend_host::install_serial_discovery(&state);
     let sink: EventSinkHandle = Arc::new(sink::CliEventSink);
-    if restore {
-        let restored =
-            backend_host::restore_workspace(&state, &config_dir, Some(sink.as_ref())).await;
-        log::info!(
-            "workspace restore: {}",
-            if restored { "loaded" } else { "none" }
-        );
-    }
-    state.signal_restore_done();
-    // 录制会话与后台任务由 spawn_backend_tasks 统一启动 (与 GUI 组合根一致)
-    app::spawn_backend_tasks(&state, Arc::clone(&sink), config_dir.clone(), &|future| {
-        tokio::spawn(future);
-    });
-    let toolbox = Toolbox::from_state(&state);
-    Ok(Host {
-        state,
-        toolbox,
-        sink,
-        config_dir,
-    })
+    backend_host::assemble(None, restore, sink).await
 }
 
 /// 收尾 — 停录制并把未落盘的工作区变更同步写盘 (幂等)。
 pub fn teardown(host: &Host) {
-    backend_host::shutdown(&host.state, &host.config_dir);
+    backend_host::teardown(host);
 }
 
 /// 把命令结果以 pretty JSON 打印到 stdout。
@@ -106,6 +73,27 @@ pub fn print_json(value: &serde_json::Value) {
         Ok(text) => println!("{text}"),
         Err(error) => eprintln!("result serialization failed: {error}"),
     }
+}
+
+/// 解析 `rpc` 子命令的参数 — 内联 JSON 或 `@文件路径`, 缺省为空对象。
+///
+/// 形状与前端 `invoke(cmd, args)` 的第二个参数一致 (顶层 camelCase), 因此
+/// `backend-cli rpc update_tab_graph --args '{"tabId":"t1",...}'` 与浏览器
+/// 发出的请求走同一份派发与参数归一。
+pub fn parse_json_arg(raw: Option<&str>) -> Result<serde_json::Value, String> {
+    let Some(raw) = raw.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(serde_json::json!({}));
+    };
+    let text = match raw.strip_prefix('@') {
+        Some(path) => read_json_text(path)?,
+        None => raw.to_string(),
+    };
+    serde_json::from_str(&text).map_err(|error| format!("参数 JSON 解析失败: {error}"))
+}
+
+/// 读取 `@文件路径` 形式的内联参数。
+fn read_json_text(path: &str) -> Result<String, String> {
+    std::fs::read_to_string(path).map_err(|error| format!("读取 {path} 失败: {error}"))
 }
 
 /// 解析 hex 字节串 — 接受 `AABB` / `AA BB` / `0xAA,0xBB` 三种写法。

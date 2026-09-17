@@ -3,40 +3,6 @@ use can::CanLoadSnapshot;
 use data_model::Result;
 use tauri::{AppHandle, Manager, State};
 
-/// 从指定设备节点的传输配置提取 CAN 波特率 (bps)
-///
-/// 仅 Slcan / CandleLight 配置携带 CAN 波特率; 其他传输方式返回 None。
-async fn extract_can_bitrate_from_transport(state: &AppState, node_id: &str) -> Option<u32> {
-    let manager = &state.transport;
-    match manager.config(node_id) {
-        Some(data_model::TransportConfig::Slcan(s)) => Some(s.can_bitrate.bps()),
-        Some(data_model::TransportConfig::CandleLight(c)) => Some(c.can_bitrate.bps()),
-        _ => None,
-    }
-}
-
-/// 计算有效 CAN 波特率 (bps) — 纯决策 (优先级: override>0 > transport 配置 > 默认)
-///
-/// 抽出为无 IO 纯函数供单测覆盖优先级; IO 侧只负责取 transport 配置值。
-fn resolve_can_bitrate_choice(override_bps: Option<u32>, transport_bps: Option<u32>) -> u32 {
-    if let Some(bps) = override_bps
-        && bps > 0
-    {
-        return bps;
-    }
-    transport_bps.unwrap_or(500_000)
-}
-
-/// 计算有效 CAN 波特率 (bps)
-///
-/// - 若 `override_bps` 为 Some(n) 且 n > 0, 使用 n (手动覆盖)
-/// - 否则尝试从指定设备节点的配置读取
-/// - 都没有则返回 500_000 (默认值, 避免前端传 0 导致除零)
-async fn resolve_can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>) -> u32 {
-    let transport_bps = extract_can_bitrate_from_transport(state, node_id).await;
-    resolve_can_bitrate_choice(override_bps, transport_bps)
-}
-
 /// 获取 CAN 负载统计快照
 ///
 /// `node_id`: 用于自动解析波特率的设备节点 id
@@ -47,7 +13,7 @@ pub async fn get_can_load_stats(
     node_id: String,
     bitrate_bps: Option<u32>,
 ) -> Result<CanLoadSnapshot> {
-    let bitrate = resolve_can_bitrate(&state, &node_id, bitrate_bps).await;
+    let bitrate = app::can_bitrate_bps(&state, &node_id, bitrate_bps);
     let load_stats = state.can_load_stats.lock();
     Ok(load_stats.snapshot(bitrate))
 }
@@ -76,19 +42,8 @@ pub async fn get_current_can_bitrate(
     state: State<'_, AppState>,
     node_id: String,
 ) -> Result<(u32, String)> {
-    let manager = &state.transport;
-    if let Some(cfg) = manager.config(&node_id) {
-        match cfg {
-            data_model::TransportConfig::Slcan(s) => {
-                return Ok((s.can_bitrate.bps(), "slcan".to_string()));
-            }
-            data_model::TransportConfig::CandleLight(c) => {
-                return Ok((c.can_bitrate.bps(), "candle".to_string()));
-            }
-            _ => {}
-        }
-    }
-    Ok((500_000, "default".to_string()))
+    let (bps, source) = app::can_bitrate_with_source(&state, &node_id);
+    Ok((bps, source.to_string()))
 }
 
 /// 导出 CAN 负载统计为 CSV 文件
@@ -111,7 +66,7 @@ pub async fn export_can_load_csv(
 ) -> Result<String> {
     use std::io::Write;
 
-    let bitrate = resolve_can_bitrate(&state, &node_id, bitrate_bps).await;
+    let bitrate = app::can_bitrate_bps(&state, &node_id, bitrate_bps);
     let snap = state.can_load_stats.lock().snapshot(bitrate);
 
     // 生成时间戳 (本地时间, 不依赖 chrono)
@@ -335,32 +290,6 @@ mod tests {
                 }],
             }],
         }
-    }
-
-    // ---- 波特率决策优先级 ----
-
-    #[test]
-    fn override_bitrate_wins_over_transport() {
-        assert_eq!(
-            resolve_can_bitrate_choice(Some(1_000_000), Some(500_000)),
-            1_000_000
-        );
-    }
-
-    #[test]
-    fn zero_override_falls_through_to_transport() {
-        assert_eq!(resolve_can_bitrate_choice(Some(0), Some(250_000)), 250_000);
-    }
-
-    #[test]
-    fn transport_config_used_when_no_override() {
-        assert_eq!(resolve_can_bitrate_choice(None, Some(250_000)), 250_000);
-    }
-
-    #[test]
-    fn default_500k_prevents_division_by_zero() {
-        assert_eq!(resolve_can_bitrate_choice(None, None), 500_000);
-        assert_eq!(resolve_can_bitrate_choice(Some(0), None), 500_000);
     }
 
     // ---- CSV 格式化 ----

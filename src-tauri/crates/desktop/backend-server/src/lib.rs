@@ -1,0 +1,154 @@
+//! # backend-server
+//!
+//! Web 出口组合根 — 把 [`control_api`] 的能力与 [`backend_host`] 的装配暴露为
+//! HTTP-RPC + WebSocket, 供浏览器前端 (以及指向远端实例的桌面壳) 使用。
+//!
+//! 与其它出口的关系 (见 `docs/architecture/exits.md` 与
+//! `docs/architecture/web-exit.md`):
+//!
+//! ```text
+//! 浏览器 ──HTTP/WS──► backend-server ──► rpc-api ──► control-api / app
+//! 桌面   ──IPC─────► src-tauri/src/commands ──┘
+//! 脚本   ──argv────► backend-cli ────────────┘
+//! ```
+//!
+//! 三个出口共用同一份能力核心与同一份装配; 本 crate 只做协议适配 (帧编解码、
+//! 鉴权、静态站点、订阅生命周期), 不承载业务判断。
+
+pub mod config;
+pub mod frames;
+pub mod http;
+pub mod session;
+pub mod sink;
+
+use std::net::IpAddr;
+use std::sync::Arc;
+use std::sync::atomic::AtomicU32;
+
+use backend_host::BackendHost;
+use tokio::sync::broadcast;
+
+pub use config::{DEFAULT_HTTP_PORT, ServerConfig};
+pub use frames::{Capabilities, PROTOCOL_VERSION};
+pub use sink::{BroadcastEventSink, OutFrame, WsStreamSink};
+
+/// 事件广播缓冲深度 — 单连接落后超过此值即丢帧并告警 (显示订阅走独立通道,
+/// 不受影响)。
+const EVENT_CHANNEL_CAPACITY: usize = 4096;
+
+/// 服务运行期共享状态。
+pub struct ServerState {
+    /// 已装配后端宿主 (能力与状态切片)。
+    pub host: Arc<BackendHost>,
+    /// 出口配置。
+    pub config: ServerConfig,
+    /// 全局事件广播发送端 — [`BroadcastEventSink`] 持有同一发送端。
+    pub broadcast: broadcast::Sender<frames::ServerMessage>,
+    /// 进程级订阅 id 分配器 (与 `app::display` 的全局订阅表同一命名空间)。
+    pub next_subscription_id: Arc<AtomicU32>,
+}
+
+impl ServerState {
+    /// 出口能力清单 — 由 `rpc-api` 的命令分类派生, 不手工维护第二份。
+    pub fn capabilities(&self) -> Capabilities {
+        Capabilities {
+            supported: rpc_api::catalog::SUPPORTED
+                .iter()
+                .map(|cmd| (*cmd).to_string())
+                .collect(),
+            pending: rpc_api::catalog::PENDING
+                .iter()
+                .map(|cmd| (*cmd).to_string())
+                .collect(),
+            desktop_only: rpc_api::catalog::DESKTOP_ONLY
+                .iter()
+                .map(|cmd| (*cmd).to_string())
+                .collect(),
+            protocol: PROTOCOL_VERSION,
+        }
+    }
+}
+
+/// 启动服务直至收到退出信号 (Ctrl-C / SIGTERM)。
+///
+/// 顺序与其它宿主一致: 装配 (含工作区恢复与录制启动) → 可选进程内 MCP →
+/// HTTP/WS 监听 → 信号 → 优雅收尾 (停录制 + flush 工作区)。
+///
+/// # Errors
+/// 装配失败、端口占用或 MCP 启动失败时返回原因。
+pub async fn serve(config: ServerConfig) -> Result<(), String> {
+    let (broadcast, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
+    let sink = BroadcastEventSink::handle(&broadcast);
+    let host = Arc::new(
+        backend_host::assemble(config.config_dir.clone(), config.restore_workspace, sink).await?,
+    );
+
+    let mut mcp = match config.mcp_port {
+        Some(port) => Some(
+            mcp_server::start(host.toolbox.clone(), host.sink.clone(), port)
+                .await
+                .map_err(|error| error.to_string())?,
+        ),
+        None => None,
+    };
+    if let Some(handle) = &mcp {
+        log::info!("MCP server 已随 Web 出口启动: 端口 {}", handle.port);
+    }
+
+    let listener = tokio::net::TcpListener::bind((config.bind, config.http_port))
+        .await
+        .map_err(|error| format!("监听 {}:{} 失败: {error}", config.bind, config.http_port))?;
+    let actual_port = listener
+        .local_addr()
+        .map_or(config.http_port, |address| address.port());
+
+    let state = Arc::new(ServerState {
+        host: host.clone(),
+        config: config.clone(),
+        broadcast,
+        next_subscription_id: Arc::new(AtomicU32::new(0)),
+    });
+    log::info!("Web 出口已监听: http://{}:{actual_port}", config.bind);
+    if !config.is_loopback() {
+        log::info!(
+            "非 loopback 绑定 — 客户端需携带访问令牌 (LISSIO_TOKEN 或配置目录的 {})",
+            config::TOKEN_FILE_NAME
+        );
+    }
+
+    let app = http::router(state);
+    let served = axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await;
+    log::info!("Web 出口停止监听, 正在收尾");
+    if let Some(handle) = mcp.as_mut() {
+        handle.stop();
+    }
+    backend_host::teardown(&host);
+    served.map_err(|error| format!("HTTP 服务退出异常: {error}"))
+}
+
+/// 退出信号 — Ctrl-C 或 SIGTERM (容器/服务管理器的主流停止方式)。
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        let _ = tokio::signal::ctrl_c().await;
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => log::warn!("SIGTERM 监听不可用: {error}"),
+        }
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+    tokio::select! {
+        () = ctrl_c => {}
+        () = terminate => {}
+    }
+}
+
+/// 默认监听地址 — 供二进制入口复用。
+pub const DEFAULT_BIND: IpAddr = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
