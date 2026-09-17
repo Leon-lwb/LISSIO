@@ -61,6 +61,7 @@ pub const SUPPORTED: &[&str] = &[
     "disconnect_edge",
     "workspace_get",
     "workspace_set_tabs",
+    "get_graph_hir",
     // 流水线与运行控制
     "set_pipeline_config",
     "get_pipeline_config",
@@ -99,6 +100,8 @@ pub const SUPPORTED: &[&str] = &[
     "clear_can_load_stats",
     "get_current_can_bitrate",
     "match_trigger_command",
+    // 帧解码器手动测试 (纯预览计算, 无状态)
+    "parse_frame_decoder_input",
     // 录制
     "get_recording_health",
     "list_recording_sessions",
@@ -125,10 +128,6 @@ pub const PENDING: &[&str] = &[
     // 文件产物 (需要 Web 侧下载端点)
     "export_waveform_csv",
     "export_can_load_csv",
-    // 图 HIR 查询
-    "get_graph_hir",
-    // 帧解码器手动测试
-    "parse_frame_decoder_input",
     // AI 对话 / 会话 / MCP / 密钥
     "ai_list_providers",
     "ai_chat_send",

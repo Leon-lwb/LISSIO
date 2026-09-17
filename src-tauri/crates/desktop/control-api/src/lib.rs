@@ -15,6 +15,8 @@
 
 pub mod control;
 pub mod data;
+pub mod frame_decoder;
+pub mod graph_hir;
 pub mod recording;
 pub mod toolbox;
 pub mod tools;

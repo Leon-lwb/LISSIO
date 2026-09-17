@@ -212,6 +212,15 @@ pub async fn disconnect_edge(
     domain(removed)
 }
 
+/// 读取指定 tab 的 HIR 视图 (编译产物投影, 供 `compile-results` Tab 渲染)。
+///
+/// 实现体在 [`control_api::graph_hir`] (L3), 与桌面 IPC 的 `get_graph_hir`
+/// 是同一份实现 (P3 下沉); 编译未完成时返回空表而不是错误。
+pub fn get_graph_hir(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
+    let tab_id: String = required(args, cmd, "tab_id")?;
+    encode(&control_api::graph_hir::graph_hir(state(host), &tab_id))
+}
+
 /// 读取工作区水合快照 (`null` = 无持久化工作区)。
 pub async fn workspace_get(host: &BackendHost) -> Result<Value, RpcError> {
     encode(&app::workspace_snapshot(state(host)).await)

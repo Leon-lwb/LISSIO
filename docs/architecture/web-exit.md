@@ -280,8 +280,8 @@ reject)。帧级错误没有归属, 省略该字段。
 | **文件产物与桌面专有** | | |
 | `export_waveform_csv` | 🕓 待接入 | 服务端文件路径语义 → 需 `/api/v1/download/{token}` (P3) |
 | `export_can_load_csv` | 🕓 待接入 | 同上 (P3) |
-| `get_graph_hir` | 🕓 待接入 | 图 HIR 查询, 按需接入 (P3) |
-| `parse_frame_decoder_input` | 🕓 待接入 | 纯预览计算, 实现体较长, P3 与 IPC 路径同步下沉 |
+| `get_graph_hir` | ✅ 已接入 | 投影实现下沉 `control-api::graph_hir`, 与 IPC 共用 |
+| `parse_frame_decoder_input` | ✅ 已接入 | 实现体下沉 `control-api::frame_decoder`, 与 IPC 共用 |
 | `inspect_element` | 🖥 桌面专有 | 打开 webview 开发者工具 |
 | `set_window_acrylic` | 🖥 桌面专有 | 窗口毛玻璃 (平台 API) |
 | `show_main_window` | 🖥 桌面专有 | 窗口显示 (启动页时序) |

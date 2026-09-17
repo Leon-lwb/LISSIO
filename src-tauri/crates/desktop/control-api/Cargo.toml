@@ -12,6 +12,8 @@ workspace = true
 kind = { workspace = true }
 acquisition = { workspace = true }
 points = { workspace = true }
+# graph_hir 测试构造 Protocol 节点需要 ProtocolConfig
+schema_types = { workspace = true }
 pipeline = { workspace = true }
 app = { workspace = true }
 graph_ops = { workspace = true }
@@ -27,6 +29,12 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
+# graph_hir 投影: 直接遍历 TypedGraph (CompiledGraph.hir 的 petgraph 图)
+petgraph = { workspace = true }
+
+[dev-dependencies]
+# graph_hir 测试构造 Transport 节点 (dev-only, 架构门禁要求非生产依赖)
+graph_testkit = { workspace = true }
 
 [package.metadata.lissio]
 domain = "desktop"

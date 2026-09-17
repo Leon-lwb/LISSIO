@@ -21,6 +21,7 @@ mod acquisition;
 mod buffer;
 mod data;
 mod devices;
+mod frame_decoder;
 mod graph;
 mod pipeline;
 mod recording;
@@ -93,6 +94,7 @@ pub async fn dispatch(host: &BackendHost, cmd: &str, args: Value) -> Result<Valu
         "disconnect_edge" => graph::disconnect_edge(host, cmd, &args).await,
         "workspace_get" => graph::workspace_get(host).await,
         "workspace_set_tabs" => graph::workspace_set_tabs(host, cmd, &args),
+        "get_graph_hir" => graph::get_graph_hir(host, cmd, &args),
 
         // ===== 流水线与运行控制 =====
         "set_pipeline_config" => pipeline::set_pipeline_config(host, cmd, &args),
@@ -133,6 +135,9 @@ pub async fn dispatch(host: &BackendHost, cmd: &str, args: Value) -> Result<Valu
         "clear_can_load_stats" => data::clear_can_load_stats(host),
         "get_current_can_bitrate" => data::get_current_can_bitrate(host, cmd, &args),
         "match_trigger_command" => data::match_trigger_command(cmd, &args),
+
+        // ===== 帧解码器手动测试 (纯预览计算) =====
+        "parse_frame_decoder_input" => frame_decoder::parse_frame_decoder_input(cmd, &args),
 
         // ===== 录制 =====
         "get_recording_health" => recording::health(host),
