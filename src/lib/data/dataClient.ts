@@ -1,5 +1,5 @@
-import { Channel, invoke } from '@tauri-apps/api/core';
-import { closeTauriChannel } from '../tauri/tauri';
+import { transport } from '../rpc';
+import type { SubscriptionHandle } from '../rpc/types';
 import {
   decodeSampleEnvelope,
   type DecodedSampleBatch,
@@ -22,7 +22,7 @@ interface Entry {
   key: string;
   sourceNodeId: string;
   sourceHandle: string;
-  channel: Channel<ArrayBuffer> | null;
+  subscription: SubscriptionHandle | null;
   listeners: Set<() => void>;
   snapshot: PortSampleSnapshot;
   generation: number;
@@ -138,13 +138,18 @@ function updateEntry(
     };
   }
   for (const listener of entry.listeners) listener();
-  if (batch && entry.channel) {
-    void invoke('ack_data', {
-      subscriptionId: entry.channel.id,
-      sequence: batch.sequence,
-      bufferedBytes: batch.byteLength,
-      renderMs: elapsedMs + performance.now() - start,
-    });
+  // 背压反馈: 订阅 id 由出口分配, 但流帧到达时必定已就绪 (见 SubscriptionHandle.id)
+  const subscriptionId = entry.subscription?.id;
+  if (batch && subscriptionId != null) {
+    // 反馈失败不影响渲染 — 后端只把它当节流参考
+    void transport
+      .call('ack_data', {
+        subscriptionId,
+        sequence: batch.sequence,
+        bufferedBytes: batch.byteLength,
+        renderMs: elapsedMs + performance.now() - start,
+      })
+      .catch(() => undefined);
   }
 }
 
@@ -199,7 +204,7 @@ function enqueueDecode(entry: Entry, job: DecodeJob) {
 }
 
 function start(entry: Entry) {
-  if (entry.channel || entry.startingGeneration !== null) return;
+  if (entry.subscription || entry.startingGeneration !== null) return;
   const generation = entry.generation + 1;
   entry.generation = generation;
   entry.startingGeneration = generation;
@@ -208,50 +213,45 @@ function start(entry: Entry) {
     ...EMPTY_SNAPSHOT,
     version: entry.snapshot.version + 1,
   };
-  const channel = new Channel<ArrayBuffer>();
-  entry.channel = channel;
-  channel.onmessage = (message) => {
-    if (entry.generation !== generation || entry.channel !== channel) return;
-    const buffer = normalizeBuffer(message);
-    enqueueDecode(entry, { buffer, generation, receivedAt: performance.now() });
-  };
-  void invoke('subscribe_data', {
-    request: {
+  const subscription = transport.subscribe<ArrayBuffer>(
+    {
       kind: 'port_samples',
       source_node_id: entry.sourceNodeId,
       source_handle: entry.sourceHandle,
     },
-    onEvent: channel,
-    intervalMs: 17,
-    maxItems: MAX_PREVIEW_ROWS,
-  })
-    .catch((error: unknown) => {
-      if (entry.generation === generation) {
-        updateEntry(entry, undefined, String(error));
-      }
-    })
-    .finally(() => {
-      if (entry.startingGeneration === generation) {
-        entry.startingGeneration = null;
-      }
-      if (
-        entry.generation !== generation ||
-        entry.channel !== channel ||
-        entry.listeners.size === 0
-      ) {
-        void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
-      }
-      if (entry.listeners.size > 0 && !entry.channel) start(entry);
-    });
+    (message) => {
+      if (entry.generation !== generation || entry.subscription !== subscription) return;
+      const buffer = normalizeBuffer(message);
+      enqueueDecode(entry, { buffer, generation, receivedAt: performance.now() });
+    },
+    {
+      intervalMs: 17,
+      maxItems: MAX_PREVIEW_ROWS,
+      onError: (error) => {
+        if (entry.generation === generation) {
+          updateEntry(entry, undefined, String(error));
+        }
+      },
+    },
+  );
+  entry.subscription = subscription;
+  // 建立是异步的: 期间可能被 stop() 取消, 也可能有新的监听者挂上来。
+  // 取消由出口负责注销, 这里只需在建立结束后收回守卫并按需重订。
+  void subscription.settled.then(() => {
+    if (entry.startingGeneration === generation) {
+      entry.startingGeneration = null;
+    }
+    if (entry.listeners.size > 0 && !entry.subscription) start(entry);
+  });
 }
 
 function stop(entry: Entry) {
   entry.generation++;
   entry.startingGeneration = null;
   entry.pendingDecode = null;
-  const channel = entry.channel;
-  entry.channel = null;
-  if (channel) void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
+  const subscription = entry.subscription;
+  entry.subscription = null;
+  subscription?.cancel();
 }
 
 export interface PortSampleStore {
@@ -276,7 +276,7 @@ export function getPortSampleStore(
       key,
       sourceNodeId,
       sourceHandle,
-      channel: null,
+      subscription: null,
       listeners: new Set(),
       snapshot: EMPTY_SNAPSHOT,
       generation: 0,

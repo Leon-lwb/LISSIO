@@ -42,7 +42,32 @@ pub enum ServerMessage {
         error: Option<Value>,
     },
     /// 协议级错误 (帧无法解析 / 订阅命令非法)。
-    Fault { message: String },
+    ///
+    /// `id` 只在"某条订阅建立失败"时出现 — 客户端据此把失败归到具体订阅
+    /// (其他协议级错误没有归属, 省略该字段)。
+    Fault {
+        message: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        id: Option<u32>,
+    },
+}
+
+impl ServerMessage {
+    /// 无归属的协议级错误。
+    pub fn fault(message: impl Into<String>) -> Self {
+        Self::Fault {
+            message: message.into(),
+            id: None,
+        }
+    }
+
+    /// 归属于某条订阅的建立失败 — 与桌面出口 `subscribe_data` 的 reject 同义。
+    pub fn subscription_fault(id: u32, message: impl Into<String>) -> Self {
+        Self::Fault {
+            message: message.into(),
+            id: Some(id),
+        }
+    }
 }
 
 /// 客户端 → 服务端消息。
@@ -145,7 +170,8 @@ pub fn encode_binary_frame(subscription_id: u32, payload: &[u8]) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::{
-        BINARY_FRAME_HEADER, BINARY_FRAME_VERSION, ClientMessage, RpcResponse, encode_binary_frame,
+        BINARY_FRAME_HEADER, BINARY_FRAME_VERSION, ClientMessage, RpcResponse, ServerMessage,
+        encode_binary_frame,
     };
     use serde_json::json;
 
@@ -186,5 +212,19 @@ mod tests {
             .expect("序列化应成功");
         assert!(err.get("result").is_none());
         assert_eq!(err["ok"], json!(false));
+    }
+
+    #[test]
+    fn fault_is_attributable_only_when_it_concerns_a_subscription() {
+        // 订阅建立失败: 客户端已先收到回执, 必须靠 id 把失败归到该订阅
+        let subscription = serde_json::to_value(ServerMessage::subscription_fault(9, "boom"))
+            .expect("序列化应成功");
+        assert_eq!(subscription["type"], json!("fault"));
+        assert_eq!(subscription["id"], json!(9));
+        assert_eq!(subscription["message"], json!("boom"));
+
+        // 帧级错误没有归属: 省略 id, 客户端只作日志
+        let plain = serde_json::to_value(ServerMessage::fault("bad frame")).expect("序列化应成功");
+        assert!(plain.get("id").is_none());
     }
 }

@@ -5,21 +5,21 @@
 //   1. src-tauri/src/lib.rs               generate_handler! 注册的 IPC 命令
 //   2. rpc-api/src/catalog.rs             SUPPORTED / PENDING / DESKTOP_ONLY / CHANNEL
 //   3. rpc-api/src/lib.rs                 dispatch 的 match 分支
-//   4. src/**/*.{ts,tsx}                  前端实际 invoke 的命令名
+//   4. src/**/*.{ts,tsx}                  前端实际调用 (transport.call / invoke) 的命令名
 //
 // 校验内容:
 //   A. 四个清单两两不相交, 且并集 = IPC 命令集合
 //   B. SUPPORTED 中每条命令都有对应的 dispatch 分支
-//   C. 前端 invoke 的每个命令名都在 IPC 集合内 (拼写漂移)
-//   D. 前端 invoke 的命令不得落在 DESKTOP_ONLY 之外的未接入集合里而不被察觉
+//   C. 前端调用的每个命令名都在 IPC 集合内 (拼写漂移)
+//   D. 前端已在用的命令不得落在未接入集合里而不被察觉
 //      (未接入只告警, 不阻断 —— 它们由 /api/v1/capabilities 暴露给前端降级)
+//   E. 出口封装: 除 src/lib/rpc/ 外不得直接使用 Tauri IPC —— 否则前端又绑回宿主,
+//      Web 出口静默失效
 
 import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
-const tauriRoot = path.join(root, 'src-tauri');
-const rpcApi = path.join(tauriRoot, 'crates/desktop/rpc-api/src');
 
 const errors = [];
 const warnings = [];
@@ -74,9 +74,17 @@ function dispatchedCommands() {
   return new Set([...block.matchAll(/^\s{8}"([a-z_0-9]+)"\s*=>/gm)].map((m) => m[1]));
 }
 
-/** 前端静态 invoke 字面量。 */
-function frontendInvocations() {
-  const found = new Set();
+/** 去掉注释 — 文档里引用 `invoke('cmd')` 不是真的调用。
+ *  前置字符判据避免把字符串里的 `http://` 当成行注释。 */
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
+}
+
+/** 前端源码文件 — 排除测试与出口实现本身 (出口是唯一允许直连 Tauri 的地方)。 */
+function frontendFiles() {
+  const files = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const absolute = path.join(dir, entry.name);
@@ -86,21 +94,52 @@ function frontendInvocations() {
         continue;
       }
       if (!/\.tsx?$/.test(entry.name)) continue;
-      if (/__tests__|\.test\.|\.spec\./.test(absolute)) continue;
-      const source = fs.readFileSync(absolute, 'utf8');
-      for (const match of source.matchAll(/\binvoke(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g)) {
-        found.add(match[1]);
-      }
+      if (/__tests__|[\\/]test[\\/]|\.test\.|\.spec\./.test(absolute)) continue;
+      if (absolute.includes(path.join('lib', 'rpc'))) continue;
+      files.push(absolute);
     }
   };
   walk(path.join(root, 'src'));
+  return files;
+}
+
+/** 前端静态命令名 — 出口无关的 `transport.call` 与历史 `invoke` 两种写法。 */
+function frontendInvocations() {
+  const patterns = [
+    /\binvoke(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g,
+    /\btransport\.call(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g,
+  ];
+  const found = new Set();
+  for (const absolute of frontendFiles()) {
+    const source = stripComments(fs.readFileSync(absolute, 'utf8'));
+    for (const pattern of patterns) {
+      for (const match of source.matchAll(pattern)) found.add(match[1]);
+    }
+  }
   return found;
+}
+
+/** 出口泄漏 — src/lib/rpc/ 之外直接使用 Tauri IPC 的位置。 */
+function transportLeaks() {
+  const leaks = [];
+  for (const absolute of frontendFiles()) {
+    const source = stripComments(fs.readFileSync(absolute, 'utf8'));
+    const relative = path.relative(root, absolute);
+    if (/from '@tauri-apps\/api\/(core|event)'/.test(source)) {
+      leaks.push(`${relative} 直接 import @tauri-apps/api/(core|event)`);
+    }
+    for (const match of source.matchAll(/(?<![.\w])(invoke|listen)(?:<[^>]*>)?\(/g)) {
+      leaks.push(`${relative} 直接调用 ${match[1]}()`);
+    }
+  }
+  return leaks;
 }
 
 const ipc = new Set(ipcCommands());
 const lists = catalog();
 const dispatched = dispatchedCommands();
 const frontend = frontendInvocations();
+const leaks = transportLeaks();
 
 // A. 清单互补性与不相交
 const seen = new Map();
@@ -132,7 +171,7 @@ for (const cmd of dispatched) {
   }
 }
 
-// C. 前端 invoke 名必须在 IPC 集合内
+// C. 前端调用的命令名必须在 IPC 集合内
 for (const cmd of frontend) {
   if (!ipc.has(cmd)) {
     errors.push(`前端调用了未注册的 IPC 命令: ${cmd}`);
@@ -149,13 +188,19 @@ if (notOnWeb.length) {
   );
 }
 
+// E. 出口封装 —— 前端只能经 src/lib/rpc/ 触达后端
+for (const leak of leaks) {
+  errors.push(`出口泄漏 (应经 src/lib/rpc/): ${leak}`);
+}
+
 const summary = [
   `IPC 命令 ${ipc.size} 条`,
   `SUPPORTED ${lists.SUPPORTED.length}`,
   `PENDING ${lists.PENDING.length}`,
   `DESKTOP_ONLY ${lists.DESKTOP_ONLY.length}`,
   `CHANNEL ${lists.CHANNEL.length}`,
-  `前端 invoke ${frontend.size}`,
+  `前端调用 ${frontend.size}`,
+  `出口泄漏 ${leaks.length}`,
 ].join(' / ');
 
 if (warnings.length) {

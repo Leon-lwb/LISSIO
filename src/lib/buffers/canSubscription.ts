@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
 import type {
   CanFrameBatch,
   CanFrame,
@@ -64,7 +64,7 @@ export function sendCanFrame(
   frame: CanFrame,
   protocolNode?: string | null,
 ): Promise<void> {
-  return invoke('send_can_frame', {
+  return transport.call('send_can_frame', {
     nodeId,
     protocolNode: protocolNode ?? null,
     frame,
@@ -73,10 +73,10 @@ export function sendCanFrame(
 
 /// 清空 CAN 帧缓冲区
 export function clearCanBuffer(): Promise<void> {
-  return invoke('clear_can_buffer');
+  return transport.call('clear_can_buffer');
 }
 
 /// 列举所有 candleLight USB 设备
 export function listCandleDevices(): Promise<CandleDeviceInfo[]> {
-  return invoke('list_candle_devices');
+  return transport.call('list_candle_devices');
 }

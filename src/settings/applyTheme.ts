@@ -4,7 +4,7 @@
 //! 亚克力背景开启时, 在主题应用后把背景类 token 转为半透明 rgba,
 //! 并通知原生窗口启用系统毛玻璃效果。
 
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../lib/rpc';
 import type { AppSettings } from './defaults';
 import { applyTheme, getCssVariableName, resolveActiveTheme, getBuiltInCssTheme, type ThemeToken } from './theme';
 import { loadCssTheme } from './css-theme-loader';
@@ -80,7 +80,7 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
     delete root.dataset.acrylic;
   }
   // 纯浏览器 dev 环境无 Tauri 后端, 调用失败时静默忽略
-  invoke('set_window_acrylic', { enabled: acrylic }).catch(() => { return undefined; });
+  transport.call('set_window_acrylic', { enabled: acrylic }).catch(() => { return undefined; });
 
   // Widget 卡片亚克力参数 (与窗口共用 acrylicOpacity, 视觉统一):
   // 关键: alpha 必须显著低于 100% 才能看到背后内容 (毛玻璃核心), blur 必须 > 0

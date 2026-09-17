@@ -129,12 +129,7 @@ async fn handle_text(
     let message = match serde_json::from_str::<ClientMessage>(text) {
         Ok(message) => message,
         Err(error) => {
-            send_message(
-                out_tx,
-                ServerMessage::Fault {
-                    message: format!("帧解析失败: {error}"),
-                },
-            );
+            send_message(out_tx, ServerMessage::fault(format!("帧解析失败: {error}")));
             return;
         }
     };
@@ -173,9 +168,7 @@ async fn subscribe(
         Err(error) => {
             send_message(
                 out_tx,
-                ServerMessage::Fault {
-                    message: format!("订阅参数无效: {error}"),
-                },
+                ServerMessage::fault(format!("订阅参数无效: {error}")),
             );
             return;
         }
@@ -198,13 +191,12 @@ async fn subscribe(
     )
     .await
     {
-        // 连接仍在, 但该 id 不会产出数据 — 显式撤销登记, 避免断连时重复注销
+        // 连接仍在, 但该 id 不会产出数据 — 显式撤销登记, 避免断连时重复注销。
+        // 回执已先发出 (客户端据此登记分流表), 因此失败必须带上 id 才能归位。
         active.remove(&id);
         send_message(
             out_tx,
-            ServerMessage::Fault {
-                message: format!("订阅失败 (id={id}): {error}"),
-            },
+            ServerMessage::subscription_fault(id, format!("订阅失败: {error}")),
         );
     }
 }

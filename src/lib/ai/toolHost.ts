@@ -10,8 +10,7 @@
 //! 编译失败 (端口域不匹配/成环) 直接报错且不建边,画布经 `graph:source`
 //! 事件收敛 (见 appStoreHelpers.adoptSourceGraph)。
 
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
 import { useAppStore } from '../../store/appStore';
 import type { Node } from '@xyflow/react';
 import { createWidget } from '../utils/widgetDefaults';
@@ -354,20 +353,19 @@ let started = false;
 export function initAiToolHost(): void {
   if (started) return;
   started = true;
-  void listen<AiToolInvoke>('ai_tool_invoke', (event) => {
-    const { call_id, name, arguments: args } = event.payload;
+  void transport.listen<AiToolInvoke>('ai_tool_invoke', ({ call_id, name, arguments: args }) => {
     void (async () => {
       const handler = HANDLERS[name];
       try {
         if (!handler) throw new Error(`前端未实现工具: ${name}`);
         const result = await handler(args ?? {});
-        await invoke('ai_tool_resolve', {
+        await transport.call('ai_tool_resolve', {
           callId: call_id,
           ok: true,
           result: result ?? { ok: true },
         });
       } catch (e) {
-        await invoke('ai_tool_resolve', {
+        await transport.call('ai_tool_resolve', {
           callId: call_id,
           ok: false,
           result: e instanceof Error ? e.message : String(e),

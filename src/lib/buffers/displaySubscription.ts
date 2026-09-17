@@ -1,5 +1,4 @@
-import { invoke, Channel } from '@tauri-apps/api/core';
-import { closeTauriChannel } from '../tauri/tauri';
+import { transport } from '../rpc';
 import { tickMetric, perfEvent } from '../utils/perfLog';
 
 export type DisplayKind =
@@ -18,7 +17,7 @@ export interface DisplayEvent<T> {
   payload: T;
 }
 
-/// 显示数据统一订阅入口 — 每个逻辑订阅一个 Tauri Channel。
+/// 显示数据统一订阅入口 — 每个逻辑订阅一路后端有序流。
 /// 后端 Actor 保证事件顺序, 推送按 intervalMs 节流; kind 不符的消息视为契约破坏并报错。
 export function subscribeDisplay<T>(
   request: Record<string, unknown>,
@@ -26,8 +25,6 @@ export function subscribeDisplay<T>(
   sink: (value: T) => void,
   options?: { intervalMs?: number; maxItems?: number },
 ): { cancel: () => void } {
-  let cancelled = false;
-
   // 调试: 统计该订阅的消息速率 (payload 字节由各订阅包装补充)
   const countedSink = (event: DisplayEvent<T>) => {
     if (event.kind !== expectedKind) {
@@ -41,28 +38,8 @@ export function subscribeDisplay<T>(
   };
   perfEvent(`subscribe display:${expectedKind}`);
 
-  const channel = new Channel<DisplayEvent<T>>();
-  channel.onmessage = countedSink;
-
-  void (async () => {
-    try {
-      await invoke('subscribe_data', {
-        request,
-        onEvent: channel,
-        ...options,
-      });
-      if (cancelled) {
-        void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
-      }
-    } catch (e) {
-      console.error(`显示订阅失败 (${expectedKind}):`, e);
-    }
-  })();
-
-  return {
-    cancel: () => {
-      cancelled = true;
-      void closeTauriChannel(channel, 'unsubscribe_data', channel.id);
-    },
-  };
+  return transport.subscribe<DisplayEvent<T>>(request, countedSink, {
+    ...options,
+    onError: (e) => console.error(`显示订阅失败 (${expectedKind}):`, e),
+  });
 }

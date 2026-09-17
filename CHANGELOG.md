@@ -6,6 +6,13 @@
 
 ### 新增
 
+- **前端出口解绑(P2)**:新增 `src/lib/rpc/` 把前端调用从 Tauri API 上解绑,一份 `dist/` 既跑桌面壳也跑浏览器
+  - `Transport` 契约(`call` / `listen` / `eventChannel` / `subscribe` / `onReconnect`)+ 两个实现:`tauriTransport`(invoke / listen / Channel)与 `httpTransport`(fetch + WebSocket + 订阅分流 + 重连 + 微批量)
+  - `tauri.ts` 的 88 个方法签名不变,内部改走 `transport.call`;显示订阅、事件监听、store 与工具宿主全部收口到 transport,~100 处调用点与 40+ 组件零改动
+  - 订阅建立失败经 `onError` 上报(Web 侧由新增的 `fault{id}` 归位),`settled` 表示在途建立结束,取消竞态在两个出口都不漏注销;`ack_data` 背压反馈在两侧都能拿到订阅 id
+  - Web 出口断线按 500ms→8s 退避重连,重连后按原顺序重订全部活跃流并触发重新水合(`workspace_get` / `get_source_graph` / `get_workspace_run_state`)
+  - 端点与令牌解析:`?server=`/`?token=` → localStorage → `VITE_LISSIO_SERVER`/`VITE_LISSIO_TOKEN` → 同源;查询参数写回 localStorage 后从地址栏摘除(令牌不进浏览器历史),反向代理路径前缀保留
+  - `pnpm check:web-contract` 新增"出口泄漏"门禁:除 `src/lib/rpc/` 外禁止 import `@tauri-apps/api/{core,event}` 或直接调用 `invoke()`/`listen()`
 - **Web 出口(服务后端拆分)**:把服务后端从 Tauri 宿主中拆出为可独立运行的服务,前端一份构建既可跑在桌面壳也可跑在浏览器(设计见 `docs/architecture/web-exit.md`)
   - 新增 `rpc-api`(L4):出口无关的命令派发表——桌面 IPC 与 HTTP-RPC 拥有同一套命令名、参数名与错误契约;`catalog` 声明 `SUPPORTED`/`PENDING`/`DESKTOP_ONLY`/`CHANNEL` 四类能力边界
   - 新增 `backend-server`(L5)与二进制 `lissio-server`:axum HTTP-RPC + WebSocket 推送、Bearer 与子协议令牌鉴权、`/health` 与 `/capabilities`、可选内嵌 MCP 与静态站点托管;后端事件经 `BroadcastEventSink` 广播、显示流经 `WsStreamSink` 推送,二进制帧(`WWB1`/`VNDP`/`VENV`)加固定头部后原样透传
@@ -25,6 +32,7 @@
 
 ### 修复
 
+- **恢复完成门在无界面出口失效**:`AppState` 构造时丢弃初始 receiver,而 `backend-host::assemble` 在装配期同步发信号 —— `tokio::sync::watch::Sender::send` 在零接收者时不写入值,导致迟到的订阅者永远等不到 `changed()`。表现为 `lissio-server` / `backend-cli serve` 下 `workspace_get` 永久挂起(浏览器端无法水合工作区),且工作区防抖落盘循环空转(`workspace.json` 从不写出)。改用无条件写入的 `send_replace`,并补两条时序回归测试
 - `pipeline_soak` 长跑基准:生成器控制句柄被提前丢弃,导致生成任务立即退出并关闭广播通道,基准直接 panic;摄入停顿场景被无条件套用"零丢弃"断言,与它人为制造超预算突发补交的场景设计自相矛盾。现按场景表达契约(常规零丢弃,降级场景要求有界且逐帧可记账)
 - `scripts/bench-audit.sh` 整体失效:crate 改名后包名失配(旧名 `data_plane` / `app_state` / `engine`),且管道退出码取自 `tee` 使编译失败被判为通过;同时补入录制落盘与 Modbus 负载基准
 

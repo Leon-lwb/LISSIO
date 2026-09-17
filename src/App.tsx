@@ -1,8 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
 import { getVersion } from '@tauri-apps/api/app';
+import { transport } from './lib/rpc';
 import { Settings, Info, RefreshCw, PanelLeft } from 'lucide-react';
 import { ActivityBar } from './components/layout/ActivityBar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -177,12 +176,13 @@ function App() {
   // 消除"主窗口已显示但内容未绘制完成"的透明空白期; 超时兜底防 rAF 异常卡住启动页
   useEffect(() => {
     if (!settingsLoaded) return;
-    void invoke('show_main_window');
+    // 桌面专有 (窗口可见性/启动页时序): Web 出口未接入, 失败静默
+    void transport.call('show_main_window').catch(() => undefined);
     let closed = false;
     const closeSplash = () => {
       if (closed) return;
       closed = true;
-      void invoke('close_splashscreen');
+      void transport.call('close_splashscreen').catch(() => undefined);
     };
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => {
@@ -249,8 +249,7 @@ function App() {
   // 监听原生菜单事件 (menu:about / menu:settings / menu:new-tab / menu:close-tab / menu:toggle-sidebar)
   // 事件处理器内通过 getState() 读取最新状态, 避免订阅易变字段导致反复重订阅
   useEffect(() => {
-    const unlistenProm = listen<string>('menu-event', (event) => {
-      const id = event.payload;
+    const unlistenProm = transport.listen<string>('menu-event', (id) => {
       switch (id) {
         case 'menu:about':
           useSettingsStore.getState().openAbout();

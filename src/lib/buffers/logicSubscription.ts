@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
 import type { LogicSampleBatch, DecodedEventBatch } from '../../types';
 import { subscribeDisplay } from './displaySubscription';
 
@@ -58,15 +58,15 @@ export function subscribeDecodedEventsFiltered(
 export function getRecentLogicSamples(
   count: number,
 ): Promise<LogicSampleBatch> {
-  return invoke('get_recent_logic_samples', { count });
+  return transport.call('get_recent_logic_samples', { count });
 }
 
 /// 清空逻辑采样缓冲区
 export function clearLogicBuffer(): Promise<void> {
-  return invoke('clear_logic_buffer');
+  return transport.call('clear_logic_buffer');
 }
 
 /// 清空解码事件缓冲区
 export function clearDecodedBuffer(): Promise<void> {
-  return invoke('clear_decoded_buffer');
+  return transport.call('clear_decoded_buffer');
 }

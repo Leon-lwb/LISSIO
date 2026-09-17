@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
 import type { RawDataBatch, RawDataDirection } from '../../types';
 import { subscribeDisplay } from './displaySubscription';
 import { tickMetric } from '../utils/perfLog';
@@ -103,5 +103,5 @@ export function subscribeRawDataNodeFiltered(
 
 /// 清空后端原始数据收集器 (source = 字节设备节点 id；缺省清空全部源)
 export function clearRawDataBuffer(source?: string): Promise<void> {
-  return invoke('clear_raw_data_collector', { source: source ?? null });
+  return transport.call('clear_raw_data_collector', { source: source ?? null });
 }

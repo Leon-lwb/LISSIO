@@ -3,15 +3,14 @@
 //! 状态机: idle → checking → up-to-date / available → downloading → ready (待重启)
 //!        任意阶段失败 → error
 //! 后端契约:
-//! - invoke('check_update', { channel }) → { available, currentVersion, version, notes, date }
-//! - invoke('download_and_install_update') → void, 期间 emit update://progress, 完成 emit update://ready
+//! - transport.call('check_update', { channel }) → { available, currentVersion, version, notes, date }
+//! - transport.call('download_and_install_update') → void, 期间 emit update://progress, 完成 emit update://ready
 //! 取代原 useUpdater hook (React 局部状态无法支撑状态栏/弹窗/设置三处共享)
 
 import { create } from 'zustand';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
 import { getVersion } from '@tauri-apps/api/app';
 import { relaunch as processRelaunch } from '@tauri-apps/plugin-process';
+import { transport } from '../lib/rpc';
 import { useSettingsStore } from './settingsStore';
 
 export type UpdateStatus =
@@ -90,7 +89,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     set({ status: 'checking', lastTrigger: trigger, error: null });
     try {
       const channel = await resolveUpdateChannel();
-      const res = await invoke<CheckUpdateResult>('check_update', { channel });
+      const res = await transport.call<CheckUpdateResult>('check_update', { channel });
       if (res.available && res.version) {
         set({
           status: 'available',
@@ -119,17 +118,16 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
     set({ status: 'downloading', progress: 0, error: null });
     let unlisten: (() => void) | null = null;
     try {
-      unlisten = await listen<{ received: number; total: number | null }>(
+      unlisten = await transport.listen<{ received: number; total: number | null }>(
         'update://progress',
-        (event) => {
-          const { received, total } = event.payload;
+        ({ received, total }) => {
           // total 未知时保持不确定态 (进度条停在原值)
           if (total && total > 0) {
             set({ progress: Math.min(100, Math.round((received / total) * 100)) });
           }
         }
       );
-      await invoke('download_and_install_update');
+      await transport.call('download_and_install_update');
       // invoke resolve 与 update://ready 事件二者取先到 — 此处兜底
       if (get().status === 'downloading') {
         set({ status: 'ready', progress: 100 });
@@ -163,7 +161,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
 }));
 
 /// 后端安装完成事件 — 模块加载时注册一次 (store 与应用同生命周期, 无需清理)
-void listen('update://ready', () => {
+void transport.listen('update://ready', () => {
   if (useUpdateStore.getState().status === 'downloading') {
     useUpdateStore.setState({ status: 'ready', progress: 100 });
   }

@@ -4,13 +4,13 @@
 /// 而不是直接读 ReactFlow `rfEdges`.
 ///
 /// 数据流:
-/// - 组件挂载 / 切 tab: `fetchHir(tabId)` → `invoke('get_graph_hir')` → `hirByTab[tabId]`
+/// - 组件挂载 / 切 tab: `fetchHir(tabId)` → `transport.call('get_graph_hir')` → `hirByTab[tabId]`
 /// - 后端 `apply_tab_graph` 编译成功 → emit `graph:compile state=Ok` →
 ///   `events.ts` 监听器调 `get().fetchHir(tab_id)` 触发 refetch
 /// - 错误态 (state=error) **不** refetch — 保留上次成功 HIR,
 ///   错误详情由 `compile-errors` Tab 单独展示
 
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../../lib/rpc';
 import type { Edge } from '@xyflow/react';
 
 // ============ 类型 (mirror cmd_graph::hir_query::GraphHir, camelCase JSON) ============
@@ -66,7 +66,7 @@ export const createCompileHirSlice: AppSlice<CompileHirSlice> = (set, _get) => {
     fetchHir: async (tabId: string) => {
       set({ hirLoading: true });
       try {
-        const hir = await invoke<GraphHir>('get_graph_hir', { tabId });
+        const hir = await transport.call<GraphHir>('get_graph_hir', { tabId });
         set((s) => ({
           hirByTab: { ...s.hirByTab, [tabId]: hir },
           hirLoading: false,

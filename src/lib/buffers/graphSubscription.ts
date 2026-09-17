@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
 import type { SpectrumResult } from '../../types';
 import { subscribeDisplay } from './displaySubscription';
 
@@ -24,7 +24,7 @@ export function subscribeSpectrum(
 
 /// 设置输入控件当前值 (Knob/Slider/Button/Radio/Checkbox 拖动时调用)
 export function setInputValue(widgetId: string, value: number): Promise<void> {
-  return invoke('set_input_value', { widgetId, value });
+  return transport.call('set_input_value', { widgetId, value });
 }
 
 /// 提交 Custom widget 输出 (iframe 调用 ctx.send 后回传)
@@ -32,7 +32,7 @@ export function submitCustomOutput(
   widgetId: string,
   outputs: Record<string, number>
 ): Promise<void> {
-  return invoke('submit_custom_output', { widgetId, outputs });
+  return transport.call('submit_custom_output', { widgetId, outputs });
 }
 
 /// 字符串输出快照 — 与数值输出平行的字符串平面

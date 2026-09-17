@@ -1,4 +1,5 @@
-import { Channel, invoke } from '@tauri-apps/api/core';
+import { transport } from '../rpc';
+import type { EventChannel } from '../rpc/types';
 import type {
   AiAttachment,
   AiChatEvent,
@@ -40,9 +41,11 @@ import type {
   PointSample,
   PointWriteRequest,
   PointWriteResult,
+  PointDescriptor,
 } from '../../types';
 import { normalizeWaveformWindow } from '../buffers/dataBuffer';
 import type { GraphEdge } from '../utils/nodeDef';
+import type { NodeDocument } from '../nodes/document';
 import type { GraphDerivedPayload } from '../../store/slices/derived';
 import { clearRawDataBuffer } from '../buffers/rawDataSubscription';
 import { subscribeDisplay } from '../buffers/displaySubscription';
@@ -78,7 +81,7 @@ export interface WidgetRecordPayload {
 /// `graph:source` 事件 / get_source_graph 响应 — tab 权威源图
 /// (含 widget 配置记录与画布位置: 画布据此重建该 tab 完整视图)
 export interface GraphSourceEventPayload {
-  documents: import('../nodes/document').NodeDocument[];
+  documents: NodeDocument[];
   tab_id: string;
   version: number;
   edges: GraphEdge[];
@@ -106,37 +109,9 @@ export interface WorkspaceSnapshotPayload {
   data_tabs: DataTabMetaPayload[];
   graphs: {
     tab_id: string;
-    documents: import('../nodes/document').NodeDocument[];
+    documents: NodeDocument[];
     edges: GraphEdge[];
   }[];
-}
-
-/// 关闭 Tauri Channel 的完整流程:
-/// 1. 调用后端 unsubscribe 命令, 从订阅者列表移除 (停止 send)
-/// 2. 注销 JS 端回调 (cleanupCallback, 防止 callback id 残留)
-/// 3. 清空 onmessage handler
-///
-/// 必须先调用后端移除再注销 JS 回调, 否则后端在 send 时找不到回调 ID 会产生警告。
-export async function closeTauriChannel<T>(
-  channel: Channel<T>,
-  unsubscribeCmd?: string,
-  channelId?: number,
-): Promise<void> {
-  // 1. 通知后端移除 (如果在 HMR 期间后端已不可达, 忽略错误)
-  if (unsubscribeCmd && channelId != null) {
-    try {
-      await invoke(unsubscribeCmd, { channelId });
-    } catch {
-      // 后端可能已不可达 (HMR/重载), 忽略
-    }
-  }
-  // 2. 注销 JS 端回调
-  const ch = channel as unknown as { cleanupCallback?: () => void };
-  if (typeof ch.cleanupCallback === 'function') {
-    ch.cleanupCallback();
-  }
-  // 3. 清空 handler
-  channel.onmessage = () => { return undefined; };
 }
 
 /// 数据管道性能配置 (snake_case, 与后端 PipelineConfig 对应)
@@ -274,61 +249,61 @@ export interface TransportRxEvent {
 export const api = {
   // ===== 类型化采集适配器 =====
   describeAcquisitionPoints: (payload: DriverPayload) =>
-    invoke<import('../../types').PointDescriptor[]>('describe_acquisition_points', { payload }),
+    transport.call<PointDescriptor[]>('describe_acquisition_points', { payload }),
 
   listAdapterCapabilities: () =>
-    invoke<AdapterCapability[]>('list_adapter_capabilities'),
+    transport.call<AdapterCapability[]>('list_adapter_capabilities'),
 
   discoverAcquisitionEndpoints: (adapterId: string) =>
-    invoke<DiscoveredEndpoint[]>('discover_acquisition_endpoints', { adapterId }),
+    transport.call<DiscoveredEndpoint[]>('discover_acquisition_endpoints', { adapterId }),
 
   validateAdapterConfiguration: (payload: DriverPayload) =>
-    invoke<DriverPayload>('validate_adapter_configuration', { payload }),
+    transport.call<DriverPayload>('validate_adapter_configuration', { payload }),
 
   openAcquisitionEndpoint: (nodeId: string) =>
-    invoke<EndpointSnapshot>('open_acquisition_endpoint', { nodeId }),
+    transport.call<EndpointSnapshot>('open_acquisition_endpoint', { nodeId }),
 
   closeAcquisitionEndpoint: (endpointId: string) =>
-    invoke<void>('close_acquisition_endpoint', { endpointId }),
+    transport.call<void>('close_acquisition_endpoint', { endpointId }),
 
   listAcquisitionEndpoints: () =>
-    invoke<EndpointSnapshot[]>('list_acquisition_endpoints'),
+    transport.call<EndpointSnapshot[]>('list_acquisition_endpoints'),
 
   readAcquisitionPoints: (endpointId: string, pointIds: string[]) =>
-    invoke<PointReadResult>('read_acquisition_points', { endpointId, pointIds }),
+    transport.call<PointReadResult>('read_acquisition_points', { endpointId, pointIds }),
 
   subscribeAcquisitionPoints: (
     endpointId: string,
     pointIds: string[],
     acquisition: AcquisitionIntent,
-  ) => invoke<EffectiveSubscription>('subscribe_acquisition_points', {
+  ) => transport.call<EffectiveSubscription>('subscribe_acquisition_points', {
     endpointId,
     intent: { points: pointIds, acquisition },
   }),
 
   writeAcquisitionPoints: (endpointId: string, request: PointWriteRequest) =>
-    invoke<PointWriteResult>('write_acquisition_points', { endpointId, request }),
+    transport.call<PointWriteResult>('write_acquisition_points', { endpointId, request }),
 
   latestAcquisitionSamples: (endpointId: string) =>
-    invoke<PointSample[]>('latest_acquisition_samples', { endpointId }),
+    transport.call<PointSample[]>('latest_acquisition_samples', { endpointId }),
 
   // ===== 设备传输 (nodeId = 图中设备节点 id) =====
-  listPorts: () => invoke<PortInfo[]>('list_ports'),
+  listPorts: () => transport.call<PortInfo[]>('list_ports'),
 
   /// 打开传输连接; protocol 仅被 TestData 用作生成数据的线缆格式参考
   /// schema: 可选帧 schema (custom 且带 encode 块时 TestData 按 schema 编码)
   closeTransport: (nodeId: string) =>
-    invoke<void>('close_transport', { nodeId }),
+    transport.call<void>('close_transport', { nodeId }),
 
   sendRaw: (nodeId: string, data: number[]) =>
-    invoke<void>('send_raw', { nodeId, data }),
+    transport.call<void>('send_raw', { nodeId, data }),
 
   sendString: (nodeId: string, text: string) =>
-    invoke<void>('send_string', { nodeId, text }),
+    transport.call<void>('send_string', { nodeId, text }),
 
   /// TextOut 手动发送: 立即把图内当前文本发往该 TextOut 节点的目标 Transport
   sendTextOutNow: (nodeId: string) =>
-    invoke<void>('send_text_out_now', { nodeId }),
+    transport.call<void>('send_text_out_now', { nodeId }),
 
   /// protocolNode: Auto 编码所用的 Protocol 节点 id (Manual 模式可传 null)
   sendWidgetValue: (
@@ -337,7 +312,7 @@ export const api = {
     binding: WidgetBinding,
     value: number,
   ) =>
-    invoke<void>('send_widget_value', { nodeId, protocolNode, binding, value }),
+    transport.call<void>('send_widget_value', { nodeId, protocolNode, binding, value }),
 
   /// 运行时热更新传输节点的链路协议 (图/协议变化后推送, 无需重连)
   /// schema: 可选帧 schema (与 openTransport 语义一致)
@@ -348,7 +323,7 @@ export const api = {
     testDataConfig?:
       Extract<TransportConfig, { kind: 'TestData' }>['params'] | null,
   ) =>
-    invoke<void>('update_transport_protocol', {
+    transport.call<void>('update_transport_protocol', {
       nodeId,
       protocol,
       schema: schema ?? null,
@@ -357,7 +332,7 @@ export const api = {
 
   /// 协议回环: 发送字节并立即捕获指定 Protocol 节点的解析结果
   sendAndCapture: (nodeId: string, protocolNode: string, data: number[]) =>
-    invoke<LoopbackResult>('send_and_capture', {
+    transport.call<LoopbackResult>('send_and_capture', {
       nodeId,
       protocolNode,
       data,
@@ -369,7 +344,7 @@ export const api = {
     frame: CommandFrame,
     inputs: Record<string, number>,
   ) =>
-    invoke<{
+    transport.call<{
       bytes: number[] | null;
       error: string | null;
       per_block: number[][];
@@ -382,23 +357,23 @@ export const api = {
     frame: CommandFrame,
     inputs: Record<string, number>,
   ) =>
-    invoke<CommandSendOutcome>('send_command_frame', { widgetId, frame, inputs }),
+    transport.call<CommandSendOutcome>('send_command_frame', { widgetId, frame, inputs }),
 
   /// 注册/替换 Command widget 的后台自动发送任务 (空数组 = 注销该 widget)。
   /// 发送触发完全在 Rust 侧 — 前端不持有任何发送定时器
   setWidgetSendTasks: (widgetId: string, tasks: SendTaskRegistration[]) =>
-    invoke<number>('set_widget_send_tasks', { widgetId, tasks }),
+    transport.call<number>('set_widget_send_tasks', { widgetId, tasks }),
 
   /// 工作区运行控制 — start (启动/恢复) / pause / stop; 返回切换后快照
   workspaceRun: (action: RunAction) =>
-    invoke<RunSnapshot>('workspace_run', { action }),
+    transport.call<RunSnapshot>('workspace_run', { action }),
 
   /// 读取当前运行快照 (水合用, 无事件)
-  getWorkspaceRunState: () => invoke<RunSnapshot>('get_workspace_run_state'),
+  getWorkspaceRunState: () => transport.call<RunSnapshot>('get_workspace_run_state'),
 
   // ===== 协议 (nodeId = 图中 Protocol 节点 id) =====
   setProtocol: (nodeId: string, config: ProtocolConfig) =>
-    invoke<void>('set_protocol', { nodeId, config }),
+    transport.call<void>('set_protocol', { nodeId, config }),
 
   // ===== 波形缓冲区 (source = Protocol 节点 id) =====
   /// 订阅波形数据 — 后端 WWB1 二进制快照流 (TypedArray 零拷贝解码)
@@ -413,31 +388,28 @@ export const api = {
       endMs?: number;
       selection?: WaveformSeriesSelection;
     },
-  ) => {
+  ) : { cancel: () => void } => {
     perfEvent('subscribe display:waveform');
-    const channel = new Channel<ArrayBuffer>();
-    channel.onmessage = (buffer) => {
-      tickMetric('display:waveform');
-      onEvent(decodeWaveformWindow(buffer));
-    };
-    invoke('subscribe_data', {
-      request: {
+    const subscription = transport.subscribe<ArrayBuffer>(
+      {
         kind: 'waveform',
         source,
         start_ms: options?.startMs,
         end_ms: options?.endMs,
         selection: options?.selection,
       },
-      onEvent: channel,
-      intervalMs: options?.intervalMs,
-      maxItems: options?.maxPoints,
-    }).catch((e) => {
-      console.error('波形订阅失败:', e);
-    });
-    return {
-      cancel: () =>
-        void closeTauriChannel(channel, 'unsubscribe_data', channel.id),
-    };
+      (buffer) => {
+        tickMetric('display:waveform');
+        onEvent(decodeWaveformWindow(buffer));
+      },
+      {
+        intervalMs: options?.intervalMs,
+        maxItems: options?.maxPoints,
+        onError: (e) => console.error('波形订阅失败:', e),
+      },
+    );
+    // 与拆分前一致的返回形状 — 调用方只关心取消
+    return { cancel: subscription.cancel };
   },
 
   /// 订阅后端测量流 — 统计/周期在权威缓冲金字塔快照上计算 (JSON 推送)
@@ -464,7 +436,7 @@ export const api = {
     sharedY: boolean,
     currentVPerDiv: number[],
   ) =>
-    invoke<AutoSetSuggestion>('compute_waveform_autoset', {
+    transport.call<AutoSetSuggestion>('compute_waveform_autoset', {
       source,
       channels,
       derived,
@@ -473,7 +445,7 @@ export const api = {
     }),
 
   createWaveformSnapshot: (source: string) =>
-    invoke<{ snapshot_id: string; overview: WaveformWindowPayload }>(
+    transport.call<{ snapshot_id: string; overview: WaveformWindowPayload }>(
       'create_waveform_snapshot',
       { source },
     ).then((created) => ({
@@ -487,7 +459,7 @@ export const api = {
     endMs: number,
     maxPoints: number,
     selection: WaveformSeriesSelection,
-  ) => invoke<WaveformWindowPayload>('query_waveform_snapshot', {
+  ) => transport.call<WaveformWindowPayload>('query_waveform_snapshot', {
     snapshotId,
     startMs,
     endMs,
@@ -496,7 +468,7 @@ export const api = {
   }).then(normalizeWaveformWindow),
 
   releaseWaveformSnapshot: (snapshotId: string) =>
-    invoke<void>('release_waveform_snapshot', { snapshotId }),
+    transport.call<void>('release_waveform_snapshot', { snapshotId }),
 
   getWaveformRawRange: (
     source: string,
@@ -505,7 +477,7 @@ export const api = {
     endTimestampUs: number,
     maxRows: number,
     selection: WaveformSeriesSelection,
-  ) => invoke<WaveformWindowPayload>('get_waveform_raw_range', {
+  ) => transport.call<WaveformWindowPayload>('get_waveform_raw_range', {
     source,
     snapshotId,
     startTimestampUs,
@@ -521,7 +493,7 @@ export const api = {
     endTimestampUs: number,
     selection: WaveformSeriesSelection,
     path: string,
-  ) => invoke<number>('export_waveform_csv', {
+  ) => transport.call<number>('export_waveform_csv', {
     source,
     snapshotId,
     startTimestampUs,
@@ -530,19 +502,19 @@ export const api = {
     path,
   }),
 
-  clearBuffer: (source: string) => invoke<void>('clear_buffer', { source }),
+  clearBuffer: (source: string) => transport.call<void>('clear_buffer', { source }),
 
   setWaveformBufferCapacity: (source: string, maxPoints: number) =>
-    invoke<void>('set_waveform_buffer_capacity', { source, maxPoints }),
+    transport.call<void>('set_waveform_buffer_capacity', { source, maxPoints }),
 
   setRawDataBufferCapacity: (source: string, capacity: number) =>
-    invoke<void>('set_rawdata_buffer_capacity', { source, capacity }),
+    transport.call<void>('set_rawdata_buffer_capacity', { source, capacity }),
 
   setCanBufferCapacity: (capacity: number) =>
-    invoke<void>('set_can_buffer_capacity', { capacity }),
+    transport.call<void>('set_can_buffer_capacity', { capacity }),
 
   setLogicBufferCapacity: (capacity: number) =>
-    invoke<void>('set_logic_buffer_capacity', { capacity }),
+    transport.call<void>('set_logic_buffer_capacity', { capacity }),
 
   /// 清空后端原始数据收集器 (source = 字节设备节点 id；缺省清空全部源)
   clearRawDataBuffer: (source?: string) => clearRawDataBuffer(source),
@@ -555,50 +527,50 @@ export const api = {
   /// baseVersion: 乐观并发基线 (期间被其他写入方推进则返回 GraphVersionConflict)
   /// 编译失败 (循环/域不匹配等) 返回真实原因, 旧图保留
   /// 返回 `GraphDerivedPayload` — 本次图变化涉及的全部节点派生端口表 / 通道数 + 新版本号
-  updateTabGraph: (tabId: string, documents: import('../nodes/document').NodeDocument[], edges: GraphEdge[], baseVersion?: number | null) =>
-    invoke<GraphDerivedPayload>('update_tab_graph', { tabId, documents, edges, baseVersion: baseVersion ?? null }),
+  updateTabGraph: (tabId: string, documents: NodeDocument[], edges: GraphEdge[], baseVersion?: number | null) =>
+    transport.call<GraphDerivedPayload>('update_tab_graph', { tabId, documents, edges, baseVersion: baseVersion ?? null }),
 
   /// 上报节点画布位置 (拖拽结束时批量提交) — 轻量路径, 不触发编译
   setNodePositions: (positions: Record<string, PositionPayload>) =>
-    invoke<void>('set_node_positions', { positions }),
+    transport.call<void>('set_node_positions', { positions }),
 
   /// 读取工作区水合快照; null = 无持久化工作区 (全新安装, 前端走默认启动)
-  workspaceGet: () => invoke<WorkspaceSnapshotPayload | null>('workspace_get'),
+  workspaceGet: () => transport.call<WorkspaceSnapshotPayload | null>('workspace_get'),
 
   /// 提交 tab 元数据 (控件 tab + 数据面板 tab) — 增删/改名/重排后整表覆盖
   workspaceSetTabs: (tabs: TabMetaPayload[], dataTabs: DataTabMetaPayload[]) =>
-    invoke<void>('workspace_set_tabs', { tabs, dataTabs }),
+    transport.call<void>('workspace_set_tabs', { tabs, dataTabs }),
 
   /// 读取指定 tab 的权威源图 (版本冲突后拉取合并; tab 无源图时返回 null)
   getSourceGraph: (tabId: string) =>
-    invoke<GraphSourceEventPayload | null>('get_source_graph', { tabId }),
+    transport.call<GraphSourceEventPayload | null>('get_source_graph', { tabId }),
 
   /// 移除指定 tab 的节点图 (tab 删除时调用)
   /// 返回 `GraphDerivedPayload` — 删除后工作区剩余节点的派生数据 (供前端 derivedPorts 对账)
   removeTabGraph: (tabId: string) =>
-    invoke<GraphDerivedPayload>('remove_tab_graph', { tabId }),
+    transport.call<GraphDerivedPayload>('remove_tab_graph', { tabId }),
 
   // ===== CAN 负载分析 =====
   /// 获取 CAN 负载统计快照
   /// nodeId: 用于自动解析波特率的设备节点 id
   /// bitrateBps: 可选手动覆盖波特率; null/0 = 自动从 TransportConfig 读取
   getCanLoadStats: (nodeId: string, bitrateBps?: number | null) =>
-    invoke<CanLoadSnapshot>('get_can_load_stats', {
+    transport.call<CanLoadSnapshot>('get_can_load_stats', {
       nodeId,
       bitrateBps: bitrateBps ?? null,
     }),
 
   /// 设置 CAN 负载统计滑动窗口大小 (微秒)
   setCanLoadWindow: (windowUs: number) =>
-    invoke<void>('set_can_load_window', { windowUs }),
+    transport.call<void>('set_can_load_window', { windowUs }),
 
   /// 清空 CAN 负载统计
-  clearCanLoadStats: () => invoke<void>('clear_can_load_stats'),
+  clearCanLoadStats: () => transport.call<void>('clear_can_load_stats'),
 
   /// 获取当前 CAN 波特率 (从 TransportConfig 提取)
   /// 返回 [bps, source] — source = "slcan" / "candle" / "default"
   getCurrentCanBitrate: (nodeId: string) =>
-    invoke<[number, string]>('get_current_can_bitrate', { nodeId }),
+    transport.call<[number, string]>('get_current_can_bitrate', { nodeId }),
 
   /// 订阅 CAN 负载统计推送 — 周期性推送 CanLoadSnapshot
   /// nodeId: 用于自动解析波特率的设备节点 id
@@ -629,7 +601,7 @@ export const api = {
   /// nodeId: 用于自动解析波特率的设备节点 id
   /// bitrateBps: 可选手动覆盖波特率; null/0 = 自动从 TransportConfig 读取
   exportCanLoadCsv: (nodeId: string, bitrateBps?: number | null) =>
-    invoke<string>('export_can_load_csv', {
+    transport.call<string>('export_can_load_csv', {
       nodeId,
       bitrateBps: bitrateBps ?? null,
     }),
@@ -646,7 +618,7 @@ export const api = {
     enableLastTimestamp: boolean,
     enableFps: boolean,
   ) =>
-    invoke<FrameDecoderManualResult>('parse_frame_decoder_input', {
+    transport.call<FrameDecoderManualResult>('parse_frame_decoder_input', {
       blocks,
       input,
       format,
@@ -658,22 +630,22 @@ export const api = {
 
   // ===== 调试 =====
   /// 打开当前 Webview 的开发者工具（检查元素）
-  inspectElement: () => invoke<void>('inspect_element'),
+  inspectElement: () => transport.call<void>('inspect_element'),
 
   // ===== 数据管道性能配置 =====
   setPipelineConfig: (config: PipelineConfig) =>
-    invoke<void>('set_pipeline_config', { config }),
+    transport.call<void>('set_pipeline_config', { config }),
 
   // ===== 四域持久化与历史查询 =====
-  getRecordingHealth: () => invoke<RecordingHealth>('get_recording_health'),
+  getRecordingHealth: () => transport.call<RecordingHealth>('get_recording_health'),
   listRecordingSessions: () =>
-    invoke<RecordingSession[]>('list_recording_sessions'),
+    transport.call<RecordingSession[]>('list_recording_sessions'),
   listRecordingSessionSummaries: () =>
-    invoke<RecordingSessionSummary[]>('list_recording_session_summaries'),
+    transport.call<RecordingSessionSummary[]>('list_recording_session_summaries'),
   listRecordingBindings: (sessionId: string) =>
-    invoke<RecordingBinding[]>('list_recording_bindings', { sessionId }),
+    transport.call<RecordingBinding[]>('list_recording_bindings', { sessionId }),
   getRecordingDatabaseInfo: () =>
-    invoke<RecordingDatabaseInfo>('get_recording_database_info'),
+    transport.call<RecordingDatabaseInfo>('get_recording_database_info'),
   queryRecordingHistory: (
     sessionId: string,
     bindingId: string | null,
@@ -682,7 +654,7 @@ export const api = {
     includePayload = false,
     fromUs: number | null = null,
     toUs: number | null = null,
-  ) => invoke<RecordingHistoryPage>('query_recording_history', {
+  ) => transport.call<RecordingHistoryPage>('query_recording_history', {
     sessionId,
     bindingId,
     afterRowId,
@@ -692,29 +664,29 @@ export const api = {
     toUs,
   }),
   cleanupRecordingSessions: (policy: RecordingCleanupPolicy) =>
-    invoke<RecordingCleanupResult>('cleanup_recording_sessions', { policy }),
+    transport.call<RecordingCleanupResult>('cleanup_recording_sessions', { policy }),
   exportRecordingData: (request: RecordingExportRequest) =>
-    invoke<RecordingExportResult>('export_recording_data', { request }),
+    transport.call<RecordingExportResult>('export_recording_data', { request }),
   queryRecordingSql: (queryId: string, sql: string, maxRows = 10_000) =>
-    invoke<RecordingSqlResult>('query_recording_sql', {
+    transport.call<RecordingSqlResult>('query_recording_sql', {
       queryId,
       sql,
       maxRows,
     }),
   cancelRecordingQuery: (queryId: string) =>
-    invoke<boolean>('cancel_recording_query', { queryId }),
-  flushRecording: () => invoke<void>('flush_recording'),
+    transport.call<boolean>('cancel_recording_query', { queryId }),
+  flushRecording: () => transport.call<void>('flush_recording'),
   deleteRecordingSession: (sessionId: string) =>
-    invoke<void>('delete_recording_session', { sessionId }),
+    transport.call<void>('delete_recording_session', { sessionId }),
   /// 暂停时新建录制会话并切换为当前写入目标
-  createRecordingSession: () => invoke<RecordingSession>('create_recording_session'),
+  createRecordingSession: () => transport.call<RecordingSession>('create_recording_session'),
   /// 暂停时把写入目标切换到指定的已停止会话
   setActiveRecordingSession: (sessionId: string) =>
-    invoke<RecordingSession>('set_active_recording_session', { sessionId }),
+    transport.call<RecordingSession>('set_active_recording_session', { sessionId }),
   /// 应用录制存储设置 (数据库目录 + 空会话续写开关); 空目录 = 默认位置。
   /// 运行中被后端拒绝, 下次启动设置回放时生效
   applyRecordingSettings: (databaseDir: string, continueEmptySession: boolean) =>
-    invoke<void>('apply_recording_settings', { databaseDir, continueEmptySession }),
+    transport.call<void>('apply_recording_settings', { databaseDir, continueEmptySession }),
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。
@@ -731,9 +703,9 @@ export const api = {
     useMcpTools: boolean,
     useBuiltinTools: boolean,
     uiLang: string,
-    onEvent: Channel<AiChatEvent>,
+    onEvent: EventChannel<AiChatEvent>,
   ) =>
-    invoke<string>('ai_chat_send', {
+    transport.call<string>('ai_chat_send', {
       sessionId,
       text,
       attachments: attachments ?? null,
@@ -749,67 +721,67 @@ export const api = {
 
   /// 取消进行中的对话任务, 返回任务是否存在
   aiChatCancel: (taskId: string) =>
-    invoke<boolean>('ai_chat_cancel', { taskId }),
+    transport.call<boolean>('ai_chat_cancel', { taskId }),
 
   /// 全部对话会话摘要
-  chatListSessions: () => invoke<AiSessionMeta[]>('chat_list_sessions'),
+  chatListSessions: () => transport.call<AiSessionMeta[]>('chat_list_sessions'),
 
   /// 新建会话
   chatCreateSession: (title: string) =>
-    invoke<AiChatSession>('chat_create_session', { title }),
+    transport.call<AiChatSession>('chat_create_session', { title }),
 
   /// 读取单个会话 (含全部条目); 不存在返回 null
   chatGetSession: (sessionId: string) =>
-    invoke<AiChatSession | null>('chat_get_session', { sessionId }),
+    transport.call<AiChatSession | null>('chat_get_session', { sessionId }),
 
   /// 重命名会话
   chatRenameSession: (sessionId: string, title: string) =>
-    invoke<void>('chat_rename_session', { sessionId, title }),
+    transport.call<void>('chat_rename_session', { sessionId, title }),
 
   /// 删除会话
   chatDeleteSession: (sessionId: string) =>
-    invoke<void>('chat_delete_session', { sessionId }),
+    transport.call<void>('chat_delete_session', { sessionId }),
 
   /// 清空会话条目 (保留会话本身)
   chatClearSession: (sessionId: string) =>
-    invoke<void>('chat_clear_session', { sessionId }),
+    transport.call<void>('chat_clear_session', { sessionId }),
 
   /// 读取适配器的 API key (系统钥匙串); 未设置返回 null
   aiKeychainGet: (adapter: string) =>
-    invoke<string | null>('ai_keychain_get', { adapter }),
+    transport.call<string | null>('ai_keychain_get', { adapter }),
 
   /// 写入适配器的 API key (系统钥匙串, 覆盖旧值)
   aiKeychainSet: (adapter: string, key: string) =>
-    invoke<void>('ai_keychain_set', { adapter, key }),
+    transport.call<void>('ai_keychain_set', { adapter, key }),
 
   /// 删除适配器的 API key (不存在时静默)
   aiKeychainDelete: (adapter: string) =>
-    invoke<void>('ai_keychain_delete', { adapter }),
+    transport.call<void>('ai_keychain_delete', { adapter }),
 
   /// 全部外部 MCP server 配置
-  mcpListServers: () => invoke<McpServerConfig[]>('mcp_list_servers'),
+  mcpListServers: () => transport.call<McpServerConfig[]>('mcp_list_servers'),
 
   /// 新增外部 MCP server 配置
   mcpAddServer: (config: McpServerConfig) =>
-    invoke<void>('mcp_add_server', { config }),
+    transport.call<void>('mcp_add_server', { config }),
 
   /// 删除外部 MCP server 配置 (同时断连)
-  mcpRemoveServer: (id: string) => invoke<void>('mcp_remove_server', { id }),
+  mcpRemoveServer: (id: string) => transport.call<void>('mcp_remove_server', { id }),
 
   /// 启用 / 禁用外部 MCP server
   mcpSetServerEnabled: (id: string, enabled: boolean) =>
-    invoke<void>('mcp_set_server_enabled', { id, enabled }),
+    transport.call<void>('mcp_set_server_enabled', { id, enabled }),
 
   /// 刷新聚合工具列表 (自动连接已启用未连接的 server) 并更新对话工具缓存
-  mcpListTools: () => invoke<McpToolInfo[]>('mcp_list_tools'),
+  mcpListTools: () => transport.call<McpToolInfo[]>('mcp_list_tools'),
 
   /// 本地 MCP server 状态
-  mcpServerStatus: () => invoke<McpServerStatus>('mcp_server_status'),
+  mcpServerStatus: () => transport.call<McpServerStatus>('mcp_server_status'),
 
   /// 启动本地 MCP server (返回实际端口; 已运行则直接返回)
   mcpServerStart: (port: number) =>
-    invoke<number>('mcp_server_start', { port }),
+    transport.call<number>('mcp_server_start', { port }),
 
   /// 停止本地 MCP server (未运行时静默)
-  mcpServerStop: () => invoke<void>('mcp_server_stop'),
+  mcpServerStop: () => transport.call<void>('mcp_server_stop'),
 };

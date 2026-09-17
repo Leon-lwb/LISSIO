@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Channel } from '@tauri-apps/api/core';
+import { transport } from '../lib/rpc';
+import type { EventChannel } from '../lib/rpc/types';
 import { api } from '../lib/tauri/tauri';
 import { notify } from '../lib/tauri/notifications';
 import { formatAiKindError } from '../lib/ai/aiErrors';
@@ -92,6 +93,18 @@ function errorItemFromRejection(err: unknown): AiViewItem {
   return { role: 'assistant', text: err instanceof Error ? err.message : String(err), error: true };
 }
 
+/** 构造对话事件通道 — 出口不支持 AI 命令时上报一次本地失败并返回 null */
+function openChatChannel(
+  onUnsupported: (err: unknown) => void
+): EventChannel<AiChatEvent> | null {
+  try {
+    return transport.eventChannel<AiChatEvent>();
+  } catch (error) {
+    onUnsupported(error);
+    return null;
+  }
+}
+
 export const useAiChatStore = create<AiChatState>()((set, get) => {
   /** 后端条目 → 视图条目 (同构, 仅收紧类型) */
   const toViewItems = (items: AiViewItem[]): AiViewItem[] =>
@@ -107,7 +120,11 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     failLocal: (err: unknown) => void
   ) => {
     const ai = useSettingsStore.getState().settings.ai;
-    const channel = new Channel<AiChatEvent>();
+    // 通道由出口构造 — Web 出口未接入 AI 命令, 构造即抛结构化错误
+    // (kind=UnsupportedCommand), 因此 AI 面板在浏览器里给出明确提示,
+    // 而不是 Tauri 运行时缺失时的无 kind TypeError。
+    const channel = openChatChannel(failLocal);
+    if (!channel) return;
     channel.onmessage = (event) => {
       switch (event.type) {
         case 'delta':

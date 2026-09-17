@@ -221,7 +221,12 @@ impl AppState {
 
     /// 标记启动恢复已完成 (无论成败) — 放行所有 await 方
     pub fn signal_restore_done(&self) {
-        let _ = self.restore_done_tx.send(true);
+        // 必须用 `send_replace` 而非 `send`: `AppState` 构造时丢弃了初始 receiver,
+        // 而无界面出口 (`backend-host::assemble`) 在装配期同步发信号 — 此刻订阅方
+        // 往往还没创建。`watch::Sender::send` 在零接收者时直接返回错误且**不写入值**,
+        // 迟到的订阅者会永远等不到 `changed()`, 于是 `workspace_get` 挂起、工作区
+        // 防抖落盘循环空转。`send_replace` 无条件写入, 与订阅时序无关。
+        self.restore_done_tx.send_replace(true);
     }
 
     /// 注入包络计算引擎 (GPU 加速实现由组合根在装配期调用一次)。
@@ -318,5 +323,41 @@ mod tests {
         let snapshots = state.waveform_snapshots.lock();
         assert!(snapshots.contains_key("keep"));
         assert!(!snapshots.contains_key("release"));
+    }
+
+    /// 恢复完成门必须在"发信号时还没有订阅者"的时序下也放行迟到订阅者。
+    ///
+    /// 无界面出口在装配期同步发信号 (此时服务端还没人订阅), 而 `AppState` 构造时
+    /// 丢弃了初始 receiver — `watch::Sender::send` 在零接收者时不写入值, 因此
+    /// 迟到订阅者会永远等不到 `changed()` (表现为 `workspace_get` 挂起)。
+    #[tokio::test]
+    async fn restore_done_signal_reaches_late_subscribers() {
+        let state = AppState::new();
+        state.signal_restore_done();
+
+        let mut late = state.subscribe_restore_done();
+        assert!(*late.borrow_and_update(), "迟到订阅者必须直接看到已完成");
+
+        tokio::time::timeout(
+            std::time::Duration::from_secs(1),
+            crate::workspace::await_restore_done(&state),
+        )
+        .await
+        .expect("已完成的门不得再挂起等待");
+    }
+
+    /// 先订阅再发信号同样放行, 且不会漏掉变更。
+    #[tokio::test]
+    async fn restore_done_signal_wakes_existing_subscribers() {
+        let state = AppState::new();
+        let mut waiting = state.subscribe_restore_done();
+        assert!(!*waiting.borrow_and_update());
+
+        state.signal_restore_done();
+        tokio::time::timeout(std::time::Duration::from_secs(1), waiting.changed())
+            .await
+            .expect("发信号必须唤醒等待方")
+            .expect("发送端常驻, 不应关闭");
+        assert!(*waiting.borrow_and_update());
     }
 }
