@@ -6,9 +6,7 @@
 //! v2 起支持「拆分备份」: 快照可只含若干分区 (BackupSection), 导入时按分区应用。
 //! 分区划分: 节点图 / 窗口组织 / 设置 / 传输与协议 / 控件与标签页。
 
-import { save, open } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import { LazyStore } from '@tauri-apps/plugin-store';
+import { platform } from '../platform';
 import { canvasNode, nodeDocument, type NodeDocument } from '../nodes/document';
 import { edgeToGraphEdge } from '../utils/nodeDef';
 import type { GraphEdge } from '../utils/nodeDef';
@@ -71,7 +69,7 @@ export async function saveJsonFile(
   data: unknown
 ): Promise<boolean> {
   try {
-    const path = await save({
+    const path = await platform.saveFile({
       defaultPath: `${filename}.json`,
       filters: JSON_FILTERS,
     });
@@ -79,7 +77,7 @@ export async function saveJsonFile(
     if (!path) return false;
     const text =
       typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-    await writeTextFile(path, text);
+    await platform.writeTextFile(path, text);
     return true;
   } catch (e) {
     console.warn('[appExport] 保存文件失败:', e);
@@ -90,15 +88,15 @@ export async function saveJsonFile(
 /** 通过系统"打开"对话框读取并解析备份文件; 用户取消/失败返回 null。 */
 export async function readSnapshotFromFile(): Promise<AppSnapshot | null> {
   try {
-    const selected: unknown = await open({
+    const selected = await platform.openFile({
       multiple: false,
       directory: false,
       filters: JSON_FILTERS,
     });
     if (!selected) return null;
-    const path: unknown = Array.isArray(selected) ? (selected as unknown[])[0] : selected;
+    const path = Array.isArray(selected) ? selected[0] : selected;
     if (typeof path !== 'string' || path === '') return null;
-    const json = await readTextFile(path);
+    const json = await platform.readTextFile(path);
     return parseSnapshot(json);
   } catch (e) {
     const lang = useAppStore.getState().lang;
@@ -271,7 +269,7 @@ async function applySettings(settings: AppSettings): Promise<void> {
   applyDataCapacity(settings);
   // 持久化到磁盘 (settings.json), 保证重启后仍生效
   try {
-    const store = new LazyStore('settings.json');
+    const store = platform.createStore('settings.json');
     await store.set('app', stripApiKey(settings));
   } catch (e) {
     console.warn('[appExport] 设置持久化失败:', e);

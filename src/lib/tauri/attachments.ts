@@ -1,12 +1,12 @@
 //! AI 对话附件读取 (系统文件对话框 + 拖放)
 //!
 //! 仅支持文本类文件: 内容随 `ai_chat_send` 传给后端, 派生历史时并入 user
-//! 消息文本。对话框复用全局 dialog / fs 插件 (capabilities 已授权, 模式同
-//! mdFile.ts); 拖放走 HTML5 dataTransfer + FileReader (主窗口已禁用原生
-//! drag-drop 劫持)。两条路径共用同一组校验规则 (类型 / 大小 / 数量)。
+//! 消息文本。对话框经平台 shim (`src/lib/platform/`) 走 dialog / fs (桌面 = Tauri
+//! 插件, 浏览器 = `<input type="file">`); 拖放走 HTML5 dataTransfer + FileReader
+//! (主窗口已禁用原生 drag-drop 劫持)。两条路径共用同一组校验规则 (类型 / 大小 /
+//! 数量)。
 
-import { open } from '@tauri-apps/plugin-dialog';
-import { readTextFile } from '@tauri-apps/plugin-fs';
+import { platform } from '../platform';
 import type { AiAttachment } from '../../types';
 
 /// 单附件内容上限 (字符数, 约 256KB 文本)
@@ -111,7 +111,7 @@ async function readCandidate(
 
 /** 系统文件对话框选择文本文件 (可多选)。用户取消返回 null。 */
 export async function pickAttachments(existing: AiAttachment[]): Promise<AttachmentPickResult | null> {
-  const selected: unknown = await open({
+  const selected = await platform.openFile({
     multiple: true,
     directory: false,
     filters: [
@@ -134,7 +134,7 @@ export async function pickAttachments(existing: AiAttachment[]): Promise<Attachm
       rejections.readFailed.push(name);
       continue;
     }
-    const att = await readCandidate(name, () => readTextFile(path), rejections);
+    const att = await readCandidate(name, () => platform.readTextFile(path), rejections);
     if (att) attachments.push(att);
   }
   return { attachments, rejections };

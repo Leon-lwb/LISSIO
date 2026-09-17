@@ -82,8 +82,9 @@ function stripComments(source) {
     .replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
 }
 
-/** 前端源码文件 — 排除测试与出口实现本身 (出口是唯一允许直连 Tauri 的地方)。 */
-function frontendFiles() {
+/** 前端源码文件 — 排除测试; `includeBridges` 为真时连出口实现 (lib/rpc、lib/platform)
+ *  一起返回, 供需要区分"哪个出口允许 import 什么"的检查使用。 */
+function frontendFiles({ includeBridges = false } = {}) {
   const files = [];
   const walk = (dir) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -95,12 +96,17 @@ function frontendFiles() {
       }
       if (!/\.tsx?$/.test(entry.name)) continue;
       if (/__tests__|[\\/]test[\\/]|\.test\.|\.spec\./.test(absolute)) continue;
-      if (absolute.includes(path.join('lib', 'rpc'))) continue;
+      if (!includeBridges && absolute.includes(path.join('lib', 'rpc'))) continue;
       files.push(absolute);
     }
   };
   walk(path.join(root, 'src'));
   return files;
+}
+
+/** 该文件是否属于某个出口实现目录 (lib/rpc = IPC, lib/platform = 插件 shim)。 */
+function inBridge(absolute, name) {
+  return absolute.includes(path.join('lib', name));
 }
 
 /** 前端静态命令名 — 出口无关的 `transport.call` 与历史 `invoke` 两种写法。 */
@@ -119,17 +125,38 @@ function frontendInvocations() {
   return found;
 }
 
-/** 出口泄漏 — src/lib/rpc/ 之外直接使用 Tauri IPC 的位置。 */
+/** 出口封装 (IPC) — src/lib/rpc/ 之外不得 import @tauri-apps/api/{core,event} 或
+ *  直接调用 invoke()/listen()。 */
 function transportLeaks() {
   const leaks = [];
   for (const absolute of frontendFiles()) {
     const source = stripComments(fs.readFileSync(absolute, 'utf8'));
     const relative = path.relative(root, absolute);
     if (/from '@tauri-apps\/api\/(core|event)'/.test(source)) {
-      leaks.push(`${relative} 直接 import @tauri-apps/api/(core|event)`);
+      leaks.push(`出口泄漏 (应经 src/lib/rpc/): ${relative} 直接 import @tauri-apps/api/(core|event)`);
     }
     for (const match of source.matchAll(/(?<![.\w])(invoke|listen)(?:<[^>]*>)?\(/g)) {
-      leaks.push(`${relative} 直接调用 ${match[1]}()`);
+      leaks.push(`出口泄漏 (应经 src/lib/rpc/): ${relative} 直接调用 ${match[1]}()`);
+    }
+  }
+  return leaks;
+}
+
+/** 出口封装 (插件) — src/lib/platform/ 之外不得 import 任何 @tauri-apps/* 模块
+ *  (静态或动态)。src/lib/rpc/ 只豁免它本职的 api/{core,event}; 插件调用点一律
+ *  必须收进 platform shim, 否则浏览器端会静默失效。 */
+function pluginLeaks() {
+  const leaks = [];
+  // 匹配 `from '@tauri-apps/x'` / `import '@tauri-apps/x'` / `import('@tauri-apps/x')`
+  const importPattern = /(?:from\s+|import\s*\(\s*|import\s+)'(@tauri-apps\/[^']+)'/g;
+  for (const absolute of frontendFiles({ includeBridges: true })) {
+    if (inBridge(absolute, 'platform')) continue;
+    const source = stripComments(fs.readFileSync(absolute, 'utf8'));
+    const relative = path.relative(root, absolute);
+    for (const match of source.matchAll(importPattern)) {
+      const module = match[1];
+      if (inBridge(absolute, 'rpc') && /^@tauri-apps\/api\/(core|event)$/.test(module)) continue;
+      leaks.push(`出口泄漏 (应经 src/lib/platform/): ${relative} 直接 import ${module}`);
     }
   }
   return leaks;
@@ -139,7 +166,7 @@ const ipc = new Set(ipcCommands());
 const lists = catalog();
 const dispatched = dispatchedCommands();
 const frontend = frontendInvocations();
-const leaks = transportLeaks();
+const leaks = [...transportLeaks(), ...pluginLeaks()];
 
 // A. 清单互补性与不相交
 const seen = new Map();
@@ -188,9 +215,9 @@ if (notOnWeb.length) {
   );
 }
 
-// E. 出口封装 —— 前端只能经 src/lib/rpc/ 触达后端
+// E. 出口封装 —— 前端只能经 src/lib/rpc/ (IPC) 与 src/lib/platform/ (插件) 触达 Tauri
 for (const leak of leaks) {
-  errors.push(`出口泄漏 (应经 src/lib/rpc/): ${leak}`);
+  errors.push(leak);
 }
 
 const summary = [

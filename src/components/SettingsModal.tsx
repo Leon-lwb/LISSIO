@@ -29,10 +29,8 @@ import {
   ExternalLink,
   FolderOpen,
 } from 'lucide-react';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { open as openDirectoryDialog } from '@tauri-apps/plugin-dialog';
+import { platform } from '../lib/platform';
 import { ORCAROUTER_OFFERS_URL, ORCAROUTER_REFERRAL_URL } from '../settings/defaults';
-import { getVersion } from '@tauri-apps/api/app';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
@@ -106,7 +104,7 @@ export function SettingsModal() {
 
   // 读取当前应用版本
   useEffect(() => {
-    void getVersion().then(setAppVersion).catch(() => setAppVersion(''));
+    void platform.getAppVersion().then(setAppVersion).catch(() => setAppVersion(''));
   }, []);
 
   // ESC 关闭 + 自动聚焦搜索框
@@ -283,7 +281,7 @@ export function SettingsModal() {
             <button
               className="flex-shrink-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
               onClick={() => {
-                void openDirectoryDialog({
+                void platform.openFile({
                   directory: true,
                   title: t(lang, 'settingRecDatabaseDir'),
                 }).then((dir) => {
@@ -531,7 +529,7 @@ export function SettingsModal() {
                             </span>
                             <button
                               className="flex-shrink-0 px-2 py-1 rounded bg-accent text-accent-foreground text-xs flex items-center gap-1"
-                              onClick={() => void openUrl(ORCAROUTER_REFERRAL_URL)}
+                              onClick={() => void platform.openUrl(ORCAROUTER_REFERRAL_URL)}
                             >
                               <ExternalLink size={11} />
                               {t(lang, 'settingAiOrcaGetKey')}
@@ -542,7 +540,7 @@ export function SettingsModal() {
                             <span className="flex-shrink-0">{t(lang, 'settingAiOrcaFreeModels')}</span>
                             <button
                               className="text-accent hover:text-accent-hover hover:underline truncate text-left"
-                              onClick={() => void openUrl(ORCAROUTER_OFFERS_URL)}
+                              onClick={() => void platform.openUrl(ORCAROUTER_OFFERS_URL)}
                               title={ORCAROUTER_OFFERS_URL}
                             >
                               {ORCAROUTER_OFFERS_URL}

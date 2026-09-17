@@ -13,6 +13,8 @@
   - `notify` 帧新增可选 `url` 并接入应用内提示:`Transport` 增加 `onServerNotify` / `downloadFile`,导出通知在 Toast 上给出"下载"动作;下载走带 `Authorization` 的 `fetch` 取字节流再保存,令牌不进 URL
   - CAN 负载 CSV 的格式化与本地时间换算下沉到 `control-api::can_export`(桌面写用户下载目录,Web 出口写暂存区),两个出口共用同一份实现
   - 设置持久化新增 `GET` / `PUT /api/v1/settings`:浏览器端没有 Tauri store,设置改由服务端落盘;文件仍是配置目录下的 `settings.json`,形状仍是 plugin-store 的 `{"app": …}`,因此**持久化格式对前端不变**,桌面与 Web 出口读写同一份设置(写入用临时文件 + rename,避免与桌面壳并发截断)
+  - 新增 `src/lib/platform/` 平台服务 shim:把 `plugin-store` / `plugin-dialog` / `plugin-fs` / `plugin-opener` / `plugin-process` / `api/app` 与窗口控制收进一个运行时无关接口,由 `hasTauriRuntime()` 装配桌面或浏览器实现;~15 个调用点(设置、备份导入导出、附件、Markdown、录音面板、波形/CAN 导出、3D 控件、菜单栏)全部改走 shim,浏览器端因此拿到等价能力(服务端设置、Blob 下载、`<input type=file>` 句柄)或明确降级(退出仅告警、窗口控制 no-op)
+  - `pnpm check:web-contract` 的出口泄漏门禁扩为两条并列规则:除 `src/lib/rpc/` 外禁止 `@tauri-apps/api/{core,event}` 与 `invoke()`/`listen()`(原有),**新增**除 `src/lib/platform/` 外禁止 import 任何 `@tauri-apps/*`(静态/动态 import 都匹配;`lib/rpc` 仅豁免本职的 `api/{core,event}`)
 - **前端出口解绑(P2)**:新增 `src/lib/rpc/` 把前端调用从 Tauri API 上解绑,一份 `dist/` 既跑桌面壳也跑浏览器
   - `Transport` 契约(`call` / `listen` / `eventChannel` / `subscribe` / `onReconnect`)+ 两个实现:`tauriTransport`(invoke / listen / Channel)与 `httpTransport`(fetch + WebSocket + 订阅分流 + 重连 + 微批量)
   - `tauri.ts` 的 88 个方法签名不变,内部改走 `transport.call`;显示订阅、事件监听、store 与工具宿主全部收口到 transport,~100 处调用点与 40+ 组件零改动

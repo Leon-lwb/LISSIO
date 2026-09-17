@@ -7,7 +7,7 @@
 import { Component, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useGLTF } from '@react-three/drei';
 // [TEMP-DISABLED] 自定义模型导入已禁用 — 恢复时无需改动本文件
-import { readFile } from '@tauri-apps/plugin-fs';
+import { platform } from '../../../lib/platform';
 import * as THREE from 'three';
 import type { Model3DSource } from '../../../types';
 
@@ -139,7 +139,7 @@ function CustomModel({
   useEffect(() => {
     let objectUrl: string | null = null;
     let cancelled = false;
-    readFile(path)
+    platform.readBinaryFile(path)
       .then((bytes) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(

@@ -1,7 +1,11 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
-import { openUrl } from '@tauri-apps/plugin-opener';
-import { exit } from '@tauri-apps/plugin-process';
+import { platform } from '../../lib/platform';
+import {
+  closeWindow,
+  minimizeWindow,
+  setWindowZoom,
+  toggleMaximizeWindow,
+} from '../../lib/platform/window';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
 import { useHistoryStore } from '../../store/historyStore';
@@ -23,6 +27,12 @@ export function isWindowsPlatform(): boolean {
   return typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent);
 }
 
+/// 窗口控制 (缩放 / 最小化 / 最大化 / 关闭) 只存在于 Tauri 宿主窗口: 浏览器标签页
+/// 不能被脚本最小化或关闭。因此不把它们塞进通用 `Platform` 接口 (Web 出口没有
+/// 可兑现的实现), 而是走 `lib/platform/window.ts` 这个桌面专属出口 — 内部按
+/// `hasTauriRuntime()` 守卫, 浏览器端 no-op。本菜单本身也只在 Windows 桌面挂载
+/// (见 isWindowsPlatform), 所以 Web 出口不会看到这些菜单项。
+///
 /// 缩放系数 — 模块级持久, 跨菜单重开保留 (与原生菜单语义一致)
 const ZOOM_STEP = 0.2;
 const ZOOM_MIN = 0.5;
@@ -32,7 +42,7 @@ let zoomFactor = 1;
 async function setZoom(next: number): Promise<void> {
   zoomFactor = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, next));
   try {
-    await getCurrentWebviewWindow().setZoom(zoomFactor);
+    await setWindowZoom(zoomFactor);
   } catch {
     // 纯浏览器 dev / 测试环境无 Tauri 后端, 静默忽略
   }
@@ -112,7 +122,7 @@ function buildMenus(lang: Lang, historyFlags: { canUndo: boolean; canRedo: boole
         { kind: 'item', id: 'about', label: L('menuAbout'), onClick: () => settings().openAbout() },
         { kind: 'item', id: 'settings', label: L('menuSettings'), shortcut: 'Ctrl+,', onClick: () => settings().open() },
         { kind: 'separator' },
-        { kind: 'item', id: 'quit', label: L('menuQuit'), onClick: () => void exit(0).catch(() => { return undefined; }) },
+        { kind: 'item', id: 'quit', label: L('menuQuit'), onClick: () => void platform.exitApp(0).catch(() => { return undefined; }) },
       ],
     },
     {
@@ -179,19 +189,19 @@ function buildMenus(lang: Lang, historyFlags: { canUndo: boolean; canRedo: boole
           kind: 'item',
           id: 'minimize',
           label: L('menuMinimize'),
-          onClick: () => void getCurrentWebviewWindow().minimize().catch(() => { return undefined; }),
+          onClick: () => void minimizeWindow().catch(() => { return undefined; }),
         },
         {
           kind: 'item',
           id: 'toggle-maximize',
           label: L('menuMaximize'),
-          onClick: () => void getCurrentWebviewWindow().toggleMaximize().catch(() => { return undefined; }),
+          onClick: () => void toggleMaximizeWindow().catch(() => { return undefined; }),
         },
         {
           kind: 'item',
           id: 'close-window',
           label: L('menuCloseWindow'),
-          onClick: () => void getCurrentWebviewWindow().close().catch(() => { return undefined; }),
+          onClick: () => void closeWindow().catch(() => { return undefined; }),
         },
       ],
     },
@@ -199,8 +209,8 @@ function buildMenus(lang: Lang, historyFlags: { canUndo: boolean; canRedo: boole
       id: 'help',
       label: L('menuHelp'),
       entries: [
-        { kind: 'item', id: 'docs', label: L('menuDocs'), onClick: () => void openUrl(APP_DOCS).catch(() => { return undefined; }) },
-        { kind: 'item', id: 'github', label: L('menuGithub'), onClick: () => void openUrl(APP_GITHUB).catch(() => { return undefined; }) },
+        { kind: 'item', id: 'docs', label: L('menuDocs'), onClick: () => void platform.openUrl(APP_DOCS).catch(() => { return undefined; }) },
+        { kind: 'item', id: 'github', label: L('menuGithub'), onClick: () => void platform.openUrl(APP_GITHUB).catch(() => { return undefined; }) },
         { kind: 'separator' },
         { kind: 'item', id: 'about', label: L('menuAbout'), onClick: () => settings().openAbout() },
       ],

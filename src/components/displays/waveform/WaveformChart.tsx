@@ -9,7 +9,7 @@ import { notify, formatError } from '../../../lib/tauri/notifications';
 import { useWaveformDetailBuffer } from '../../../lib/hooks/useWaveformDetailBuffer';
 import { waveformWindow, type WaveformWindowCache } from '../../../lib/buffers/dataBuffer';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
-import { save } from '@tauri-apps/plugin-dialog';
+import { platform } from '../../../lib/platform';
 import { t } from '../../../i18n';
 import type {
   WaveformSeriesSelection,
@@ -431,7 +431,7 @@ export function WaveformChart({
   const exportSelection = useCallback(() => {
     const absolute = getAbsoluteSelection();
     if (!absolute || !sourceId) return;
-    void save({
+    void platform.saveFile({
       defaultPath: 'waveform.csv',
       filters: [{ name: 'CSV', extensions: ['csv'] }],
     }).then(async (path) => {

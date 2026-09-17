@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Github, ExternalLink } from 'lucide-react';
-import { getName, getVersion } from '@tauri-apps/api/app';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { platform } from '../lib/platform';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
 import { LissajousMark } from './brand/LissajousMark';
@@ -25,8 +24,8 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
   useEffect(() => {
     if (!isOpen) return;
-    void getName().then(setAppName).catch(() => setAppName('Lissio'));
-    void getVersion().then(setAppVersion).catch(() => setAppVersion('0.0.0'));
+    void platform.getAppName().then(setAppName).catch(() => setAppName('Lissio'));
+    void platform.getAppVersion().then(setAppVersion).catch(() => setAppVersion('0.0.0'));
   }, [isOpen]);
 
   useEffect(() => {
@@ -87,7 +86,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         <div className="flex gap-2 mb-4">
           <button
             className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
-            onClick={() => void openUrl(APP_GITHUB)}
+            onClick={() => void platform.openUrl(APP_GITHUB)}
           >
             <Github size={14} />
             <span>{t(lang, 'aboutGithub')}</span>
@@ -95,7 +94,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           </button>
           <button
             className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
-            onClick={() => void openUrl(APP_DOCS)}
+            onClick={() => void platform.openUrl(APP_DOCS)}
           >
             <span>{t(lang, 'aboutDocs')}</span>
             <ExternalLink size={10} className="opacity-60" />

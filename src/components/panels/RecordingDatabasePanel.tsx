@@ -1,6 +1,6 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import { CornerUpLeft, Database, Eraser, ExternalLink, FilePlus2, Pause, Play, RefreshCw, Square, Trash2 } from 'lucide-react';
-import { confirm } from '@tauri-apps/plugin-dialog';
+import { platform } from '../../lib/platform';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
 import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
@@ -150,7 +150,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   }
 
   async function cleanupStopped(): Promise<void> {
-    const confirmed = await confirm(t(lang, 'recordingDatabaseCleanupStoppedConfirm'), { kind: 'warning' });
+    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseCleanupStoppedConfirm'), { kind: 'warning' });
     if (confirmed === false) return;
     setBusy(true);
     try {
@@ -169,7 +169,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   }
 
   async function cleanupKept(): Promise<void> {
-    const confirmed = await confirm(
+    const confirmed = await platform.confirm(
       t(lang, 'recordingDatabaseCleanupKeepConfirm').replace('{count}', String(keepLatest)),
       { kind: 'warning' },
     );
@@ -191,7 +191,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   }
 
   async function deleteSession(sessionId: string): Promise<void> {
-    const confirmed = await confirm(t(lang, 'recordingDatabaseDeleteConfirm'), { kind: 'warning' });
+    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseDeleteConfirm'), { kind: 'warning' });
     if (confirmed === false) return;
     setBusy(true);
     try {

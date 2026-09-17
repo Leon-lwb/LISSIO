@@ -1,10 +1,13 @@
-//! 设置 store — 基于 zustand + tauri-plugin-store
+//! 设置 store — 基于 zustand + 平台存储 shim
 //!
-//! 启动时调用 load() 从磁盘加载, 每次 update 后 save() (防抖 300ms)
+//! 启动时调用 load() 加载, 每次 update 后 save() (防抖 300ms)
 //! 通过 subscribeAppearance() 自动应用 appearance 到 CSS 变量
+//!
+//! 存储经 `src/lib/platform/` 选择: 桌面 = Tauri `plugin-store` 的 settings.json,
+//! Web 出口 = 服务端 `/api/v1/settings`。接口一致, 因此这里不再感知出口。
 
 import { create } from 'zustand';
-import { LazyStore } from '@tauri-apps/plugin-store';
+import { platform, type PlatformStore } from '../lib/platform';
 import type {
   AppSettings} from '../settings/defaults';
 import {
@@ -28,10 +31,10 @@ import { useAppStore } from './appStore';
 const STORE_FILE = 'settings.json';
 const STORE_KEY = 'app';
 
-/// 单例 LazyStore — 多次调用共享底层连接
-let storeInstance: LazyStore | null = null;
-function getStore(): LazyStore {
-  storeInstance ??= new LazyStore(STORE_FILE);
+/// 单例存储 — 多次调用共享底层连接 (桌面) / 服务端文档缓存 (Web)
+let storeInstance: PlatformStore | null = null;
+function getStore(): PlatformStore {
+  storeInstance ??= platform.createStore(STORE_FILE);
   return storeInstance;
 }
 

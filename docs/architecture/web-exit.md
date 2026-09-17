@@ -367,19 +367,44 @@ localStorage 并把它从地址栏摘掉 —— 便于"发一次带参链接, �
 
 ### 5.4 门禁
 
-`pnpm check:web-contract` 新增"出口泄漏"检查: 除 `src/lib/rpc/` 之外, 任何前端文件
-都不得 import `@tauri-apps/api/{core,event}` 或直接调用 `invoke()` / `listen()`。
-这条门禁是 P2 的防回归核心 —— 漏掉一处调用点就会让该能力在浏览器里静默失效。
+`pnpm check:web-contract` 有两条并列的"出口泄漏"检查:
 
-### 5.5 平台服务 shim (P3)
+1. **IPC 封装** — 除 `src/lib/rpc/` 之外, 任何前端文件不得 import
+   `@tauri-apps/api/{core,event}` 或直接调用 `invoke()` / `listen()`。
+2. **插件封装** — 除 `src/lib/platform/` 之外, 任何前端文件不得 import **任何**
+   `@tauri-apps/*` 模块 (静态 `from` / 裸 `import` / 动态 `import()` 都匹配)。
+   `src/lib/rpc/` 只豁免它本职的 `api/{core,event}`, 插件调用点一律必须收进
+   platform shim。
 
-`src/lib/platform/` 覆盖 Tauri 插件能力: `plugin-store` (设置落服务端
-`/api/v1/settings` 或 localStorage)、`plugin-dialog` + `plugin-fs` (浏览器文件选择 /
-下载)、`plugin-opener` (`window.open`)、更新器 (Web 端隐藏)、系统通知 (应用内 Toast
-+ `Notification` API)、`getVersion` (构建期注入)。
+这两条是 P2/P3 的防回归核心 —— 漏掉一处调用点就会让该能力在浏览器里静默失效。
 
-在此之前, 浏览器端这些路径按"不可用"降级: `settingsStore.load()` 失败落到默认设置
-(因此首次引导向导每次加载都会弹出), 文件选择/导出/更新器在交互时失败。
+### 5.5 平台服务 shim (P3, 已完成)
+
+`src/lib/platform/` 覆盖 Tauri 插件能力, 由 `hasTauriRuntime()` 装配 (与 transport
+同一条判定):
+
+```
+types.ts    Platform / PlatformStore 契约 (运行时无关)
+tauri.ts    tauriPlatform — 薄委托现有插件, 行为与拆分前逐字一致
+web.ts      webPlatform   — 浏览器等价能力或明确降级
+window.ts   桌面专属窗口控制 (缩放/最小化/最大化/关闭), 浏览器 no-op
+index.ts    hasTauriRuntime() ? tauriPlatform : webPlatform
+```
+
+浏览器实现:
+
+| 能力 | 桌面 | Web 出口 |
+|---|---|---|
+| 设置存储 | `plugin-store` 的 `settings.json` | `GET`/`PUT /api/v1/settings` (同一文件与形状) |
+| 保存文件 | 原生"另存为"对话框 → 写盘 | 退化为浏览器下载 (Blob + `<a download>`) |
+| 打开文件 | 原生"打开"对话框 → 真实路径 | 隐藏 `<input type=file>` + 模块级句柄 `browser-file:<n>` |
+| 打开链接 | `plugin-opener` | `window.open(url, '_blank', 'noopener,noreferrer')` |
+| 退出 / 重启 | `plugin-process` | 退出仅告警; 重启退化为页面刷新 |
+| 版本 / 名称 | `api/app` | `VITE_APP_VERSION ?? 'web'` / `'Lissio'` |
+| 窗口控制 | 原生窗口 | 无等价能力 (桌面专属, 已在 `window.ts` 守卫) |
+
+因此浏览器端设置可持久化 (首次引导向导不再每次加载都弹), 文件选择 / 导出走浏览器
+等价路径, 更新器与窗口控制在 Web 端隐藏或 no-op。
 
 ## 6. CLI 设计
 
@@ -441,7 +466,7 @@ cargo run -p backend-cli -- rpc get_pipeline_config
 | P0 契约冻结 | 本文件 + 命令能力矩阵 + `scripts/check-web-contract.mjs` | 已完成 |
 | P1 后端竖切 | `BackendHost` 上移; `rpc-api` (88 条命令); `backend-server` (HTTP/WS/鉴权/静态站点); `backend-cli serve --http` 与 `rpc` | 已完成 |
 | P2 前端解绑 | `src/lib/rpc/` 四文件; `tauri.ts` 与各 `*Subscription.ts` 切 transport; 事件监听切 transport; 重连重水合; 出口泄漏门禁 | 已完成 |
-| P3 全量能力 + 平台 shim | 文件产物下载端点; `ai-host` 迁移 + `SecretStore` 端口; `parse_frame_decoder_input` / `get_graph_hir`; `platform/` shim; 服务端 settings; `notify` → 应用内提示 | **进行中** — 已完成 `parse_frame_decoder_input` / `get_graph_hir` 下沉、`/api/v1/download/{token}` + 两个 CSV 导出、`notify` → 应用内提示 (带下载动作); 待做 `platform/` shim + 服务端 settings、`ai-host` + `SecretStore` |
+| P3 全量能力 + 平台 shim | 文件产物下载端点; `ai-host` 迁移 + `SecretStore` 端口; `parse_frame_decoder_input` / `get_graph_hir`; `platform/` shim; 服务端 settings; `notify` → 应用内提示 | **进行中** — 已完成 `parse_frame_decoder_input` / `get_graph_hir` 下沉、`/api/v1/download/{token}` + 两个 CSV 导出、`notify` → 应用内提示 (带下载动作)、`src/lib/platform/` shim + 服务端 settings (`GET`/`PUT /api/v1/settings`); **待做** `ai-host` 迁移 + `SecretStore` 端口 (22 条 AI/MCP 命令) |
 | P4 收尾 | 浏览器 E2E 固化为可重复脚本; `exits.md` 与本文件的最终校对; README 使用说明 | 待实施 |
 
 ## 9. 未决事项

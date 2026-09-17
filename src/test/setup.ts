@@ -80,9 +80,10 @@ vi.stubGlobal(
   }
 );
 
-/// jsdom 中把运行时标记为 Tauri 宿主 — `lib/rpc/index.ts` 据此选择桌面 transport，
-/// 于是各测试继续走下面 mock 的 `invoke` / `listen` / `Channel` (与拆分前的调用点等价)。
-/// 直接赋值而非 `vi.stubGlobal`: 后者会被测试里的 `unstubAllGlobals()` 一并还原，
+/// jsdom 中把运行时标记为 Tauri 宿主 — `lib/rpc/index.ts` 据此选择桌面 transport,
+/// `lib/platform/index.ts` 据此选择桌面插件实现, 于是各测试继续走下面 mock 的
+/// `invoke` / `listen` / `Channel` / `@tauri-apps/plugin-*` (与拆分前的调用点等价)。
+/// 直接赋值而非 `vi.stubGlobal`: 后者会被测试里的 `unstubAllGlobals()` 一并还原,
 /// 导致同文件后续用例意外切到 Web 出口。
 (window as unknown as { __TAURI_INTERNALS__: unknown }).__TAURI_INTERNALS__ = {
   invoke: tauriMock.invoke,

@@ -5,7 +5,7 @@ import type { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Check, Copy } from 'lucide-react';
-import { openUrl } from '@tauri-apps/plugin-opener';
+import { platform } from '../../lib/platform';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 
@@ -71,7 +71,7 @@ const components: Components = {
       className="text-accent underline underline-offset-2 break-all cursor-pointer border-0 bg-transparent p-0 text-left"
       onClick={(e) => {
         e.preventDefault();
-        if (href) void openUrl(href);
+        if (href) void platform.openUrl(href);
       }}
     >
       {children}

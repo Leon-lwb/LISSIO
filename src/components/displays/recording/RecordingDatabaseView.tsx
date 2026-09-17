@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { Database, Download, FileText, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
-import { save } from '@tauri-apps/plugin-dialog';
+import { platform } from '../../../lib/platform';
 import { useAppStore } from '../../../store/appStore';
 import { useRecordingDatabaseStore } from '../../../store/recordingDatabaseStore';
 import { api, type RecordingExportFormat } from '../../../lib/tauri/tauri';
@@ -70,7 +70,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
   async function handleExport(): Promise<void> {
     if (selectedSessionId == null) return;
     const format = exportFormats.find((item) => item.value === exportFormat) ?? exportFormats[0];
-    const path = await save({
+    const path = await platform.saveFile({
       defaultPath: `recording-${selectedSessionId}.${format.extension}`,
       filters: [{ name: format.label, extensions: [format.extension] }],
     });

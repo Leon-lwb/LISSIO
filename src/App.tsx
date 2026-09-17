@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { getVersion } from '@tauri-apps/api/app';
+import { platform } from './lib/platform';
 import { transport } from './lib/rpc';
 import { Settings, Info, RefreshCw, PanelLeft } from 'lucide-react';
 import { ActivityBar } from './components/layout/ActivityBar';
@@ -209,14 +209,14 @@ function App() {
   }, [settingsLoaded, showOnboarding, hasOpenedOnboarding, openOnboarding]);
 
   // 设置加载完成后: 版本更新检测 (每会话一次) — 版本变化则弹出一次操作指南,
-  // 并立即持久化新版本号 (中途关闭向导也不会重复弹; getVersion 失败 = 非 Tauri 环境, 跳过)
+  // 并立即持久化新版本号 (中途关闭向导也不会重复弹; getAppVersion 失败 = 非 Tauri 环境, 跳过)
   useEffect(() => {
     if (!settingsLoaded || versionGuideCheckedRef.current) return;
     versionGuideCheckedRef.current = true;
     void (async () => {
       let current: string;
       try {
-        current = await getVersion();
+        current = await platform.getAppVersion();
       } catch {
         return;
       }

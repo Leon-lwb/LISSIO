@@ -8,8 +8,7 @@
 //! 取代原 useUpdater hook (React 局部状态无法支撑状态栏/弹窗/设置三处共享)
 
 import { create } from 'zustand';
-import { getVersion } from '@tauri-apps/api/app';
-import { relaunch as processRelaunch } from '@tauri-apps/plugin-process';
+import { platform } from '../lib/platform';
 import { transport } from '../lib/rpc';
 import { useSettingsStore } from './settingsStore';
 
@@ -60,12 +59,12 @@ interface UpdateStore {
 }
 
 /// 解析更新通道: 显式设置优先; 否则按当前版本推导 (含 '-' 视为预发布 → beta)
-/// getVersion 失败 (非 Tauri 环境) 时回退 stable
+/// getAppVersion 失败 (非 Tauri 环境) 时回退 stable
 export async function resolveUpdateChannel(): Promise<UpdateChannel> {
   const explicit = useSettingsStore.getState().settings.general.updateChannel;
   if (explicit) return explicit;
   try {
-    const version = await getVersion();
+    const version = await platform.getAppVersion();
     return version.includes('-') ? 'beta' : 'stable';
   } catch {
     return 'stable';
@@ -140,7 +139,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
   },
 
   relaunch: async () => {
-    await processRelaunch();
+    await platform.relaunchApp();
   },
 
   skipVersion: () => {

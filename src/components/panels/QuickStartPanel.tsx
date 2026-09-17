@@ -16,7 +16,7 @@ import {
   Upload,
   type LucideIcon,
 } from 'lucide-react';
-import { ask, confirm } from '@tauri-apps/plugin-dialog';
+import { platform } from '../../lib/platform';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 import { QUICK_START_TEMPLATES, type QuickStartTemplate } from '../../lib/quickstart/templates';
@@ -45,7 +45,7 @@ export function QuickStartPanel() {
   /// 通过系统对话框确认应用方式: 先询问「替换」(推荐), 取消则再询问「合并」
   const chooseAndApply = async (snap: AppSnapshot, name: string) => {
     const title = t(lang, 'templateApplyTitle');
-    const replace = await confirm(
+    const replace = await platform.confirm(
       `${name}\n\n${t(lang, 'templateApplyReplaceConfirm')}`,
       { title, kind: 'warning' }
     );
@@ -53,7 +53,7 @@ export function QuickStartPanel() {
       await apply(snap, 'replace');
       return;
     }
-    const merge = await ask(
+    const merge = await platform.ask(
       `${name}\n\n${t(lang, 'templateApplyMergePrompt')}`,
       { title, kind: 'info' }
     );
