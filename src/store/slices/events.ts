@@ -360,11 +360,13 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
               },
             ]
           : [];
-        const push = notification.level === 'error' ? notify.error : notify.info;
-        push.call(notify, t(lang, 'serverNotify'), notification.message, {
-          source: 'server',
-          actions,
-        });
+        const options = { source: 'server', actions };
+        const title = t(lang, 'serverNotify');
+        if (notification.level === 'error') {
+          notify.error(title, notification.message, options);
+        } else {
+          notify.info(title, notification.message, options);
+        }
       });
 
       return () => {

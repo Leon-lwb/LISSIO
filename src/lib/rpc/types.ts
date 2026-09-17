@@ -77,7 +77,9 @@ export interface Transport {
 
 /// 服务端通知帧 — 与 `backend-server::frames::ServerMessage::Notify` 对应。
 export interface ServerNotification {
-  level: 'info' | 'error' | string;
+  /// 线上取值 `'info'` / `'error'`; 用 `string` 而非字面量联集, 是为了让服务端
+  /// 新增级别时不至于在前端被静默收窄成 never。
+  level: string;
   message: string;
   /// 产物下载链接 (相对当前服务源); 只有导出类通知携带。
   url?: string | null;

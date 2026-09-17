@@ -49,7 +49,9 @@ export function fileNameFromDisposition(header: string | null): string | null {
   if (!header) return null;
   const match = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
   const name = match?.[1]?.trim();
-  return name ? name : null;
+  // 空白文件名按"没有建议名"处理, 回落到调用方给的名字
+  if (name === undefined || name === '') return null;
+  return name;
 }
 
 /// 用临时对象 URL 触发浏览器保存 — 导出产物交付的收尾一步。

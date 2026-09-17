@@ -415,12 +415,14 @@ describe('HttpTransport 服务端通知与产物下载', () => {
     patched.createObjectURL = createObjectURL;
     patched.revokeObjectURL = revokeObjectURL;
 
-    // 捕获被点击的锚点 — 函数内部会立刻把它移出 DOM。
+    // 捕获被点击的锚点 — 函数内部会立刻把它移出 DOM, 所以只能在 click 期间读。
+    // 经 getter 读取: 直接读这个局部变量会被 TS 按初始值收窄成 null。
     let clicked: HTMLAnchorElement | null = null;
+    const clickedAnchor = (): HTMLAnchorElement | null => clicked;
     const clickSpy = vi
       .spyOn(HTMLAnchorElement.prototype, 'click')
-      .mockImplementation(function (this: HTMLAnchorElement) {
-        clicked = this;
+      .mockImplementation(() => {
+        clicked = document.querySelector('a[download]');
       });
 
     fetchMock.mockResolvedValueOnce({
@@ -436,7 +438,8 @@ describe('HttpTransport 服务端通知与产物下载', () => {
     try {
       await transport.downloadFile('/api/v1/download/abc123', 'fallback.csv');
 
-      const [url, init] = fetchMock.mock.calls.at(-1) as [
+      const calls = fetchMock.mock.calls;
+      const [url, init] = calls[calls.length - 1] as [
         string,
         { headers: Record<string, string> },
       ];
@@ -444,8 +447,8 @@ describe('HttpTransport 服务端通知与产物下载', () => {
       expect(init.headers.authorization).toBe('Bearer secret');
       // 令牌不得出现在 URL 里 (会进访问日志与浏览器历史)
       expect(url).not.toContain('secret');
-      expect(clicked?.download).toBe('waveform.csv');
-      expect(clicked?.href).toBe('blob:mock');
+      expect(clickedAnchor()?.download).toBe('waveform.csv');
+      expect(clickedAnchor()?.href).toBe('blob:mock');
       // 锚点不能留在 DOM 里
       expect(document.querySelectorAll('a[download]')).toHaveLength(0);
     } finally {
