@@ -9,6 +9,9 @@
 - **全量能力与平台 shim(P3, 进行中)**:把 Web 出口的待接入命令逐条补齐,并把宿主专有能力收口到平台 shim
   - `get_graph_hir` 与 `parse_frame_decoder_input` 的实现体下沉到 `control-api`(新增 `graph_hir` / `frame_decoder` 模块),桌面 IPC 与 Web 出口共用同一份实现,不再各留一份;`catalog` 中两条命令由 `PENDING` 移入 `SUPPORTED`
   - 顺带修掉 `parse_frame_decoder_input` 的返回形状:补 `#[serde(rename_all = "camelCase")]`,前端读的 `consumedBytes` 由 `undefined` 恢复为真实字节数(桌面路径同修)
+  - 文件产物交付:新增 `GET /api/v1/download/{token}` 与 `backend-host::ArtifactStaging` 受管暂存区;`export_waveform_csv` / `export_can_load_csv` 在 Web 出口写受管目录并把下载链接经 `notify` 帧下发,**不再接受客户端指定的服务器路径**(原 IPC 语义照搬进 HTTP 等于任意路径写入面)
+  - `notify` 帧新增可选 `url` 并接入应用内提示:`Transport` 增加 `onServerNotify` / `downloadFile`,导出通知在 Toast 上给出"下载"动作;下载走带 `Authorization` 的 `fetch` 取字节流再保存,令牌不进 URL
+  - CAN 负载 CSV 的格式化与本地时间换算下沉到 `control-api::can_export`(桌面写用户下载目录,Web 出口写暂存区),两个出口共用同一份实现
 - **前端出口解绑(P2)**:新增 `src/lib/rpc/` 把前端调用从 Tauri API 上解绑,一份 `dist/` 既跑桌面壳也跑浏览器
   - `Transport` 契约(`call` / `listen` / `eventChannel` / `subscribe` / `onReconnect`)+ 两个实现:`tauriTransport`(invoke / listen / Channel)与 `httpTransport`(fetch + WebSocket + 订阅分流 + 重连 + 微批量)
   - `tauri.ts` 的 88 个方法签名不变,内部改走 `transport.call`;显示订阅、事件监听、store 与工具宿主全部收口到 transport,~100 处调用点与 40+ 组件零改动

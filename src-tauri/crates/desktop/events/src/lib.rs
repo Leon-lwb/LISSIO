@@ -45,6 +45,15 @@ pub trait BackendEventSink: Send + Sync {
     fn emit_event(&self, event: &str, payload: Value);
     /// 推送一条系统通知。
     fn notify(&self, level: NotifyLevel, message: &str);
+    /// 推送一条带"下载 / 打开链接"的系统通知。
+    ///
+    /// Web 出口把导出产物挂在 `/api/v1/download/{token}` 上 (浏览器没有可写路径),
+    /// 只能靠一条带链接的提示把文件交给用户。不支持链接的出口沿用默认实现, 退化为
+    /// 普通通知 — 因此这是端口上的可选能力, 不是契约变更。
+    fn notify_with_url(&self, level: NotifyLevel, message: &str, url: &str) {
+        let _ = url;
+        self.notify(level, message);
+    }
 }
 
 /// 事件端口共享句柄 — 需要跨任务 (`tokio::spawn`) 持有端口时使用。

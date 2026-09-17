@@ -73,7 +73,7 @@ WebSocket 只会引入回归风险; A/C 才是新增路径。
 ```jsonc
 // 服务端 → 客户端
 { "type": "event",      "event": "transport:state", "payload": { ... } }
-{ "type": "notify",     "level": "error", "message": "..." }
+{ "type": "notify",     "level": "error", "message": "...", "url": "/api/v1/download/…" }  // url 仅导出类通知携带 (P3)
 { "type": "stream",     "id": 7, "payload": { "kind": "waveform", "payload": { ... } } }
 { "type": "subscribed", "id": 7 }
 { "type": "unsubscribed", "id": 7 }
@@ -125,6 +125,7 @@ reject)。帧级错误没有归属, 省略该字段。
 |---|---|
 | `POST /api/v1/rpc` | 命令派发 (单条 / 数组) |
 | `GET /api/v1/ws` | 事件 + 订阅 + 单连接 RPC |
+| `GET /api/v1/download/{token}` | 导出产物下载 — 只服务暂存区登记过的 token, **不接受任意服务器路径** (P3) |
 | `GET /api/v1/health` | 健康检查 (无鉴权) |
 | `GET /api/v1/capabilities` | `{supported, pending, desktop_only, protocol}` — 前端据此降级 UI (P3 接入; 当前未接入的命令由服务端直接返回 `UnsupportedCommand`) |
 | `--static-dir` | 同进程托管前端 `dist/` (SPA 回落 `index.html`) |
@@ -278,8 +279,8 @@ reject)。帧级错误没有归属, 省略该字段。
 | `mcp_server_start` | 🕓 待接入 |  |
 | `mcp_server_stop` | 🕓 待接入 |  |
 | **文件产物与桌面专有** | | |
-| `export_waveform_csv` | 🕓 待接入 | 服务端文件路径语义 → 需 `/api/v1/download/{token}` (P3) |
-| `export_can_load_csv` | 🕓 待接入 | 同上 (P3) |
+| `export_waveform_csv` | ✅ 已接入 | Web 出口写受管暂存区, 下载链接经 `notify` 帧下发 (P3) |
+| `export_can_load_csv` | ✅ 已接入 | 同上; 返回值为下载 URL (桌面为本地路径) |
 | `get_graph_hir` | ✅ 已接入 | 投影实现下沉 `control-api::graph_hir`, 与 IPC 共用 |
 | `parse_frame_decoder_input` | ✅ 已接入 | 实现体下沉 `control-api::frame_decoder`, 与 IPC 共用 |
 | `inspect_element` | 🖥 桌面专有 | 打开 webview 开发者工具 |
@@ -344,7 +345,11 @@ handler 收到的是 payload 本身而不是 Tauri 的 `Event` 包装。
   事件无法回放, 只能靠拉取对账。
 - **错误形状**: `call` 拒绝的是 `{kind, message}` 结构化错误 (与 Tauri IPC 一致),
   `parseNodeError` / `errorGuidance` 两个出口通用; `kind` 取自 `rpc_api::RpcError`。
-- **`notify` 帧**: Web 出口暂只记录到控制台; 应用内提示由平台 shim 统一接管 (P3)。
+- **`notify` 帧**: 已接入 (P3)。帧可携带可选的 `url` — 导出类命令把产物挂在
+  `/api/v1/download/{token}` 上, 应用内提示据此给出"下载"动作。浏览器无法在导航
+  请求上附加 `Authorization` 头, 因此下载走带鉴权的 `fetch` 取回字节流再触发保存
+  (`Transport::downloadFile`), 令牌不进 URL。系统级通知 (Notification API) 仍由平台
+  shim 统一接管。
 
 ### 5.3 端点与令牌
 
@@ -434,7 +439,7 @@ cargo run -p backend-cli -- rpc get_pipeline_config
 | P0 契约冻结 | 本文件 + 命令能力矩阵 + `scripts/check-web-contract.mjs` | 已完成 |
 | P1 后端竖切 | `BackendHost` 上移; `rpc-api` (88 条命令); `backend-server` (HTTP/WS/鉴权/静态站点); `backend-cli serve --http` 与 `rpc` | 已完成 |
 | P2 前端解绑 | `src/lib/rpc/` 四文件; `tauri.ts` 与各 `*Subscription.ts` 切 transport; 事件监听切 transport; 重连重水合; 出口泄漏门禁 | 已完成 |
-| P3 全量能力 + 平台 shim | 文件产物下载端点; `ai-host` 迁移 + `SecretStore` 端口; `parse_frame_decoder_input` / `get_graph_hir`; `platform/` shim; 服务端 settings; `notify` → 应用内提示 | 待实施 |
+| P3 全量能力 + 平台 shim | 文件产物下载端点; `ai-host` 迁移 + `SecretStore` 端口; `parse_frame_decoder_input` / `get_graph_hir`; `platform/` shim; 服务端 settings; `notify` → 应用内提示 | **进行中** — 已完成 `parse_frame_decoder_input` / `get_graph_hir` 下沉、`/api/v1/download/{token}` + 两个 CSV 导出、`notify` → 应用内提示 (带下载动作); 待做 `platform/` shim + 服务端 settings、`ai-host` + `SecretStore` |
 | P4 收尾 | 浏览器 E2E 固化为可重复脚本; `exits.md` 与本文件的最终校对; README 使用说明 | 待实施 |
 
 ## 9. 未决事项
@@ -448,8 +453,10 @@ cargo run -p backend-cli -- rpc get_pipeline_config
    `pending`, 前端由 `transport.eventChannel` 抛出 `UnsupportedCommand` 明确拒绝。
 3. **多客户端语义** — 当前是"同一后端会话的多个视图", 图并发编辑沿用既有
    `baseVersion` 乐观并发 (`GraphVersionConflict`); 不承诺多人同时编辑。
-4. **`parse_frame_decoder_input`** — 纯预览计算, 实现体在 Tauri 命令层; 应下沉到
-   共享层后两个出口同时接入, 而不是复制一份。
+4. **`parse_frame_decoder_input`** — **已解决 (P3)**: 实现体下沉到
+   [`control-api::frame_decoder`](../../src-tauri/crates/desktop/control-api/src/frame_decoder.rs),
+   桌面 IPC 与 Web 出口共用同一份实现 (`get_graph_hir` 同法下沉到
+   `control-api::graph_hir`)。
 5. **令牌分发** — 同源部署时浏览器仍需拿到令牌 (`?token=` / localStorage / 构建期
    变量三选一)。可选的改进是让 `lissio-server` 在托管 `dist/` 时把令牌注入
    `index.html` (同源即可信), 但那会把"令牌文件 0600"的边界放宽成"任何能读到页面的人

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHttpTransport, type HttpTransport } from '../httpTransport';
+import { createHttpTransport, fileNameFromDisposition, type HttpTransport } from '../httpTransport';
 
 /// 假 WebSocket — 由测试显式驱动 open / message / close, 并记录上行帧。
 class FakeSocket {
@@ -364,5 +364,107 @@ describe('HttpTransport 显示订阅', () => {
     } catch (error) {
       expect(error).toMatchObject({ kind: 'UnsupportedCommand' });
     }
+  });
+});
+
+describe('HttpTransport 服务端通知与产物下载', () => {
+  /// 建立连接并拿到 socket (notify 帧只在连接上到达)。
+  async function connected(): Promise<FakeSocket> {
+    const unlisten = transport.listen('transport:state', vi.fn());
+    const socket = lastSocket();
+    socket.open();
+    await unlisten;
+    return socket;
+  }
+
+  it('notify 帧带 url 时原样交给订阅方', async () => {
+    const socket = await connected();
+    const received: { level: string; message: string; url?: string | null }[] = [];
+    const remove = transport.onServerNotify((notification) => received.push(notification));
+
+    socket.text({
+      type: 'notify',
+      level: 'info',
+      message: '波形 CSV 已导出 (3 行) — 点击下载',
+      url: '/api/v1/download/abc123',
+    });
+    // 不带 url 的通知 (普通后端 notify) 同样投递, url 为 null
+    socket.text({ type: 'notify', level: 'error', message: '设备断开' });
+
+    expect(received).toEqual([
+      { level: 'info', message: '波形 CSV 已导出 (3 行) — 点击下载', url: '/api/v1/download/abc123' },
+      { level: 'error', message: '设备断开', url: null },
+    ]);
+
+    remove();
+    socket.text({ type: 'notify', level: 'info', message: '再来一条' });
+    expect(received).toHaveLength(2);
+  });
+
+  it('downloadFile 用 Authorization 头取回产物并触发保存', async () => {
+    const blob = new Blob(['a,b\n'], { type: 'text/csv' });
+    const createObjectURL = vi.fn(() => 'blob:mock');
+    const revokeObjectURL = vi.fn();
+    // jsdom 不实现对象 URL — 就地补上, 测试结束恢复。
+    const patched = URL as unknown as {
+      createObjectURL: (value: Blob) => string;
+      revokeObjectURL: (url: string) => void;
+    };
+    const originalCreate = patched.createObjectURL;
+    const originalRevoke = patched.revokeObjectURL;
+    patched.createObjectURL = createObjectURL;
+    patched.revokeObjectURL = revokeObjectURL;
+
+    // 捕获被点击的锚点 — 函数内部会立刻把它移出 DOM。
+    let clicked: HTMLAnchorElement | null = null;
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        clicked = this;
+      });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: (name: string) =>
+          name === 'content-disposition' ? 'attachment; filename="waveform.csv"' : null,
+      },
+      blob: () => Promise.resolve(blob),
+    });
+
+    try {
+      await transport.downloadFile('/api/v1/download/abc123', 'fallback.csv');
+
+      const [url, init] = fetchMock.mock.calls.at(-1) as [
+        string,
+        { headers: Record<string, string> },
+      ];
+      expect(url).toBe('http://127.0.0.1:8790/api/v1/download/abc123');
+      expect(init.headers.authorization).toBe('Bearer secret');
+      // 令牌不得出现在 URL 里 (会进访问日志与浏览器历史)
+      expect(url).not.toContain('secret');
+      expect(clicked?.download).toBe('waveform.csv');
+      expect(clicked?.href).toBe('blob:mock');
+      // 锚点不能留在 DOM 里
+      expect(document.querySelectorAll('a[download]')).toHaveLength(0);
+    } finally {
+      clickSpy.mockRestore();
+      patched.createObjectURL = originalCreate;
+      patched.revokeObjectURL = originalRevoke;
+    }
+  });
+
+  it('下载失败抛出可读错误 (由上层渲染为提示)', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 404, headers: { get: () => null } });
+    await expect(transport.downloadFile('/api/v1/download/gone', 'x.csv')).rejects.toThrow(
+      /404/,
+    );
+  });
+
+  it('Content-Disposition 缺失时回落到调用方给的文件名', () => {
+    expect(fileNameFromDisposition(null)).toBeNull();
+    expect(fileNameFromDisposition('attachment; filename="a.csv"')).toBe('a.csv');
+    expect(fileNameFromDisposition('inline')).toBeNull();
   });
 });

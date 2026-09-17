@@ -64,4 +64,21 @@ export interface Transport {
   /// 断线重连成功后的回调 (仅 Web 出口触发; 首次连接不触发)。
   /// 上层据此重新水合权威状态, 返回注销函数。
   onReconnect?(handler: () => void): () => void;
+  /// 服务端通知帧 (`notify`)。仅 Web 出口触发 — 桌面出口的后端通知由 Tauri
+  /// 系统通知承载, 不经该端口。上层据此渲染应用内提示。
+  onServerNotify?(handler: (notification: ServerNotification) => void): () => void;
+  /// 下载服务端产物 (导出类命令下发的 `/api/v1/download/{token}`)。
+  ///
+  /// 只有 Web 出口需要: 桌面导出命令直接把文件写到用户选的本地路径。浏览器
+  /// 无法在导航请求上附加 `Authorization` 头, 因此这里用带鉴权的 `fetch` 取回
+  /// 字节流再触发保存 — 令牌不进 URL (不进访问日志与浏览器历史)。
+  downloadFile?(relativeUrl: string, fallbackName: string): Promise<void>;
+}
+
+/// 服务端通知帧 — 与 `backend-server::frames::ServerMessage::Notify` 对应。
+export interface ServerNotification {
+  level: 'info' | 'error' | string;
+  message: string;
+  /// 产物下载链接 (相对当前服务源); 只有导出类通知携带。
+  url?: string | null;
 }

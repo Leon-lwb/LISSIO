@@ -56,14 +56,27 @@ impl BackendEventSink for BroadcastEventSink {
     }
 
     fn notify(&self, level: NotifyLevel, message: &str) {
-        let level = match level {
-            NotifyLevel::Info => "info",
-            NotifyLevel::Error => "error",
-        };
         let _ = self.tx.send(ServerMessage::Notify {
-            level: level.to_string(),
+            level: notify_level(level).to_string(),
             message: message.to_string(),
+            url: None,
         });
+    }
+
+    fn notify_with_url(&self, level: NotifyLevel, message: &str, url: &str) {
+        let _ = self.tx.send(ServerMessage::Notify {
+            level: notify_level(level).to_string(),
+            message: message.to_string(),
+            url: Some(url.to_string()),
+        });
+    }
+}
+
+/// 通知级别 → 线上字符串。
+const fn notify_level(level: NotifyLevel) -> &'static str {
+    match level {
+        NotifyLevel::Info => "info",
+        NotifyLevel::Error => "error",
     }
 }
 

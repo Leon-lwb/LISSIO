@@ -1305,6 +1305,9 @@ droppedInfoOpenSettings: Open Settings
 canLoadExport: Export CSV
 canLoadExportFailed: Export failed
 canLoadExportSuccess: Exported
+download: Download
+downloadFailed: Download failed
+serverNotify: Server notification
 
 # Frame Decoder
 frameDecoder: Frame Decoder

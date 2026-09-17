@@ -23,7 +23,14 @@ pub enum ServerMessage {
     /// 后端事件 (`events::BackendEventSink::emit_event`)。
     Event { event: String, payload: Value },
     /// 系统通知 (`BackendEventSink::notify`) — Web 侧渲染为应用内提示。
-    Notify { level: String, message: String },
+    Notify {
+        level: String,
+        message: String,
+        /// 产物下载 / 打开链接 (相对当前服务源)。只有导出类通知携带 —
+        /// 浏览器无法落盘, 只能靠链接把文件交给用户。
+        #[serde(skip_serializing_if = "Option::is_none")]
+        url: Option<String>,
+    },
     /// JSON 显示流推送 (`StreamPayload::Json` 的解析结果)。
     Stream { id: u32, payload: Value },
     /// 订阅已建立的回执 — 下发服务端分配的订阅 id。

@@ -21,6 +21,7 @@ mod acquisition;
 mod buffer;
 mod data;
 mod devices;
+mod export;
 mod frame_decoder;
 mod graph;
 mod pipeline;
@@ -155,6 +156,10 @@ pub async fn dispatch(host: &BackendHost, cmd: &str, args: Value) -> Result<Valu
         "create_recording_session" => recording::create_session(host).await,
         "set_active_recording_session" => recording::switch_session(host, cmd, &args).await,
         "apply_recording_settings" => recording::apply_settings(host, cmd, &args).await,
+
+        // ===== 文件产物导出 (Web 出口走受管暂存区 + 下载端点) =====
+        "export_waveform_csv" => export::export_waveform_csv(host, cmd, &args).await,
+        "export_can_load_csv" => export::export_can_load_csv(host, cmd, &args).await,
 
         other => Err(RpcError::unsupported(other)),
     }

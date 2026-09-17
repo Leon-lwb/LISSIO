@@ -22,6 +22,12 @@ import type {
 } from '../../lib/tauri/tauri';
 import { EMPTY_NODE_STATS } from './connection';
 import type { AppSlice } from './types';
+import { t } from '../../i18n';
+import {
+  notify,
+  formatError,
+  type NotificationAction,
+} from '../../lib/tauri/notifications';
 import type { GraphStateSlice } from './graphState';
 import type { GraphDerivedPayload } from './derived';
 import type { GraphCompileEvent } from './compileStatus';
@@ -333,8 +339,37 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
         get().controlTabs.forEach((tab) => { void get().syncTabGraph(tab.id); });
       });
 
+      // 服务端通知帧 → 应用内提示。导出类通知带下载链接: 浏览器无法直接落盘,
+      // 由 transport 带鉴权取回字节流再触发保存 (令牌不进 URL)。
+      const removeServerNotify = transport.onServerNotify?.((notification) => {
+        const downloadUrl = notification.url;
+        const lang = useAppStore.getState().lang;
+        const actions: NotificationAction[] = downloadUrl
+          ? [
+              {
+                label: t(lang, 'download'),
+                run: () => {
+                  void transport
+                    .downloadFile?.(downloadUrl, 'export.csv')
+                    .catch((error: unknown) => {
+                      notify.error(t(lang, 'downloadFailed'), formatError(error), {
+                        source: 'download',
+                      });
+                    });
+                },
+              },
+            ]
+          : [];
+        const push = notification.level === 'error' ? notify.error : notify.info;
+        push.call(notify, t(lang, 'serverNotify'), notification.message, {
+          source: 'server',
+          actions,
+        });
+      });
+
       return () => {
         removeReconnect?.();
+        removeServerNotify?.();
         unlistenFns.forEach((fn) => fn());
         unlistenFns = [];
         spectrumCoalescer.cancel();

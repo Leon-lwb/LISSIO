@@ -7,11 +7,13 @@
 //! 本 crate 不含 Tauri: 配置目录按平台语义解析 (与 `app_config_dir()` 一致),
 //! 事件经 [`events::BackendEventSink`] 端口注入。
 
+mod artifacts;
 mod assembly;
 mod config;
 mod host;
 mod lifecycle;
 
+pub use artifacts::{ARTIFACT_TTL, ArtifactStaging, sanitize_file_name};
 pub use assembly::{
     build_acquisition_runtime, install_envelope_engine, install_point_observer,
     install_serial_discovery,

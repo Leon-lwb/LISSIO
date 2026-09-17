@@ -118,6 +118,9 @@ pub const SUPPORTED: &[&str] = &[
     "create_recording_session",
     "set_active_recording_session",
     "apply_recording_settings",
+    // 文件产物 (Web 出口写受管暂存区, 经 /api/v1/download/{token} 交付)
+    "export_waveform_csv",
+    "export_can_load_csv",
 ];
 
 /// 尚未接入本出口的命令 — 均为需要服务端文件系统 / 密钥端口 / AI 宿主持有的能力。
@@ -125,9 +128,6 @@ pub const SUPPORTED: &[&str] = &[
 /// 接入顺序见 `docs/architecture/web-exit.md`: 文件产物类先走下载端点, AI 类
 /// 需先完成 `ai-host` 迁移与 `SecretStore` 端口注入。
 pub const PENDING: &[&str] = &[
-    // 文件产物 (需要 Web 侧下载端点)
-    "export_waveform_csv",
-    "export_can_load_csv",
     // AI 对话 / 会话 / MCP / 密钥
     "ai_list_providers",
     "ai_chat_send",

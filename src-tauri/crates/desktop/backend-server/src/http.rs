@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use axum::body::Bytes;
 use axum::extract::ws::WebSocketUpgrade;
-use axum::extract::{Request, State};
+use axum::extract::{Path, Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
@@ -35,6 +35,7 @@ pub fn router(state: Arc<ServerState>) -> Router {
     let protected = Router::new()
         .route("/api/v1/rpc", post(rpc_handler))
         .route("/api/v1/ws", get(ws_handler))
+        .route("/api/v1/download/{token}", get(download_handler))
         .route_layer(axum::middleware::from_fn_with_state(
             state.clone(),
             require_token,
@@ -82,6 +83,60 @@ async fn health() -> Json<Value> {
 /// 能力清单 — 前端据此隐藏本出口不支持的 UI。
 async fn capabilities(State(state): State<Arc<ServerState>>) -> Json<Value> {
     Json(serde_json::to_value(state.capabilities()).unwrap_or(Value::Null))
+}
+
+/// 导出产物下载 — 只服务暂存区登记过的 token, **不接受任意服务器路径**。
+///
+/// 与其它受保护路由共用 `require_token`, 因此链接可以安全地直接发给浏览器;
+/// 暂存文件名里的内部 token 前缀不外泄。
+async fn download_handler(
+    State(state): State<Arc<ServerState>>,
+    Path(token): Path<String>,
+) -> Response {
+    let Some(artifacts) = state.host.artifacts.as_ref() else {
+        return error_response(StatusCode::NOT_FOUND, "NotFound", "本出口未启用产物下载");
+    };
+    let Some(path) = artifacts.resolve(&token) else {
+        return error_response(StatusCode::NOT_FOUND, "NotFound", "下载链接不存在或已过期");
+    };
+    let bytes = match tokio::fs::read(&path).await {
+        Ok(bytes) => bytes,
+        Err(error) => {
+            return error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "IoError",
+                &format!("读取导出产物失败: {error}"),
+            );
+        }
+    };
+    (
+        [
+            (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_string()),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{}\"", download_file_name(&path)),
+            ),
+            (header::CACHE_CONTROL, "no-store".to_string()),
+        ],
+        bytes,
+    )
+        .into_response()
+}
+
+/// 从暂存路径还原用户可见文件名 — 去掉 `<token>-` 内部前缀。
+fn download_file_name(path: &std::path::Path) -> String {
+    let raw = path.file_name().map_or_else(
+        || "export.csv".to_string(),
+        |name| name.to_string_lossy().into_owned(),
+    );
+    match raw.split_once('-') {
+        Some((prefix, rest))
+            if !rest.is_empty() && prefix.chars().all(|ch| ch.is_ascii_hexdigit()) =>
+        {
+            rest.to_string()
+        }
+        _ => raw,
+    }
 }
 
 /// HTTP-RPC — 单条或数组 (数组用于启动时的并发突发, 减少往返)。
@@ -247,5 +302,15 @@ mod tests {
     #[test]
     fn missing_subprotocol_yields_no_token() {
         assert_eq!(subprotocol_token(&HeaderMap::new()), None);
+    }
+
+    /// 下载文件名去掉内部 token 前缀, 且不会把普通连字符名误当前缀。
+    #[test]
+    fn download_file_name_drops_internal_token_prefix() {
+        let staged =
+            std::path::Path::new("/tmp/downloads/0123456789abcdef0123456789abcdef-waveform.csv");
+        assert_eq!(super::download_file_name(staged), "waveform.csv");
+        let plain = std::path::Path::new("/tmp/downloads/my-export.csv");
+        assert_eq!(super::download_file_name(plain), "my-export.csv");
     }
 }

@@ -9,6 +9,7 @@
 //! 各出口 (IPC 命令层 / CLI 子命令 / HTTP-RPC) 操作的是同一份运行状态。
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use app::AppState;
 use control_api::Toolbox;
@@ -24,6 +25,9 @@ pub struct BackendHost {
     pub sink: EventSinkHandle,
     /// 配置目录 (workspace.json / settings.json / recordings/ 所在处)。
     pub config_dir: PathBuf,
+    /// 导出产物暂存区 — 只有 Web 出口注入 (浏览器没有可写路径); 其余出口为
+    /// `None`, 导出命令沿用显式本地路径语义。见 [`crate::ArtifactStaging`]。
+    pub artifacts: Option<Arc<crate::ArtifactStaging>>,
 }
 
 /// 装配后端宿主 (适配器注册 + 点位观察者 + 可选工作区恢复 + 后台任务)。
@@ -62,6 +66,8 @@ pub async fn assemble(
         toolbox,
         sink,
         config_dir,
+        // Web 出口装配后自行注入暂存区 (见 `backend_server::serve`)
+        artifacts: None,
     })
 }
 

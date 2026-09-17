@@ -36,6 +36,9 @@ pub use sink::{BroadcastEventSink, OutFrame, WsStreamSink};
 /// 不受影响)。
 const EVENT_CHANNEL_CAPACITY: usize = 4096;
 
+/// 导出产物暂存目录名 (位于配置目录下) — 只服务经 token 登记的产物。
+pub const DOWNLOAD_DIR_NAME: &str = "downloads";
+
 /// 服务运行期共享状态。
 pub struct ServerState {
     /// 已装配后端宿主 (能力与状态切片)。
@@ -79,9 +82,14 @@ impl ServerState {
 pub async fn serve(config: ServerConfig) -> Result<(), String> {
     let (broadcast, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
     let sink = BroadcastEventSink::handle(&broadcast);
-    let host = Arc::new(
-        backend_host::assemble(config.config_dir.clone(), config.restore_workspace, sink).await?,
-    );
+    let mut host =
+        backend_host::assemble(config.config_dir.clone(), config.restore_workspace, sink).await?;
+    // Web 出口注入导出产物暂存区: 导出命令改把产物写进受管目录, 经
+    // `/api/v1/download/{token}` 交付 (浏览器没有可写路径)。
+    host.artifacts = Some(Arc::new(backend_host::ArtifactStaging::new(
+        host.config_dir.join(DOWNLOAD_DIR_NAME),
+    )?));
+    let host = Arc::new(host);
 
     let mut mcp = match config.mcp_port {
         Some(port) => Some(

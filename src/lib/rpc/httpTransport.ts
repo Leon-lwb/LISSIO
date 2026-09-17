@@ -17,6 +17,7 @@
 import type {
   EventChannel,
   RpcError,
+  ServerNotification,
   SubscribeOptions,
   SubscriptionHandle,
   Transport,
@@ -42,6 +43,28 @@ export interface WebEndpoint {
   token: string;
 }
 
+/// 从 `Content-Disposition` 还原服务端建议的文件名
+/// (`attachment; filename="waveform.csv"`); 缺失或为空时返回 null。
+export function fileNameFromDisposition(header: string | null): string | null {
+  if (!header) return null;
+  const match = /filename\s*=\s*"?([^";]+)"?/i.exec(header);
+  const name = match?.[1]?.trim();
+  return name ? name : null;
+}
+
+/// 用临时对象 URL 触发浏览器保存 — 导出产物交付的收尾一步。
+function triggerBrowserDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // 立即回收会让部分浏览器拿不到数据 — 下一轮事件循环再释放。
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 /// 服务端 → 客户端消息 (仅本出口消费的变体)。
 interface SubscribedMessage {
   type: 'subscribed';
@@ -61,6 +84,8 @@ interface NotifyMessage {
   type: 'notify';
   level: string;
   message: string;
+  /// 产物下载链接 (相对当前服务源); 只有导出类通知携带。
+  url?: string | null;
 }
 interface FaultMessage {
   type: 'fault';
@@ -152,6 +177,7 @@ export class HttpTransport implements Transport {
 
   private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
   private readonly reconnectHandlers = new Set<() => void>();
+  private readonly serverNotifyHandlers = new Set<(notification: ServerNotification) => void>();
 
   constructor(endpoint: WebEndpoint) {
     this.endpoint = endpoint;
@@ -247,6 +273,28 @@ export class HttpTransport implements Transport {
   onReconnect(handler: () => void): () => void {
     this.reconnectHandlers.add(handler);
     return () => this.reconnectHandlers.delete(handler);
+  }
+
+  onServerNotify(handler: (notification: ServerNotification) => void): () => void {
+    this.serverNotifyHandlers.add(handler);
+    return () => this.serverNotifyHandlers.delete(handler);
+  }
+
+  /// 取回导出产物并触发浏览器保存。
+  ///
+  /// 用带 `Authorization` 的 `fetch` 而不是直接导航到该 URL: 浏览器无法在导航
+  /// 请求上附加请求头, 把令牌放进查询串则会写进访问日志与浏览器历史 (§3.5)。
+  async downloadFile(relativeUrl: string, fallbackName: string): Promise<void> {
+    const response = await fetch(`${this.endpoint.base}${relativeUrl}`, {
+      headers: { ...this.authHeader() },
+    });
+    if (!response.ok) {
+      throw new Error(`下载失败: HTTP ${response.status}`);
+    }
+    const blob = await response.blob();
+    const fileName =
+      fileNameFromDisposition(response.headers.get('content-disposition')) ?? fallbackName;
+    triggerBrowserDownload(blob, fileName);
   }
 
   /// 断开并停止重连 (测试与卸载用)。
@@ -471,9 +519,17 @@ export class HttpTransport implements Transport {
       }
       case 'notify': {
         const notify = message as NotifyMessage;
-        // Web 出口暂只记录 — 应用内提示由平台 shim 统一接管 (系统通知在浏览器
-        // 无等价物)。
-        console.warn(`[web] 后端通知 (${notify.level}): ${notify.message}`);
+        // 应用内提示 (含导出下载链接) 由订阅方渲染 — transport 不认识 UI。
+        const notification: ServerNotification = {
+          level: notify.level,
+          message: notify.message,
+          url: notify.url ?? null,
+        };
+        if (this.serverNotifyHandlers.size === 0) {
+          console.warn(`[web] 后端通知 (${notify.level}): ${notify.message}`);
+          break;
+        }
+        for (const handler of [...this.serverNotifyHandlers]) handler(notification);
         break;
       }
       case 'fault':

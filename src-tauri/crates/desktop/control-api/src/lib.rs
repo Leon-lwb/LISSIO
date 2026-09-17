@@ -13,6 +13,7 @@
 //! 端口注入, 显示数据流经 `app::display::StreamSink` 端口注入, 由组合根提供
 //! 具体实现。
 
+pub mod can_export;
 pub mod control;
 pub mod data;
 pub mod frame_decoder;
