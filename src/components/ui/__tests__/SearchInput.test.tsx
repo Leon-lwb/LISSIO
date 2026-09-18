@@ -9,6 +9,7 @@ import type { ComponentProps } from 'react';
 function ControlledSearchInput(props: Partial<ComponentProps<typeof SearchInput>>) {
   const [value, setValue] = useState(props.value ?? '');
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- 测试专用冒泡探测节点, 无交互语义
     <div
       data-testid="outside"
       onKeyDown={(e) => (e.currentTarget as HTMLElement).dataset.escBubbled = 'true'}

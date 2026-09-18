@@ -17,7 +17,6 @@ interface SearchInputProps {
   ariaLabel?: string;
   /// ESC 按下时回调 (清空之后仍会回调, 供调用方重置关联状态如分类跳转)
   onEscape?: () => void;
-  autoFocus?: boolean;
   disabled?: boolean;
   /// 输入停止 debounceMs 毫秒后才上报 onChange; 缺省 0 = 每键即时
   debounceMs?: number;
@@ -36,7 +35,6 @@ export function SearchInput({
   placeholder,
   ariaLabel,
   onEscape,
-  autoFocus,
   disabled = false,
   debounceMs = 0,
   mono = false,
@@ -127,7 +125,6 @@ export function SearchInput({
         ref={inputRef}
         type="text"
         disabled={disabled}
-        autoFocus={autoFocus}
         className={`search-input bg-transparent border-none min-w-0 flex-1 text-xs text-text-primary placeholder:text-text-disabled ${mono ? 'font-mono' : ''}`}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}

@@ -23,7 +23,7 @@ const errors = [];
 function logicalLines(text) {
   const out = [];
   let buf = null;
-  let depth = 0;
+  let depth;
   for (const raw of text.split(/\r?\n/)) {
     if (buf === null) {
       if (/^\s*(#|$)/.test(raw)) continue;

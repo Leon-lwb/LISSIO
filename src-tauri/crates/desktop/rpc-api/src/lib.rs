@@ -18,6 +18,7 @@ pub mod args;
 pub mod catalog;
 
 mod acquisition;
+mod ai;
 mod buffer;
 mod data;
 mod devices;
@@ -29,9 +30,28 @@ mod recording;
 mod transport;
 
 use backend_host::BackendHost;
+use events::{EventSinkHandle, NullEventSink};
 use serde_json::Value;
+use std::sync::Arc;
 
 pub use args::{RpcError, normalize_args};
+
+/// Per-request output ports. HTTP calls use the defaults; WebSocket calls can
+/// inject a connection-scoped chat channel and frontend-tool event sink.
+#[derive(Clone)]
+pub struct RpcContext {
+    pub chat_events: Option<ai_host::ChatEventSink>,
+    pub frontend_sink: EventSinkHandle,
+}
+
+impl Default for RpcContext {
+    fn default() -> Self {
+        Self {
+            chat_events: None,
+            frontend_sink: Arc::new(NullEventSink),
+        }
+    }
+}
 
 /// 派发一条命令。
 ///
@@ -39,8 +59,42 @@ pub use args::{RpcError, normalize_args};
 /// HTTP 响应 `result` 字段的 JSON。未知或未接入的命令返回
 /// [`RpcError::unsupported`], 出口层据此回 501 而不是 500。
 pub async fn dispatch(host: &BackendHost, cmd: &str, args: Value) -> Result<Value, RpcError> {
+    dispatch_with_context(host, cmd, args, &RpcContext::default()).await
+}
+
+/// Dispatch with request-scoped streaming/event ports.
+pub async fn dispatch_with_context(
+    host: &BackendHost,
+    cmd: &str,
+    args: Value,
+    context: &RpcContext,
+) -> Result<Value, RpcError> {
     let args = normalize_args(args);
     match cmd {
+        // ===== AI / sessions / MCP =====
+        "ai_list_providers" => ai::list_providers(),
+        "ai_chat_send" => ai::chat_send(host, cmd, &args, context).await,
+        "ai_chat_cancel" => ai::chat_cancel(host, cmd, &args),
+        "ai_tool_resolve" => ai::tool_resolve(host, cmd, &args),
+        "ai_secret_status" => ai::secret_status(host, cmd, &args),
+        "ai_secret_set" => ai::secret_set(host, cmd, &args),
+        "ai_secret_delete" => ai::secret_delete(host, cmd, &args),
+        "chat_list_sessions" => ai::list_sessions(host),
+        "chat_create_session" => ai::create_session(host, cmd, &args),
+        "chat_get_session" => ai::get_session(host, cmd, &args),
+        "chat_rename_session" => ai::rename_session(host, cmd, &args),
+        "chat_delete_session" => ai::delete_session(host, cmd, &args),
+        "chat_clear_session" => ai::clear_session(host, cmd, &args),
+        "mcp_list_servers" => ai::list_servers(host),
+        "mcp_add_server" => ai::add_server(host, cmd, &args),
+        "mcp_remove_server" => ai::remove_server(host, cmd, &args),
+        "mcp_set_server_enabled" => ai::set_server_enabled(host, cmd, &args),
+        "mcp_list_tools" => ai::list_tools(host).await,
+        "mcp_connection_states" => ai::connection_states(host),
+        "mcp_call_tool" => ai::call_tool(host, cmd, &args).await,
+        "mcp_server_status" => ai::server_status(host),
+        "mcp_server_start" => ai::server_start(host, cmd, &args).await,
+        "mcp_server_stop" => ai::server_stop(host),
         // ===== 设备与采集 =====
         "list_ports" => devices::list_ports(host),
         "list_candle_devices" => devices::list_candle_devices(),

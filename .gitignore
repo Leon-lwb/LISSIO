@@ -34,6 +34,9 @@ node_modules/
 # Frontend build output
 dist/
 dist-ssr/
+src-tauri/binaries/
+test-results/
+playwright-report/
 
 # Generated reports and promotional media
 /output/

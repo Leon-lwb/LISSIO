@@ -60,8 +60,8 @@ pub const SKILLS: &[Skill] = &[
         title_en: "Software & Core Concepts Overview",
         summary_zh: "软件定位、字节/数值双平面、页签节点文档与数据流",
         summary_en: "App purpose, byte/value planes, tab-owned node documents, data flow",
-        md_zh: include_str!("../skills/zh/overview.md"),
-        md_en: include_str!("../skills/en/overview.md"),
+        md_zh: include_str!("../../../../src/commands/skills/zh/overview.md"),
+        md_en: include_str!("../../../../src/commands/skills/en/overview.md"),
     },
     Skill {
         id: "nodes-reference",
@@ -69,8 +69,8 @@ pub const SKILLS: &[Skill] = &[
         title_en: "Node & Widget Type Reference",
         summary_zh: "传输/协议类型与参数、全部 widget、连线规则与端口域 (同域才能连)",
         summary_en: "Transport/protocol kinds & params, all widgets, wiring rules & port domains",
-        md_zh: include_str!("../skills/zh/nodes-reference.md"),
-        md_en: include_str!("../skills/en/nodes-reference.md"),
+        md_zh: include_str!("../../../../src/commands/skills/zh/nodes-reference.md"),
+        md_en: include_str!("../../../../src/commands/skills/en/nodes-reference.md"),
     },
     Skill {
         id: "protocols",
@@ -78,8 +78,8 @@ pub const SKILLS: &[Skill] = &[
         title_en: "Protocols & Data Formats",
         summary_zh: "JustFloat/FireWater 帧格式、自定义帧、CAN、逻辑解码",
         summary_en: "JustFloat/FireWater frames, custom frames, CAN, logic decode",
-        md_zh: include_str!("../skills/zh/protocols.md"),
-        md_en: include_str!("../skills/en/protocols.md"),
+        md_zh: include_str!("../../../../src/commands/skills/zh/protocols.md"),
+        md_en: include_str!("../../../../src/commands/skills/en/protocols.md"),
     },
     Skill {
         id: "debug-recipes",
@@ -87,8 +87,8 @@ pub const SKILLS: &[Skill] = &[
         title_en: "Device Debugging Playbook",
         summary_zh: "连接设备→解析→绘图、无硬件调试、无数据排查、CAN 调试等任务套路",
         summary_en: "Connect→parse→plot, hardware-less debug, no-data triage, CAN",
-        md_zh: include_str!("../skills/zh/debug-recipes.md"),
-        md_en: include_str!("../skills/en/debug-recipes.md"),
+        md_zh: include_str!("../../../../src/commands/skills/zh/debug-recipes.md"),
+        md_en: include_str!("../../../../src/commands/skills/en/debug-recipes.md"),
     },
     Skill {
         id: "tools-guide",
@@ -96,8 +96,8 @@ pub const SKILLS: &[Skill] = &[
         title_en: "Built-in Tools Guide",
         summary_zh: "工具清单、先读后写工作流、上限与注意事项",
         summary_en: "Tool inventory, read-before-write workflow, caps & caveats",
-        md_zh: include_str!("../skills/zh/tools-guide.md"),
-        md_en: include_str!("../skills/en/tools-guide.md"),
+        md_zh: include_str!("../../../../src/commands/skills/zh/tools-guide.md"),
+        md_en: include_str!("../../../../src/commands/skills/en/tools-guide.md"),
     },
 ];
 

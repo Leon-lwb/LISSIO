@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { BackendConnectionGate } from './components/BackendConnectionGate';
 import "./styles/theme.css";
 import "./styles/components.css";
 
@@ -21,6 +22,8 @@ window.addEventListener("error", (e) => {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <BackendConnectionGate>
+      <App />
+    </BackendConnectionGate>
   </React.StrictMode>,
 );

@@ -1,7 +1,14 @@
+//! Exit-independent AI/MCP host.
+
+mod native_executor;
+mod secret;
+mod skills;
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use app::AppState;
+use crate::native_executor::{NativeToolExecutor, PendingCalls, ToolOutcome};
+use crate::skills::Lang;
 use chat::{
     AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, ToolExecutor,
     TurnRecorder, run_chat,
@@ -11,19 +18,23 @@ use chat_session::{
 };
 use control_api::Toolbox;
 use error::{McpError, Result};
+use events::EventSinkHandle;
 use llm::{AdapterInfo, AiProviderConfig, ToolSpecDto, validate_config};
 use mcp_client::{McpManager, McpServerConfig, McpToolInfo};
 use mcp_server::McpServerHandle;
 use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::Value;
-use tauri::{AppHandle, Manager, State, ipc::Channel};
 
-use crate::native_executor::{NativeToolExecutor, PendingCalls, ToolOutcome};
-use crate::skills::{self, Lang};
+pub use secret::{SecretSource, SecretStatus, SecretStore, SystemSecretStore};
+
+/// 流式事件出口。WebSocket 使用连接级实现，旧 Tauri wrapper 可注入 Channel 适配器。
+pub type ChatEventSink = Arc<dyn Fn(AiChatEvent) + Send + Sync>;
 
 /// AI 功能全局状态 (Tauri managed)。
-pub struct AiState {
+pub struct AiHost {
+    toolbox: Toolbox,
+    sink: EventSinkHandle,
     /// 对话任务取消注册表。
     registry: Arc<ChatTaskRegistry>,
     /// 对话会话存储 (多会话 + 历史持久化, 所有权在后端)。
@@ -36,12 +47,24 @@ pub struct AiState {
     server: Mutex<Option<McpServerHandle>>,
     /// 前端托管工具调用注册表 (call_id → 回执发送端)。
     pending_frontend: PendingCalls,
+    secrets: Arc<dyn SecretStore>,
 }
 
-impl AiState {
+impl AiHost {
     /// 从 app config dir 构造 (加载已配置的外部 MCP server 列表与会话历史;
     /// 配置文件损坏时按空配置启动, 不阻塞应用)。
-    pub fn new(config_dir: PathBuf) -> Self {
+    pub fn new(config_dir: PathBuf, toolbox: Toolbox, sink: EventSinkHandle) -> Self {
+        Self::with_secret_store(config_dir, toolbox, sink, Arc::new(SystemSecretStore))
+    }
+
+    /// Construct with an injected secret port (used by deterministic backend tests and alternate
+    /// deployments).
+    pub fn with_secret_store(
+        config_dir: PathBuf,
+        toolbox: Toolbox,
+        sink: EventSinkHandle,
+        secrets: Arc<dyn SecretStore>,
+    ) -> Self {
         let mcp = McpManager::load(&config_dir).unwrap_or_else(|e| {
             log::warn!("MCP 配置加载失败, 按空配置启动: {e}");
             McpManager::empty(&config_dir)
@@ -51,12 +74,15 @@ impl AiState {
             SessionStore::empty(&config_dir)
         });
         Self {
+            toolbox,
+            sink,
             registry: Arc::new(ChatTaskRegistry::default()),
             sessions: Arc::new(sessions),
             mcp: Arc::new(mcp),
             tool_cache: Mutex::new(Vec::new()),
             server: Mutex::new(None),
             pending_frontend: Arc::new(Mutex::new(std::collections::HashMap::new())),
+            secrets,
         }
     }
 }
@@ -129,7 +155,6 @@ impl ToolExecutor for CompositeExecutor {
 // ============ AI 对话 ============
 
 /// 支持的 LLM provider 适配器清单 (设置 UI 下拉)。
-#[tauri::command]
 pub fn ai_list_providers() -> Vec<AdapterInfo> {
     llm::list_adapters().to_vec()
 }
@@ -146,22 +171,24 @@ pub fn ai_list_providers() -> Vec<AdapterInfo> {
 ///
 /// # Errors
 /// 配置校验失败 (缺 key / 未知适配器 / 缺模型名) 或会话落盘失败。
-#[tauri::command]
 pub async fn ai_chat_send(
-    state: State<'_, AiState>,
-    app: AppHandle,
+    state: &AiHost,
     session_id: String,
     text: Option<String>,
     attachments: Option<Vec<AttachmentDto>>,
     regenerate: bool,
-    config: AiProviderConfig,
+    mut config: AiProviderConfig,
     system: Option<String>,
     max_tool_rounds: u32,
     use_mcp_tools: bool,
     use_builtin_tools: bool,
     ui_lang: Option<String>,
-    on_event: Channel<AiChatEvent>,
+    on_event: ChatEventSink,
+    frontend_sink: EventSinkHandle,
 ) -> Result<String> {
+    if config.api_key.trim().is_empty() {
+        config.api_key = state.secrets.resolve(&config.adapter)?.unwrap_or_default();
+    }
     validate_config(&config)?;
 
     // 回合前置: 先落盘用户输入 / 截断待重试回合, 派生的历史才是权威上下文
@@ -208,25 +235,21 @@ pub async fn ai_chat_send(
     };
 
     let spawned_task_id = task_id.clone();
-    tauri::async_runtime::spawn(async move {
+    let toolbox = state.toolbox.clone();
+    let backend_sink = state.sink.clone();
+    tokio::spawn(async move {
         // 事件双路: 转发前端流式渲染 + 记录器聚合 (终态后落盘)
         let recorder = Arc::new(Mutex::new(TurnRecorder::new()));
         let recorder_for_sink = Arc::clone(&recorder);
         let sink: EventSink = Arc::new(move |event| {
             recorder_for_sink.lock().record(&event);
-            let _ = on_event.send(event);
+            on_event(event);
         });
         let provider = GenaiTurnProvider;
 
         // 内置工具: toolbox 从 AppState 提取共享句柄, pending 注册表接收前端回执
         let native = use_builtin_tools.then(|| {
-            let app_state: State<AppState> = app.state();
-            NativeToolExecutor::new(
-                Toolbox::from_state(&app_state),
-                app.clone(),
-                pending_frontend,
-                lang,
-            )
+            NativeToolExecutor::new(toolbox, backend_sink, frontend_sink, pending_frontend, lang)
         });
         let mcp_executor = (!mcp_tools.is_empty()).then(|| McpToolExecutor {
             tools: mcp_tools,
@@ -267,13 +290,7 @@ pub async fn ai_chat_send(
 
 /// 前端托管工具回执 — `toolHost` 执行完 `ai_tool_invoke` 事件后调用。
 /// 返回是否存在该 pending 调用 (已超时清理时为 false, 回执被丢弃)。
-#[tauri::command]
-pub fn ai_tool_resolve(
-    state: State<'_, AiState>,
-    call_id: String,
-    ok: bool,
-    result: Value,
-) -> bool {
+pub fn ai_tool_resolve(state: &AiHost, call_id: String, ok: bool, result: Value) -> bool {
     // 语句内取走 sender, MutexGuard 不跨后续处理存活
     let tx = state.pending_frontend.lock().remove(&call_id);
     tx.is_some_and(|tx| {
@@ -291,8 +308,7 @@ pub fn ai_tool_resolve(
 }
 
 /// 取消进行中的对话任务;返回是否存在该任务。
-#[tauri::command]
-pub fn ai_chat_cancel(state: State<'_, AiState>, task_id: String) -> bool {
+pub fn ai_chat_cancel(state: &AiHost, task_id: String) -> bool {
     state.registry.cancel(&task_id)
 }
 
@@ -302,34 +318,30 @@ pub fn ai_chat_cancel(state: State<'_, AiState>, task_id: String) -> bool {
 ///
 /// # Errors
 /// 钥匙串访问失败。
-#[tauri::command]
-pub async fn ai_keychain_get(adapter: String) -> Result<Option<String>> {
-    crate::keychain::get_key(&adapter)
+pub fn ai_secret_status(state: &AiHost, adapter: String) -> Result<SecretStatus> {
+    state.secrets.status(&adapter)
 }
 
 /// 写入适配器的 API key (已存在则覆盖)。
 ///
 /// # Errors
 /// 钥匙串访问失败。
-#[tauri::command]
-pub async fn ai_keychain_set(adapter: String, key: String) -> Result<()> {
-    crate::keychain::set_key(&adapter, &key)
+pub fn ai_secret_set(state: &AiHost, adapter: String, key: String) -> Result<SecretStatus> {
+    state.secrets.set(&adapter, &key)
 }
 
 /// 删除适配器的 API key (不存在时静默)。
 ///
 /// # Errors
 /// 钥匙串访问失败。
-#[tauri::command]
-pub async fn ai_keychain_delete(adapter: String) -> Result<()> {
-    crate::keychain::delete_key(&adapter)
+pub fn ai_secret_delete(state: &AiHost, adapter: String) -> Result<SecretStatus> {
+    state.secrets.delete(&adapter)
 }
 
 // ============ 对话会话 (后端持有, 前端薄视图) ============
 
 /// 全部会话摘要。
-#[tauri::command]
-pub fn chat_list_sessions(state: State<'_, AiState>) -> Vec<SessionMeta> {
+pub fn chat_list_sessions(state: &AiHost) -> Vec<SessionMeta> {
     state.sessions.list_metas()
 }
 
@@ -337,14 +349,12 @@ pub fn chat_list_sessions(state: State<'_, AiState>) -> Vec<SessionMeta> {
 ///
 /// # Errors
 /// 落盘失败。
-#[tauri::command]
-pub async fn chat_create_session(state: State<'_, AiState>, title: String) -> Result<ChatSession> {
+pub fn chat_create_session(state: &AiHost, title: String) -> Result<ChatSession> {
     state.sessions.create(&title)
 }
 
 /// 读取单个会话 (含全部条目);不存在返回 None。
-#[tauri::command]
-pub fn chat_get_session(state: State<'_, AiState>, session_id: String) -> Option<ChatSession> {
+pub fn chat_get_session(state: &AiHost, session_id: String) -> Option<ChatSession> {
     state.sessions.get(&session_id)
 }
 
@@ -352,12 +362,7 @@ pub fn chat_get_session(state: State<'_, AiState>, session_id: String) -> Option
 ///
 /// # Errors
 /// 会话不存在或落盘失败。
-#[tauri::command]
-pub async fn chat_rename_session(
-    state: State<'_, AiState>,
-    session_id: String,
-    title: String,
-) -> Result<()> {
+pub fn chat_rename_session(state: &AiHost, session_id: String, title: String) -> Result<()> {
     state.sessions.rename(&session_id, &title)
 }
 
@@ -365,8 +370,7 @@ pub async fn chat_rename_session(
 ///
 /// # Errors
 /// 落盘失败。
-#[tauri::command]
-pub async fn chat_delete_session(state: State<'_, AiState>, session_id: String) -> Result<()> {
+pub fn chat_delete_session(state: &AiHost, session_id: String) -> Result<()> {
     state.sessions.remove(&session_id)
 }
 
@@ -374,16 +378,14 @@ pub async fn chat_delete_session(state: State<'_, AiState>, session_id: String) 
 ///
 /// # Errors
 /// 落盘失败。
-#[tauri::command]
-pub async fn chat_clear_session(state: State<'_, AiState>, session_id: String) -> Result<()> {
+pub fn chat_clear_session(state: &AiHost, session_id: String) -> Result<()> {
     state.sessions.clear_items(&session_id)
 }
 
 // ============ MCP client (外部 server) ============
 
 /// 全部外部 MCP server 配置。
-#[tauri::command]
-pub fn mcp_list_servers(state: State<'_, AiState>) -> Vec<McpServerConfig> {
+pub fn mcp_list_servers(state: &AiHost) -> Vec<McpServerConfig> {
     state.mcp.list_servers()
 }
 
@@ -391,14 +393,12 @@ pub fn mcp_list_servers(state: State<'_, AiState>) -> Vec<McpServerConfig> {
 ///
 /// # Errors
 /// id 重复 / 配置非法 / 写盘失败。
-#[tauri::command]
-pub async fn mcp_add_server(state: State<'_, AiState>, config: McpServerConfig) -> Result<()> {
+pub fn mcp_add_server(state: &AiHost, config: McpServerConfig) -> Result<()> {
     state.mcp.add_server(config)
 }
 
 /// 删除外部 MCP server 配置 (同时断连)。
-#[tauri::command]
-pub fn mcp_remove_server(state: State<'_, AiState>, id: String) {
+pub fn mcp_remove_server(state: &AiHost, id: String) {
     state.mcp.remove_server(&id);
 }
 
@@ -406,26 +406,19 @@ pub fn mcp_remove_server(state: State<'_, AiState>, id: String) {
 ///
 /// # Errors
 /// id 不存在或写盘失败。
-#[tauri::command]
-pub async fn mcp_set_server_enabled(
-    state: State<'_, AiState>,
-    id: String,
-    enabled: bool,
-) -> Result<()> {
+pub fn mcp_set_server_enabled(state: &AiHost, id: String, enabled: bool) -> Result<()> {
     state.mcp.set_enabled(&id, enabled)
 }
 
 /// 刷新聚合工具列表 (自动连接已启用但未连接的 server) 并更新缓存。
-#[tauri::command]
-pub async fn mcp_list_tools(state: State<'_, AiState>) -> Result<Vec<McpToolInfo>> {
+pub async fn mcp_list_tools(state: &AiHost) -> Result<Vec<McpToolInfo>> {
     let tools = state.mcp.list_tools().await;
     state.tool_cache.lock().clone_from(&tools);
     Ok(tools)
 }
 
 /// 当前各 server 的连接状态 [(server_id, connected)]。
-#[tauri::command]
-pub fn mcp_connection_states(state: State<'_, AiState>) -> Vec<(String, bool)> {
+pub fn mcp_connection_states(state: &AiHost) -> Vec<(String, bool)> {
     state.mcp.connection_states()
 }
 
@@ -433,12 +426,7 @@ pub fn mcp_connection_states(state: State<'_, AiState>) -> Vec<(String, bool)> {
 ///
 /// # Errors
 /// 工具未注册或远端调用失败。
-#[tauri::command]
-pub async fn mcp_call_tool(
-    state: State<'_, AiState>,
-    name: String,
-    arguments: Value,
-) -> Result<String> {
+pub async fn mcp_call_tool(state: &AiHost, name: String, arguments: Value) -> Result<String> {
     state.mcp.call_by_prefixed(&name, arguments).await
 }
 
@@ -454,8 +442,7 @@ pub struct McpServerStatus {
 }
 
 /// 查询本地 MCP server 状态。
-#[tauri::command]
-pub fn mcp_server_status(state: State<'_, AiState>) -> McpServerStatus {
+pub fn mcp_server_status(state: &AiHost) -> McpServerStatus {
     let mut guard = state.server.lock();
     if let Some(handle) = guard.as_mut()
         && matches!(handle.check_running(), Ok(true))
@@ -475,12 +462,7 @@ pub fn mcp_server_status(state: State<'_, AiState>) -> McpServerStatus {
 ///
 /// # Errors
 /// 端口被占用 ([`McpError::ServerStart`])。
-#[tauri::command]
-pub async fn mcp_server_start(
-    state: State<'_, AiState>,
-    app: AppHandle,
-    port: Option<u16>,
-) -> Result<u16> {
+pub async fn mcp_server_start(state: &AiHost, port: Option<u16>) -> Result<u16> {
     {
         let mut guard = state.server.lock();
         if let Some(handle) = guard.as_mut()
@@ -491,19 +473,20 @@ pub async fn mcp_server_start(
         *guard = None;
     }
 
-    let app_state: State<AppState> = app.state();
-    let toolbox = Toolbox::from_state(&app_state);
-    let sink = crate::event_sink::TauriEventSink::handle(&app);
     // 端口配置归后端: 显式设置 > LISSIO_MCP_PORT > DEFAULT_MCP_PORT
-    let handle = mcp_server::start(toolbox, sink, mcp_server::resolve_port(port)).await?;
+    let handle = mcp_server::start(
+        state.toolbox.clone(),
+        state.sink.clone(),
+        mcp_server::resolve_port(port),
+    )
+    .await?;
     let bound = handle.port;
     *state.server.lock() = Some(handle);
     Ok(bound)
 }
 
 /// 停止本地 MCP server (未运行时静默)。
-#[tauri::command]
-pub fn mcp_server_stop(state: State<'_, AiState>) {
+pub fn mcp_server_stop(state: &AiHost) {
     let taken = state.server.lock().take();
     if let Some(mut handle) = taken {
         handle.stop();

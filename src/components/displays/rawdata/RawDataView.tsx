@@ -8,23 +8,27 @@ import { traceTransportSource } from '../../../store/appStoreHelpers';
 import { t } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter, HexColorMode, AppendMode, SendPanelMode } from './rawDataViewHelpers';
 import { byteToHex, byteToAscii, formatTime } from './rawDataViewHelpers';
+import { decodeUtf8 } from '../../../lib/utils/utf8';
 import { useLongTaskMonitor, useRawDataBuffer, useRawNumericSamples, useRawStringSamples } from './useRawDataBuffer';
 import { useRawDataChannel } from './useRawDataChannel';
 import { useAutoScrollBottom } from './useAutoScrollBottom';
+import { useTerminalLines } from '../../../lib/terminal/terminalBuffer';
 import { DroppedInfoPopover } from '../../common/DroppedInfoPopover';
 import { RawDataViewHeader } from './RawDataViewHeader';
 import { RawDataViewContent } from './RawDataViewContent';
+import { RawDataViewTerminal } from './RawDataViewTerminal';
 import { RawDataViewNumericContent } from './RawDataViewNumericContent';
 import { RawDataViewSendPanel } from './RawDataViewSendPanel';
 import { RawDataViewSettings } from './RawDataViewSettings';
 import { getRawDataViewPrefs } from '../../../lib/buffers/rawDataViewStore';
-/// 原始数据显示 — Grid/Line × HEX/ASCII 四视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
+/// 原始数据显示 — Grid/Line/终端 × HEX/ASCII 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
 /// 纯端口制: 每张卡片独立的输入选择 (存 RawDataConfig.selectedInput), 选择器只列该卡片
 /// 已连接的端口 (Transport.rx / Protocol.out / FrameDecoder.raw / 字符串口 / 数值口);
 /// 无连线时空态引导。
 /// FrameDecoder 的 raw 口 = 该节点独立整帧字节流; Transport/Protocol = 原始字节流;
 /// 字符串域输出口 (Trigger.text / TextInput.str / Str) = 字符串平面值变化历史;
 /// 其余数值口 = 数值流 (graphOutputs)
+/// 终端分组 = 串口终端视图: ANSI 彩色 + UTF-8 流式行, \r 覆盖, 可选本地回显
 export function RawDataView({ widgetId }: { widgetId?: string }) {
   const lang = useAppStore((s) => s.lang);
   const clearData = useAppStore((s) => s.clearData);
@@ -53,6 +57,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   const [appendMode, setAppendMode] = useState<AppendMode>(() => getRawDataViewPrefs(persistKey).appendMode);
   const [sendPanelMode, setSendPanelMode] = useState<SendPanelMode>(() => getRawDataViewPrefs(persistKey).sendPanelMode);
   const [hexColorMode, setHexColorMode] = useState<HexColorMode>(() => getRawDataViewPrefs(persistKey).hexColorMode);
+  const [localEcho, setLocalEcho] = useState(() => getRawDataViewPrefs(persistKey).localEcho);
+  const [ansiDecode, setAnsiDecode] = useState(() => getRawDataViewPrefs(persistKey).ansiDecode);
   const [showSettings, setShowSettings] = useState(false);
   const [droppedInfoOpen, setDroppedInfoOpen] = useState(false);
   const [sendContent, setSendContent] = useState('');
@@ -64,6 +70,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   const isByteSrc = channelInfo?.kind === 'byte-source';
   const isStr = channelInfo?.kind === 'string';
   const isNum = !!selectedChannel && !isDec && !isByteSrc && !isStr;
+  /// 终端视图仅字节通道可开 (数值/字符串通道无字节流语义)
+  const isTerm = !isNum && !isStr && grouping === 'terminal';
 
   // 发送目标 = 选中通道沿连线溯源到的 Transport (字节源/数值口均可上溯);
   // 溯源失败 (如自定义控件数值口) → null, 发送面板禁用
@@ -108,6 +116,10 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   });
   useLongTaskMonitor();
 
+  // ---- 终端视图 (仅字节通道激活消费; 切到终端时从保留字节全量重放一次) ----
+  const { terminal, version: termVersion } = useTerminalLines(buffer, ansiDecode, isTerm);
+  const terminalLineCount = terminal.getLines().length + 1;
+
   // ---- 数值/字符串通道视图 ----
   const numScrollRef = useRef<HTMLDivElement>(null);
   const strScrollRef = useRef<HTMLDivElement>(null);
@@ -144,11 +156,17 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
 
   // 自动滚动到最新结果: 数据帧到来时安排一次平滑追底 (useAutoScrollBottom
   // 内部合并高频帧为单一 rAF 循环; reduced-motion 下瞬时跳底)
+  const activeCount = isNum
+    ? numRows.length
+    : isStr
+      ? filteredStringRows.length
+      : isTerm
+        ? terminalLineCount
+        : modeCount;
   useEffect(() => {
-    const activeCount = isNum ? numRows.length : isStr ? filteredStringRows.length : modeCount;
     if (activeCount === 0) return;
     scheduleToBottom();
-  }, [modeCount, numRows.length, sampleSnapshot.version, isNum, isStr, filteredStringRows.length, version, buffer, scheduleToBottom]);
+  }, [activeCount, termVersion, scheduleToBottom]);
 
   const handleClear = () => {
     if (isStr) {
@@ -175,6 +193,10 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       case 'none': suffix = ''; break;
     }
     void sendText(sendTargetId, sendContent + suffix);
+    // 终端模式本地回显: 设备不回显时也能看到已发内容 (tx 方向, 走同一解析管线)
+    if (isTerm && localEcho) {
+      terminal.pushLocal(sendContent + suffix, Date.now());
+    }
     setSendContent('');
   };
 
@@ -186,6 +208,9 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       .map((line) => {
         const hex = Array.from(line.bytes, (b) => byteToHex(b)).join(' ');
         const ascii = Array.from(line.bytes, (b) => byteToAscii(b)).join('');
+        if (repr === 'utf8') {
+          return `${formatTime(line.timestamp)}  ${decodeUtf8(line.bytes)}`;
+        }
         if (repr === 'ascii') {
           return `${formatTime(line.timestamp)}  ${ascii}`;
         }
@@ -206,6 +231,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     (e: React.KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (isTerm) return; // 终端视图无行选中语义, 用原生文本选择复制
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         selection.selectAll();
@@ -217,7 +243,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         void copySelected();
       }
     },
-    [selection, copySelected]
+    [selection, copySelected, isTerm]
   );
 
   const handleRowMouseDown = useCallback(
@@ -266,6 +292,74 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     </div>
   );
 
+  // 字节通道内容: 终端视图 or 网格/行字节视图
+  const renderByteContent = isTerm ? (
+    <RawDataViewTerminal
+      terminal={terminal}
+      showTimestamp={showTimestamp}
+      parentRef={parentRef}
+      onScroll={handleScroll}
+      onKeyDown={handleKeyDown}
+    />
+  ) : (
+    <RawDataViewContent
+      modeCount={modeCount}
+      grouping={grouping === 'terminal' ? 'line' : grouping}
+      repr={repr}
+      buffer={buffer}
+      showTimestamp={showTimestamp}
+      showOffset={showOffset}
+      hexColorMode={hexColorMode}
+      version={version}
+      lang={lang}
+      selection={selection}
+      onRowMouseDown={handleRowMouseDown}
+      parentRef={parentRef}
+      onScroll={handleScroll}
+      onKeyDown={handleKeyDown}
+    />
+  );
+
+  // 通道内容三选一 (数值/字符串/字节), 两种发送面板布局共用
+  const channelContent = isNum
+    ? renderValueContent(numScrollRef)
+    : isStr
+      ? renderValueContent(strScrollRef, filteredStringRows)
+      : renderByteContent;
+
+  // 视图内设置表单 (hex 颜色/发送面板位置/时间戳/偏移/终端选项), 外层容器随布局不同
+  const settingsForm = (
+    <RawDataViewSettings
+      hexColorMode={hexColorMode}
+      sendPanelMode={sendPanelMode}
+      showTimestamp={showTimestamp}
+      showOffset={showOffset}
+      localEcho={localEcho}
+      ansiDecode={ansiDecode}
+      showTerminalOptions={isTerm}
+      onHexColorModeChange={setHexColorMode}
+      onSendPanelModeChange={setSendPanelMode}
+      onShowTimestampChange={setShowTimestamp}
+      onShowOffsetChange={setShowOffset}
+      onLocalEchoChange={setLocalEcho}
+      onAnsiDecodeChange={setAnsiDecode}
+      lang={lang}
+    />
+  );
+
+  const sendForm = (compact: boolean) => (
+    <RawDataViewSendPanel
+      appendMode={appendMode}
+      sendContent={sendContent}
+      onAppendModeChange={setAppendMode}
+      onSendContentChange={setSendContent}
+      onSend={handleSend}
+      lang={lang}
+      compact={compact}
+      targetTransportLabel={sendTargetLabel}
+    />
+  );
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <RawDataViewHeader
@@ -282,7 +376,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         stringRowCount={filteredStringRows.length}
         isFiltered={isFiltered}
         totalBytes={totalBytes}
-        modeCount={modeCount}
+        modeCount={isTerm ? terminalLineCount : modeCount}
         droppedBytes={droppedBytes}
         channelOptions={channelOptions}
         selectionCount={selection.selected.size}
@@ -307,108 +401,21 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       <div className="flex-1 flex overflow-hidden min-h-0">
         {sendPanelMode === 'separate' ? (
           <>
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-              {isNum ? (
-                renderValueContent(numScrollRef)
-              ) : isStr ? (
-                renderValueContent(strScrollRef, filteredStringRows)
-              ) : (
-                <RawDataViewContent
-                  modeCount={modeCount}
-                  grouping={grouping}
-                  repr={repr}
-                  buffer={buffer}
-                  showTimestamp={showTimestamp}
-                  showOffset={showOffset}
-                  hexColorMode={hexColorMode}
-                  version={version}
-                  lang={lang}
-                  selection={selection}
-                  onRowMouseDown={handleRowMouseDown}
-                  parentRef={parentRef}
-                  onScroll={handleScroll}
-                  onKeyDown={handleKeyDown}
-                />
-              )}
-            </div>
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">{channelContent}</div>
             <div className="w-[220px] shrink-0 border-l border-border bg-bg-sidebar flex flex-col overflow-hidden">
-              {showSettings && (
-                <div className="flex-1 overflow-y-auto p-3">
-                  <RawDataViewSettings
-                    hexColorMode={hexColorMode}
-                    sendPanelMode={sendPanelMode}
-                    showTimestamp={showTimestamp}
-                    showOffset={showOffset}
-                    onHexColorModeChange={setHexColorMode}
-                    onSendPanelModeChange={setSendPanelMode}
-                    onShowTimestampChange={setShowTimestamp}
-                    onShowOffsetChange={setShowOffset}
-                    lang={lang}
-                  />
-                </div>
-              )}
-              <div className="border-t border-border p-2 flex flex-col gap-1.5">
-                <RawDataViewSendPanel
-                  appendMode={appendMode}
-                  sendContent={sendContent}
-                  onAppendModeChange={setAppendMode}
-                  onSendContentChange={setSendContent}
-                  onSend={handleSend}
-                  lang={lang}
-                  compact
-                  targetTransportLabel={sendTargetLabel}
-                />
-              </div>
+              {showSettings && <div className="flex-1 overflow-y-auto p-3">{settingsForm}</div>}
+              <div className="border-t border-border p-2 flex flex-col gap-1.5">{sendForm(true)}</div>
             </div>
           </>
         ) : (
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {isNum ? (
-              renderValueContent(numScrollRef)
-            ) : isStr ? (
-              renderValueContent(strScrollRef, filteredStringRows)
-            ) : (
-              <RawDataViewContent
-                modeCount={modeCount}
-                grouping={grouping}
-                repr={repr}
-                buffer={buffer}
-                showTimestamp={showTimestamp}
-                showOffset={showOffset}
-                hexColorMode={hexColorMode}
-                version={version}
-                lang={lang}
-                selection={selection}
-                onRowMouseDown={handleRowMouseDown}
-                parentRef={parentRef}
-                onScroll={handleScroll}
-                onKeyDown={handleKeyDown}
-              />
-            )}
+            {channelContent}
             {showSettings && (
               <div className="border-t border-border p-3 bg-bg-sidebar overflow-y-auto max-h-[180px]">
-                <RawDataViewSettings
-                  hexColorMode={hexColorMode}
-                  sendPanelMode={sendPanelMode}
-                  showTimestamp={showTimestamp}
-                  showOffset={showOffset}
-                  onHexColorModeChange={setHexColorMode}
-                  onSendPanelModeChange={setSendPanelMode}
-                  onShowTimestampChange={setShowTimestamp}
-                  onShowOffsetChange={setShowOffset}
-                  lang={lang}
-                />
+                {settingsForm}
               </div>
             )}
-            <RawDataViewSendPanel
-              appendMode={appendMode}
-              sendContent={sendContent}
-              onAppendModeChange={setAppendMode}
-              onSendContentChange={setSendContent}
-              onSend={handleSend}
-              lang={lang}
-              targetTransportLabel={sendTargetLabel}
-            />
+            {sendForm(false)}
           </div>
         )}
       </div>

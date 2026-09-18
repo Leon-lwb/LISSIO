@@ -50,7 +50,7 @@ describe('filterAttachmentCandidates', () => {
   it('skips files already attached by name', () => {
     const r = filterAttachmentCandidates([{ name: 'a.md', size: 1 }], [att('a.md')]);
     expect(r.accepted).toEqual([]);
-    expect(Object.values(r.rejections).every((l) => l.length === 0)).toBe(true);
+    expect(Object.values(r.rejections).every((l: string[]) => l.length === 0)).toBe(true);
   });
 
   it('enforces the per-message attachment quota', () => {

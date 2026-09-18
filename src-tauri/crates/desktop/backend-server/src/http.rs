@@ -1,7 +1,7 @@
 //! HTTP / WebSocket 路由 — 健康检查 / 能力清单 / RPC / 事件推送 / 静态站点。
 //!
 //! 鉴权: HTTP 用 `Authorization: Bearer <token>`; 浏览器 WebSocket API 无法设置
-//! 请求头, 因此升级请求用 `Sec-WebSocket-Protocol: lissio.v1, bearer.<token>`
+//! 请求头, 因此升级请求用 `Sec-WebSocket-Protocol: lissio.v2, bearer.<token>`
 //! 携带令牌 — 令牌不出现在 URL 里, 不会被写进访问日志。
 
 use std::sync::Arc;
@@ -24,7 +24,7 @@ use crate::frames::{PROTOCOL_VERSION, RpcRequest, RpcResponse};
 use crate::session::SessionContext;
 
 /// WebSocket 子协议标识 (浏览器端第一个提议值)。
-pub const WS_SUBPROTOCOL: &str = "lissio.v1";
+pub const WS_SUBPROTOCOL: &str = "lissio.v2";
 /// 子协议中携带令牌的前缀。
 pub const WS_TOKEN_PREFIX: &str = "bearer.";
 /// 请求体上限 — 全量节点图提交可能达到数 MB。
@@ -34,6 +34,7 @@ const MAX_BODY_BYTES: usize = 32 * 1024 * 1024;
 pub fn router(state: Arc<ServerState>) -> Router {
     let protected = Router::new()
         .route("/api/v1/rpc", post(rpc_handler))
+        .route("/api/v1/handshake", get(handshake))
         .route("/api/v1/ws", get(ws_handler))
         .route("/api/v1/download/{token}", get(download_handler))
         .route("/api/v1/settings", get(get_settings).put(put_settings))
@@ -89,6 +90,17 @@ async fn health() -> Json<Value> {
 /// 能力清单 — 前端据此隐藏本出口不支持的 UI。
 async fn capabilities(State(state): State<Arc<ServerState>>) -> Json<Value> {
     Json(serde_json::to_value(state.capabilities()).unwrap_or(Value::Null))
+}
+
+/// Authenticated compatibility handshake used before the React application mounts.
+async fn handshake(State(state): State<Arc<ServerState>>) -> Json<Value> {
+    Json(json!({
+        "status": "ok",
+        "version": env!("CARGO_PKG_VERSION"),
+        "protocol": PROTOCOL_VERSION,
+        "instance_id": format!("{}-{}", std::process::id(), state.config.http_port),
+        "capabilities": state.capabilities(),
+    }))
 }
 
 /// 导出产物下载 — 只服务暂存区登记过的 token, **不接受任意服务器路径**。

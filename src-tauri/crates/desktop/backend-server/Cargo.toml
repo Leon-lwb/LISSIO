@@ -13,6 +13,7 @@ name = "lissio-server"
 path = "src/main.rs"
 
 [dependencies]
+ai-host = { workspace = true }
 app = { workspace = true }
 backend-host = { workspace = true }
 control-api = { workspace = true }
@@ -25,6 +26,7 @@ clap = { workspace = true }
 env_logger = { workspace = true }
 futures = { workspace = true }
 log = { workspace = true }
+chat = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

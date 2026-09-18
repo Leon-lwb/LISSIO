@@ -28,6 +28,7 @@ jobs:
     permissions:
       contents: write
       actions: read
+      packages: write
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -107,7 +108,9 @@ jobs:
             -name "*.exe" -o \
             -name "*.app.tar.gz" -o \
             -name "*.nsis.zip" -o \
-            -name "*.sig" \
+            -name "*.sig" -o \
+            -name "lissio-backend-*.tar.gz" -o \
+            -name "lissio-web-*.tar.gz" \
           \) | sort)
           if [ ${#FILES[@]} -eq 0 ]; then
             echo "::error::未在构件中找到任何安装包文件"
@@ -169,6 +172,18 @@ jobs:
           cat artifacts/latest.json
           echo "$(pwd)/artifacts/latest.json" >> /tmp/release-assets.txt
 
+      - name: Generate SHA-256 checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > artifacts/SHA256SUMS
+          while IFS= read -r file; do
+            [ -f "$file" ] || continue
+            sha256sum "$file" | sed "s#  .*/#  #" >> artifacts/SHA256SUMS
+          done < /tmp/release-assets.txt
+          echo "$(pwd)/artifacts/SHA256SUMS" >> /tmp/release-assets.txt
+          cat artifacts/SHA256SUMS
+
       - name: Create GitHub Release
         shell: bash
         env:
@@ -225,3 +240,23 @@ jobs:
           fi
           gh release upload beta beta-latest.json --clobber
           echo "✅ beta 通道 manifest 已更新到 v${{ inputs.version }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish server + web OCI image
+        shell: bash
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            --tag "$IMAGE:${{ inputs.version }}" \
+            --tag "$IMAGE:latest" \
+            --push .

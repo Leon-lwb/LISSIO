@@ -35,6 +35,36 @@ pub struct BroadcastEventSink {
     tx: broadcast::Sender<ServerMessage>,
 }
 
+/// A request/connection-scoped event sink. Unlike `BroadcastEventSink`, this
+/// is used by frontend-hosted AI tools and must never fan out to other clients.
+#[derive(Clone)]
+pub struct ConnectionEventSink {
+    tx: mpsc::UnboundedSender<OutFrame>,
+}
+
+impl ConnectionEventSink {
+    pub fn handle(tx: &mpsc::UnboundedSender<OutFrame>) -> events::EventSinkHandle {
+        Arc::new(Self { tx: tx.clone() })
+    }
+}
+
+impl BackendEventSink for ConnectionEventSink {
+    fn emit_event(&self, event: &str, payload: Value) {
+        let _ = self.tx.send(OutFrame::Message(ServerMessage::Event {
+            event: event.to_string(),
+            payload,
+        }));
+    }
+
+    fn notify(&self, level: NotifyLevel, message: &str) {
+        let _ = self.tx.send(OutFrame::Message(ServerMessage::Notify {
+            level: notify_level(level).to_string(),
+            message: message.to_string(),
+            url: None,
+        }));
+    }
+}
+
 impl BroadcastEventSink {
     /// 由广播发送端构造。
     pub const fn new(tx: broadcast::Sender<ServerMessage>) -> Self {

@@ -1,14 +1,13 @@
 # Software exits — UI / CLI / MCP 统一架构
 
-Lissio 有四个对外的"软件出口"。四者是不同的协议适配器(进程内 RPC / HTTP-RPC +
-WebSocket / JSON-RPC tools / argv 子命令),字面上不合并;**统一的对象是它们之下的
+Lissio 有四个对外的"软件出口"。四者是不同的协议适配器(HTTP-RPC +
+WebSocket / JSON-RPC tools / argv 子命令 / 桌面平台壳),字面上不合并;**统一的对象是它们之下的
 能力核心、装配与端口**——一份实现,四个薄壳,零业务重复。
 
 ```
 桌面前端 (React)  浏览器前端 (React)  外部 AI 客户端        运维 / 脚本 / headless
-    │ Tauri IPC        │ HTTP + WS          │ MCP (streamable-http)  │ argv 子命令
-    │ src-tauri/       │ crates/desktop/    │ crates/desktop/        │ crates/desktop/
-    │ src/commands     │ backend-server     │ mcp-server             │ backend-cli
+    │ HTTP + WS        │ HTTP + WS          │ MCP (streamable-http)  │ argv 子命令
+    │ sidecar server   │ backend-server     │ mcp-server             │ backend-cli
     └────────┬─────────┴─────────┬──────────┴───────────┬───────────┘
              │                   │                      │
              ▼                   ▼                      ▼
@@ -40,14 +39,15 @@ Web 出口的完整设计 (线协议 / 鉴权 / 命令能力矩阵 / 落地阶�
 
 ### 1b. 命令派发 — `rpc-api`
 
-出口无关的"命令名 → 能力调用"派发表: 桌面 IPC 与 HTTP-RPC 拥有同一套命令名、参数
-名与错误契约, 因此新增出口不必复制上百个命令壳。`catalog` 声明
+出口无关的"命令名 → 能力调用"派发表: Desktop 与 Web 通过同一 HTTP/WS 后端
+拥有同一套命令名、参数名与错误契约。`catalog` 声明
 `SUPPORTED / PENDING / DESKTOP_ONLY / CHANNEL` 四类, 由 `pnpm check:web-contract`
-校验其并集覆盖 `generate_handler!` 注册的全部命令。
+校验网络派发表与前端调用面完整，并确保 Tauri `generate_handler!` 只包含
+`DESKTOP_ONLY` 平台壳命令。
 
 ### 2. 装配 — `backend-host`
 
-GUI 组合根(`lissio`)与无界面宿主(`backend-cli`)共用同一份装配:
+常驻服务(`lissio-server`)与运维入口(`backend-cli`)共用同一份装配:
 `build_acquisition_runtime` / `install_point_observer` / `restore_workspace` /
 `shutdown` / 配置目录解析。保证两种宿主下适配器注册、点位投影、工作区恢复
 与收尾行为完全一致。
@@ -56,16 +56,16 @@ GUI 组合根(`lissio`)与无界面宿主(`backend-cli`)共用同一份装配:
 
 | 端口 | 契约 | Tauri 实现 | Web 实现 | 无界面实现 |
 |---|---|---|---|---|
-| 后端事件 | `events::BackendEventSink` | `TauriEventSink`(组合根 `event_sink.rs`) | `BroadcastEventSink`(广播到全部连接) | `CliEventSink`(stderr JSON-lines)/ `NullEventSink` |
-| 显示数据流 | `app::display::StreamSink` | `TauriChannelSink`(包装 IPC `Channel`) | `WsStreamSink`(连接级出站队列) | CLI/测试自有实现 |
+| 后端事件 | `events::BackendEventSink` | `BroadcastEventSink`(sidecar WS) | `BroadcastEventSink`(广播到连接) | `CliEventSink`(stderr JSON-lines)/ `NullEventSink` |
+| 显示数据流 | `app::display::StreamSink` | `WsStreamSink`(连接级出站队列) | `WsStreamSink`(连接级出站队列) | CLI/测试自有实现 |
 
 L0–L3 与 `mcp-server`、`backend-host`、`backend-cli` 不依赖 Tauri;
-GUI 专有逻辑(启动页兜底、退出 flush 的窗口部分)留在组合根 `gui_host.rs`。
+Desktop 专有逻辑仅保留在 Tauri 平台壳；业务 flush 由 supervised sidecar 完成。
 
 ## 出口能力矩阵
 
-能力按无头场景价值收敛到 control-api;UI-only 命令(窗口 / splashscreen /
-AI 聊天会话状态)不入共享层,仍是 IPC 专有。
+能力按无头场景价值收敛到 control-api；仅窗口、启动页、更新器和 sidecar 管理
+保留为 Tauri IPC，AI 会话属于独立后端公共能力。
 
 | 能力域 | IPC | Web | MCP | CLI |
 |---|---|---|---|
@@ -82,10 +82,10 @@ AI 聊天会话状态)不入共享层,仍是 IPC 专有。
 | 端点开闭 / 点位读写 | ✓ | ✓ | ✓ | `endpoint *` |
 | 运行控制 | ✓ | ✓ | ✓ | `run start/pause/stop` |
 | 录制会话 / 查询 | ✓ | ✓ | ✓ | `record *` |
-| 导出到文件 | ✓(路径参数) | 待接入(下载端点) | ✓ | `snapshot export-csv` / `record export` |
+| 导出到文件 | ✓(HTTP 下载) | ✓(受鉴权下载端点) | ✓ | `snapshot export-csv` / `record export` |
 | 窗口 / 启动页 / 更新器 | ✓ | 桌面专有 | — | — |
-| AI 对话 / MCP / 密钥 | ✓ | 待接入(`ai-host` + `SecretStore`) | — | — |
-| 常驻服务 | 进程内启动 | 本体(可选内嵌 MCP) | 本体 | `serve` |
+| AI 对话 / MCP / 密钥状态 | ✓(HTTP/WS) | ✓ | 入站服务由 `AiHost` 管理 | 后端宿主能力 |
+| 常驻服务 | 自动管理 sidecar | 独立服务 | 同一服务进程 | `serve` |
 
 ## 约定
 

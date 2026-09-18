@@ -1,8 +1,8 @@
 # Web 出口 — 服务后端拆分设计
 
-本文件描述"把服务后端从 Tauri 宿主里拆出来"这一目标的架构、协议契约与落地
-顺序。它是对 [exits.md](exits.md) 的扩展: 出口从三个 (UI / MCP / CLI) 增加到
-四个, 新增的 Web 出口 (HTTP-RPC + WebSocket) 与其余三个共用同一份能力核心
+本文件描述已经落地的独立后端架构与 `lissio.web.v2` 协议。Web 与 Desktop 的
+业务调用都经 HTTP-RPC + WebSocket 进入同一个 `lissio-server`，CLI 复用同一装配与
+派发表。所有出口共用同一份能力核心
 ([`control-api`](../../src-tauri/crates/desktop/control-api)) 与同一份装配
 ([`backend-host`](../../src-tauri/crates/desktop/backend-host))。
 
@@ -12,7 +12,7 @@ HTTP/WS", 不是重新设计 API。
 
 ## 1. 目标形态
 
-一份前端产物 (`dist/`), 三种运行方式:
+三个可独立发布的交付单元:
 
 ```
                      ┌──────────── 浏览器 ────────────┐
@@ -21,20 +21,20 @@ HTTP/WS", 不是重新设计 API。
                                     │ HTTP-RPC + WebSocket
                                     ▼
   桌面 (Tauri webview)       lissio-server (独立进程)
-       │  IPC (默认)              ├ control-api   能力核心
-       └────────────┬────────────►├ backend-host  装配 / 生命周期
-                    │             ├ mcp-server    :8765 (可选)
-       (也可改走 HTTP/WS 连远端)   └ workspace / recordings / settings
+       │ HTTP/WS                  ├ control-api   能力核心
+       └────────────────────────►├ backend-host  装配 / 生命周期
+       Tauri 只管理同版本 sidecar  ├ ai-host       AI / MCP / secrets
+                                  └ workspace / recordings / settings
 ```
 
 | 形态 | 后端位置 | 前端 transport | 状态 |
 |---|---|---|---|
-| A 独立服务 | `lissio-server` 进程 | HTTP + WS | 可用 |
-| B 桌面嵌入式 | Tauri 进程内 | Tauri IPC (默认) | 行为与性能零变化 |
-| C 桌面连远端 | 远端 `lissio-server` | HTTP + WS | 复用 A |
+| A Backend/CLI | 独立 `lissio-server` + `backend-cli` | HTTP + WS / argv | 独立压缩包 |
+| B Desktop | Tauri 自动监管同版本 sidecar | HTTP + WS | 安装后自动启动 |
+| C Web | 任意兼容的远端后端 | HTTP + WS | 纯静态包或 OCI 同源部署 |
 
-桌面默认保留 IPC 的理由: 波形走 `Channel` 二进制快路径 + 自适应节流, 换成
-WebSocket 只会引入回归风险; A/C 才是新增路径。
+Tauri IPC 只承载窗口、菜单、更新器、文件对话框和 sidecar 控制。业务 IPC 不存在
+回退路径，波形快路径改由 WebSocket 二进制帧承载。
 
 ## 2. crate 边界
 
@@ -44,7 +44,7 @@ WebSocket 只会引入回归风险; A/C 才是新增路径。
 | `backend-server` | L5 desktop | Web 出口组合根 — axum HTTP-RPC / WebSocket / 鉴权 / 静态站点; bin `lissio-server` | 新增 |
 | `backend-host` | L4 desktop | 装配与生命周期 — 新增 `BackendHost` / `assemble` / `teardown`, GUI 与全部无界面出口共用 | 扩展 |
 | `backend-cli` | L5 desktop | argv 出口 — `Host` 改为复用 `backend-host`, 新增 `serve --http` 与 `rpc` | 扩展 |
-| `ai-host` | L4 desktop | AI 会话 / MCP / 内置工具 / 密钥端口 | **规划中** (P3) |
+| `ai-host` | L4 desktop | AI 会话 / MCP / 内置工具 / 只写密钥端口 | 已完成 |
 
 分层约束 (由 `pnpm check:architecture` 强制):
 `rpc-api` 不依赖 `tauri` / `axum` / `rmcp`; `backend-server` 只做协议适配,
@@ -78,6 +78,7 @@ WebSocket 只会引入回归风险; A/C 才是新增路径。
 { "type": "subscribed", "id": 7 }
 { "type": "unsubscribed", "id": 7 }
 { "type": "response",   "id": 1, "ok": true, "result": { ... } }
+{ "type": "channel",    "id": 3, "payload": { "type": "delta", "text": "…" } }
 { "type": "fault",      "message": "...", "id": 7 }   // id 仅订阅建立失败时出现
 
 // 客户端 → 服务端
@@ -129,7 +130,8 @@ reject)。帧级错误没有归属, 省略该字段。
 | `GET /api/v1/settings` | 设置读取 — 与桌面 `plugin-store` 的 `settings.json` 同一文件与形状 (P3) |
 | `PUT /api/v1/settings` | 设置整表覆盖 (与 `LazyStore.set('app', …)` 等价, P3) |
 | `GET /api/v1/health` | 健康检查 (无鉴权) |
-| `GET /api/v1/capabilities` | `{supported, pending, desktop_only, protocol}` — 前端据此降级 UI (P3 接入; 当前未接入的命令由服务端直接返回 `UnsupportedCommand`) |
+| `GET /api/v1/handshake` | 受鉴权握手：服务版本、协议版本、实例 ID、能力清单 |
+| `GET /api/v1/capabilities` | `{supported, pending, desktop_only, protocol}` — 前端据此降级 UI |
 | `--static-dir` | 同进程托管前端 `dist/` (SPA 回落 `index.html`) |
 
 | flag | env | 默认 |
@@ -145,7 +147,7 @@ reject)。帧级错误没有归属, 省略该字段。
 ### 3.5 鉴权
 
 - HTTP: `Authorization: Bearer <token>`。
-- WS: `Sec-WebSocket-Protocol: lissio.v1, bearer.<token>` —— 浏览器 WebSocket API
+- WS: `Sec-WebSocket-Protocol: lissio.v2, bearer.<token>` —— 浏览器 WebSocket API
   无法设置请求头, 子协议是唯一不把令牌写进 URL 的方式 (URL 会进访问日志)。
 - 令牌比较是定长比较, 不按前缀提前返回。
 - CORS 白名单为空时不挂 CORS 层 (同源部署无需跨源, 也避免误开放)。
@@ -154,7 +156,7 @@ reject)。帧级错误没有归属, 省略该字段。
 ## 4. 命令能力矩阵
 
 命令面以 `rpc-api/src/catalog.rs` 为唯一权威, 由 `pnpm check:web-contract`
-校验"四个清单两两不相交, 且并集 = `generate_handler!` 注册的全部命令"。
+校验四个清单互斥、后端派发表完整，以及 Tauri 根包只注册 `DESKTOP_ONLY` 壳命令。
 
 | 命令 | 出口状态 | 说明 |
 |---|---|---|
@@ -257,29 +259,12 @@ reject)。帧级错误没有归属, 省略该字段。
 | `set_active_recording_session` | ✅ 已接入 |  |
 | `apply_recording_settings` | ✅ 已接入 |  |
 | **AI / MCP** | | |
-| `ai_list_providers` | 🕓 待接入 |  |
-| `ai_chat_send` | 🕓 待接入 |  |
-| `ai_chat_cancel` | 🕓 待接入 |  |
-| `ai_tool_resolve` | 🕓 待接入 | 对应 WS 反向 RPC 回执 (P3) |
-| `chat_list_sessions` | 🕓 待接入 |  |
-| `chat_create_session` | 🕓 待接入 |  |
-| `chat_get_session` | 🕓 待接入 |  |
-| `chat_rename_session` | 🕓 待接入 |  |
-| `chat_delete_session` | 🕓 待接入 |  |
-| `chat_clear_session` | 🕓 待接入 |  |
-| `ai_keychain_get` | 🕓 待接入 |  |
-| `ai_keychain_set` | 🕓 待接入 |  |
-| `ai_keychain_delete` | 🕓 待接入 |  |
-| `mcp_list_servers` | 🕓 待接入 |  |
-| `mcp_add_server` | 🕓 待接入 |  |
-| `mcp_remove_server` | 🕓 待接入 |  |
-| `mcp_set_server_enabled` | 🕓 待接入 |  |
-| `mcp_list_tools` | 🕓 待接入 |  |
-| `mcp_connection_states` | 🕓 待接入 |  |
-| `mcp_call_tool` | 🕓 待接入 |  |
-| `mcp_server_status` | 🕓 待接入 |  |
-| `mcp_server_start` | 🕓 待接入 |  |
-| `mcp_server_stop` | 🕓 待接入 |  |
+| `ai_list_providers` / `ai_chat_send` / `ai_chat_cancel` | ✅ 已接入 | 流式事件走 v2 `channel` 帧 |
+| `ai_tool_resolve` | ✅ 已接入 | 只回到发起对话的连接 |
+| `chat_*` 会话 CRUD | ✅ 已接入 | 会话由后端持久化 |
+| `ai_secret_status/set/delete` | ✅ 已接入 | 状态接口不返回明文；环境来源只读 |
+| `mcp_list/add/remove/set/list_tools/connection_states/call_tool` | ✅ 已接入 | 外部 MCP 由 `AiHost` 管理 |
+| `mcp_server_status/start/stop` | ✅ 已接入 | 入站 MCP 生命周期唯一归属 `AiHost` |
 | **文件产物与桌面专有** | | |
 | `export_waveform_csv` | ✅ 已接入 | Web 出口写受管暂存区, 下载链接经 `notify` 帧下发 (P3) |
 | `export_can_load_csv` | ✅ 已接入 | 同上; 返回值为下载 URL (桌面为本地路径) |
@@ -315,27 +300,23 @@ export interface Transport {
 }
 ```
 
-`src/lib/tauri/tauri.ts` 的 `api` 对象**签名全部不变** — 88 个方法、~100 处调用点、
-40+ 组件零改动, 内部 `invoke(...)` 换成 `transport.call(...)`; `subscribeDisplay` /
+`src/lib/tauri/tauri.ts` 的业务调用面保持原有调用方式，内部 `invoke(...)` 换成
+`transport.call(...)`; `subscribeDisplay` /
 `subscribeWaveform` / 各 `*Subscription.ts` 走 `transport.subscribe`。事件监听
 (`events.ts` / `App.tsx` / `toolHost` / `updateStore`) 走 `transport.listen`, 因此
 handler 收到的是 payload 本身而不是 Tauri 的 `Event` 包装。
 
-### 5.1 与桌面出口的语义对齐
+### 5.1 Desktop 与 Web 的统一语义
 
-- **订阅 id**: `SubscriptionHandle.id` 在两个出口都可读 (`ack_data` 背压反馈依赖它)。
-  桌面由 `Channel.id` 同步给出; Web 由服务端回执下发, 且回执必定先于流帧。
-- **建立失败**: `SubscribeOptions.onError` 与桌面 `subscribe_data` 的 reject 同义。
-  Web 侧由 `fault{id}` 触发。
+- **订阅 id**: 两种 UI 都由服务端 `subscribed` 回执取得，流帧到达前一定已分配。
+- **建立失败**: `SubscribeOptions.onError` 由 `fault{id}` 触发。
 - **建立结束**: `SubscriptionHandle.settled` 恒 resolve (成功与失败都算结束), 供
   订阅方做生命周期对账 (`dataClient` 用它收回"在途建立"守卫)。失败之所以不放在这里,
   是因为 Web 的回执先于订阅尝试下发, 一个 promise 无法同时表达两件事。
-- **取消竞态**: 桌面侧在 `invoke` 落地后补一次 `unsubscribe_data`(取消可能先于注册
-  到达); Web 侧记录留在等待队列里占位, 回执到达时立即注销 —— 两者都保证"取消后不会
-  有数据投递, 也不会漏注销"。
-- **事件通道**: `ai_chat_send` 的回调通道由出口构造。桌面返回 Tauri `Channel`;
-  Web 抛 `kind=UnsupportedCommand` 的结构化错误, AI 面板因此给出"本出口暂未接入"的
-  提示, 而不是浏览器里构造 `Channel` 时的无 `kind` TypeError。
+- **取消竞态**: 记录留在等待队列里占位，回执到达时立即注销，保证不误配下一订阅。
+- **事件通道**: `ai_chat_send` 参数中的 `{ "$channel": id }` 让命令自动走 WS RPC；
+  后端以 `channel` 帧流式返回。终态事件会释放通道登记。
+- **前端工具隔离**: `ai_tool_invoke` 使用连接级事件 sink，只会发给对话发起者。
 
 ### 5.2 Web 出口行为
 
@@ -345,7 +326,7 @@ handler 收到的是 payload 本身而不是 Tauri 的 `Event` 包装。
   (服务端订阅表已随连接关闭注销), 并触发 `onReconnect` — `events.ts` 据此重新水合
   `workspace_get` / `get_source_graph` / `get_workspace_run_state`。断线期间丢失的后端
   事件无法回放, 只能靠拉取对账。
-- **错误形状**: `call` 拒绝的是 `{kind, message}` 结构化错误 (与 Tauri IPC 一致),
+- **错误形状**: `call` 拒绝的是 `{kind, message}` 结构化错误 (HTTP 与 WS 一致),
   `parseNodeError` / `errorGuidance` 两个出口通用; `kind` 取自 `rpc_api::RpcError`。
 - **`notify` 帧**: 已接入 (P3)。帧可携带可选的 `url` — 导出类命令把产物挂在
   `/api/v1/download/{token}` 上, 应用内提示据此给出"下载"动作。浏览器无法在导航
@@ -355,15 +336,13 @@ handler 收到的是 payload 本身而不是 Tauri 的 `Event` 包装。
 
 ### 5.3 端点与令牌
 
-选择规则: `window.__TAURI_INTERNALS__` 存在 → Tauri IPC, 否则 → HTTP/WS。
+业务 transport 始终是 HTTP/WS。`window.__TAURI_INTERNALS__` 仅用于选择窗口、更新器、
+sidecar 管理等壳层命令。
 
 端点解析: `?server=` → `localStorage['lissio.server']` → 构建期
-`VITE_LISSIO_SERVER` → 同源。令牌同理 (`?token=` →
-`localStorage['lissio.token']` → `VITE_LISSIO_TOKEN`)。查询参数带值时写回
-localStorage 并把它从地址栏摘掉 —— 便于"发一次带参链接, 之后免参直达", 也避免令牌
-留在浏览器历史里。反向代理的路径前缀会被保留。
-
-令牌的直接分发 (同源部署时怎么让浏览器拿到 64 字符令牌) 仍是未决事项, 见 §9。
+`VITE_LISSIO_SERVER` → 同源。令牌为 `?token=` →
+`sessionStorage['lissio.token']` → `VITE_LISSIO_TOKEN`，默认不跨浏览器会话持久化。
+查询参数使用后立即从地址栏摘除；反向代理路径前缀会被保留。
 
 ### 5.4 门禁
 
@@ -424,23 +403,19 @@ backend-cli devices|send|inject|endpoint|graph|data|snapshot|frame|run|record   
 
 | 门禁 | 内容 |
 |---|---|
-| `pnpm check:web-contract` | 四个清单互补 + `SUPPORTED` 与 `dispatch` 分支一一对应 + 前端命令名都在 IPC 注册表内 + 出口封装无泄漏 |
+| `pnpm check:web-contract` | 四个清单互补 + `SUPPORTED` 与 `dispatch` 分支一一对应 + Tauri 仅注册 `DESKTOP_ONLY` + 出口封装无泄漏 |
 | `pnpm check:architecture` | 新 crate 的目录 / metadata / 层序 / 适配器隔离 |
 | `pnpm check:deps` | `axum` (ws feature) / `tower-http` 等新依赖必须登记在 `[workspace.dependencies]` |
 | `cargo clippy --workspace --all-targets` | 仓库从严配置, 警告即错误 |
 | `cargo test --workspace` | 含 `rpc-api` 参数归一 / 清单互补、`backend-server` 帧编解码 / 令牌比较 / 订阅帧、`app` 恢复完成门时序 |
 | `pnpm test` | 含 `src/lib/rpc/__tests__/` 三个套件: 桌面委托语义、Web 出口状态机 (回执 FIFO / 取消竞态 / 重连重订 / 二进制分流)、端点解析 |
 
-Web 出口的实测验证分两层:
+Web 出口的自动验证分两层:
 
-- **线协议 E2E** (真实 `lissio-server`, 按 `httpTransport` 的算法直连): 批量数组
-  RPC 与逐条成败映射、顶层 camelCase 归一、`UnsupportedCommand`、401、WS 子协议
-  握手、回执 FIFO (含回执前取消)、后端事件帧、JSON 流帧、**二进制 WWB1 帧**、
-  `fault` 帧、断线重连后重新订阅。
-- **浏览器 E2E** (`ego-browser` 加载服务器托管的 `dist/`): 应用启动 + `list_ports`
-  真串口列表、工作区 `workspace_get` 水合 (持久化的 TestData 图被还原到画布)、
-  设备连接 + `workspace_run`、`transport:rx` 事件驱动的状态栏计数、波形面板渲染
-  二进制流 (低速 TestData 下可见曲线)。
+- **Vitest transport 契约**: HTTP 微批量、逐条成败映射、WS RPC/事件通道、订阅回执、
+  取消竞态、二进制分流、断线重连与重新订阅。
+- **Playwright + 真实 `lissio-server`**: 无后端诊断、正确令牌握手后才挂载应用、
+  错误令牌与网络不可达的分类，以及查询参数令牌的即时清理。
 
 手工验收 (P1 竖切):
 
@@ -464,33 +439,19 @@ cargo run -p backend-cli -- rpc get_pipeline_config
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | P0 契约冻结 | 本文件 + 命令能力矩阵 + `scripts/check-web-contract.mjs` | 已完成 |
-| P1 后端竖切 | `BackendHost` 上移; `rpc-api` (88 条命令); `backend-server` (HTTP/WS/鉴权/静态站点); `backend-cli serve --http` 与 `rpc` | 已完成 |
+| P1 后端竖切 | `BackendHost` 上移; `rpc-api` 全量派发; `backend-server` (HTTP/WS/鉴权/静态站点); `backend-cli serve --http` 与 `rpc` | 已完成 |
 | P2 前端解绑 | `src/lib/rpc/` 四文件; `tauri.ts` 与各 `*Subscription.ts` 切 transport; 事件监听切 transport; 重连重水合; 出口泄漏门禁 | 已完成 |
-| P3 全量能力 + 平台 shim | 文件产物下载端点; `ai-host` 迁移 + `SecretStore` 端口; `parse_frame_decoder_input` / `get_graph_hir`; `platform/` shim; 服务端 settings; `notify` → 应用内提示 | **进行中** — 已完成 `parse_frame_decoder_input` / `get_graph_hir` 下沉、`/api/v1/download/{token}` + 两个 CSV 导出、`notify` → 应用内提示 (带下载动作)、`src/lib/platform/` shim + 服务端 settings (`GET`/`PUT /api/v1/settings`); **待做** `ai-host` 迁移 + `SecretStore` 端口 (22 条 AI/MCP 命令) |
-| P4 收尾 | 浏览器 E2E 固化为可重复脚本; `exits.md` 与本文件的最终校对; README 使用说明 | 待实施 |
+| P3 全量能力 + 平台 shim | 文件产物、`ai-host`、SecretStore、settings、通知 | 已完成 |
+| P4 独立交付 | sidecar、连接门、Backend/Web 压缩包、OCI 与 Release 门禁 | 已完成 |
 
 ## 9. 未决事项
 
-1. **桌面端是否统一走 HTTP/WS** — 当前设计保留双 transport (桌面 IPC 默认), 以获得
-   二进制快路径与零回归。两个出口的语义差已收敛到 `Transport` 契约内, 若将来要统一,
-   只需改 `index.ts` 的选择规则。
-2. **首版是否包含 AI 面板** — 涉及 `ai-host` 迁移 (会话存储 / MCP 管理器 / 内置工具
-   执行器从 `src-tauri` 搬出) 与 `SecretStore` 端口注入 (桌面用 keyring, 服务端用
-   0600 文件或 `LISSIO_AI_API_KEY`); 未完成前 AI 相关命令在 `/capabilities` 中列为
-   `pending`, 前端由 `transport.eventChannel` 抛出 `UnsupportedCommand` 明确拒绝。
-3. **多客户端语义** — 当前是"同一后端会话的多个视图", 图并发编辑沿用既有
+1. **多客户端语义** — 当前是"同一后端会话的多个视图", 图并发编辑沿用既有
    `baseVersion` 乐观并发 (`GraphVersionConflict`); 不承诺多人同时编辑。
-4. **`parse_frame_decoder_input`** — **已解决 (P3)**: 实现体下沉到
+2. **`parse_frame_decoder_input`** — 实现体下沉到
    [`control-api::frame_decoder`](../../src-tauri/crates/desktop/control-api/src/frame_decoder.rs),
    桌面 IPC 与 Web 出口共用同一份实现 (`get_graph_hir` 同法下沉到
    `control-api::graph_hir`)。
-5. **令牌分发** — 同源部署时浏览器仍需拿到令牌 (`?token=` / localStorage / 构建期
-   变量三选一)。可选的改进是让 `lissio-server` 在托管 `dist/` 时把令牌注入
-   `index.html` (同源即可信), 但那会把"令牌文件 0600"的边界放宽成"任何能读到页面的人
-   都能拿到令牌" —— 需要与桌面连远端 (C 形态) 的安全模型一起设计。
-6. **`/capabilities` 未鉴权** — `/health` 与 `/capabilities` 都在鉴权中间件之外
-   (能力清单只暴露命令名, 不含数据)。若认为命令面本身也需要保护, 把它挪进
-   `require_token` 即可。
-7. **浏览器端性能** — 20 kHz × 4ch 的 TestData 会把浏览器渲染压满 (服务端与线协议
+3. **浏览器端性能** — 20 kHz × 4ch 的 TestData 会把浏览器渲染压满 (服务端与线协议
    都正常, 只是前端逐帧重绘跟不上)。这是 Web 出口的固有限制而非缺陷, 但值得在
    P4 明确"浏览器端建议的数据规模"或引入抽帧策略。

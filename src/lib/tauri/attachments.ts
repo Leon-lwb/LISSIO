@@ -82,7 +82,11 @@ function baseName(path: string): string {
 function readAsText(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ''));
+    reader.onload = () => {
+      // readAsText 的 result 恒为 string; 其它类型只在误用时出现
+      const { result } = reader;
+      resolve(typeof result === 'string' ? result : '');
+    };
     reader.onerror = () => reject(reader.error ?? new Error('read failed'));
     reader.readAsText(file);
   });

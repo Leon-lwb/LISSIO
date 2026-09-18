@@ -331,20 +331,78 @@ cd lissio
 pnpm install
 ```
 
-3. 启动开发环境
+Lissio 固定为三个独立交付单元：Backend/CLI 压缩包、纯静态 Web 压缩包，以及
+内含同版本 `lissio-server` sidecar 的 Desktop 安装包。
+
+### 桌面（Tauri）
 
 ```sh
-pnpm tauri dev
+pnpm dev:desktop    # 准备并启动 sidecar、Vite 与原生窗口
+pnpm build:desktop  # 打包安装程序 → src-tauri/target/release/bundle/
 ```
 
-应用默认会在 `http://localhost:1420` 加载前端，并启动 Tauri 桌面窗口。
+Desktop 的业务调用全部走 HTTP/WebSocket；Tauri IPC 仅保留窗口、菜单、更新器、文件对话框
+和 sidecar 管理。sidecar 缺失、鉴权失败、协议不兼容或崩溃时，会在业务 store 挂载前显示连接诊断页。
+
+### 独立 Web 服务（`lissio-server`）
+
+```sh
+pnpm build:web                              # 前端 → dist/
+pnpm dev:server --static-dir dist           # 单进程同时提供 HTTP API 与网页
+```
+
+然后打开 `http://127.0.0.1:8790`。首次访问在地址后追加访问令牌 `?token=<server-token>`
+—— 浏览器只在 sessionStorage 中保留令牌，并立即把参数从地址栏摘掉。令牌文件在首次启动时生成，路径会打印到
+服务端日志：macOS 为 `~/Library/Application Support/top.pengheng.lissio/server-token`，
+Windows 为 `%APPDATA%\top.pengheng.lissio\server-token`，Linux 为
+`~/.config/top.pengheng.lissio/server-token`；也可通过 `LISSIO_TOKEN` 显式指定。
+
+| 参数 | 环境变量 | 默认 |
+|---|---|---|
+| `--bind` | `LISSIO_BIND` | `127.0.0.1` |
+| `--http-port` | `LISSIO_HTTP_PORT` | `8790` |
+| `--token` / `--token-file` | `LISSIO_TOKEN` | `<配置目录>/server-token`（0600） |
+| `--static-dir` | `LISSIO_STATIC_DIR` | 关（仅 API） |
+| `--cors-origin`（可重复） | `LISSIO_CORS_ORIGINS` | 关（同源部署） |
+| `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / 默认启动 MCP |
+
+暴露到 loopback 之外需 `--bind 0.0.0.0` 并显式提供强令牌。`pnpm server` 等价于
+`cd src-tauri && cargo run -p backend-server`；CLI 形式
+`cargo run -p backend-cli -- serve` 走同一条装配路径。探活：
+`curl http://127.0.0.1:8790/api/v1/health`。
+
+AI 对话、会话、外部 MCP、入站 MCP 与前端工具在 Desktop/Web 中功能一致。保存的
+Provider Key 不可读回，UI 只接收 `configured`、`source`、`writable` 状态。部署环境变量为
+`LISSIO_AI_API_KEY_<ADAPTER>`，例如 `LISSIO_AI_API_KEY_OPENAI`。
+
+### OCI（server + Web）
+
+```sh
+docker run --rm -p 8790:8790 -p 8765:8765 \
+  -e LISSIO_TOKEN='请替换为强令牌' \
+  -v lissio-data:/var/lib/lissio ghcr.io/horldsence/lissio:latest
+```
+
+镜像缺少显式令牌时会拒绝启动；需要硬件访问时通过容器运行时映射串口/CAN 设备。
+
+### Web 前端开发（热更新）
+
+```sh
+pnpm dev:server # 终端 1：独立服务端，端口 8790
+pnpm dev:web   # 终端 2：vite 开发服务器，端口 1420，/api 自动代理到服务端
+```
+
+打开 `http://localhost:1420/?token=<server-token>` 一次即可（令牌写入 sessionStorage）。
+需要指向其它后端时设置 `LISSIO_DEV_SERVER=http://host:port`。
 
 ## 构建与打包
 
 生成生产环境前端资源并打包桌面应用：
 
 ```sh
-pnpm tauri build
+pnpm build:web
+pnpm build:server
+pnpm build:desktop
 ```
 
 输出产物位于 `src-tauri/target/release/bundle/`。

@@ -12,7 +12,6 @@ use events::EventSinkHandle;
 use llm::ToolSpecDto;
 use parking_lot::Mutex;
 use serde_json::{Value, json};
-use tauri::{AppHandle, Emitter};
 use tokio::sync::oneshot;
 
 use super::args::{
@@ -42,21 +41,27 @@ pub type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<ToolOutcome>>>
 /// 原生工具执行器 — 内置 AI 调用软件自有能力的桥梁。
 pub struct NativeToolExecutor {
     toolbox: Toolbox,
-    app: AppHandle,
     /// 事件端口 — 后端直连能力 (字节注入/连线) 复用与 MCP server 同一份实现。
     sink: EventSinkHandle,
+    /// 当前出口的前端事件端口。WebSocket 出口可为连接级实现。
+    frontend: EventSinkHandle,
     pending: PendingCalls,
     lang: Lang,
 }
 
 impl NativeToolExecutor {
-    /// 构造 (toolbox 从 `AppState` 提取, pending 注册表由 `AiState` 持有)。
-    pub fn new(toolbox: Toolbox, app: AppHandle, pending: PendingCalls, lang: Lang) -> Self {
-        let sink = crate::event_sink::TauriEventSink::handle(&app);
+    /// 构造。业务状态、后端事件与前端事件均由组合根注入。
+    pub fn new(
+        toolbox: Toolbox,
+        sink: EventSinkHandle,
+        frontend: EventSinkHandle,
+        pending: PendingCalls,
+        lang: Lang,
+    ) -> Self {
         Self {
             toolbox,
-            app,
             sink,
+            frontend,
             pending,
             lang,
         }
@@ -74,10 +79,7 @@ impl NativeToolExecutor {
         self.pending.lock().insert(call_id.clone(), tx);
 
         let payload = json!({ "call_id": call_id, "name": name, "arguments": arguments });
-        if let Err(e) = self.app.emit(AI_TOOL_INVOKE_EVENT, payload) {
-            self.pending.lock().remove(&call_id);
-            return Err(tool_failed(name, format!("事件派发失败: {e}")));
-        }
+        self.frontend.emit_event(AI_TOOL_INVOKE_EVENT, payload);
 
         match tokio::time::timeout(FRONTEND_TOOL_TIMEOUT, rx).await {
             Ok(Ok(ToolOutcome::Ok(content))) => Ok(content),

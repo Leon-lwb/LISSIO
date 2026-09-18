@@ -151,7 +151,7 @@ describe('aiChatStore 多会话 (后端持有)', () => {
     });
   });
 
-  it('发送前检查: 缺 API key 时拦截, 不发请求也不污染视图', async () => {
+  it('保存的 API key 不读回前端，空字段仍交由后端 SecretStore 校验', async () => {
     useAiChatStore.setState({ ...RESET, activeSessionId: 's1' });
     useSettingsStore.setState({
       settings: {
@@ -163,11 +163,11 @@ describe('aiChatStore 多会话 (后端持有)', () => {
     await useAiChatStore.getState().send('你好');
 
     const s = useAiChatStore.getState();
-    expect(s.streaming).toBe(false);
-    expect(s.viewItems).toHaveLength(0);
+    expect(s.streaming).toBe(true);
+    expect(s.viewItems).toHaveLength(1);
     expect(
       (tauriMock.invoke.mock.calls as unknown as [string][]).some(([cmd]) => cmd === 'ai_chat_send')
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('regenerate 乐观截断最后一条用户之后的条目, 后端走 regenerate 通道', async () => {

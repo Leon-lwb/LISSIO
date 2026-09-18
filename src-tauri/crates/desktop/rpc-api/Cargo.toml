@@ -9,6 +9,7 @@ license.workspace = true
 workspace = true
 
 [dependencies]
+ai-host = { workspace = true }
 acquisition = { workspace = true }
 app = { workspace = true }
 backend-host = { workspace = true }
@@ -19,6 +20,9 @@ control-api = { workspace = true }
 data_model = { workspace = true }
 error = { workspace = true }
 events = { workspace = true }
+chat-session = { workspace = true }
+llm = { workspace = true }
+mcp-client = { workspace = true }
 graph_ops = { workspace = true }
 kind = { workspace = true }
 logic = { workspace = true }

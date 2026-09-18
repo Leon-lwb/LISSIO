@@ -25,8 +25,8 @@ layers and their L4 implementations are injected by the composition root.
 
 ## Software exits
 
-UI (Tauri IPC), Web (HTTP-RPC + WebSocket, `backend-server`), MCP (`mcp-server`),
-and headless CLI (`backend-cli`) are four thin protocol adapters over one
+Desktop and Web both use HTTP-RPC + WebSocket through `backend-server`; Tauri IPC is a
+platform-shell-only exit. MCP (`mcp-server`) and headless CLI (`backend-cli`) are thin adapters over one
 capability core (`control-api`), one command dispatch table (`rpc-api`), one
 shared assembly (`backend-host`), and two push ports
 (`events::BackendEventSink`, `app::display::StreamSink`). Capability coverage
@@ -66,18 +66,17 @@ allowed when they also satisfy the layer rule.
 | data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `rpc-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, `backend-server`, and root package `lissio`; commands are modules under `src-tauri/src/commands` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `ai-host`, `rpc-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, `backend-server`, and the shell-only root package `lissio` |
 
 `graph` keeps `compiler::{hir, plane, lower}` and `eval` as private
 implementation stages. Do not split compiler phases into crates.
 
 ## Command-name contract
 
-`rpc-api::catalog` is the single authority for which IPC command names each
-software exit implements. Its four lists (`SUPPORTED`, `PENDING`,
-`DESKTOP_ONLY`, `CHANNEL`) must stay disjoint and must cover every command
-registered in `generate_handler!`. `pnpm check:web-contract` enforces this, plus
-that every name the frontend invokes exists in the IPC registry.
+`rpc-api::catalog` is the authority for the public command surface. Its four lists
+(`SUPPORTED`, `PENDING`, `DESKTOP_ONLY`, `CHANNEL`) stay disjoint. `SUPPORTED` and
+`CHANNEL` belong to the independent backend; the Tauri `generate_handler!` registry must equal
+`DESKTOP_ONLY`. `pnpm check:web-contract` enforces both sides and every frontend invocation.
 
 ## Machine-readable contract
 

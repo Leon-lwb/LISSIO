@@ -28,10 +28,13 @@ class MemoryStorage {
 }
 
 let storage: MemoryStorage;
+let session: MemoryStorage;
 
 beforeEach(() => {
   storage = new MemoryStorage();
+  session = new MemoryStorage();
   vi.stubGlobal('localStorage', storage);
+  vi.stubGlobal('sessionStorage', session);
   window.history.replaceState({}, '', '/');
 });
 
@@ -45,14 +48,15 @@ describe('resolveWebEndpoint', () => {
     expect(resolveWebEndpoint()).toEqual({ base: window.location.origin, token: '' });
   });
 
-  it('查询参数写入 localStorage 并从地址栏摘除', () => {
+  it('服务器写入 localStorage、令牌写入 sessionStorage，并从地址栏摘除', () => {
     window.history.replaceState({}, '', '/?server=127.0.0.1:9000&token=abc');
     expect(resolveWebEndpoint()).toEqual({ base: 'http://127.0.0.1:9000', token: 'abc' });
     expect(storage.getItem('lissio.server')).toBe('127.0.0.1:9000');
-    expect(storage.getItem('lissio.token')).toBe('abc');
+    expect(storage.getItem('lissio.token')).toBeNull();
+    expect(session.getItem('lissio.token')).toBe('abc');
     expect(window.location.search).toBe('');
 
-    // 无参再次解析: 从 localStorage 读回, 链接可以只发一次
+    // 无参再次解析: 从对应存储读回, 链接可以只发一次
     expect(resolveWebEndpoint()).toEqual({ base: 'http://127.0.0.1:9000', token: 'abc' });
   });
 
@@ -64,11 +68,12 @@ describe('resolveWebEndpoint', () => {
   it('空参数值不写入 localStorage (只摘除参数)', () => {
     window.history.replaceState({}, '', '/?token=');
     expect(resolveWebEndpoint().token).toBe('');
-    expect(storage.getItem('lissio.token')).toBeNull();
+    expect(session.getItem('lissio.token')).toBeNull();
   });
 
   it('存储不可用时退化为同源, 不抛异常', () => {
     vi.stubGlobal('localStorage', undefined);
+    vi.stubGlobal('sessionStorage', undefined);
     expect(resolveWebEndpoint()).toEqual({ base: window.location.origin, token: '' });
   });
 

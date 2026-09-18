@@ -9,6 +9,7 @@
 
 /* ============ 字体许可与来源 ============ */
 /* 所有内置字体均为可再分发许可, 完整许可原文见 src/assets/fonts/*-LICENSE.txt:
+     - FiraCode Nerd Font Mono : SIL OFL 1.1 (c) The Fira Code Project Authors + Nerd Fonts 补丁 (MIT)
      - GoMono Nerd Font Mono : BSD-3-Clause (c) 2016 Bigelow & Holmes Inc. + Nerd Fonts 补丁 (MIT)
      - Clear Han Serif       : SIL OFL 1.1  (c) chncwk, 衍生自思源宋体 (Adobe OFL 1.1)
      - Maple Mono CN         : SIL OFL 1.1
@@ -17,6 +18,31 @@
    切勿在此添加商业授权字体 (如 方正屏显雅宋)：本仓库以 GPL-2.0-only 分发,
    再分发商用字体需方正书面授权, 只能依赖使用者本机自行安装并由字体栈回退承载。
    详见 docs/fonts.md */
+
+/* ============ FiraCode Nerd Font Mono (默认等宽) ============ */
+/* 拉丁/希腊/西里尔 + 全套 Nerd Fonts 图标 (PUA), 连字 (-> != 等) 默认开启。
+   上游无 Italic 字形, 浏览器按 CSS 规则合成斜体 */
+@font-face {
+  font-family: "FiraCode Nerd Font Mono";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/FiraCodeNerdFontMono-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "FiraCode Nerd Font Mono";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/FiraCodeNerdFontMono-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "FiraCode Nerd Font Mono";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/FiraCodeNerdFontMono-Bold.woff2") format("woff2");
+}
 
 /* ============ GoMono Nerd Font Mono ============ */
 /* 拉丁/希腊/西里尔 + 全套 Nerd Fonts 图标 (PUA)。Go Mono 本身即等宽,
@@ -143,11 +169,33 @@
   --color-info: var(--color-blue);
   --color-danger-surface: var(--color-bg-danger);
 
+  /* ---------- 终端 16 色 (ANSI, RawData 终端模式用) ---------- */
+  /* 标准 ANSI 序号 0-15; 0-7 中可映射主题 token 的走 var() 以随主题联动,
+     black/cyan 与全部 bright 色取固定值 (终端惯例色, 主题无对应 token) */
+  --term-0: #666d79;                    /* black */
+  --term-1: var(--color-red);           /* red */
+  --term-2: var(--color-green);         /* green */
+  --term-3: var(--color-yellow);        /* yellow */
+  --term-4: var(--color-blue);          /* blue */
+  --term-5: var(--color-purple);        /* magenta */
+  --term-6: #56b6c2;                    /* cyan */
+  --term-7: var(--color-text-primary);  /* white */
+  --term-8: #7f8790;                    /* bright black */
+  --term-9: #ff8a7d;                    /* bright red */
+  --term-10: #a9e0a2;                   /* bright green */
+  --term-11: #f0d19b;                   /* bright yellow */
+  --term-12: #93c5ff;                   /* bright blue */
+  --term-13: #dba6d6;                   /* bright magenta */
+  --term-14: #74d6e2;                   /* bright cyan */
+  --term-15: var(--color-text-bright);  /* bright white */
+  --term-fg: var(--color-text-primary); /* 终端默认前景 */
+  --term-bg: transparent;               /* 终端默认背景 */
+
   /* ---------- 字体族 ---------- */
-  /* UI: GoMono(拉丁) → 屏显臻宋(中文) → Maple Mono CN(等宽中文兜底) → JetBrains Mono(缺字兜底) */
-  --font-ui: "GoMono Nerd Font Mono", "Clear Han Serif", "Maple Mono CN", "JetBrains Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  /* UI: FiraCode(拉丁, 连字) → GoMono(拉丁回退) → 屏显臻宋(中文) → Maple Mono CN(等宽中文兜底) → JetBrains Mono(缺字兜底) */
+  --font-ui: "FiraCode Nerd Font Mono", "GoMono Nerd Font Mono", "Clear Han Serif", "Maple Mono CN", "JetBrains Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   /* Mono: 中文先用 Maple Mono CN 以保证 2:1 对齐, 再回退屏显臻宋补齐生僻字 */
-  --font-mono: "GoMono Nerd Font Mono", "Maple Mono CN", "Clear Han Serif", "JetBrains Mono", "Cascadia Code", "Fira Code", "SF Mono", Menlo, "PingFang SC", "Microsoft YaHei", monospace;
+  --font-mono: "FiraCode Nerd Font Mono", "GoMono Nerd Font Mono", "Maple Mono CN", "Clear Han Serif", "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, "PingFang SC", "Microsoft YaHei", monospace;
 
   /* ---------- 字号 ---------- */
   --font-size-xs: 11px;

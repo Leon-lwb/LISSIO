@@ -195,7 +195,7 @@ describe('HttpTransport 事件通道', () => {
     const socket = lastSocket();
     socket.open();
     await pending;
-    expect(socket.protocols).toEqual(['lissio.v1', 'bearer.secret']);
+    expect(socket.protocols).toEqual(['lissio.v2', 'bearer.secret']);
     expect(socket.url).toBe('ws://127.0.0.1:8790/api/v1/ws');
   });
 });
@@ -357,13 +357,19 @@ describe('HttpTransport 显示订阅', () => {
     expect(second.frames()).toEqual([]);
   });
 
-  it('Web 出口未接入的通道在构造时抛出结构化错误', () => {
-    expect(() => transport.eventChannel()).toThrowError(/ai_chat_send/);
-    try {
-      transport.eventChannel();
-    } catch (error) {
-      expect(error).toMatchObject({ kind: 'UnsupportedCommand' });
-    }
+  it('v2 事件通道通过 WebSocket 接收流式 payload', async () => {
+    const channel = transport.eventChannel<{ type: string; text: string }>();
+    const received = vi.fn();
+    channel.onmessage = received;
+    const pending = transport.call('ai_chat_send', { onEvent: channel });
+    const socket = lastSocket();
+    socket.open();
+    await vi.waitFor(() => expect(socket.frames()).toHaveLength(1));
+    const frame = socket.frames()[0] as { id: number; args: { onEvent: { $channel: number } } };
+    socket.text({ type: 'channel', id: frame.args.onEvent.$channel, payload: { type: 'delta', text: 'hi' } });
+    socket.text({ type: 'response', id: frame.id, ok: true, result: 'task-1' });
+    await expect(pending).resolves.toBe('task-1');
+    expect(received).toHaveBeenCalledWith({ type: 'delta', text: 'hi' });
   });
 });
 

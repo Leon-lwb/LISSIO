@@ -31,7 +31,7 @@ export function SimulationProperties({ node }: { node: Node }) {
       {!pointSource && <label htmlFor="sim-channels">通道数<DraftNumberInput id="sim-channels" className="form-input" min={1} max={256} integer value={config.channels} onCommit={channels => update({ channels })} /></label>}
     </div>
     {!pointSource && (parsers.length ? <label>参考解析器<select className="form-select" value={config.referenceNodeId ?? ''} onChange={e => update({ referenceNodeId: e.target.value || null })}>
-      <option value="">自动匹配唯一格式</option>{parsers.map(p => <option key={p.id} value={p.id}>{String(p.data.label ?? p.id)}</option>)}
+      <option value="">自动匹配唯一格式</option>{parsers.map(p => <option key={p.id} value={p.id}>{typeof p.data.label === 'string' ? p.data.label : p.id}</option>)}
     </select></label> : <label>生成格式<select className="form-select" value={(config.encoding as { protocol?: { kind: string } } | null)?.protocol?.kind ?? ''} onChange={e => update({ encoding: e.target.value ? { protocol: { kind: e.target.value, channels: config.channels }, schema: null } : null })}>
       <option value="">请选择</option><option>JustFloat</option><option>FireWater</option><option>RawData</option>
     </select></label>)}

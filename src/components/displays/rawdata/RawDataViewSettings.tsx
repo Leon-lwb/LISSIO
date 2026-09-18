@@ -1,4 +1,4 @@
-import { Palette, PanelRight, AlignLeft } from 'lucide-react';
+import { Palette, PanelRight, AlignLeft, Terminal } from 'lucide-react';
 import { t, type Lang } from '../../../i18n';
 import type { HexColorMode, SendPanelMode } from './rawDataViewHelpers';
 
@@ -7,10 +7,16 @@ interface Props {
   sendPanelMode: SendPanelMode;
   showTimestamp: boolean;
   showOffset: boolean;
+  /// 终端模式选项 (仅终端分组下显示)
+  localEcho: boolean;
+  ansiDecode: boolean;
+  showTerminalOptions: boolean;
   onHexColorModeChange: (v: HexColorMode) => void;
   onSendPanelModeChange: (v: SendPanelMode) => void;
   onShowTimestampChange: (v: boolean) => void;
   onShowOffsetChange: (v: boolean) => void;
+  onLocalEchoChange: (v: boolean) => void;
+  onAnsiDecodeChange: (v: boolean) => void;
   lang: Lang;
 }
 
@@ -19,10 +25,15 @@ export function RawDataViewSettings({
   sendPanelMode,
   showTimestamp,
   showOffset,
+  localEcho,
+  ansiDecode,
+  showTerminalOptions,
   onHexColorModeChange,
   onSendPanelModeChange,
   onShowTimestampChange,
   onShowOffsetChange,
+  onLocalEchoChange,
+  onAnsiDecodeChange,
   lang,
 }: Props) {
   const hexColorOptions: { mode: HexColorMode; label: string }[] = [
@@ -93,6 +104,31 @@ export function RawDataViewSettings({
           {t(lang, 'showOffset')}
         </label>
       </div>
+      {showTerminalOptions && (
+        <div>
+          <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
+            <Terminal size={12} /> {t(lang, 'terminalOptions')}
+          </h4>
+          <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer mb-1.5">
+            <input
+              type="checkbox"
+              checked={ansiDecode}
+              onChange={(e) => onAnsiDecodeChange(e.target.checked)}
+              className="accent-accent"
+            />
+            {t(lang, 'ansiDecode')}
+          </label>
+          <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer">
+            <input
+              type="checkbox"
+              checked={localEcho}
+              onChange={(e) => onLocalEchoChange(e.target.checked)}
+              className="accent-accent"
+            />
+            {t(lang, 'localEcho')}
+          </label>
+        </div>
+      )}
     </div>
   );
 }

@@ -15,9 +15,9 @@ describe('checkAiProviderSettings', () => {
     ).toBeNull();
   });
 
-  it('非本地 provider 缺 key → AiMissingApiKey (带 adapter 参数)', () => {
-    const issue = checkAiProviderSettings(aiSettings({ adapter: 'openai', apiKey: '  ' }));
-    expect(issue).toEqual({ kind: 'AiMissingApiKey', params: { adapter: 'openai' } });
+  it('保存的 key 为只写状态，前端不因空值阻断发送', () => {
+    const issue = checkAiProviderSettings(aiSettings({ adapter: 'openai', apiKey: '  ', model: 'gpt-4o-mini' }));
+    expect(issue).toBeNull();
   });
 
   it('ollama 为本地服务, 允许无 key', () => {

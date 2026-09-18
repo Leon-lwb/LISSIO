@@ -21,7 +21,7 @@ use serde::Deserialize;
 use tokio::sync::{broadcast, mpsc};
 
 use crate::frames::{ClientMessage, ServerMessage, encode_binary_frame};
-use crate::sink::{OutFrame, WsStreamSink};
+use crate::sink::{ConnectionEventSink, OutFrame, WsStreamSink};
 
 /// 会话上下文 — 由 HTTP 层注入。
 pub struct SessionContext {
@@ -147,7 +147,32 @@ async fn handle_text(
             subscribe(context, out_tx, active, args).await;
         }
         ClientMessage::Rpc { id, cmd, args } => {
-            let response = rpc_api::dispatch(&context.host, &cmd, args).await;
+            let channel_id = args
+                .get("onEvent")
+                .or_else(|| args.get("on_event"))
+                .and_then(|value| value.get("$channel"))
+                .and_then(serde_json::Value::as_u64)
+                .and_then(|value| u32::try_from(value).ok());
+            let chat_events = channel_id.map(|channel_id| {
+                let output = out_tx.clone();
+                std::sync::Arc::new(move |event: chat::AiChatEvent| {
+                    if let Ok(payload) = serde_json::to_value(event) {
+                        send_message(
+                            &output,
+                            ServerMessage::Channel {
+                                id: channel_id,
+                                payload,
+                            },
+                        );
+                    }
+                }) as ai_host::ChatEventSink
+            });
+            let rpc_context = rpc_api::RpcContext {
+                chat_events,
+                frontend_sink: ConnectionEventSink::handle(out_tx),
+            };
+            let response =
+                rpc_api::dispatch_with_context(&context.host, &cmd, args, &rpc_context).await;
             send_message(out_tx, response_message(id, response));
         }
     }

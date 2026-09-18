@@ -1,6 +1,6 @@
 [package]
 name = "backend-host"
-description = "Lissio 无界面后端装配与生命周期 — 传输适配器注册、点位投影、工作区恢复与收尾 (Tauri 组合根与 CLI 共用, 无 Tauri)"
+description = "Lissio 独立后端装配与生命周期 — AI、传输适配器、点位投影、工作区恢复与收尾"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -15,6 +15,7 @@ modbus-rtu = ["dep:modbus-adapter"]
 s7 = ["dep:s7-adapter"]
 
 [dependencies]
+ai-host = { workspace = true }
 app = { workspace = true }
 acquisition = { workspace = true }
 pipeline = { workspace = true }
@@ -36,4 +37,4 @@ s7-adapter = { workspace = true, optional = true }
 [package.metadata.lissio]
 domain = "desktop"
 layer = 4
-responsibility = "无界面后端装配与生命周期 — 采集适配器注册、点位投影、配置目录解析、工作区恢复与收尾 (GUI 与单后端共用)"
+responsibility = "独立后端装配与生命周期 — AI 宿主、采集适配器、点位投影、配置目录、工作区恢复与收尾"

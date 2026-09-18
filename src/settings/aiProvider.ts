@@ -16,9 +16,8 @@ export interface AiSendIssue {
 
 /** 检查 provider 配置是否满足发送条件 */
 export function checkAiProviderSettings(ai: AppSettings['ai']): AiSendIssue | null {
-  if (ai.adapter !== 'ollama' && !ai.apiKey.trim()) {
-    return { kind: 'AiMissingApiKey', params: { adapter: ai.adapter } };
-  }
+  // Saved secrets are write-only and resolved by the backend. Missing-key
+  // validation therefore belongs to `ai-host`, not to the browser.
   if (ai.adapter === 'openai_compatible' && !ai.baseUrl.trim()) {
     return { kind: 'AiMissingBaseUrl', params: {} };
   }

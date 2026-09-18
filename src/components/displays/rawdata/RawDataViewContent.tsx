@@ -62,7 +62,11 @@ export function RawDataViewContent({
       {showOffset && grouping === 'grid' && (
         <span className="text-text-secondary text-xs font-mono min-w-[80px] text-right">Offset</span>
       )}
-      {grouping === 'line' ? (
+      {repr === 'utf8' ? (
+        <div className="flex-1">
+          <span className="text-text-secondary text-xs font-mono">UTF-8</span>
+        </div>
+      ) : grouping === 'line' ? (
         <>
           <div className="flex-1" />
           {repr === 'hex' && (

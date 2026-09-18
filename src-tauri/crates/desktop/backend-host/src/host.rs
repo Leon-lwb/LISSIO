@@ -21,6 +21,8 @@ pub struct BackendHost {
     pub state: AppState,
     /// 控制能力切片 (与 `state` 共享同一批 `Arc` 句柄)。
     pub toolbox: Toolbox,
+    /// AI/MCP host，共享相同的 Toolbox、事件端口与配置目录。
+    pub ai: Arc<ai_host::AiHost>,
     /// 出口事件端口 (stderr / Tauri / WebSocket 广播)。
     pub sink: EventSinkHandle,
     /// 配置目录 (workspace.json / settings.json / recordings/ 所在处)。
@@ -61,9 +63,15 @@ pub async fn assemble(
         tokio::spawn(future);
     });
     let toolbox = Toolbox::from_state(&state);
+    let ai = Arc::new(ai_host::AiHost::new(
+        config_dir.clone(),
+        toolbox.clone(),
+        sink.clone(),
+    ));
     Ok(BackendHost {
         state,
         toolbox,
+        ai,
         sink,
         config_dir,
         // Web 出口装配后自行注入暂存区 (见 `backend_server::serve`)

@@ -159,6 +159,8 @@ gridView: 网格
 lineView: 行
 hexView: HEX
 asciiView: ASCII
+utf8View: UTF-8
+terminalView: 终端
 rawDataChannel: 通道
 send: 发送
 clear: 清空
@@ -277,6 +279,10 @@ rawDataDirectionRx: 接收
 rawDataDirectionTx: 发送
 rawDataSearchPlaceholder: 搜索…
 displayOptions: 显示选项
+terminalOptions: 终端
+localEcho: 发送后本地回显
+ansiDecode: 解析 ANSI 颜色转义
+terminalReprDisabled: 终端视图不使用 HEX/ASCII 表示
 
 # 节点编辑器
 newTab: 新建标签页

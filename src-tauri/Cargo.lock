@@ -49,6 +49,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "ai-host"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "can",
+ "chat",
+ "chat-session",
+ "control-api",
+ "data-model",
+ "error",
+ "events",
+ "keyring",
+ "llm",
+ "log",
+ "mcp-client",
+ "mcp-server",
+ "parking_lot",
+ "security-framework 3.7.0",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -714,6 +738,7 @@ name = "backend-host"
 version = "0.6.1"
 dependencies = [
  "acquisition",
+ "ai-host",
  "app",
  "can-transport",
  "control-api",
@@ -736,9 +761,11 @@ dependencies = [
 name = "backend-server"
 version = "0.6.1"
 dependencies = [
+ "ai-host",
  "app",
  "axum",
  "backend-host",
+ "chat",
  "clap",
  "control-api",
  "data-model",
@@ -3798,46 +3825,20 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 name = "lissio"
 version = "0.6.1"
 dependencies = [
- "acquisition",
  "app",
- "async-trait",
  "backend-host",
  "buffer_graph",
- "bus",
- "can",
- "can-transport",
- "chat",
- "chat-session",
- "control-api",
  "data-model",
  "error",
- "evaluator",
- "events",
+ "getrandom 0.3.4",
  "graph-testkit",
  "graph_ops",
- "keyring",
  "kind",
- "llm",
  "log",
- "logic",
- "mcp-client",
- "mcp-server",
  "menu_shell",
- "network",
- "parking_lot",
- "petgraph",
- "pipeline",
- "points",
- "recording",
- "reqwest",
  "schema_types",
- "security-framework 3.7.0",
- "semver",
  "serde",
  "serde_json",
- "serial",
- "stream",
- "subscription",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
@@ -3849,9 +3850,7 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "tokio",
- "transport",
  "update_flow",
- "waveform",
  "window-vibrancy",
 ]
 
@@ -5670,19 +5669,23 @@ name = "rpc-api"
 version = "0.6.1"
 dependencies = [
  "acquisition",
+ "ai-host",
  "app",
  "backend-host",
  "buffer_graph",
  "can",
  "can-transport",
+ "chat-session",
  "control-api",
  "data-model",
  "error",
  "events",
  "graph_ops",
  "kind",
+ "llm",
  "log",
  "logic",
+ "mcp-client",
  "pipeline",
  "points",
  "raw-data",

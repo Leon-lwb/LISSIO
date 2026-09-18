@@ -1,63 +1,27 @@
-//! `lissio` 二进制组合根 — 只做插件装配、状态管理与命令注册。
+//! `lissio` desktop shell composition root.
 //!
-//! 层级: L5 (顶端)。全部业务逻辑位于 `crates/<层>/*`; 后台任务 (ticker /
-//! 工作区防抖落盘 / 启动页兜底) 在 [`app_state`] 的 `runtime` 模块。
-//!
+//! Product logic lives in the independently running `lissio-server`. This crate only owns
+//! windows, menus, updates, platform plugins, and the supervised server sidecar.
 
-mod commands;
-mod event_sink;
-mod gui_host;
+mod shell;
+mod sidecar;
 
-// 必须 glob 导入: `#[tauri::command]` 生成的 `__cmd__*` / `__tauri_command_name_*`
-// 宏 (`#[macro_export]`, doc-hidden) 只在 glob 导入时进入本 crate 宏命名空间,
-// `generate_handler!` 展开时需要它们在作用域内。
-pub use commands::acquisition::*;
-pub use commands::ai::*;
-pub use commands::buffer::*;
-pub use commands::can_load::*;
-pub use commands::can_transport::*;
-pub use commands::debug::*;
-pub use commands::display::*;
-pub use commands::graph::*;
-pub use commands::pipeline::*;
-pub use commands::rawdata::*;
-pub use commands::recording::*;
-
-pub use app::AppState;
-pub use menu_shell::{build_menu, ids, on_menu_event};
+pub use menu_shell::{build_menu, on_menu_event};
+pub use shell::{close_splashscreen, inspect_element, set_window_acrylic, show_main_window};
+pub use sidecar::{backend_sidecar_info, backend_sidecar_open_logs, backend_sidecar_restart};
+// Tauri command macros are exported as hidden companion macros and require a glob import at the
+// composition root so `generate_handler!` can resolve them.
 pub use update_flow::*;
 
 use tauri::Manager;
 use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-// tauri::generate_context! 展开生成的闭包栈占用无法由本仓库控制
 #[allow(clippy::large_stack_frames)]
 pub fn run() {
-    println!(
-        r"
-    -@@@@@@@@@       :@@@@@@@@@.   .@@@@@@@@:@.     @@@@@@@@:@*  @@@@@@@@@@      +@@@@@@@@-
-        @@@@+            @@@@%     @@@-     *@@:   @@@%      @@#     @@@@       @@@@      @@@@
-        @@@@+            @@@@%    @@@@#      .@:  +@@@@       @%     @@@@     #@@@@        @@@@-
-        @@@@+            @@@@%    =@@@@@@@-        @@@@@@@+          @@@@     @@@@*        @@@@@
-        @@@@+            @@@@%      @@@@@@@@@@@     @@@@@@@@@@@      @@@@    *@@@@-        %@@@@.
-        @@@@+            @@@@%          #@@@@@@@        +@@@@@@@:    @@@@    -@@@@+        @@@@@
-        @@@@+       :@   @@@@%    @@        @@@@. @@        @@@@#    @@@@     @@@@@        @@@@+
-        @@@@*      #@@   @@@@%    @@@       @@@@  @@@       @@@@     @@@@      *@@@%      @@@@
-    m-@@@@@@@@@@@@@@@@:@@@@@@@@@. @@@@@@##@@@@    @@%@@@%#@@@@.   @@@@@@@@@@     .@@@@##@@@@
- "
-    );
-
-    let app_state = AppState::with_acquisition(backend_host::build_acquisition_runtime());
-    let acquisition = app_state.transport.clone();
-    backend_host::install_point_observer(&app_state);
-    backend_host::install_envelope_engine(&app_state);
-    backend_host::install_serial_discovery(&app_state);
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                // 日志级别: 开发构建 (debug_assertions) 显示 debug 级诊断日志,
-                // 发布构建只显示 info 及以上
                 .level(if cfg!(debug_assertions) {
                     log::LevelFilter::Debug
                 } else {
@@ -77,216 +41,39 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(app_state)
-        .manage(acquisition)
         .manage(PendingUpdate(std::sync::Mutex::default()))
+        .manage(sidecar::SidecarManager::default())
         .setup(|app| {
-            // 构建原生菜单栏。
-            // - macOS: 菜单位于系统全局菜单栏, 与窗口透明无关, 正常挂载。
-            // - Linux: GTK 菜单栏自带不透明背景, 无此问题, 正常挂载。
-            // - Windows: 主窗口为透明窗口 (WS_EX_LAYERED) 时, 原生菜单栏无法正确绘制:
-            //   菜单文字按深色模式渲染为白色, 但菜单背景在分层窗口上不填充, 造成
-            //   "白字白底" 且背景透视露出下层内容。因此 Windows 仅构建但不挂载原生菜单,
-            //   改由前端自定义菜单栏 (MenuBar.tsx) 承担同等功能。
+            if let Err(error) = app.state::<sidecar::SidecarManager>().start(app.handle()) {
+                log::error!("sidecar startup failed: {error}");
+            }
+
             let menu = build_menu(app)?;
             #[cfg(not(target_os = "windows"))]
             app.set_menu(menu)?;
+            #[cfg(target_os = "windows")]
+            let _ = menu;
 
-            // AI 状态: MCP server 配置持久化在 app config dir
-            let ai_config_dir = app
-                .path()
-                .app_config_dir()
-                .unwrap_or_else(|_| std::path::PathBuf::from("."));
-            match backend_host::migrate_legacy_config(&ai_config_dir) {
-                Ok(files) if !files.is_empty() => {
-                    log::info!("migrated legacy Lissio state: {}", files.join(", "));
-                }
-                Err(error) => log::warn!("legacy configuration migration failed: {error}"),
-                _ => {}
-            }
-            app.manage(commands::ai::AiState::new(ai_config_dir.clone()));
-
-            // 工作区启动恢复: tab 元数据 + 各 tab 节点文档与连线
-            // 落盘在 app config dir 的 workspace.json; 恢复在后台任务执行 (不阻塞
-            // 主线程 — 事件循环可立即绘制启动页, 否则 setup 期间整段"无窗口"),
-            // workspace_get / 落盘任务 await 恢复完成门保持原时序
-            // (返回 false = 无持久化, 默认启动)
-            let app_handle = app.handle().clone();
-            let restore_dir = ai_config_dir.clone();
-            tauri::async_runtime::spawn(async move {
-                let state = app_handle.state::<AppState>();
-                let restored = backend_host::restore_workspace(&state, &restore_dir, None).await;
-                state.signal_restore_done();
-                log::info!(
-                    "workspace restore: {}",
-                    if restored { "loaded" } else { "none" }
-                );
-            });
-
-            // 后台任务: 工作区防抖落盘 / 推送 ticker / 启动页兜底
-            // (任务体无 Tauri 依赖, 由本组合根提供 tauri::async_runtime 孵化器)
-            {
-                let state = app.state::<AppState>();
-                let sink = event_sink::TauriEventSink::handle(app.handle());
-                app::spawn_backend_tasks(&state, sink, ai_config_dir, &|future| {
-                    tauri::async_runtime::spawn(future);
-                });
-            }
-            gui_host::spawn_splashscreen_fallback(app.handle());
-
+            shell::spawn_splashscreen_fallback(app.handle());
             Ok(())
         })
         .on_menu_event(|app, event| on_menu_event(app, event.id().as_ref()))
         .invoke_handler(tauri::generate_handler![
-            // 类型化采集端点与适配器能力
-            list_adapter_capabilities,
-            describe_acquisition_points,
-            discover_acquisition_endpoints,
-            validate_adapter_configuration,
-            open_acquisition_endpoint,
-            close_acquisition_endpoint,
-            list_acquisition_endpoints,
-            read_acquisition_points,
-            subscribe_acquisition_points,
-            write_acquisition_points,
-            latest_acquisition_samples,
-            // 传输
-            list_ports,
-            close_transport,
-            send_raw,
-            send_string,
-            send_text_out_now,
-            send_widget_value,
-            send_and_capture,
-            update_transport_protocol,
-            // 协议
-            set_protocol,
-            get_protocol,
-            get_detected_channels,
-            // 流水线参数
-            set_pipeline_config,
-            get_pipeline_config,
-            // 工作区运行控制 + 后台发送任务注册
-            workspace_run,
-            get_workspace_run_state,
-            set_widget_send_tasks,
-            get_send_task_status,
-            // 波形缓冲区
-            subscribe_data,
-            unsubscribe_data,
-            ack_data,
-            get_data_health,
-            get_recording_health,
-            list_recording_sessions,
-            list_recording_session_summaries,
-            list_recording_bindings,
-            get_recording_database_info,
-            query_recording_history,
-            query_recording_sql,
-            cancel_recording_query,
-            flush_recording,
-            delete_recording_session,
-            cleanup_recording_sessions,
-            export_recording_data,
-            create_recording_session,
-            set_active_recording_session,
-            apply_recording_settings,
-            create_waveform_snapshot,
-            query_waveform_snapshot,
-            release_waveform_snapshot,
-            get_waveform_raw_range,
-            export_waveform_csv,
-            compute_waveform_autoset,
-            clear_buffer,
-            set_buffer_channels,
-            get_buffer_info,
-            set_waveform_buffer_capacity,
-            set_rawdata_buffer_capacity,
-            set_can_buffer_capacity,
-            set_logic_buffer_capacity,
-            // 节点图 (后端化重构)
-            update_tab_graph,
-            get_graph_hir,
-            remove_tab_graph,
-            connect_edge,
-            disconnect_edge,
-            get_source_graph,
-            set_input_value,
-            set_node_positions,
-            workspace_get,
-            workspace_set_tabs,
-            submit_custom_output,
-            submit_custom_text_output,
-            inject_bytes,
-            // 原始数据
-            clear_raw_data_collector,
-            // CAN 帧
-            send_can_frame,
-            get_recent_can_frames,
-            clear_can_buffer,
-            get_can_buffer_info,
-            list_candle_devices,
-            // 逻辑分析仪
-            get_recent_logic_samples,
-            clear_logic_buffer,
-            get_logic_buffer_info,
-            get_recent_decoded_events,
-            clear_decoded_buffer,
-            get_decoded_buffer_info,
-            // CAN 负载分析
-            get_can_load_stats,
-            set_can_load_window,
-            clear_can_load_stats,
-            get_current_can_bitrate,
-            export_can_load_csv,
-            // 帧解码器手动测试 (FrameDecoder 面板)
-            parse_frame_decoder_input,
-            // 触发器匹配 (Trigger 面板手动 / 自动模式)
-            match_trigger_command,
-            // 命令帧字节打包 (CommandSender 发送路径)
-            compute_command_frame_bytes,
-            // 命令帧手动发送 (统一发送内核: 与预览/自动同编码同路由)
-            send_command_frame,
-            // 调试
             inspect_element,
-            // 窗口
             set_window_acrylic,
             show_main_window,
             close_splashscreen,
-            // 应用更新
             check_update,
             download_and_install_update,
-            // AI 对话 + MCP
-            ai_list_providers,
-            ai_chat_send,
-            ai_chat_cancel,
-            ai_tool_resolve,
-            chat_list_sessions,
-            chat_create_session,
-            chat_get_session,
-            chat_rename_session,
-            chat_delete_session,
-            chat_clear_session,
-            ai_keychain_get,
-            ai_keychain_set,
-            ai_keychain_delete,
-            mcp_list_servers,
-            mcp_add_server,
-            mcp_remove_server,
-            mcp_set_server_enabled,
-            mcp_list_tools,
-            mcp_connection_states,
-            mcp_call_tool,
-            mcp_server_status,
-            mcp_server_start,
-            mcp_server_stop,
+            backend_sidecar_info,
+            backend_sidecar_restart,
+            backend_sidecar_open_logs,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // 退出 flush: 把未落盘的工作区变更同步写盘 (GUI 专有, 见 gui_host)
             if matches!(event, tauri::RunEvent::Exit) {
-                gui_host::flush_workspace_on_exit(app);
+                app.state::<sidecar::SidecarManager>().stop();
             }
         });
 }

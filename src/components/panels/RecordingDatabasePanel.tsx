@@ -389,7 +389,14 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           return (
             <div
               key={summary.session.id}
+              role="button"
+              tabIndex={0}
               onClick={() => attemptSelect(summary)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                attemptSelect(summary);
+              }}
               onContextMenu={(event) => openRowMenu(event, summary)}
               title={t(lang, 'recordingDatabaseRowSelectHint')}
               className={clsx(

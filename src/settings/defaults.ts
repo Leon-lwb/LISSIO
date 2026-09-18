@@ -103,7 +103,7 @@ export interface AppSettings {
     previewFpsLimit: number;
     previewBandwidthMbPerSec: number;
   };
-  /// AI 对话与 MCP — api_key 存系统钥匙串 (ai_keychain_*), 磁盘副本恒为空串;
+  /// AI 对话与 MCP — api_key 写入后端 SecretStore，磁盘副本恒为空串且不可读回;
   /// 运行时随请求传给后端, 后端不持久化
   ai: {
     /** LLM 适配器标识 (见后端 ai_list_providers) */
@@ -152,9 +152,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     cssTheme: 'default',
     customCssThemes: [],
     reducedMotion: false,
-    uiFontFamily: "'GoMono Nerd Font Mono', 'Clear Han Serif', 'Maple Mono CN', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+    uiFontFamily: "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', 'Clear Han Serif', 'Maple Mono CN', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
     uiFontSize: 13,
-    monoFontFamily: "'GoMono Nerd Font Mono', 'Maple Mono CN', 'Clear Han Serif', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
+    monoFontFamily: "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', 'Maple Mono CN', 'Clear Han Serif', 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
     monoFontSize: 12,
     statusBarVisible: true,
     activityBarVisible: true,

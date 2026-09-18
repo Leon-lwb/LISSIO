@@ -1,5 +1,6 @@
 import { transport } from '../rpc';
 import type { EventChannel } from '../rpc/types';
+import type { AiSecretStatus } from '../../types/ai';
 import type {
   AiAttachment,
   AiChatEvent,
@@ -746,17 +747,16 @@ export const api = {
   chatClearSession: (sessionId: string) =>
     transport.call<void>('chat_clear_session', { sessionId }),
 
-  /// 读取适配器的 API key (系统钥匙串); 未设置返回 null
-  aiKeychainGet: (adapter: string) =>
-    transport.call<string | null>('ai_keychain_get', { adapter }),
+  /// 读取适配器的密钥状态；不返回明文。
+  aiSecretStatus: (adapter: string) =>
+    transport.call<AiSecretStatus>('ai_secret_status', { adapter }),
 
-  /// 写入适配器的 API key (系统钥匙串, 覆盖旧值)
-  aiKeychainSet: (adapter: string, key: string) =>
-    transport.call<void>('ai_keychain_set', { adapter, key }),
+  /// 写入后端 SecretStore；响应只含状态，不回传明文。
+  aiSecretSet: (adapter: string, key: string) =>
+    transport.call<AiSecretStatus>('ai_secret_set', { adapter, key }),
 
-  /// 删除适配器的 API key (不存在时静默)
-  aiKeychainDelete: (adapter: string) =>
-    transport.call<void>('ai_keychain_delete', { adapter }),
+  aiSecretDelete: (adapter: string) =>
+    transport.call<AiSecretStatus>('ai_secret_delete', { adapter }),
 
   /// 全部外部 MCP server 配置
   mcpListServers: () => transport.call<McpServerConfig[]>('mcp_list_servers'),

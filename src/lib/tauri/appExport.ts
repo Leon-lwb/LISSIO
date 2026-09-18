@@ -259,7 +259,7 @@ async function applySettings(settings: AppSettings): Promise<void> {
   // 导入文件中的密钥 (旧版备份) 迁入钥匙串, 不再落盘
   if (settings.ai.apiKey) {
     try {
-      await api.aiKeychainSet(settings.ai.adapter, settings.ai.apiKey);
+      await api.aiSecretSet(settings.ai.adapter, settings.ai.apiKey);
     } catch (e) {
       console.warn('[appExport] 密钥迁入钥匙串失败:', e);
     }

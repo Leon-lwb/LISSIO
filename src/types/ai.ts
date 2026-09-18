@@ -1,7 +1,8 @@
 //! AI 功能类型 — 与后端 `ai_provider` / `ai_chat` / `mcp_client` 的 serde
 //! 结构严格对应 (snake_case 字段逐一对应, 勿改名)。
 
-/// LLM provider 配置 (随请求传递, 后端不持久化密钥)。
+/// LLM provider 配置。保存的密钥由后端按 adapter 注入；`api_key` 仅保留为空的
+/// wire 兼容字段，禁止放入已保存的明文。
 export interface AiProviderConfig {
   adapter: string;
   base_url: string;
@@ -9,6 +10,12 @@ export interface AiProviderConfig {
   model: string;
   temperature?: number | null;
   max_tokens?: number | null;
+}
+
+export interface AiSecretStatus {
+  configured: boolean;
+  source: 'keyring' | 'environment' | null;
+  writable: boolean;
 }
 
 /// 对话过程事件 (后端 Channel 推送, tag = "type")。

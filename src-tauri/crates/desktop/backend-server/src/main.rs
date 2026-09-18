@@ -51,6 +51,10 @@ struct Cli {
     /// 显式配置目录 (缺省按平台语义解析, 可被 LISSIO_CONFIG_DIR 覆盖)
     #[arg(long)]
     config_dir: Option<PathBuf>,
+
+    /// Sidecar mode: stdin close/input triggers a graceful flush and shutdown.
+    #[arg(long)]
+    supervised_stdio: bool,
 }
 
 fn main() {
@@ -85,7 +89,12 @@ fn main() {
             std::process::exit(1);
         }
     };
-    if let Err(error) = runtime.block_on(backend_server::serve(config)) {
+    let result = if cli.supervised_stdio {
+        runtime.block_on(backend_server::serve_supervised(config))
+    } else {
+        runtime.block_on(backend_server::serve(config))
+    };
+    if let Err(error) = result {
         eprintln!("error: {error}");
         std::process::exit(1);
     }

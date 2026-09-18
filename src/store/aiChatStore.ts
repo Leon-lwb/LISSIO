@@ -71,7 +71,7 @@ function providerConfigFromSettings() {
   return {
     adapter: ai.adapter,
     base_url: ai.baseUrl,
-    api_key: ai.apiKey,
+    api_key: '',
     model: ai.model,
     temperature: ai.temperature,
     max_tokens: ai.maxTokens,

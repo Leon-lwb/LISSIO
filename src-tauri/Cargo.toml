@@ -9,18 +9,19 @@ edition = "2024"
 [package.metadata.lissio]
 domain = "desktop"
 layer = 5
-responsibility = "Tauri IPC, platform adapters, dependency injection, and application composition"
+responsibility = "Desktop platform shell, window/update integration, and supervised lissio-server sidecar lifecycle"
 
 [lib]
 name = "lissio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [features]
-# 适配器装配在 backend-host (GUI 与 CLI 共用); 根只做 feature 转发
-default = ["modbus-tcp", "modbus-rtu", "s7"]
-modbus-tcp = ["backend-host/modbus-tcp"]
-modbus-rtu = ["backend-host/modbus-rtu"]
-s7 = ["backend-host/s7"]
+# Kept as no-op compatibility flags for existing desktop build invocations. Hardware adapter
+# features belong to the separately built lissio-server sidecar.
+default = []
+modbus-tcp = []
+modbus-rtu = []
+s7 = []
 
 [profile.release]
 debug = true
@@ -90,6 +91,7 @@ members = [
   "crates/ai/chat-session",
   "crates/ai/chat",
   "crates/ai/mcp-client",
+  "crates/desktop/ai-host",
   "crates/desktop/control-api",
   "crates/desktop/rpc-api",
   "crates/desktop/backend-server",
@@ -202,7 +204,7 @@ futures = "0.3"
 async-trait = "0.1"
 bytes = { version = "1", features = ["serde"] }
 base64 = "0.22"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync", "time", "fs", "signal"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync", "time", "fs", "signal"] }
 tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }
 tokio-serial = { version = "5.4.4", default-features = false }
 # tokio-s7: 西门子 S7comm 异步客户端 (ISO-on-TCP), PLC 采集的第二条点位源 (Apache-2.0)
@@ -240,7 +242,7 @@ tauri-plugin-process = "2"
 tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 window-vibrancy = "0.6"
-semver = "1"
+getrandom = "0.3"
 # 硬件/平台访问
 serialport = "4"
 core-foundation = "0.10"
@@ -312,6 +314,7 @@ llm = { path = "crates/ai/llm" }
 chat = { path = "crates/ai/chat" }
 chat-session = { path = "crates/ai/chat-session" }
 mcp-client = { path = "crates/ai/mcp-client" }
+ai-host = { path = "crates/desktop/ai-host" }
 mcp-server = { path = "crates/desktop/mcp-server" }
 control-api = { path = "crates/desktop/control-api" }
 rpc-api = { path = "crates/desktop/rpc-api" }
@@ -325,68 +328,38 @@ libautomotive = "0.1"
 tauri-build = { workspace = true }
 
 [dependencies]
-kind = { workspace = true }
-acquisition = { workspace = true }
-points = { workspace = true }
-async-trait = { workspace = true }
-buffer_graph = { workspace = true }
-bus = { workspace = true }
-recording = { workspace = true }
-can = { workspace = true }
-chat = { workspace = true }
-chat-session = { workspace = true }
-data_model = { workspace = true }
-pipeline = { workspace = true }
-evaluator = { workspace = true }
-error = { workspace = true }
-graph_ops = { workspace = true }
-keyring = { workspace = true }
-llm = { workspace = true }
-logic = { workspace = true }
-mcp-client = { workspace = true }
-mcp-server = { workspace = true }
-control-api = { workspace = true }
-backend-host = { workspace = true, default-features = false }
-petgraph = { workspace = true }
-schema_types = { workspace = true }
-stream = { workspace = true }
-events = { workspace = true }
-app = { workspace = true }
-transport = { workspace = true }
-serial = { workspace = true }
-network = { workspace = true }
-can_transport = { workspace = true }
-subscription = { workspace = true }
 menu_shell = { workspace = true }
 update_flow = { workspace = true }
-waveform = { workspace = true }
 tauri = { workspace = true }
 tauri-plugin-opener = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true }
 log = { workspace = true }
-parking_lot = { workspace = true }
 tauri-plugin-log = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-plugin-fs = { workspace = true }
 tauri-plugin-notification = { workspace = true }
 tauri-plugin-store = { workspace = true }
 tauri-plugin-process = { workspace = true }
-semver = { workspace = true }
-reqwest = { workspace = true }
+getrandom = { workspace = true }
 window-vibrancy = { workspace = true }
 
 [dev-dependencies]
+app = { workspace = true }
+backend-host = { workspace = true, default-features = false }
+buffer_graph = { workspace = true }
+data_model = { workspace = true }
+error = { workspace = true }
+graph_ops = { workspace = true }
 graph_testkit = { workspace = true }
+kind = { workspace = true }
+schema_types = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
 
 # tauri-plugin-updater 仅桌面端支持, target 门控声明 (不在上方通用段重复登记)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { workspace = true }
-
-# security-framework 仅 keychain.rs 的 macOS 分支用于细分钥匙串授权拒绝错误码
-[target.'cfg(target_os = "macos")'.dependencies]
-security-framework = { workspace = true }
 
 [lints]
 workspace = true

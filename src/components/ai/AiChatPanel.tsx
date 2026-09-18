@@ -488,7 +488,7 @@ export function AiChatPanel() {
 
   // 附件被拒提示 — 按原因分组聚合为逐条通知
   const notifyRejections = (rejections: AttachmentRejections) => {
-    const groups: Array<[keyof AttachmentRejections, string]> = [
+    const groups: [keyof AttachmentRejections, string][] = [
       ['unsupported', 'aiAttachmentUnsupported'],
       ['tooLarge', 'aiAttachmentTooLarge'],
       ['tooMany', 'aiAttachmentTooMany'],

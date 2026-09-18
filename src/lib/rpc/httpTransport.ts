@@ -27,8 +27,8 @@ import type {
 const BINARY_FRAME_VERSION = 1;
 const BINARY_FRAME_HEADER = 10;
 
-/// WS 子协议 — 服务端只接受 `lissio.v1`, 令牌作为第二个提议值携带。
-const WS_PROTOCOL = 'lissio.v1';
+/// WS 子协议 — 服务端只接受 `lissio.v2`, 令牌作为第二个提议值携带。
+const WS_PROTOCOL = 'lissio.v2';
 const WS_TOKEN_PREFIX = 'bearer.';
 
 /// 重连退避: 首次 500ms, 逐次倍增, 上限 8s。
@@ -95,13 +95,31 @@ interface FaultMessage {
   /// 订阅建立失败时带上的订阅 id — 用于把失败归到具体订阅。
   id?: number | null;
 }
+interface ChannelMessage {
+  type: 'channel';
+  id: number;
+  payload: unknown;
+}
+interface ResponseMessage {
+  type: 'response';
+  id: number;
+  ok: boolean;
+  result?: unknown;
+  error?: unknown;
+}
 type ServerMessage =
   | SubscribedMessage
   | StreamMessage
   | EventMessage
   | NotifyMessage
   | FaultMessage
+  | ChannelMessage
+  | ResponseMessage
   | { type: string };
+
+interface WebEventChannel<T> extends EventChannel<T> {
+  $channel: number;
+}
 
 /// 一条已登记或待回执的显示订阅。
 interface SubscriptionRecord {
@@ -138,16 +156,6 @@ function toError(reason: unknown): Error {
   return reason instanceof Error ? reason : new Error(String(reason));
 }
 
-/// 抛错路径上的结构化失败 — 既满足"抛 Error"的约定 (stack / Error 身份),
-/// 又保留后端错误的判别字段, 因此按 `kind` 分支的前端逻辑 (`errorItemFromRejection`
-/// 等) 照常可用。
-function structuredError(error: RpcError): Error & RpcError {
-  return Object.assign(new Error(error.message), {
-    kind: error.kind,
-    data: error.data,
-  });
-}
-
 /// 从数组里删除一项 (就地, 保持顺序)。
 function drop<T>(items: T[], item: T): void {
   const index = items.indexOf(item);
@@ -167,6 +175,7 @@ export class HttpTransport implements Transport {
   private connectedOnce = false;
 
   private nextCallId = 1;
+  private nextChannelId = 1;
   private batch: PendingCall[] = [];
   private batchScheduled = false;
 
@@ -180,6 +189,8 @@ export class HttpTransport implements Transport {
   private readonly listeners = new Map<string, Set<(payload: unknown) => void>>();
   private readonly reconnectHandlers = new Set<() => void>();
   private readonly serverNotifyHandlers = new Set<(notification: ServerNotification) => void>();
+  private readonly eventChannels = new Map<number, WebEventChannel<unknown>>();
+  private readonly socketCalls = new Map<number, PendingCall>();
 
   constructor(endpoint: WebEndpoint) {
     this.endpoint = endpoint;
@@ -188,6 +199,9 @@ export class HttpTransport implements Transport {
   // ===== Transport =====
 
   call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+    if (args && Object.values(args).some((value) => isWebEventChannel(value))) {
+      return this.callOverSocket<T>(cmd, args);
+    }
     return new Promise<T>((resolve, reject) => {
       this.batch.push({
         id: this.nextCallId++,
@@ -231,12 +245,10 @@ export class HttpTransport implements Transport {
   }
 
   eventChannel<T>(): EventChannel<T> {
-    // `ai_chat_send` 尚未接入 Web 出口 (见 /api/v1/capabilities 的 pending)。
-    // 直接抛结构化错误, 让 AI 面板既有的失败路径呈现"本出口不支持",
-    // 而不是在浏览器里构造 Tauri Channel 时抛出无 `kind` 的 TypeError。
-    throw structuredError(
-      rpcFailure('UnsupportedCommand', 'Web 出口暂未接入命令 ai_chat_send'),
-    );
+    const id = this.nextChannelId++;
+    const channel: WebEventChannel<T> = { $channel: id, onmessage: null };
+    this.eventChannels.set(id, channel as WebEventChannel<unknown>);
+    return channel;
   }
 
   subscribe<T>(
@@ -314,6 +326,11 @@ export class HttpTransport implements Transport {
     this.live.length = 0;
     this.awaiting.length = 0;
     this.established.clear();
+    for (const call of this.socketCalls.values()) {
+      call.reject(new Error('Web 出口连接已关闭'));
+    }
+    this.socketCalls.clear();
+    this.eventChannels.clear();
   }
 
   /** 当前端点 — 诊断用。 */
@@ -322,6 +339,23 @@ export class HttpTransport implements Transport {
   }
 
   // ===== HTTP-RPC =====
+
+  private callOverSocket<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const call: PendingCall = {
+        id: this.nextCallId++, cmd, args,
+        resolve: resolve as (value: unknown) => void,
+        reject,
+      };
+      this.socketCalls.set(call.id, call);
+      void this.ensureSocket().then(() => {
+        this.socket?.send(JSON.stringify({ type: 'rpc', id: call.id, cmd, args }));
+      }).catch((error: unknown) => {
+        this.socketCalls.delete(call.id);
+        reject(toError(error));
+      });
+    });
+  }
 
   /// 提交已合并的调用。数组形态是协议的既定批量入口 (单条也走数组, 只有一种
   /// 请求/响应形状要维护)。
@@ -434,6 +468,9 @@ export class HttpTransport implements Transport {
       socket.onclose = () => {
         this.socket = null;
         this.connecting = null;
+        const failure = rpcFailure('ConnectionLost', 'WebSocket 连接已断开');
+        for (const call of this.socketCalls.values()) call.reject(failure);
+        this.socketCalls.clear();
         // 已经 resolve 时是空操作; 未打开就关闭则让等待方感知失败。
         reject(new Error('Web 出口连接已关闭 (未能建立或已断开)'));
         this.scheduleReconnect();
@@ -517,6 +554,21 @@ export class HttpTransport implements Transport {
         const handlers = this.listeners.get(event.event);
         if (!handlers) break;
         for (const handler of [...handlers]) handler(event.payload);
+        break;
+      }
+      case 'channel': {
+        const channel = message as ChannelMessage;
+        this.eventChannels.get(channel.id)?.onmessage?.(channel.payload);
+        if (isTerminalChannelPayload(channel.payload)) this.eventChannels.delete(channel.id);
+        break;
+      }
+      case 'response': {
+        const response = message as ResponseMessage;
+        const call = this.socketCalls.get(response.id);
+        if (!call) break;
+        this.socketCalls.delete(response.id);
+        if (response.ok) call.resolve(response.result);
+        else call.reject(response.error ?? rpcFailure('Unknown', 'WebSocket RPC 调用失败'));
         break;
       }
       case 'notify': {
@@ -642,6 +694,16 @@ export class HttpTransport implements Transport {
     if (socket?.readyState !== WebSocket.OPEN) return;
     socket.send(JSON.stringify(frame));
   }
+}
+
+function isTerminalChannelPayload(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object' || !('type' in payload)) return false;
+  const type = (payload as { type?: unknown }).type;
+  return type === 'done' || type === 'cancelled' || type === 'error';
+}
+
+function isWebEventChannel(value: unknown): value is WebEventChannel<unknown> {
+  return value !== null && typeof value === 'object' && '$channel' in value;
 }
 
 /// 按端点构造 Web 出口 transport。

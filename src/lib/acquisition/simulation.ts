@@ -2,7 +2,6 @@ import { openNodePropertiesPanel } from '../utils/revealDataTab';
 import type { Node, Edge } from '@xyflow/react';
 import type {
   EncodeBlock,
-  FrameDecoderConfig,
   ProtocolConfig,
   ProtocolSchema,
   SimulationConfig,
@@ -61,7 +60,7 @@ function parserEncoding(parser: Node): { protocol: ProtocolConfig; schema: Proto
   }
   const widget = parser.data.widget as WidgetConfig | undefined;
   if (widget?.kind !== 'FrameDecoder') return null;
-  const config = widget.params as FrameDecoderConfig;
+  const config = widget.params;
   const encode: EncodeBlock[] = [];
   for (const block of config.blocks) {
     if ((block.type === 'header' || block.type === 'tail') && block.matchId == null) {

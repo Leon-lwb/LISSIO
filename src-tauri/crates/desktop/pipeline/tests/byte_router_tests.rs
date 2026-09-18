@@ -766,8 +766,8 @@ async fn test_data_700k_full_pipeline_has_per_sample_timestamps() {
     );
 
     // 连接即生成: spawn 后数据流立即持续产出 (与真实 open_transport 行为一致)
-    let (_write_tx, data_tx, _cancel, _runtime_tx) = transport::test_data::spawn(
-        test_config,
+    let (write_tx, data_tx, _cancel, _runtime_tx) = transport::test_data::spawn(
+        test_config.clone(),
         TestDataLink {
             protocol: ProtocolConfig::FireWater { channels: Some(4) },
             schema: None,
@@ -775,6 +775,15 @@ async fn test_data_700k_full_pipeline_has_per_sample_timestamps() {
     )
     .unwrap();
     let mut rx = data_tx.subscribe();
+    // route_bytes 的采样时钟权威来自连接会话，而不是图中可能仍在防抖同步的
+    // 配置。测试必须像真实 read_task 一样传入轻量 live handle；否则会落入
+    // Arrival 域，使结果取决于测试机调度速度，无法验证 700 kHz 时钟恢复。
+    let handle = acquisition::handle::TransportHandle::new(
+        TransportConnection::new(write_tx, data_tx, std::sync::Arc::new(NoopControl)),
+        TransportConfig::TestData(test_config),
+        1,
+    );
+    let live = handle.live("tp");
 
     // 与 read_task 相同的合批策略 (目标 64KB); 广播 Lagged 计数 (workspace
     // 并行负载下可能溢出 — 丢消息产生诚实缺口, 见下方断言的容差)
@@ -800,7 +809,7 @@ async fn test_data_700k_full_pipeline_has_per_sample_timestamps() {
                 Err(_) => break,
             }
         }
-        route_bytes(&plane, None, "tp", &data, 0, &mut cache, None).await;
+        route_bytes(&plane, None, "tp", &data, 0, &mut cache, Some(&live)).await;
     }
 
     let buf = plane.buffer_for("pt");

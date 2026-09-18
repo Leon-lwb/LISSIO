@@ -22,6 +22,8 @@ pub const BINARY_FRAME_HEADER: usize = 10;
 pub enum ServerMessage {
     /// 后端事件 (`events::BackendEventSink::emit_event`)。
     Event { event: String, payload: Value },
+    /// Connection-scoped command event channel (AI streaming, etc.).
+    Channel { id: u32, payload: Value },
     /// 系统通知 (`BackendEventSink::notify`) — Web 侧渲染为应用内提示。
     Notify {
         level: String,
@@ -159,7 +161,7 @@ pub struct Capabilities {
 }
 
 /// 出口协议版本号。
-pub const PROTOCOL_VERSION: &str = "lissio.web.v1";
+pub const PROTOCOL_VERSION: &str = "lissio.web.v2";
 
 /// 二进制流帧编码 — 头部 + 原样 payload。
 pub fn encode_binary_frame(subscription_id: u32, payload: &[u8]) -> Vec<u8> {

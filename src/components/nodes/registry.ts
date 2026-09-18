@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import type { DomainType, WidgetConfig } from '../../types';
-import type { DerivedPort, NodePortTable } from '../../lib/utils/connectionRules';
+import type { DerivedPort, NodePortTable, PortInfo } from '../../lib/utils/connectionRules';
 import { getWidgetPorts } from './WidgetPorts';
 import { widgetMinSize, type WidgetSizeLimits } from '../../lib/utils/widgetSize';
 import { isRawDataPreset, protocolPortNames } from '../../lib/utils/protocolSchema';
@@ -16,11 +16,11 @@ import { AcquisitionProperties } from '../acquisition/AcquisitionProperties';
 import { ProtocolProperties } from './ProtocolProperties';
 
 export type CanvasNodeType = 'acquisition' | 'point-selector' | 'protocol' | 'widget';
-type PropertyProps = { node: Node };
-type PortContext = {
+interface PropertyProps { node: Node }
+interface PortContext {
   derivedPorts?: Record<string, { ports?: DerivedPort[] }>;
   detectedChannels?: Record<string, number | null>;
-};
+}
 
 export interface NodeDefinition {
   renderer: ComponentType<NodeProps>;
@@ -61,10 +61,10 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
     ports(node, context) {
       const data = node.data as ProtocolNodeData;
       const derived = context.derivedPorts?.[node.id]?.ports;
-      const names = derived?.length
-        ? derived.map(port => ({ id: port.name, domain: port.domain === 'Spectrum' ? 'freq' : port.domain === 'String' ? 'string' : 'time' as DomainType }))
+      const names: PortInfo[] = derived?.length
+        ? derived.map(port => ({ id: port.name, domain: port.domain === 'Spectrum' ? 'freq' : port.domain === 'String' ? 'string' : 'time' }))
         : protocolPortNames(data, context.detectedChannels?.[node.id] ?? null)
-          .map(id => ({ id, domain: isRawDataPreset(data) && id === 'str' ? 'string' : 'time' as DomainType }));
+          .map(id => ({ id, domain: isRawDataPreset(data) && id === 'str' ? 'string' : 'time' }));
       return { inputs: [{ id: 'in', domain: 'bytes' }], outputs: [{ id: 'out', domain: 'bytes' }, ...names] };
     },
     size: () => ({ minW: 180, minH: 90 }),

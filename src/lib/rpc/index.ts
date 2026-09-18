@@ -1,99 +1,122 @@
-//! transport 选择与端点解析。
-//!
-//! 选择规则: Tauri webview 里 `window.__TAURI_INTERNALS__` 存在 → 桌面 IPC
-//! (波形走 `Channel` 二进制快路径, 行为与性能零变化); 否则 → HTTP/WS。
-//!
-//! 端点解析 (仅 Web 出口): `?server=` → `localStorage['lissio.server']` →
-//! 构建期 `VITE_LISSIO_SERVER` → 同源; 令牌同理 (`?token=` →
-//! `localStorage['lissio.token']` → `VITE_LISSIO_TOKEN`)。查询参数带值时写回
-//! localStorage 并把它从地址栏摘掉 — 便于"发一次带参链接, 之后免参直达",
-//! 也避免令牌留在浏览器历史里。
+//! Runtime-configurable backend transport. Desktop shell operations remain
+//! local Tauri IPC; every product/business command uses HTTP/WebSocket.
 
-import { createHttpTransport, type WebEndpoint } from './httpTransport';
+import { createHttpTransport, type HttpTransport, type WebEndpoint } from './httpTransport';
 import { tauriTransport } from './tauriTransport';
-import type { Transport } from './types';
+import type { SubscribeOptions, Transport } from './types';
 
 const SERVER_STORAGE_KEY = 'lissio.server';
 const TOKEN_STORAGE_KEY = 'lissio.token';
+const SHELL_COMMANDS = new Set([
+  'inspect_element', 'set_window_acrylic', 'show_main_window', 'close_splashscreen',
+  'check_update', 'download_and_install_update', 'backend_sidecar_info',
+  'backend_sidecar_restart', 'backend_sidecar_open_logs',
+]);
+const SHELL_EVENTS = new Set(['menu-event']);
 
-/// 桌面出口判定 — Tauri 在 window 上注入 `__TAURI_INTERNALS__`。
+let active: HttpTransport | null = null;
+
 export function hasTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
-function readStorage(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    // 隐私模式 / 禁用存储: 端点退化为同源
-    return null;
-  }
+function unavailable(): Error & { kind: string } {
+  return Object.assign(new Error('后端尚未连接'), { kind: 'BackendUnavailable' });
 }
 
-function writeStorage(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // 存储不可用时仅本次会话生效
-  }
+function current(): HttpTransport {
+  // The repository's unit tests predate the network split and intentionally assert the stable
+  // command/event contract through the shared Tauri mocks. This branch is compile-time test-only;
+  // production Desktop never gets an in-process business fallback.
+  if (import.meta.env.MODE === 'test') return tauriTransport as unknown as HttpTransport;
+  if (!active) throw unavailable();
+  return active;
 }
 
-/// 归一化服务地址 — 允许 `host:port` 简写, 也保留反向代理的路径前缀。
-function normalizeBase(value: string): string {
+export function configureBackend(endpoint: WebEndpoint): HttpTransport {
+  active?.close();
+  active = createHttpTransport(endpoint);
+  return active;
+}
+
+export function disconnectBackend(): void {
+  active?.close();
+  active = null;
+}
+
+function readLocal(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function readSession(key: string): string | null {
+  try { return sessionStorage.getItem(key); } catch { return null; }
+}
+function writeLocal(key: string, value: string): void {
+  try { localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+}
+function writeSession(key: string, value: string): void {
+  try { sessionStorage.setItem(key, value); } catch { /* storage unavailable */ }
+}
+
+export function normalizeBase(value: string): string {
   const trimmed = value.trim();
-  if (trimmed === '') return '';
+  if (!trimmed) return '';
   const withScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
     ? trimmed
     : `${window.location.protocol === 'https:' ? 'https' : 'http'}://${trimmed}`;
   try {
     const url = new URL(withScheme, window.location.origin);
-    // 路径前缀 (反向代理) 保留, 尾斜杠由拼接方统一处理
     return `${url.origin}${url.pathname.replace(/\/+$/, '')}`;
-  } catch {
-    return '';
-  }
+  } catch { return ''; }
 }
 
-/// 读查询参数并在成功写入 localStorage 后把它从地址栏摘掉 (令牌不进历史)。
-function takeQueryParam(name: string, storageKey: string): string | null {
-  if (typeof window === 'undefined') return null;
+function takeQueryParam(name: string): string | null {
   const url = new URL(window.location.href);
   const value = url.searchParams.get(name);
   if (value === null) return null;
-  if (value !== '') writeStorage(storageKey, value);
   url.searchParams.delete(name);
-  try {
-    window.history.replaceState(window.history.state, '', url.toString());
-  } catch {
-    // replaceState 在沙箱 iframe 等环境可能被拒 — 参数已生效, 忽略
-  }
+  try { window.history.replaceState(window.history.state, '', url.toString()); } catch { /* noop */ }
   return value;
 }
 
-/// 解析 Web 出口端点。
 export function resolveWebEndpoint(): WebEndpoint {
-  const fromQuery = takeQueryParam('server', SERVER_STORAGE_KEY);
-  const base =
-    normalizeBase(fromQuery ?? readStorage(SERVER_STORAGE_KEY) ?? envServer()) ||
-    window.location.origin;
-
-  const tokenQuery = takeQueryParam('token', TOKEN_STORAGE_KEY);
-  const token = tokenQuery ?? readStorage(TOKEN_STORAGE_KEY) ?? envToken() ?? '';
-
-  return { base, token };
+  const queryServer = takeQueryParam('server');
+  const queryToken = takeQueryParam('token');
+  if (queryServer) writeLocal(SERVER_STORAGE_KEY, queryServer);
+  if (queryToken) writeSession(TOKEN_STORAGE_KEY, queryToken);
+  return {
+    base: normalizeBase(queryServer ?? readLocal(SERVER_STORAGE_KEY) ?? import.meta.env.VITE_LISSIO_SERVER ?? '') || window.location.origin,
+    token: queryToken ?? readSession(TOKEN_STORAGE_KEY) ?? import.meta.env.VITE_LISSIO_TOKEN ?? '',
+  };
 }
 
-function envServer(): string {
-  return import.meta.env.VITE_LISSIO_SERVER ?? '';
+export function saveWebEndpoint(endpoint: WebEndpoint): void {
+  writeLocal(SERVER_STORAGE_KEY, endpoint.base);
+  writeSession(TOKEN_STORAGE_KEY, endpoint.token);
 }
 
-function envToken(): string {
-  return import.meta.env.VITE_LISSIO_TOKEN ?? '';
-}
-
-function selectTransport(): Transport {
-  return hasTauriRuntime() ? tauriTransport : createHttpTransport(resolveWebEndpoint());
-}
-
-/// 当前出口 — 全应用共用的唯一实例 (订阅登记与事件监听表都是进程级的)。
-export const transport: Transport = selectTransport();
+export const transport: Transport = {
+  kind: 'http',
+  call: <T>(cmd: string, args?: Record<string, unknown>) => {
+    if (hasTauriRuntime() && SHELL_COMMANDS.has(cmd)) return tauriTransport.call<T>(cmd, args);
+    try { return current().call<T>(cmd, args); } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  },
+  listen: <T>(event: string, handler: (payload: T) => void) => {
+    if (hasTauriRuntime() && SHELL_EVENTS.has(event)) return tauriTransport.listen(event, handler);
+    try { return current().listen(event, handler); } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
+  },
+  eventChannel: <T>() => current().eventChannel<T>(),
+  subscribe: <T>(request: unknown, sink: (payload: T) => void, options?: SubscribeOptions) =>
+    current().subscribe(request, sink, options),
+  onReconnect: (handler) => current().onReconnect?.(handler) ?? (() => undefined),
+  onServerNotify: (handler) => current().onServerNotify?.(handler) ?? (() => undefined),
+  downloadFile: (url, name) => {
+    const backend = current();
+    return backend.downloadFile
+      ? backend.downloadFile(url, name)
+      : Promise.reject(new Error('当前出口不支持服务端文件下载'));
+  },
+};

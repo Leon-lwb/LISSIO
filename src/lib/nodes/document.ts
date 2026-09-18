@@ -21,7 +21,7 @@ export type NodeDocument = Business & {
 
 export function nodeDocument(node: Node): NodeDocument {
   let business: Business;
-  let label = String(node.data.label ?? '');
+  let label = typeof node.data.label === 'string' ? node.data.label : '';
   let testData: SimulationConfig | null = null;
   switch (node.type) {
     case 'acquisition': {

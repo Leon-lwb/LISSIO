@@ -1,8 +1,8 @@
 //! 命令面清单 — Web 出口的能力边界 (人工维护, 由契约对齐测试守护)。
 //!
-//! 四个集合与 `dispatch` 的 `match` 分支必须严格互补:
-//! `SUPPORTED ∪ PENDING ∪ DESKTOP_ONLY ∪ CHANNEL` = `generate_handler!` 注册的
-//! 全部 IPC 命令, 且两两不相交。新增前端调用而忘了接出口时, 契约测试会失败。
+//! 四个集合描述前端公共命令面。`SUPPORTED` 与 `CHANNEL` 由独立后端承载，
+//! `DESKTOP_ONLY` 是 Tauri 壳唯一允许注册的 IPC。新增前端调用而忘了接出口时，
+//! 契约测试会失败。
 //!
 //! 契约测试入口: `pnpm check:web-contract` (`scripts/check-web-contract.mjs`)。
 
@@ -15,6 +15,9 @@ pub const DESKTOP_ONLY: &[&str] = &[
     "close_splashscreen",
     "check_update",
     "download_and_install_update",
+    "backend_sidecar_info",
+    "backend_sidecar_restart",
+    "backend_sidecar_open_logs",
 ];
 
 /// 已接入本出口的命令 (与 `dispatch` 分支一一对应)。
@@ -121,27 +124,20 @@ pub const SUPPORTED: &[&str] = &[
     // 文件产物 (Web 出口写受管暂存区, 经 /api/v1/download/{token} 交付)
     "export_waveform_csv",
     "export_can_load_csv",
-];
-
-/// 尚未接入本出口的命令 — 均为需要服务端文件系统 / 密钥端口 / AI 宿主持有的能力。
-///
-/// 接入顺序见 `docs/architecture/web-exit.md`: 文件产物类先走下载端点, AI 类
-/// 需先完成 `ai-host` 迁移与 `SecretStore` 端口注入。
-pub const PENDING: &[&str] = &[
-    // AI 对话 / 会话 / MCP / 密钥
+    // AI / sessions / MCP
     "ai_list_providers",
     "ai_chat_send",
     "ai_chat_cancel",
     "ai_tool_resolve",
+    "ai_secret_status",
+    "ai_secret_set",
+    "ai_secret_delete",
     "chat_list_sessions",
     "chat_create_session",
     "chat_get_session",
     "chat_rename_session",
     "chat_delete_session",
     "chat_clear_session",
-    "ai_keychain_get",
-    "ai_keychain_set",
-    "ai_keychain_delete",
     "mcp_list_servers",
     "mcp_add_server",
     "mcp_remove_server",
@@ -153,6 +149,12 @@ pub const PENDING: &[&str] = &[
     "mcp_server_start",
     "mcp_server_stop",
 ];
+
+/// 尚未接入网络出口的命令。
+///
+/// v2 已完成 AI/MCP 与 SecretStore 迁移；新业务命令若暂不能由独立后端承载，
+/// 必须显式列入此表并由 Web 契约检查阻止遗漏。当前没有 pending 命令。
+pub const PENDING: &[&str] = &[];
 
 /// 由出口通道 (而非 `dispatch`) 承载的命令。
 ///

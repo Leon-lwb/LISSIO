@@ -14,8 +14,7 @@ export interface RpcError {
 }
 
 /// 事件通道 — `ai_chat_send` 这类"命令内联回调流"的参数形状。
-/// 桌面出口传 Tauri `Channel`; Web 出口不支持 (对应命令在 `/capabilities`
-/// 中列为 `pending`), 构造时即抛结构化错误。
+/// 桌面出口传 Tauri `Channel`; Web 出口传 v2 WebSocket channel marker。
 export interface EventChannel<T> {
   onmessage: ((value: T) => void) | null;
 }

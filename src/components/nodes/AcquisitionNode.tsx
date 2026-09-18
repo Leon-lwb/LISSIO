@@ -45,7 +45,7 @@ export const AcquisitionNode = memo(function AcquisitionNode({ id, data, selecte
     return () => { active = false; };
   }, [id, initialCard, spec.driver.driverId, spec.capabilityEndpointId]);
 
-  const ports = card?.endpoint.ports ?? [];
+  const ports = useMemo(() => card?.endpoint.ports ?? [], [card]);
   const inputPorts = useMemo(() => ports.filter(acceptsInput), [ports]);
   const outputPorts = useMemo(() => ports.filter(acceptsOutput), [ports]);
   const online = snapshot?.state.state === 'online';

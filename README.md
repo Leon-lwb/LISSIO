@@ -336,20 +336,86 @@ cd lissio
 pnpm install
 ```
 
-3. Start the dev environment
+Lissio ships as three independent units: a Backend/CLI archive, a static Web archive,
+and a Desktop installer whose Tauri shell supervises a bundled, same-version
+`lissio-server` sidecar.
+
+### Desktop (Tauri)
 
 ```sh
-pnpm tauri dev
+pnpm dev:desktop    # prepares and starts the sidecar, Vite, and native shell
+pnpm build:desktop  # packaged installers → src-tauri/target/release/bundle/
 ```
 
-The app loads the frontend at `http://localhost:1420` by default and launches a Tauri desktop window.
+Desktop business calls always use HTTP/WebSocket. Tauri IPC is limited to windows,
+menus, updates, file dialogs, and sidecar supervision. A connection diagnostic page is
+shown before application stores mount when the sidecar is missing, unauthorized,
+incompatible, or has crashed.
+
+### Standalone web server (`lissio-server`)
+
+```sh
+pnpm build:web                              # frontend → dist/
+pnpm dev:server --static-dir dist           # HTTP API + web app in one process
+```
+
+Then open `http://127.0.0.1:8790`. On the first visit append the access token as
+`?token=<server-token>` — the browser keeps it in sessionStorage and immediately removes
+the parameter from the address bar. The token file is created on first start and its path is printed to the
+server log: `~/Library/Application Support/top.pengheng.lissio/server-token` (macOS),
+`%APPDATA%\top.pengheng.lissio\server-token` (Windows),
+`~/.config/top.pengheng.lissio/server-token` (Linux). You can also set `LISSIO_TOKEN`
+explicitly.
+
+| flag | env | default |
+|---|---|---|
+| `--bind` | `LISSIO_BIND` | `127.0.0.1` |
+| `--http-port` | `LISSIO_HTTP_PORT` | `8790` |
+| `--token` / `--token-file` | `LISSIO_TOKEN` | `<config dir>/server-token` (0600) |
+| `--static-dir` | `LISSIO_STATIC_DIR` | off (API only) |
+| `--cors-origin` (repeatable) | `LISSIO_CORS_ORIGINS` | off (same-origin) |
+| `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / MCP enabled |
+
+Exposing beyond loopback requires `--bind 0.0.0.0` plus a strong `LISSIO_TOKEN`.
+`pnpm server` is equivalent to `cd src-tauri && cargo run -p backend-server`; the CLI
+form `cargo run -p backend-cli -- serve` shares the same code path. Health check:
+`curl http://127.0.0.1:8790/api/v1/health`.
+
+AI, session, external MCP, inbound MCP, and frontend-tool commands have the same feature
+surface in Desktop and Web. Saved provider keys are write-only: the UI receives only
+`configured`, `source`, and `writable`. Deployment fallback variables use
+`LISSIO_AI_API_KEY_<ADAPTER>` (for example `LISSIO_AI_API_KEY_OPENAI`).
+
+### OCI (server + Web)
+
+```sh
+docker run --rm -p 8790:8790 -p 8765:8765 \
+  -e LISSIO_TOKEN='replace-with-a-strong-token' \
+  -v lissio-data:/var/lib/lissio ghcr.io/horldsence/lissio:latest
+```
+
+The image refuses to start without an explicit token. Map serial/CAN devices with the
+container runtime's device options when hardware access is required.
+
+### Web frontend development (hot reload)
+
+```sh
+pnpm dev:server # terminal 1: standalone backend at :8790
+pnpm dev:web   # terminal 2: vite dev server at :1420, /api proxied to the backend
+```
+
+Open `http://localhost:1420/?token=<server-token>` once (the token persists in
+sessionStorage). Point the proxy at a different backend with
+`LISSIO_DEV_SERVER=http://host:port`.
 
 ## Build & Packaging
 
 Build production frontend assets and package the desktop app:
 
 ```sh
-pnpm tauri build
+pnpm build:web
+pnpm build:server
+pnpm build:desktop
 ```
 
 Artifacts are output to `src-tauri/target/release/bundle/`.

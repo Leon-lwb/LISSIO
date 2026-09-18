@@ -90,9 +90,62 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "main_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
+  quality:
+    name: Release quality gates
+    needs: set-version
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-version.outputs.main_sha }}
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2
+      - name: Install system and frontend dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libudev-dev pkg-config
+          pnpm install --frozen-lockfile
+      - name: Frontend and architecture gates
+        run: |
+          pnpm architecture >/dev/null
+          pnpm check:architecture
+          pnpm check:deps
+          pnpm check:web-contract
+          pnpm typecheck
+          pnpm lint:ci
+          pnpm test
+          pnpm build:web
+      - name: Browser E2E
+        run: |
+          pnpm exec playwright install --with-deps chromium
+          pnpm test:e2e
+      - name: Rust gates
+        working-directory: src-tauri
+        run: |
+          cargo fmt --check
+          cargo clippy --workspace --all-targets
+          cargo test --workspace
+          cargo deny check
+
   build:
     name: Build ${{ matrix.platform }} (v${{ needs.set-version.outputs.version }})
-    needs: set-version
+    needs: [set-version, quality]
     permissions:
       contents: read
     strategy:
@@ -198,6 +251,9 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build target sidecar
+        run: pnpm prepare:sidecar:release -- --target=${{ matrix.target }}
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
@@ -207,6 +263,28 @@ jobs:
           APPIMAGE_EXTRACT_AND_RUN: "1"
         with:
           args: ${{ matrix.args }}
+
+      - name: Build independent Backend/CLI package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo build --manifest-path src-tauri/Cargo.toml --release --target "${{ matrix.target }}" -p backend-server -p backend-cli
+          EXT=""
+          if [[ "${{ matrix.target }}" == *windows* ]]; then EXT=".exe"; fi
+          OUT="release/lissio-backend-${{ needs.set-version.outputs.version }}-${{ matrix.target }}"
+          mkdir -p "$OUT"
+          cp "src-tauri/target/${{ matrix.target }}/release/lissio-server${EXT}" "$OUT/"
+          cp "src-tauri/target/${{ matrix.target }}/release/backend-cli${EXT}" "$OUT/"
+          cp packaging/server/README.md packaging/server/start.sh packaging/server/start.ps1 "$OUT/"
+          chmod +x "$OUT/start.sh" || true
+          tar -czf "${OUT}.tar.gz" -C release "$(basename "$OUT")"
+
+      - name: Build versioned Web package
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          pnpm build:web
+          tar -czf "release/lissio-web-${{ needs.set-version.outputs.version }}.tar.gz" -C dist .
 
       - name: Rename macOS updater artifacts
         if: runner.os == 'macOS'
@@ -234,5 +312,6 @@ jobs:
             src-tauri/target/**/bundle/**/*.app.tar.gz
             src-tauri/target/**/bundle/**/*.nsis.zip
             src-tauri/target/**/bundle/**/*.sig
+            release/*.tar.gz
           retention-days: 30
           if-no-files-found: error

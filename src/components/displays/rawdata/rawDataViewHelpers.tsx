@@ -7,33 +7,46 @@ export type DirectionFilter = 'all' | RawDataDirection;
 export type AppendMode = 'none' | 'nl' | 'tab' | 'nl_tab';
 export type SendPanelMode = 'bottom' | 'separate';
 export type HexColorMode = 'none' | 'printable' | 'range';
-/// 行分组方式: grid = 固定 16 字节一行, line = 换行分隔
-export type RawDataGrouping = 'grid' | 'line';
-/// 字节表示方式: hex = 十六进制 (+ascii 尾列), ascii = 仅 ascii
-export type RawDataRepr = 'hex' | 'ascii';
+/// 行分组方式: grid = 固定 16 字节一行, line = 换行分隔, terminal = 串口终端视图
+export type RawDataGrouping = 'grid' | 'line' | 'terminal';
+/// 字节表示方式: hex = 十六进制 (+ascii 尾列), ascii = 仅 ascii, utf8 = 整行按 UTF-8 解码的文本
+export type RawDataRepr = 'hex' | 'ascii' | 'utf8';
 
 export const ROW_HEIGHT = 22;
 export const GROUP_SIZE = 8;
 
 /// 格式化时间戳为 HH:MM:SS.mmm
+/// 分片时间戳大量重复 (同 chunk 所有行共用), 缓存避免每行每次渲染 new Date
+const TIME_CACHE_CAP = 4096;
+const timeCache = new Map<number, string>();
+
 export function formatTime(ts: number): string {
   if (!ts) return '--:--:--.---';
+  let cached = timeCache.get(ts);
+  if (cached) return cached;
   const d = new Date(ts);
   const h = d.getHours().toString().padStart(2, '0');
   const m = d.getMinutes().toString().padStart(2, '0');
   const s = d.getSeconds().toString().padStart(2, '0');
   const ms = d.getMilliseconds().toString().padStart(3, '0');
-  return `${h}:${m}:${s}.${ms}`;
+  cached = `${h}:${m}:${s}.${ms}`;
+  if (timeCache.size >= TIME_CACHE_CAP) timeCache.clear();
+  timeCache.set(ts, cached);
+  return cached;
 }
+
+/// 256 项格式化查表 — 热路径 (每行 32 cell × 可见行) 免去 toString/padStart 分配
+const HEX_TABLE: string[] = Array.from({ length: 256 }, (_, b) => b.toString(16).padStart(2, '0').toUpperCase());
+const ASCII_TABLE: string[] = Array.from({ length: 256 }, (_, b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.'));
 
 /// 格式化单字节为 2 位大写 hex
 export function byteToHex(b: number): string {
-  return b.toString(16).padStart(2, '0').toUpperCase();
+  return HEX_TABLE[b] ?? '00';
 }
 
 /// 格式化单字节为 ascii（不可打印显示为 .）
 export function byteToAscii(b: number): string {
-  return b >= 32 && b < 127 ? String.fromCharCode(b) : '.';
+  return ASCII_TABLE[b] ?? '.';
 }
 
 /// 判断字节是否为可打印 ASCII

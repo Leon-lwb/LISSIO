@@ -18,11 +18,13 @@ import { SearchInput } from '../../ui/SearchInput';
 const GROUPING_OPTIONS: { value: RawDataGrouping; label: string }[] = [
   { value: 'grid', label: 'gridView' },
   { value: 'line', label: 'lineView' },
+  { value: 'terminal', label: 'terminalView' },
 ];
 
 const REPR_OPTIONS: { value: RawDataRepr; label: string }[] = [
   { value: 'hex', label: 'hexView' },
   { value: 'ascii', label: 'asciiView' },
+  { value: 'utf8', label: 'utf8View' },
 ];
 
 const DIRECTION_OPTIONS: { value: DirectionFilter; label: string; symbol: string }[] = [
@@ -137,7 +139,8 @@ export function RawDataViewHeader({
           {REPR_OPTIONS.map((opt) => (
             <button
               key={opt.value}
-              disabled={isNum || isStr}
+              disabled={isNum || isStr || grouping === 'terminal'}
+              title={grouping === 'terminal' ? t(lang, 'terminalReprDisabled') : undefined}
               className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40 ${repr === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => onReprChange(opt.value)}
             >

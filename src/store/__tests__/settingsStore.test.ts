@@ -220,25 +220,27 @@ describe('settingsStore API key 钥匙串集成', () => {
       .map((a) => [a.adapter, a.key ?? '']);
   }
 
-  it('load 时从钥匙串水合当前适配器的 API key', async () => {
+  it('load 时只读取密钥状态，不把明文水合到前端', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, {});
     (tauriMock.invoke as unknown as { mockImplementation: (f: (cmd: string) => unknown) => void })
-      .mockImplementation((cmd: string) => Promise.resolve(cmd === 'ai_keychain_get' ? 'sk-stored' : undefined));
+      .mockImplementation((cmd: string) => Promise.resolve(cmd === 'ai_secret_status'
+        ? { configured: true, source: 'keyring', writable: true }
+        : undefined));
 
     await useSettingsStore.getState().load();
 
-    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('sk-stored');
+    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
+    expect(keychainCalls('ai_secret_status')).toContainEqual(['orcarouter', '']);
   });
 
-  it('旧版明文 key 自动迁入钥匙串 (仅当钥匙串为空)', async () => {
+  it('旧版明文 key 自动迁入 SecretStore 后立即从设置中清除', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, { ai: { apiKey: 'sk-legacy' } });
-    (tauriMock.invoke as unknown as { mockImplementation: (f: (cmd: string) => unknown) => void })
-      .mockImplementation((cmd: string) => Promise.resolve(cmd === 'ai_keychain_get' ? null : undefined));
-
     await useSettingsStore.getState().load();
 
-    expect(keychainCalls('ai_keychain_set')).toContainEqual(['orcarouter', 'sk-legacy']);
-    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('sk-legacy');
+    expect(keychainCalls('ai_secret_set')).toContainEqual(['orcarouter', 'sk-legacy']);
+    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
+    const saved = tauriMock.fileStore.get(STORE_FILE)?.get(STORE_KEY) as AppSettings;
+    expect(saved.ai.apiKey).toBe('');
   });
 
   it('持久化剥离 API key — settings.json 恒为空串', async () => {
@@ -253,19 +255,21 @@ describe('settingsStore API key 钥匙串集成', () => {
       const saved = tauriMock.fileStore.get(STORE_FILE)?.get(STORE_KEY) as { ai?: { apiKey?: string } } | undefined;
       expect(saved?.ai?.apiKey).toBe('');
     });
-    // 内存中保留真实值 (随请求传给后端)
+    // 编辑控件可暂存本次输入，但对话请求不会携带它。
     expect(useSettingsStore.getState().settings.ai.apiKey).toBe('sk-secret');
   });
 
-  it('update apiKey 写入钥匙串; 切换适配器水合对应密钥', () => {
+  it('update apiKey 覆盖 SecretStore；切换适配器只读取状态并清空输入', () => {
     useSettingsStore.getState().update('ai', 'apiKey', 'sk-new');
-    expect(keychainCalls('ai_keychain_set')).toContainEqual(['orcarouter', 'sk-new']);
+    expect(keychainCalls('ai_secret_set')).toContainEqual(['orcarouter', 'sk-new']);
 
     (tauriMock.invoke as unknown as { mockImplementation: (f: (cmd: string) => unknown) => void })
-      .mockImplementation((cmd: string) => Promise.resolve(cmd === 'ai_keychain_get' ? 'sk-deepseek' : undefined));
+      .mockImplementation((cmd: string) => Promise.resolve(cmd === 'ai_secret_status'
+        ? { configured: true, source: 'environment', writable: true }
+        : undefined));
     useSettingsStore.getState().update('ai', 'adapter', 'deepseek');
     return vi.waitFor(() => {
-      expect(useSettingsStore.getState().settings.ai.apiKey).toBe('sk-deepseek');
+      expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
     });
   });
 
@@ -273,7 +277,7 @@ describe('settingsStore API key 钥匙串集成', () => {
     (tauriMock.invoke as unknown as {
       mockImplementation: (f: (cmd: string) => unknown) => void;
     }).mockImplementation((cmd: string) => {
-      if (cmd === 'ai_keychain_get') {
+      if (cmd === 'ai_secret_status') {
         return Promise.reject(Object.assign(new Error('cancelled'), { kind: 'AiKeyringAccessDenied', data: {} }));
       }
       return Promise.resolve(undefined);
@@ -289,7 +293,7 @@ describe('settingsStore API key 钥匙串集成', () => {
     (tauriMock.invoke as unknown as {
       mockImplementation: (f: (cmd: string) => unknown) => void;
     }).mockImplementation((cmd: string) => {
-      if (cmd === 'ai_keychain_get') {
+      if (cmd === 'ai_secret_status') {
         return Promise.reject(Object.assign(new Error('locked'), { kind: 'AiKeyring', data: {} }));
       }
       return Promise.resolve(undefined);
@@ -307,7 +311,7 @@ describe('settingsStore API key 钥匙串集成', () => {
     (tauriMock.invoke as unknown as {
       mockImplementation: (f: (cmd: string) => unknown) => void;
     }).mockImplementation((cmd: string) => {
-      if (cmd === 'ai_keychain_get') {
+      if (cmd === 'ai_secret_status') {
         return Promise.reject(Object.assign(new Error('cancelled'), { kind: 'AiKeyringAccessDenied', data: {} }));
       }
       return Promise.resolve(undefined);
@@ -318,17 +322,19 @@ describe('settingsStore API key 钥匙串集成', () => {
     expect(useSettingsStore.getState().keychainPermissionPromptOpen).toBe(false);
   });
 
-  it('再次请求成功后水合密钥并关闭提醒', async () => {
+  it('再次请求成功后确认状态并关闭提醒，仍不读回密钥', async () => {
     useSettingsStore.setState({ keychainPermissionPromptOpen: true });
     (tauriMock.invoke as unknown as {
       mockImplementation: (f: (cmd: string) => unknown) => void;
     }).mockImplementation((cmd: string) =>
-      Promise.resolve(cmd === 'ai_keychain_get' ? 'sk-restored' : undefined)
+      Promise.resolve(cmd === 'ai_secret_status'
+        ? { configured: true, source: 'keyring', writable: true }
+        : undefined)
     );
 
     await useSettingsStore.getState().retryKeychainPermission();
 
-    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('sk-restored');
+    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
     expect(useSettingsStore.getState().keychainPermissionPromptOpen).toBe(false);
     expect(useSettingsStore.getState().keychainPermissionRetryError).toBeNull();
   });
@@ -338,7 +344,7 @@ describe('settingsStore API key 钥匙串集成', () => {
     (tauriMock.invoke as unknown as {
       mockImplementation: (f: (cmd: string) => unknown) => void;
     }).mockImplementation((cmd: string) => {
-      if (cmd === 'ai_keychain_get') {
+      if (cmd === 'ai_secret_status') {
         return Promise.reject(Object.assign(new Error('cancelled'), { kind: 'AiKeyringAccessDenied', data: {} }));
       }
       return Promise.resolve(undefined);

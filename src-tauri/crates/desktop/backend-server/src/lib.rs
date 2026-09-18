@@ -8,7 +8,7 @@
 //!
 //! ```text
 //! 浏览器 ──HTTP/WS──► backend-server ──► rpc-api ──► control-api / app
-//! 桌面   ──IPC─────► src-tauri/src/commands ──┘
+//! 桌面   ──HTTP/WS──► sidecar backend-server ─┘
 //! 脚本   ──argv────► backend-cli ────────────┘
 //! ```
 //!
@@ -22,6 +22,7 @@ pub mod session;
 pub mod settings;
 pub mod sink;
 
+use std::io::Write as _;
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::sync::atomic::AtomicU32;
@@ -81,6 +82,16 @@ impl ServerState {
 /// # Errors
 /// 装配失败、端口占用或 MCP 启动失败时返回原因。
 pub async fn serve(config: ServerConfig) -> Result<(), String> {
+    serve_inner(config, false).await
+}
+
+/// Sidecar entrypoint. In addition to OS signals, EOF or a line on stdin asks
+/// the server to flush state and stop gracefully.
+pub async fn serve_supervised(config: ServerConfig) -> Result<(), String> {
+    serve_inner(config, true).await
+}
+
+async fn serve_inner(config: ServerConfig, supervised_stdio: bool) -> Result<(), String> {
     let (broadcast, _) = broadcast::channel(EVENT_CHANNEL_CAPACITY);
     let sink = BroadcastEventSink::handle(&broadcast);
     let mut host =
@@ -92,16 +103,11 @@ pub async fn serve(config: ServerConfig) -> Result<(), String> {
     )?));
     let host = Arc::new(host);
 
-    let mut mcp = match config.mcp_port {
-        Some(port) => Some(
-            mcp_server::start(host.toolbox.clone(), host.sink.clone(), port)
-                .await
-                .map_err(|error| error.to_string())?,
-        ),
-        None => None,
-    };
-    if let Some(handle) = &mcp {
-        log::info!("MCP server 已随 Web 出口启动: 端口 {}", handle.port);
+    if let Some(port) = config.mcp_port {
+        let bound = ai_host::mcp_server_start(&host.ai, Some(port))
+            .await
+            .map_err(|error| error.to_string())?;
+        log::info!("MCP server 已随 Web 出口启动: 端口 {bound}");
     }
 
     let listener = tokio::net::TcpListener::bind((config.bind, config.http_port))
@@ -118,6 +124,12 @@ pub async fn serve(config: ServerConfig) -> Result<(), String> {
         next_subscription_id: Arc::new(AtomicU32::new(0)),
     });
     log::info!("Web 出口已监听: http://{}:{actual_port}", config.bind);
+    println!(
+        "LISSIO_READY={{\"port\":{actual_port},\"protocol\":\"{}\",\"version\":\"{}\"}}",
+        PROTOCOL_VERSION,
+        env!("CARGO_PKG_VERSION")
+    );
+    let _ = std::io::stdout().flush();
     if !config.is_loopback() {
         log::info!(
             "非 loopback 绑定 — 客户端需携带访问令牌 (LISSIO_TOKEN 或配置目录的 {})",
@@ -127,18 +139,16 @@ pub async fn serve(config: ServerConfig) -> Result<(), String> {
 
     let app = http::router(state);
     let served = axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal())
+        .with_graceful_shutdown(shutdown_signal(supervised_stdio))
         .await;
     log::info!("Web 出口停止监听, 正在收尾");
-    if let Some(handle) = mcp.as_mut() {
-        handle.stop();
-    }
+    ai_host::mcp_server_stop(&host.ai);
     backend_host::teardown(&host);
     served.map_err(|error| format!("HTTP 服务退出异常: {error}"))
 }
 
 /// 退出信号 — Ctrl-C 或 SIGTERM (容器/服务管理器的主流停止方式)。
-async fn shutdown_signal() {
+async fn shutdown_signal(supervised_stdio: bool) {
     let ctrl_c = async {
         let _ = tokio::signal::ctrl_c().await;
     };
@@ -153,9 +163,20 @@ async fn shutdown_signal() {
     };
     #[cfg(not(unix))]
     let terminate = std::future::pending::<()>();
+    let supervised = async move {
+        if supervised_stdio {
+            use tokio::io::AsyncBufReadExt as _;
+            let mut input = tokio::io::BufReader::new(tokio::io::stdin());
+            let mut line = String::new();
+            let _ = input.read_line(&mut line).await;
+        } else {
+            std::future::pending::<()>().await;
+        }
+    };
     tokio::select! {
         () = ctrl_c => {}
         () = terminate => {}
+        () = supervised => {}
     }
 }
 

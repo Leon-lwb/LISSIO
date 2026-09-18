@@ -7,7 +7,7 @@
 /// - 字节平面 (全局): Transport / Protocol 节点, 边携带 Vec<u8>, 事件驱动
 /// - 数值平面 (每 tab): ProtocolSource 引用全局 Protocol 节点的最新帧, 输出 ch0..chN
 
-import type { WidgetConfig, MathOp, StrOp, WindowType, SpectrumOutput, DecoderBlock, ProtocolSchema } from '../../types';
+import type { WidgetConfig, MathOp, StrOp, WindowType, SpectrumOutput, DecoderBlock, ProtocolSchema, EndpointSpec } from '../../types';
 import type { ProtocolConfig } from '../../types';
 import type { FilterConfig } from '../../types/common';
 import { isUnaryMathOp } from '../../types';
@@ -46,7 +46,7 @@ function toNodeFilterConfig(params: FilterConfig): NodeFilterConfig {
 /// Protocol.convert_to / schema 为 None 时序列化省略 (Rust 侧 default + skip_serializing_if)
 /// ProtocolSource.port_names 为 None 时省略 (缺省 ch0..chN)
 export type NodeKind =
-  | { kind: 'Acquisition'; params: { spec: import('../../types').EndpointSpec; ports: { id: string; direction: string; domain: string }[] } }
+  | { kind: 'Acquisition'; params: { spec: EndpointSpec; ports: { id: string; direction: string; domain: string }[] } }
   | { kind: 'PointSelector'; params: { points: string[] } }
   | { kind: 'Protocol'; params: { config: ProtocolConfig; convert_to?: ProtocolConfig | null; schema?: ProtocolSchema | null } }
   | { kind: 'ProtocolSource'; params: { node_id: string; channels: number; port_names?: string[] | null } }

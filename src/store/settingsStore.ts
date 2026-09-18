@@ -41,8 +41,8 @@ function getStore(): PlatformStore {
 /// 防抖保存计时器
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
-/// API key 不入 settings.json — 真实值存系统钥匙串, 磁盘副本恒为空串。
-/// 运行内存中的 settings.ai.apiKey 保留真实值 (随请求传给后端)。
+/// API key 不入 settings.json，也不从后端读回。该字段仅作为覆盖写入控件的
+/// 临时输入；对话请求由后端 SecretStore 注入有效密钥。
 function sanitizeForPersist(settings: AppSettings): AppSettings {
   return { ...settings, ai: { ...settings.ai, apiKey: '' } };
 }
@@ -63,19 +63,15 @@ interface HydrateApiKeyResult {
   accessDenied: boolean;
 }
 
-/// 启动水合: 从钥匙串读取当前适配器的 API key;
-/// 兼容迁移 — 旧版本明文存于 settings.json 的 key 迁入钥匙串 (仅当钥匙串为空)。
+/// 启动水合: 只读取密钥状态；兼容迁移旧 settings.json 中的明文后立即清空。
 /// 同时保留结构化的授权拒绝信号,供主窗口按启动顺序显示说明。
 async function hydrateApiKey(settings: AppSettings): Promise<HydrateApiKeyResult> {
   try {
     const legacy = settings.ai.apiKey;
-    let stored = await api.aiKeychainGet(settings.ai.adapter);
-    if (!stored && legacy) {
-      await api.aiKeychainSet(settings.ai.adapter, legacy);
-      stored = legacy;
-    }
+    if (legacy) await api.aiSecretSet(settings.ai.adapter, legacy);
+    else await api.aiSecretStatus(settings.ai.adapter);
     return {
-      settings: { ...settings, ai: { ...settings.ai, apiKey: stored ?? '' } },
+      settings: { ...settings, ai: { ...settings.ai, apiKey: '' } },
       accessDenied: false,
     };
   } catch (error) {
@@ -219,11 +215,13 @@ const LEGACY_DEFAULT_UI_FONTS = [
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   "'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
   "'JetBrains Mono', 'Maple Mono CN', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+  "'GoMono Nerd Font Mono', 'Clear Han Serif', 'Maple Mono CN', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
 ];
 const LEGACY_DEFAULT_MONO_FONTS = [
   "'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
   "'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
   "'JetBrains Mono', 'Maple Mono CN', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
+  "'GoMono Nerd Font Mono', 'Maple Mono CN', 'Clear Han Serif', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
 ];
 
 /// 防御性 token 迁移映射: 历史版本曾用过的旧 token 名 -> 当前名。
@@ -322,11 +320,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     set({ keychainPermissionRetrying: true, keychainPermissionRetryError: null });
     try {
       const adapter = get().settings.ai.adapter;
-      const key = await api.aiKeychainGet(adapter);
+      await api.aiSecretStatus(adapter);
       set((state) => ({
         settings: {
           ...state.settings,
-          ai: { ...state.settings.ai, apiKey: key ?? '' },
+          ai: { ...state.settings.ai, apiKey: '' },
         },
         keychainPermissionPromptOpen: false,
         keychainPermissionRetrying: false,
@@ -436,15 +434,15 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     } else {
       commit();
     }
-    // AI 分类副作用: 密钥入钥匙串 (磁盘剥离), 切换服务商时水合对应密钥
+    // AI 分类副作用: 覆盖写入后端 SecretStore；密钥永不读回。
     if (category === 'ai' && field === 'apiKey') {
-      api.aiKeychainSet(get().settings.ai.adapter, String(value)).catch((e: unknown) =>
+      api.aiSecretSet(get().settings.ai.adapter, String(value)).catch((e: unknown) =>
         console.warn('[settings] 钥匙串写入失败:', e)
       );
     } else if (category === 'ai' && field === 'adapter') {
-      api.aiKeychainGet(String(value))
-        .then((key) =>
-          set((s) => ({ settings: { ...s.settings, ai: { ...s.settings.ai, apiKey: key ?? '' } } }))
+      api.aiSecretStatus(String(value))
+        .then(() =>
+          set((s) => ({ settings: { ...s.settings, ai: { ...s.settings.ai, apiKey: '' } } }))
         )
         .catch((e: unknown) => console.warn('[settings] 钥匙串读取失败:', e));
     }
@@ -462,7 +460,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     applyPipelineConfig(DEFAULT_SETTINGS);
     scheduleRecordingApply(DEFAULT_SETTINGS);
     // 全量重置: 清掉当前适配器的钥匙串密钥
-    api.aiKeychainDelete(get().settings.ai.adapter).catch((e: unknown) =>
+    api.aiSecretDelete(get().settings.ai.adapter).catch((e: unknown) =>
       console.warn('[settings] 钥匙串删除失败:', e)
     );
     if (saveTimer) clearTimeout(saveTimer);
@@ -489,7 +487,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     if (category === 'performance') applyPipelineConfig(settings);
     // AI 分类重置: 同步清掉当前适配器的钥匙串密钥
     if (category === 'ai') {
-      api.aiKeychainDelete(get().settings.ai.adapter).catch((e: unknown) =>
+      api.aiSecretDelete(get().settings.ai.adapter).catch((e: unknown) =>
         console.warn('[settings] 钥匙串删除失败:', e)
       );
     }

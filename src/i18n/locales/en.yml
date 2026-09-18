@@ -159,6 +159,8 @@ gridView: Grid
 lineView: Line
 hexView: HEX
 asciiView: ASCII
+utf8View: UTF-8
+terminalView: Terminal
 rawDataChannel: Channel
 send: Send
 clear: Clear
@@ -277,6 +279,10 @@ rawDataDirectionRx: RX
 rawDataDirectionTx: TX
 rawDataSearchPlaceholder: Search…
 displayOptions: Display
+terminalOptions: Terminal
+localEcho: Local echo after send
+ansiDecode: Parse ANSI color escapes
+terminalReprDisabled: Terminal view does not use HEX/ASCII
 
 # Node Editor
 newTab: New Tab
