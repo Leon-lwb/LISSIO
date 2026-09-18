@@ -1,9 +1,13 @@
 [package]
-name = "logic_decoder"
+name = "lissio-logic-decoder"
 description = "Lissio 逻辑分析仪解码引擎 — UART/I2C/SPI"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "logic_decoder"
 
 [lints]
 workspace = true

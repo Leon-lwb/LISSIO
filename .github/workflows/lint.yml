@@ -172,4 +172,4 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
       - name: Test shared enumeration and adapter contracts
-        run: cargo test --locked -p serial -p modbus-adapter -p can-transport
+        run: cargo test --locked -p lissio-serial -p lissio-modbus-adapter -p lissio-can-transport

@@ -1,9 +1,13 @@
 [package]
-name = "events"
+name = "lissio-events"
 description = "Lissio 前端事件契约 + 后端事件端口 (BackendEventSink) — 无 Tauri 依赖, 由组合根注入 Tauri/CLI 实现"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "events"
 
 [lints]
 workspace = true

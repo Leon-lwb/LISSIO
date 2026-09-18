@@ -1,8 +1,13 @@
 [package]
-name = "buffer_graph"
+name = "lissio-buffer-graph"
+description = "节点图数据路由 — Edge / NodeGraph / RoutedData 三层结构"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "buffer_graph"
 
 [lints]
 workspace = true

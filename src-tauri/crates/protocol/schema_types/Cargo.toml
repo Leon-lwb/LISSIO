@@ -1,9 +1,13 @@
 [package]
-name = "schema_types"
+name = "lissio-schema-types"
 description = "帧 schema 数据类型 — 校验算法、字段类型、解码/编码块、HEX 解析、协议配置"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "schema_types"
 
 [lints]
 workspace = true

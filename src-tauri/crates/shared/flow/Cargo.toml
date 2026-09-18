@@ -1,9 +1,13 @@
 [package]
-name = "flow"
+name = "lissio-flow"
 description = "Typed flow delivery envelopes, byte boundaries, epochs, sequences, and gaps"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "flow"
 
 [lints]
 workspace = true

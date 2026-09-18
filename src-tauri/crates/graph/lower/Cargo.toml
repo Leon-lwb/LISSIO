@@ -1,9 +1,13 @@
 [package]
-name = "lower"
+name = "lissio-lower"
 description = "节点图编译后端 — SlotArena 槽位分配 + per-kind lowering, 产出 SlotPlan 平坦操作序列"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "lower"
 
 [lints]
 workspace = true

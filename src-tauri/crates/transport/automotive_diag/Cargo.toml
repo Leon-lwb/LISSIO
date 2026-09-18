@@ -1,8 +1,13 @@
 [package]
-name = "automotive_diag"
+name = "lissio-automotive-diag"
+description = "诊断协议层入口 (UDS / OBD-II / J1939)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "automotive_diag"
 
 [lints]
 workspace = true

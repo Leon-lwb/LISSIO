@@ -142,8 +142,8 @@ allocator 元数据或其他源，不是进程级内存上限。
 
 ```bash
 cd src-tauri
-cargo bench -p buffer_databuffer --bench waveform_pyramid_bench
-cargo bench -p data_plane --bench ingest_bench
+cargo bench -p lissio-waveform --bench waveform_pyramid_bench
+cargo bench -p lissio-pipeline --bench ingest_bench
 ```
 
 - `waveform_pyramid_write`: 4 通道 L0 滚动覆盖 + 多层级联写入，以 JustFloat

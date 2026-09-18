@@ -1,9 +1,13 @@
 [package]
-name = "s7-adapter"
+name = "lissio-s7-adapter"
 description = "Siemens S7 client adapter for the typed acquisition plane"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "s7_adapter"
 
 [lints]
 workspace = true

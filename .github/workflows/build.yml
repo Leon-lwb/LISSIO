@@ -268,7 +268,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cargo build --manifest-path src-tauri/Cargo.toml --release --target "${{ matrix.target }}" -p backend-server -p backend-cli
+          cargo build --manifest-path src-tauri/Cargo.toml --release --target "${{ matrix.target }}" -p lissio-backend-server -p lissio-backend-cli
           EXT=""
           if [[ "${{ matrix.target }}" == *windows* ]]; then EXT=".exe"; fi
           OUT="release/lissio-backend-${{ needs.set-version.outputs.version }}-${{ matrix.target }}"

@@ -9,7 +9,7 @@ if (host.status !== 0) throw new Error(host.stderr || 'rustc -vV failed');
 const target = targetArg?.slice('--target='.length) ?? /^host: (.+)$/m.exec(host.stdout)?.[1];
 if (!target) throw new Error('Unable to determine Rust target triple');
 
-const args = ['build', '--manifest-path', 'src-tauri/Cargo.toml', '-p', 'backend-server'];
+const args = ['build', '--manifest-path', 'src-tauri/Cargo.toml', '-p', 'lissio-backend-server'];
 if (targetArg) args.push('--target', target);
 if (release) args.push('--release');
 const built = spawnSync('cargo', args, {

@@ -3,23 +3,6 @@
 version = 4
 
 [[package]]
-name = "acquisition"
-version = "0.6.1"
-dependencies = [
- "async-trait",
- "data-model",
- "error",
- "flow",
- "parking_lot",
- "points",
- "schema_types",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
-]
-
-[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -46,30 +29,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c982642fa9e8606056828ee9a8505737230110bb1099153c79efe865c59d12ba"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "ai-host"
-version = "0.6.1"
-dependencies = [
- "async-trait",
- "can",
- "chat",
- "chat-session",
- "control-api",
- "data-model",
- "error",
- "events",
- "keyring",
- "llm",
- "log",
- "mcp-client",
- "mcp-server",
- "parking_lot",
- "security-framework 3.7.0",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -180,40 +139,6 @@ name = "anyhow"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
-
-[[package]]
-name = "app"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "buffer_graph",
- "bus",
- "can",
- "criterion",
- "data-model",
- "error",
- "evaluator",
- "events",
- "filter",
- "kind",
- "log",
- "logic",
- "measurement",
- "parking_lot",
- "pipeline",
- "points",
- "raw-data",
- "recording",
- "rustc-hash 2.1.3",
- "schema_types",
- "serde",
- "serde_json",
- "spectrum",
- "stream",
- "subscription",
- "tokio",
- "waveform",
-]
 
 [[package]]
 name = "approx"
@@ -599,46 +524,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f2032f911046de80f0a198e0901378627c33f59ea0ac00e363d481118bd70a53"
 
 [[package]]
-name = "automotive"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "can",
- "data-model",
- "error",
- "log",
- "parking_lot",
- "protocol",
- "protocol_can_bridge",
- "tokio",
- "transport",
-]
-
-[[package]]
-name = "automotive_diag"
-version = "0.6.1"
-dependencies = [
- "libautomotive",
-]
-
-[[package]]
-name = "automotive_isotp"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "can",
- "data-model",
- "diagnostic",
- "error",
- "log",
- "thiserror 1.0.69",
- "tokio",
- "transport",
-]
-
-[[package]]
 name = "aws-lc-rs"
 version = "1.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -710,75 +595,6 @@ dependencies = [
  "sync_wrapper",
  "tower-layer",
  "tower-service",
-]
-
-[[package]]
-name = "backend-cli"
-version = "0.6.1"
-dependencies = [
- "app",
- "backend-host",
- "backend-server",
- "clap",
- "control-api",
- "env_logger",
- "events",
- "log",
- "mcp-server",
- "pipeline",
- "points",
- "rpc-api",
- "serde_json",
- "tokio",
- "waveform",
-]
-
-[[package]]
-name = "backend-host"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "ai-host",
- "app",
- "can-transport",
- "control-api",
- "data-model",
- "events",
- "gpu",
- "graph_ops",
- "log",
- "modbus-adapter",
- "network",
- "pipeline",
- "points",
- "s7-adapter",
- "serial",
- "tokio",
- "transport",
-]
-
-[[package]]
-name = "backend-server"
-version = "0.6.1"
-dependencies = [
- "ai-host",
- "app",
- "axum",
- "backend-host",
- "chat",
- "clap",
- "control-api",
- "data-model",
- "env_logger",
- "events",
- "futures",
- "log",
- "mcp-server",
- "rpc-api",
- "serde",
- "serde_json",
- "tokio",
- "tower-http",
 ]
 
 [[package]]
@@ -906,30 +722,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "buffer_graph"
-version = "0.6.1"
-dependencies = [
- "criterion",
- "data-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72f5acc6cb2ba439de613abc23857ec3d78374d8ed5ac84e9d11336e87da8649"
-
-[[package]]
-name = "bus"
-version = "0.6.1"
-dependencies = [
- "log",
- "parking_lot",
- "serde",
- "tokio",
-]
 
 [[package]]
 name = "bytemuck"
@@ -998,33 +794,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bb1307f12aa967b5a58416e87b3653360e0fd614a016b6e970db08fecbb1b80d"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "can"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "can-transport"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "can",
- "data-model",
- "error",
- "log",
- "nusb",
- "schema_types",
- "serde_json",
- "serial",
- "thiserror 1.0.69",
- "tokio",
 ]
 
 [[package]]
@@ -1126,36 +895,6 @@ dependencies = [
  "cfg-if",
  "cpufeatures 0.3.1",
  "rand_core 0.10.1",
-]
-
-[[package]]
-name = "chat"
-version = "0.6.1"
-dependencies = [
- "async-trait",
- "chat-session",
- "data-model",
- "error",
- "futures",
- "llm",
- "log",
- "parking_lot",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "chat-session"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "error",
- "llm",
- "log",
- "parking_lot",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -1330,33 +1069,6 @@ dependencies = [
  "getrandom 0.2.17",
  "once_cell",
  "tiny-keccak",
-]
-
-[[package]]
-name = "control-api"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "app",
- "buffer_graph",
- "can",
- "data-model",
- "events",
- "graph-testkit",
- "graph_ops",
- "kind",
- "logic",
- "parking_lot",
- "petgraph",
- "pipeline",
- "points",
- "raw-data",
- "recording",
- "schema_types",
- "serde",
- "serde_json",
- "tokio",
- "waveform",
 ]
 
 [[package]]
@@ -1661,16 +1373,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a4ae5f15dda3c708c0ade84bfee31ccab44a3da4f88015ed22f63732abe300c8"
 
 [[package]]
-name = "data-model"
-version = "0.6.1"
-dependencies = [
- "can",
- "error",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "dbus"
 version = "0.9.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1763,16 +1465,6 @@ dependencies = [
  "rustc_version",
  "syn 2.0.119",
  "unicode-xid",
-]
-
-[[package]]
-name = "diagnostic"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -2082,53 +1774,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "error"
-version = "0.6.1"
-dependencies = [
- "serde",
- "serde_json",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "eval"
-version = "0.6.1"
-dependencies = [
- "buffer_graph",
- "criterion",
- "data-model",
- "filter",
- "frame-decoder",
- "graph-testkit",
- "hir",
- "kind",
- "lower",
- "plane",
- "rustc-hash 2.1.3",
- "spectrum",
- "trigger",
-]
-
-[[package]]
-name = "evaluator"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "filter",
- "graph",
- "log",
- "logic",
- "parking_lot",
- "pipeline",
- "raw-data",
- "serde",
- "spectrum",
- "stream",
- "waveform",
-]
-
-[[package]]
 name = "event-listener"
 version = "5.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2146,15 +1791,6 @@ checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
  "event-listener",
  "pin-project-lite",
-]
-
-[[package]]
-name = "events"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -2225,14 +1861,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "filter"
-version = "0.6.1"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "find-msvc-tools"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2253,15 +1881,6 @@ dependencies = [
  "crc32fast",
  "miniz_oxide 0.9.1",
  "zlib-rs",
-]
-
-[[package]]
-name = "flow"
-version = "0.6.1"
-dependencies = [
- "bytes",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -2316,15 +1935,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "frame-decoder"
-version = "0.6.1"
-dependencies = [
- "criterion",
- "schema_types",
- "serde",
 ]
 
 [[package]]
@@ -2739,19 +2349,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gpu"
-version = "0.6.1"
-dependencies = [
- "bytemuck",
- "criterion",
- "log",
- "pollster",
- "thiserror 1.0.69",
- "waveform",
- "wgpu",
-]
-
-[[package]]
 name = "gpu-allocator"
 version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2763,64 +2360,6 @@ dependencies = [
  "presser",
  "thiserror 2.0.20",
  "windows 0.62.2",
-]
-
-[[package]]
-name = "graph"
-version = "0.6.1"
-dependencies = [
- "buffer_graph",
- "criterion",
- "eval",
- "filter",
- "frame-decoder",
- "graph-testkit",
- "hir",
- "kind",
- "lower",
- "petgraph",
- "plane",
- "spectrum",
- "trigger",
-]
-
-[[package]]
-name = "graph-testkit"
-version = "0.6.1"
-dependencies = [
- "buffer_graph",
- "data-model",
- "eval",
- "filter",
- "kind",
- "schema_types",
- "spectrum",
- "trigger",
-]
-
-[[package]]
-name = "graph_ops"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "app",
- "buffer_graph",
- "criterion",
- "data-model",
- "error",
- "evaluator",
- "events",
- "flow",
- "graph-testkit",
- "kind",
- "log",
- "parking_lot",
- "pipeline",
- "recording",
- "schema_types",
- "serde",
- "serde_json",
- "tokio",
 ]
 
 [[package]]
@@ -2982,20 +2521,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "hir"
-version = "0.6.1"
-dependencies = [
- "buffer_graph",
- "data-model",
- "error",
- "graph-testkit",
- "kind",
- "petgraph",
- "rustc-hash 2.1.3",
- "serde_json",
-]
 
 [[package]]
 name = "html5ever"
@@ -3599,19 +3124,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
-name = "kind"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "filter",
- "schema_types",
- "serde",
- "serde_json",
- "spectrum",
- "trigger",
-]
-
-[[package]]
 name = "lexical-core"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3825,18 +3337,19 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 name = "lissio"
 version = "0.6.1"
 dependencies = [
- "app",
- "backend-host",
- "buffer_graph",
- "data-model",
- "error",
  "getrandom 0.3.4",
- "graph-testkit",
- "graph_ops",
- "kind",
+ "lissio-app",
+ "lissio-backend-host",
+ "lissio-buffer-graph",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-graph-ops",
+ "lissio-graph-testkit",
+ "lissio-kind",
+ "lissio-menu-shell",
+ "lissio-schema-types",
+ "lissio-update-flow",
  "log",
- "menu_shell",
- "schema_types",
  "serde",
  "serde_json",
  "tauri",
@@ -3850,8 +3363,921 @@ dependencies = [
  "tauri-plugin-store",
  "tauri-plugin-updater",
  "tokio",
- "update_flow",
  "window-vibrancy",
+]
+
+[[package]]
+name = "lissio-acquisition"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-flow",
+ "lissio-points",
+ "lissio-schema-types",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-ai-host"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "keyring",
+ "lissio-can",
+ "lissio-chat",
+ "lissio-chat-session",
+ "lissio-control-api",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-events",
+ "lissio-llm",
+ "lissio-mcp-client",
+ "lissio-mcp-server",
+ "log",
+ "parking_lot",
+ "security-framework 3.7.0",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-app"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-acquisition",
+ "lissio-buffer-graph",
+ "lissio-bus",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-evaluator",
+ "lissio-events",
+ "lissio-filter",
+ "lissio-kind",
+ "lissio-logic",
+ "lissio-measurement",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-raw-data",
+ "lissio-recording",
+ "lissio-schema-types",
+ "lissio-spectrum",
+ "lissio-stream",
+ "lissio-subscription",
+ "lissio-waveform",
+ "log",
+ "parking_lot",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-automotive"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-protocol",
+ "lissio-protocol-can-bridge",
+ "lissio-transport",
+ "log",
+ "parking_lot",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-automotive-diag"
+version = "0.6.1"
+dependencies = [
+ "libautomotive",
+]
+
+[[package]]
+name = "lissio-automotive-isotp"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-diagnostic",
+ "lissio-error",
+ "lissio-transport",
+ "log",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-backend-cli"
+version = "0.6.1"
+dependencies = [
+ "clap",
+ "env_logger",
+ "lissio-app",
+ "lissio-backend-host",
+ "lissio-backend-server",
+ "lissio-control-api",
+ "lissio-events",
+ "lissio-mcp-server",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-rpc-api",
+ "lissio-waveform",
+ "log",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-backend-host"
+version = "0.6.1"
+dependencies = [
+ "lissio-acquisition",
+ "lissio-ai-host",
+ "lissio-app",
+ "lissio-can-transport",
+ "lissio-control-api",
+ "lissio-data-model",
+ "lissio-events",
+ "lissio-gpu",
+ "lissio-graph-ops",
+ "lissio-modbus-adapter",
+ "lissio-network",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-s7-adapter",
+ "lissio-serial",
+ "lissio-transport",
+ "log",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-backend-server"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "clap",
+ "env_logger",
+ "futures",
+ "lissio-ai-host",
+ "lissio-app",
+ "lissio-backend-host",
+ "lissio-chat",
+ "lissio-control-api",
+ "lissio-data-model",
+ "lissio-events",
+ "lissio-mcp-server",
+ "lissio-rpc-api",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tower-http",
+]
+
+[[package]]
+name = "lissio-buffer-graph"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-bus"
+version = "0.6.1"
+dependencies = [
+ "log",
+ "parking_lot",
+ "serde",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-can"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-can-transport"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-schema-types",
+ "lissio-serial",
+ "log",
+ "nusb",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-chat"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "futures",
+ "lissio-chat-session",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-llm",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-chat-session"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-llm",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-control-api"
+version = "0.6.1"
+dependencies = [
+ "lissio-acquisition",
+ "lissio-app",
+ "lissio-buffer-graph",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-events",
+ "lissio-graph-ops",
+ "lissio-graph-testkit",
+ "lissio-kind",
+ "lissio-logic",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-raw-data",
+ "lissio-recording",
+ "lissio-schema-types",
+ "lissio-waveform",
+ "parking_lot",
+ "petgraph",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-data-model"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-error",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-diagnostic"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-error"
+version = "0.6.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lissio-eval"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-buffer-graph",
+ "lissio-data-model",
+ "lissio-filter",
+ "lissio-frame-decoder",
+ "lissio-graph-testkit",
+ "lissio-hir",
+ "lissio-kind",
+ "lissio-lower",
+ "lissio-plane",
+ "lissio-spectrum",
+ "lissio-trigger",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "lissio-evaluator"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-filter",
+ "lissio-graph",
+ "lissio-logic",
+ "lissio-pipeline",
+ "lissio-raw-data",
+ "lissio-spectrum",
+ "lissio-stream",
+ "lissio-waveform",
+ "log",
+ "parking_lot",
+ "serde",
+]
+
+[[package]]
+name = "lissio-events"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-filter"
+version = "0.6.1"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-flow"
+version = "0.6.1"
+dependencies = [
+ "bytes",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-frame-decoder"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-schema-types",
+ "serde",
+]
+
+[[package]]
+name = "lissio-gpu"
+version = "0.6.1"
+dependencies = [
+ "bytemuck",
+ "criterion",
+ "lissio-waveform",
+ "log",
+ "pollster",
+ "thiserror 1.0.69",
+ "wgpu",
+]
+
+[[package]]
+name = "lissio-graph"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-buffer-graph",
+ "lissio-eval",
+ "lissio-filter",
+ "lissio-frame-decoder",
+ "lissio-graph-testkit",
+ "lissio-hir",
+ "lissio-kind",
+ "lissio-lower",
+ "lissio-plane",
+ "lissio-spectrum",
+ "lissio-trigger",
+ "petgraph",
+]
+
+[[package]]
+name = "lissio-graph-ops"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-acquisition",
+ "lissio-app",
+ "lissio-buffer-graph",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-evaluator",
+ "lissio-events",
+ "lissio-flow",
+ "lissio-graph-testkit",
+ "lissio-kind",
+ "lissio-pipeline",
+ "lissio-recording",
+ "lissio-schema-types",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-graph-testkit"
+version = "0.6.1"
+dependencies = [
+ "lissio-buffer-graph",
+ "lissio-data-model",
+ "lissio-eval",
+ "lissio-filter",
+ "lissio-kind",
+ "lissio-schema-types",
+ "lissio-spectrum",
+ "lissio-trigger",
+]
+
+[[package]]
+name = "lissio-hir"
+version = "0.6.1"
+dependencies = [
+ "lissio-buffer-graph",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-graph-testkit",
+ "lissio-kind",
+ "petgraph",
+ "rustc-hash 2.1.3",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-kind"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "lissio-filter",
+ "lissio-schema-types",
+ "lissio-spectrum",
+ "lissio-trigger",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-llm"
+version = "0.6.1"
+dependencies = [
+ "futures",
+ "genai",
+ "lissio-data-model",
+ "lissio-error",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-logic"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-logic-decoder"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "lissio-logic",
+ "lissio-protocol",
+]
+
+[[package]]
+name = "lissio-lower"
+version = "0.6.1"
+dependencies = [
+ "lissio-filter",
+ "lissio-graph-testkit",
+ "lissio-hir",
+ "lissio-kind",
+ "lissio-plane",
+ "lissio-trigger",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "lissio-mcp-client"
+version = "0.6.1"
+dependencies = [
+ "futures",
+ "lissio-data-model",
+ "lissio-error",
+ "log",
+ "parking_lot",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-mcp-server"
+version = "0.6.1"
+dependencies = [
+ "axum",
+ "lissio-can",
+ "lissio-control-api",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-events",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-waveform",
+ "log",
+ "rmcp",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-measurement"
+version = "0.6.1"
+dependencies = [
+ "lissio-spectrum",
+ "serde",
+]
+
+[[package]]
+name = "lissio-menu-shell"
+version = "0.6.1"
+dependencies = [
+ "log",
+ "serde",
+ "tauri",
+ "tauri-plugin-opener",
+]
+
+[[package]]
+name = "lissio-modbus-adapter"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "criterion",
+ "libc",
+ "lissio-acquisition",
+ "lissio-data-model",
+ "lissio-flow",
+ "lissio-points",
+ "lissio-serial",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-modbus",
+ "tokio-serial",
+]
+
+[[package]]
+name = "lissio-network"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-schema-types",
+ "log",
+ "thiserror 1.0.69",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-pipeline"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-acquisition",
+ "lissio-app",
+ "lissio-buffer-graph",
+ "lissio-bus",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-eval",
+ "lissio-events",
+ "lissio-filter",
+ "lissio-flow",
+ "lissio-frame-decoder",
+ "lissio-graph",
+ "lissio-graph-testkit",
+ "lissio-kind",
+ "lissio-logic",
+ "lissio-logic-decoder",
+ "lissio-lower",
+ "lissio-points",
+ "lissio-protocol",
+ "lissio-protocol-can-bridge",
+ "lissio-protocol-float",
+ "lissio-raw-data",
+ "lissio-recording",
+ "lissio-schema",
+ "lissio-schema-types",
+ "lissio-spectrum",
+ "lissio-transport",
+ "lissio-trigger",
+ "lissio-waveform",
+ "log",
+ "parking_lot",
+ "rustc-hash 2.1.3",
+ "scirs2-core",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-plane"
+version = "0.6.1"
+dependencies = [
+ "lissio-graph-testkit",
+ "lissio-hir",
+ "lissio-kind",
+ "petgraph",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
+name = "lissio-points"
+version = "0.6.1"
+dependencies = [
+ "lissio-flow",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-protocol"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-logic",
+ "serde",
+]
+
+[[package]]
+name = "lissio-protocol-can-bridge"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-protocol",
+]
+
+[[package]]
+name = "lissio-protocol-float"
+version = "0.6.1"
+dependencies = [
+ "lissio-data-model",
+ "lissio-protocol",
+]
+
+[[package]]
+name = "lissio-raw-data"
+version = "0.6.1"
+dependencies = [
+ "base64 0.22.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-recording"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "duckdb",
+ "parking_lot",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lissio-rpc-api"
+version = "0.6.1"
+dependencies = [
+ "lissio-acquisition",
+ "lissio-ai-host",
+ "lissio-app",
+ "lissio-backend-host",
+ "lissio-buffer-graph",
+ "lissio-can",
+ "lissio-can-transport",
+ "lissio-chat-session",
+ "lissio-control-api",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-events",
+ "lissio-graph-ops",
+ "lissio-kind",
+ "lissio-llm",
+ "lissio-logic",
+ "lissio-mcp-client",
+ "lissio-pipeline",
+ "lissio-points",
+ "lissio-raw-data",
+ "lissio-schema-types",
+ "lissio-waveform",
+ "log",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-s7-adapter"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-data-model",
+ "lissio-flow",
+ "lissio-points",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
+ "tokio-s7",
+]
+
+[[package]]
+name = "lissio-schema"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-logic",
+ "lissio-logic-decoder",
+ "lissio-protocol",
+ "lissio-protocol-can-bridge",
+ "lissio-protocol-float",
+ "lissio-schema-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-schema-types"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-diagnostic",
+ "lissio-logic",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lissio-serial"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "core-foundation 0.10.1",
+ "io-kit-sys 0.4.1",
+ "lissio-acquisition",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-schema-types",
+ "log",
+ "serde_json",
+ "serialport",
+ "thiserror 1.0.69",
+ "tokio",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "lissio-spectrum"
+version = "0.6.1"
+dependencies = [
+ "realfft",
+ "rustfft",
+ "serde",
+]
+
+[[package]]
+name = "lissio-stream"
+version = "0.6.1"
+dependencies = [
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-logic",
+ "lissio-pipeline",
+ "lissio-raw-data",
+ "lissio-waveform",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-subscription"
+version = "0.6.1"
+dependencies = [
+ "parking_lot",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-transport"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-flow",
+ "lissio-logic",
+ "lissio-schema-types",
+ "log",
+ "parking_lot",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "lissio-trigger"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "glob",
+ "log",
+ "regex",
+ "serde",
+]
+
+[[package]]
+name = "lissio-update-flow"
+version = "0.6.1"
+dependencies = [
+ "lissio-error",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-plugin-updater",
+]
+
+[[package]]
+name = "lissio-waveform"
+version = "0.6.1"
+dependencies = [
+ "criterion",
+ "lissio-data-model",
+ "parking_lot",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -3867,18 +4293,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11d3d7f243d5c5a8b9bb5d6dd2b1602c0cb0b9db1621bafc7ed66e35ff9fe092"
 
 [[package]]
-name = "llm"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "error",
- "futures",
- "genai",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "lock_api"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3892,37 +4306,6 @@ name = "log"
 version = "0.4.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
-
-[[package]]
-name = "logic"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "logic_decoder"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "logic",
- "protocol",
-]
-
-[[package]]
-name = "lower"
-version = "0.6.1"
-dependencies = [
- "filter",
- "graph-testkit",
- "hir",
- "kind",
- "plane",
- "rustc-hash 2.1.3",
- "trigger",
-]
 
 [[package]]
 name = "lru-slab"
@@ -3990,49 +4373,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mcp-client"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "error",
- "futures",
- "log",
- "parking_lot",
- "rmcp",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "mcp-server"
-version = "0.6.1"
-dependencies = [
- "axum",
- "can",
- "control-api",
- "data-model",
- "error",
- "events",
- "log",
- "pipeline",
- "points",
- "rmcp",
- "serde",
- "serde_json",
- "tokio",
- "waveform",
-]
-
-[[package]]
-name = "measurement"
-version = "0.6.1"
-dependencies = [
- "serde",
- "spectrum",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4045,16 +4385,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "menu_shell"
-version = "0.6.1"
-dependencies = [
- "log",
- "serde",
- "tauri",
- "tauri-plugin-opener",
 ]
 
 [[package]]
@@ -4128,27 +4458,6 @@ dependencies = [
  "nix 0.31.3",
  "serialport",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "modbus-adapter"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "criterion",
- "data-model",
- "flow",
- "libc",
- "parking_lot",
- "points",
- "serde",
- "serde_json",
- "serial",
- "thiserror 1.0.69",
- "tokio",
- "tokio-modbus",
- "tokio-serial",
 ]
 
 [[package]]
@@ -4277,20 +4586,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee6cda3051665f1fb8d9e08fc35c96d5a244fb1be711a03b71118828afc9a873"
 dependencies = [
  "jni-sys 0.3.1",
-]
-
-[[package]]
-name = "network"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "data-model",
- "error",
- "log",
- "schema_types",
- "thiserror 1.0.69",
- "tokio",
 ]
 
 [[package]]
@@ -4883,49 +5178,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
-name = "pipeline"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "app",
- "buffer_graph",
- "bus",
- "can",
- "criterion",
- "data-model",
- "eval",
- "events",
- "filter",
- "flow",
- "frame-decoder",
- "graph",
- "graph-testkit",
- "kind",
- "log",
- "logic",
- "logic_decoder",
- "lower",
- "parking_lot",
- "points",
- "protocol",
- "protocol_can_bridge",
- "protocol_float",
- "raw-data",
- "recording",
- "rustc-hash 2.1.3",
- "schema",
- "schema_types",
- "scirs2-core",
- "serde",
- "serde_json",
- "spectrum",
- "tokio",
- "transport",
- "trigger",
- "waveform",
-]
-
-[[package]]
 name = "piper"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4941,17 +5193,6 @@ name = "pkg-config"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6b464fbc74e149a392436b17d523f769e057cb6877f6a5c4618bc6f11800548"
-
-[[package]]
-name = "plane"
-version = "0.6.1"
-dependencies = [
- "graph-testkit",
- "hir",
- "kind",
- "petgraph",
- "rustc-hash 2.1.3",
-]
 
 [[package]]
 name = "plist"
@@ -5018,15 +5259,6 @@ dependencies = [
  "fdeflate",
  "flate2",
  "miniz_oxide 0.8.9",
-]
-
-[[package]]
-name = "points"
-version = "0.6.1"
-dependencies = [
- "flow",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -5190,33 +5422,6 @@ name = "profiling"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d595e54a326bc53c1c197b32d295e14b169e3cfeaa8dc82b529f947fba6bcf5"
-
-[[package]]
-name = "protocol"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "logic",
- "serde",
-]
-
-[[package]]
-name = "protocol_can_bridge"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "protocol",
-]
-
-[[package]]
-name = "protocol_float"
-version = "0.6.1"
-dependencies = [
- "data-model",
- "protocol",
-]
 
 [[package]]
 name = "quick-xml"
@@ -5387,15 +5592,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca45419789ae5a7899559e9512e58ca889e41f04f1f2445e9f4b290ceccd1d08"
 
 [[package]]
-name = "raw-data"
-version = "0.6.1"
-dependencies = [
- "base64 0.22.1",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "raw-window-handle"
 version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5446,19 +5642,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f821338fddb99d089116342c46e9f1fbf3828dba077674613e734e01d6ea8677"
 dependencies = [
  "rustfft",
-]
-
-[[package]]
-name = "recording"
-version = "0.6.1"
-dependencies = [
- "criterion",
- "duckdb",
- "parking_lot",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -5665,38 +5848,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rpc-api"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "ai-host",
- "app",
- "backend-host",
- "buffer_graph",
- "can",
- "can-transport",
- "chat-session",
- "control-api",
- "data-model",
- "error",
- "events",
- "graph_ops",
- "kind",
- "llm",
- "log",
- "logic",
- "mcp-client",
- "pipeline",
- "points",
- "raw-data",
- "schema_types",
- "serde",
- "serde_json",
- "tokio",
- "waveform",
-]
-
-[[package]]
 name = "rsqlite-vfs"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5872,23 +6023,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 
 [[package]]
-name = "s7-adapter"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "data-model",
- "flow",
- "parking_lot",
- "points",
- "serde",
- "serde_json",
- "thiserror 1.0.69",
- "tokio",
- "tokio-s7",
-]
-
-[[package]]
 name = "safe_arch"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5913,34 +6047,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
 dependencies = [
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "schema"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "logic",
- "logic_decoder",
- "protocol",
- "protocol_can_bridge",
- "protocol_float",
- "schema_types",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "schema_types"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "diagnostic",
- "logic",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -6256,25 +6362,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serial"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "core-foundation 0.10.1",
- "data-model",
- "error",
- "io-kit-sys 0.4.1",
- "log",
- "schema_types",
- "serde_json",
- "serialport",
- "thiserror 1.0.69",
- "tokio",
- "windows-sys 0.52.0",
-]
-
-[[package]]
 name = "serialize-to-javascript"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6470,15 +6557,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "spectrum"
-version = "0.6.1"
-dependencies = [
- "realfft",
- "rustfft",
- "serde",
-]
-
-[[package]]
 name = "spirv"
 version = "0.4.0+sdk-1.4.341.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6523,24 +6601,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "stream"
-version = "0.6.1"
-dependencies = [
- "can",
- "data-model",
- "error",
- "log",
- "logic",
- "parking_lot",
- "pipeline",
- "raw-data",
- "serde",
- "serde_json",
- "tokio",
- "waveform",
-]
 
 [[package]]
 name = "strength_reduce"
@@ -6618,14 +6678,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "subscription"
-version = "0.6.1"
-dependencies = [
- "parking_lot",
- "tokio",
 ]
 
 [[package]]
@@ -7682,24 +7734,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "transport"
-version = "0.6.1"
-dependencies = [
- "acquisition",
- "async-trait",
- "can",
- "data-model",
- "error",
- "flow",
- "log",
- "logic",
- "parking_lot",
- "schema_types",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "transpose"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7729,17 +7763,6 @@ dependencies = [
  "serde",
  "thiserror 2.0.20",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "trigger"
-version = "0.6.1"
-dependencies = [
- "criterion",
- "glob",
- "log",
- "regex",
- "serde",
 ]
 
 [[package]]
@@ -7872,18 +7895,6 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
-
-[[package]]
-name = "update_flow"
-version = "0.6.1"
-dependencies = [
- "error",
- "reqwest",
- "serde",
- "serde_json",
- "tauri",
- "tauri-plugin-updater",
-]
 
 [[package]]
 name = "ureq"
@@ -8117,17 +8128,6 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
-]
-
-[[package]]
-name = "waveform"
-version = "0.6.1"
-dependencies = [
- "criterion",
- "data-model",
- "parking_lot",
- "serde",
- "serde_json",
 ]
 
 [[package]]

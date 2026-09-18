@@ -367,8 +367,8 @@ Windows 为 `%APPDATA%\top.pengheng.lissio\server-token`，Linux 为
 | `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / 默认启动 MCP |
 
 暴露到 loopback 之外需 `--bind 0.0.0.0` 并显式提供强令牌。`pnpm server` 等价于
-`cd src-tauri && cargo run -p backend-server`；CLI 形式
-`cargo run -p backend-cli -- serve` 走同一条装配路径。探活：
+`cd src-tauri && cargo run -p lissio-backend-server`；CLI 形式
+`cargo run -p lissio-backend-cli -- serve` 走同一条装配路径。探活：
 `curl http://127.0.0.1:8790/api/v1/health`。
 
 AI 对话、会话、外部 MCP、入站 MCP 与前端工具在 Desktop/Web 中功能一致。保存的

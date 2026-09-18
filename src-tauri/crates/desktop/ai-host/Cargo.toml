@@ -1,9 +1,13 @@
 [package]
-name = "ai-host"
+name = "lissio-ai-host"
 description = "Exit-independent Lissio AI, MCP, native-tool, and secret-store host"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "ai_host"
 
 [lints]
 workspace = true

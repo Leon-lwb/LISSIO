@@ -1,9 +1,13 @@
 [package]
-name = "schema"
+name = "lissio-schema"
 description = "Lissio Schema 协议引擎 — 自定义帧 schema 流式解析/编码"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "schema"
 
 [lints]
 workspace = true

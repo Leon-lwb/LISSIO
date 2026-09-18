@@ -1,8 +1,13 @@
 [package]
-name = "waveform"
+name = "lissio-waveform"
+description = "多通道时间序列数据缓冲区 — 多通道 f32 + 时间戳 + 派生通道"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "waveform"
 
 [lints]
 workspace = true

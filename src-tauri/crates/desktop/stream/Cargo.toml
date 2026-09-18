@@ -1,9 +1,13 @@
 [package]
-name = "stream"
+name = "lissio-stream"
 description = "Lissio 统一分片流框架 (StreamSource) + 自适应推送速率控制器 (AdaptiveRate + adaptive_stream_loop)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "stream"
 
 [lints]
 workspace = true

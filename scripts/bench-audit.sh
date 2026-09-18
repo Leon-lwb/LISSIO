@@ -47,19 +47,19 @@ cd "$audit_root/src-tauri"
 # 否则 cargo 会以 "package ID specification did not match" 直接失败。
 # 键是包名，值是该包下要跑的 bench 目标。
 audit_benches=(
-  'pipeline ingest_bench'
-  'pipeline eval_bench'
-  'waveform waveform_pyramid_bench'
-  'recording storage'
-  'app waveform_wire'
-  'gpu envelope_bench'
-  'buffer_graph node_graph_bench'
-  'graph compile_bench'
-  'eval eval_run_bench'
-  'trigger trigger_bench'
-  'frame-decoder frame_decoder_bench'
-  'graph_ops graph_ops_bench'
-  'modbus-adapter modbus_adapter'
+  'lissio-pipeline ingest_bench'
+  'lissio-pipeline eval_bench'
+  'lissio-waveform waveform_pyramid_bench'
+  'lissio-recording storage'
+  'lissio-app waveform_wire'
+  'lissio-gpu envelope_bench'
+  'lissio-buffer-graph node_graph_bench'
+  'lissio-graph compile_bench'
+  'lissio-eval eval_run_bench'
+  'lissio-trigger trigger_bench'
+  'lissio-frame-decoder frame_decoder_bench'
+  'lissio-graph-ops graph_ops_bench'
+  'lissio-modbus-adapter modbus_adapter'
 )
 
 audit_packages=""
@@ -93,7 +93,7 @@ for audit_spec in "${audit_benches[@]}"; do
   read -r audit_package audit_bench <<< "$audit_spec"
   case "$audit_spec" in
     # storage 是自定义 main 的 JSON 产物，不接受 Criterion 参数。
-    'recording storage')
+    'lissio-recording storage')
       audit_run "$audit_bench" env VOFA_STORAGE_BENCH_BYTES="$audit_storage_bytes" \
         cargo bench -p "$audit_package" --bench "$audit_bench"
       ;;
@@ -106,20 +106,20 @@ done
 # 长跑：墙钟限速摄入 + 异步图求值 + 30 Hz 查询与订阅并发，断言 >10 MB/s 与零丢弃。
 for audit_graph in raw math; do
   audit_run "soak-$audit_graph" env VOFA_SOAK_SECONDS="$audit_seconds" VOFA_SOAK_GRAPH="$audit_graph" VOFA_SOAK_GENERATOR=1 \
-    cargo bench -p pipeline --bench pipeline_soak
+    cargo bench -p lissio-pipeline --bench pipeline_soak
 done
 audit_run soak-synthetic env VOFA_SOAK_SECONDS="$audit_seconds" VOFA_SOAK_GRAPH=math VOFA_SOAK_GENERATOR=0 \
-  cargo bench -p pipeline --bench pipeline_soak
+  cargo bench -p lissio-pipeline --bench pipeline_soak
 audit_run soak-stall-100ms env VOFA_SOAK_SECONDS=30 VOFA_SOAK_GRAPH=math VOFA_SOAK_GENERATOR=1 VOFA_SOAK_EVAL_STALL_MS=100 \
-  cargo bench -p pipeline --bench pipeline_soak
+  cargo bench -p lissio-pipeline --bench pipeline_soak
 audit_run soak-ingest-stall-500ms env VOFA_SOAK_SECONDS=30 VOFA_SOAK_GRAPH=math VOFA_SOAK_GENERATOR=1 VOFA_SOAK_INGEST_STALL_MS=500 \
-  cargo bench -p pipeline --bench pipeline_soak
+  cargo bench -p lissio-pipeline --bench pipeline_soak
 
 # Modbus 采集负载（进程内模拟服务 + 纯 CPU 轮询扫描）。扫描矩阵有 36 个场景，
 # 只在 full 模式跑，否则 quick 回归会慢到没人愿意执行。
 if [[ "$audit_mode" == 'full' ]]; then
   audit_run modbus-load env LISSIO_MODBUS_BENCH_SECONDS=2 \
-    cargo bench -p modbus-adapter --bench modbus_load
+    cargo bench -p lissio-modbus-adapter --bench modbus_load
 fi
 
 cd "$audit_root"

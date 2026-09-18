@@ -17,6 +17,7 @@ const rows = packages.map((pkg) => {
     .sort();
   return {
     crate: pkg.name,
+    lib: pkg.targets.find((target) => target.kind.includes('lib'))?.name ?? '-',
     domain: architecture.domain ?? '-',
     layer: Number.isInteger(architecture.layer) ? `L${architecture.layer}` : '-',
     responsibility: architecture.responsibility ?? '-',
@@ -40,6 +41,7 @@ if (format === 'json') {
 } else {
   console.table(rows.map((row) => ({
     crate: row.crate,
+    lib: row.lib,
     domain: row.domain,
     layer: row.layer,
     responsibility: row.responsibility,

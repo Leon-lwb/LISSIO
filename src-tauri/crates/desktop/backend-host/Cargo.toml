@@ -1,9 +1,13 @@
 [package]
-name = "backend-host"
+name = "lissio-backend-host"
 description = "Lissio 独立后端装配与生命周期 — AI、传输适配器、点位投影、工作区恢复与收尾"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "backend_host"
 
 [lints]
 workspace = true

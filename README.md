@@ -377,8 +377,8 @@ explicitly.
 | `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / MCP enabled |
 
 Exposing beyond loopback requires `--bind 0.0.0.0` plus a strong `LISSIO_TOKEN`.
-`pnpm server` is equivalent to `cd src-tauri && cargo run -p backend-server`; the CLI
-form `cargo run -p backend-cli -- serve` shares the same code path. Health check:
+`pnpm server` is equivalent to `cd src-tauri && cargo run -p lissio-backend-server`; the CLI
+form `cargo run -p lissio-backend-cli -- serve` shares the same code path. Health check:
 `curl http://127.0.0.1:8790/api/v1/health`.
 
 AI, session, external MCP, inbound MCP, and frontend-tool commands have the same feature

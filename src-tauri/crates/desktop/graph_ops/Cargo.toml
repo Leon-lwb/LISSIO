@@ -1,9 +1,13 @@
 [package]
-name = "graph_ops"
+name = "lissio-graph-ops"
 description = "Lissio 图提交核心 — tab 图编译提交/拓扑 op/派生数据/编译队列 (无 Tauri IPC, L3 应用核心)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "graph_ops"
 
 [lints]
 workspace = true

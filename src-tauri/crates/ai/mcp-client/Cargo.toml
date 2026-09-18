@@ -1,9 +1,13 @@
 [package]
-name = "mcp-client"
+name = "lissio-mcp-client"
 description = "Lissio MCP 客户端 — 连接外部 MCP server (stdio/streamable-http), 聚合工具供 AI 对话调用"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "mcp_client"
 
 [lints]
 workspace = true

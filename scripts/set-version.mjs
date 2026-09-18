@@ -6,7 +6,8 @@
  *   1. package.json                  → "version" (完整 semver)
  *   2. src-tauri/tauri.conf.json     → "version" (MSI 不支持 prerelease,写剥离后的 base 版本)
  *   3. src-tauri/Cargo.toml          → [package] 与 [workspace.package] 的 version (同 2,写 base 版本)
- *      (所有 crates 以 version.workspace = true 继承,自动跟随)
+ *      (所有 crates 以 version.workspace = true 继承,自动跟随;
+ *       [workspace.dependencies] 内部条目的 version 同步改写,crates.io 发布要求显式版本)
  *   4. src-tauri/Cargo.lock          → 通过 cargo metadata 刷新 workspace 成员版本记录
  *
  * 用法:
@@ -78,6 +79,19 @@ function updateCargoToml(target) {
       if (current === target) return line;
       touched += 1;
       return line.replace(/^version\s*=\s*"[^"]+"/, `version = "${target}"`);
+    }
+    // Workspace-internal dependency entries carry an explicit `version` (required
+    // for crates.io publishing); keep them locked to the workspace version.
+    if (
+      section === "workspace.dependencies" &&
+      /path\s*=\s*"crates\//.test(line) &&
+      /version\s*=\s*"/.test(line)
+    ) {
+      const current = line.match(/version\s*=\s*"([^"]+)"/)[1];
+      if (old === null) old = current;
+      if (current === target) return line;
+      touched += 1;
+      return line.replace(/version\s*=\s*"[^"]+"/, `version = "${target}"`);
     }
     return line;
   });

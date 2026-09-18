@@ -1,9 +1,13 @@
 [package]
-name = "pipeline"
+name = "lissio-pipeline"
 description = "Lissio 数据平面 (字节路由 + 数值平面评估 + 每源数据缓冲 + 解析引擎状态) — 两平面节点图重构核心"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "pipeline"
 
 [lints]
 workspace = true

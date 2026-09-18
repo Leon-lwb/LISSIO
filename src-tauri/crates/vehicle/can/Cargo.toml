@@ -1,9 +1,13 @@
 [package]
-name = "can"
+name = "lissio-can"
 description = "CAN 数据类型 — 帧/方向/波特率/缓冲/负载统计"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "can"
 
 [lints]
 workspace = true

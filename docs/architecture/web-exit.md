@@ -421,7 +421,7 @@ Web 出口的自动验证分两层:
 
 ```sh
 # 终端 1: 起服务 (静态站点内嵌则浏览器直开 http://127.0.0.1:8790)
-cargo run -p backend-server            # 或 backend-cli serve
+cargo run -p lissio-backend-server      # 或 lissio-backend-cli serve（二进制名 backend-cli）
 
 # 终端 2: 探活 + 能力清单 + 一条命令
 curl -s http://127.0.0.1:8790/api/v1/health
@@ -431,7 +431,7 @@ curl -s -H "Authorization: Bearer $TOKEN" -H 'content-type: application/json' \
   -d '{"id":1,"cmd":"get_pipeline_config","args":{}}' http://127.0.0.1:8790/api/v1/rpc
 
 # 等价的 CLI 逃生口 (与上面同一条派发路径)
-cargo run -p backend-cli -- rpc get_pipeline_config
+cargo run -p lissio-backend-cli -- rpc get_pipeline_config
 ```
 
 ## 8. 落地阶段

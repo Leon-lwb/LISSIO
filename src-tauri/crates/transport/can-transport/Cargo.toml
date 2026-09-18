@@ -1,9 +1,13 @@
 [package]
-name = "can-transport"
+name = "lissio-can-transport"
 description = "Lissio CAN 桥接传输 — Slcan (ASCII over serial) + CandleLight (原生 USB bulk)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "can_transport"
 
 [lints]
 workspace = true

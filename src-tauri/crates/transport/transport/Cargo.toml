@@ -1,9 +1,13 @@
 [package]
-name = "transport"
+name = "lissio-transport"
 description = "Lissio 字节设备适配层 — 后端扩展契约与确定性字节模拟"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "transport"
 
 [lints]
 workspace = true

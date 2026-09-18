@@ -1,9 +1,13 @@
 [package]
-name = "chat-session"
+name = "lissio-chat-session"
 description = "Lissio AI 会话持久化 — 多会话存储 / 视图条目 DTO / LLM 历史派生"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "chat_session"
 
 [lints]
 workspace = true

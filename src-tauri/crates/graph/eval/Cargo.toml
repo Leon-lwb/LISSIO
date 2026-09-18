@@ -1,9 +1,13 @@
 [package]
-name = "eval"
+name = "lissio-eval"
 description = "节点图槽位运行时 — CompiledEval 逐帧评估 (快路径零字符串哈希) + ValuesMap 快照物化"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "eval"
 
 [lints]
 workspace = true

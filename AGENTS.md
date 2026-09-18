@@ -28,7 +28,11 @@ root and owns Tauri IPC modules under `src-tauri/src/commands/`.
   cross-crate glob re-export, repeated DTO, or public mutable lock.
 - `graph-testkit` is dev-dependency only.
 - Names describe responsibility. Do not use `lissio-*`, `vofa-*`, layer
-  prefixes, or standalone `core`, `runtime`, `types`, or `common`.
+  prefixes, or standalone `core`, `runtime`, `types`, or `common` for crates,
+  lib targets, or directories. Only the crates.io package name is namespaced:
+  it must be `lissio-` + the directory name (underscores as hyphens), remapped
+  via `package =` in `[workspace.dependencies]` while dep keys keep the short
+  name.
 - A new crate requires metadata, documentation, architecture tests, and a root
   workspace dependency entry inherited by consumers.
 

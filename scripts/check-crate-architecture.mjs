@@ -21,7 +21,10 @@ const allowedDomains = {
   desktop: [...domains],
 };
 const adapterDependencies = new Set(['tauri', 'keyring', 'genai', 'rmcp', 'serialport', 'nusb', 'wgpu']);
-const bannedNames = /^(?:core|runtime|types|common)$|^(?:lissio|vofa)-/;
+// Lib/bin target names carry the responsibility naming; the `lissio-` prefix is
+// reserved for the crates.io package name (registry namespace) and must never
+// appear on a target name.
+const bannedTargetNames = /^(?:core|runtime|types|common)$|^(?:lissio|vofa)-/;
 
 for (const pkg of packages) {
   const manifest = path.resolve(pkg.manifest_path);
@@ -34,9 +37,13 @@ for (const pkg of packages) {
     errors.push(`${pkg.name}: incomplete [package.metadata.lissio]`);
     continue;
   }
+  const crateDir = relative[1];
   if (relative[0] !== architecture.domain) errors.push(`${pkg.name}: directory domain and metadata domain differ`);
-  if (relative[1] !== pkg.name) errors.push(`${pkg.name}: directory must match package name`);
-  if (bannedNames.test(pkg.name)) errors.push(`${pkg.name}: forbidden ambiguous or prefixed crate name`);
+  const libTarget = pkg.targets.find((target) => target.kind.includes('lib'));
+  if (libTarget?.name !== crateDir.replace(/-/g, '_')) errors.push(`${pkg.name}: lib target must match directory name (${crateDir.replace(/-/g, '_')})`);
+  const expectedPackageName = `lissio-${crateDir.replace(/_/g, '-')}`;
+  if (pkg.name !== expectedPackageName) errors.push(`${pkg.name}: package name must be ${expectedPackageName}`);
+  if (libTarget && bannedTargetNames.test(libTarget.name)) errors.push(`${pkg.name}: forbidden ambiguous or prefixed crate name`);
   for (const dependency of pkg.dependencies) {
     const target = byName.get(dependency.name);
     if (target && target.id !== pkg.id) {
@@ -50,7 +57,7 @@ for (const pkg of packages) {
           errors.push(`${pkg.name}: ${architecture.domain} cannot depend on ${target.name} (${targetArchitecture.domain})`);
         }
       }
-      if (target.name === 'graph-testkit' && dependency.kind !== 'dev') errors.push(`${pkg.name}: graph-testkit must be a dev-dependency`);
+      if (target.name === 'lissio-graph-testkit' && dependency.kind !== 'dev') errors.push(`${pkg.name}: graph-testkit must be a dev-dependency`);
     }
     if (architecture.layer <= 3 && adapterDependencies.has(dependency.name)) errors.push(`${pkg.name}: L0-L3 cannot depend on adapter ${dependency.name}`);
     if (dependency.name.startsWith('tauri') && architecture.domain !== 'desktop') errors.push(`${pkg.name}: Tauri is restricted to the desktop domain`);

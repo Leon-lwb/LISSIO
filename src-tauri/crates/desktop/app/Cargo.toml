@@ -1,9 +1,13 @@
 [package]
-name = "app"
+name = "lissio-app"
 description = "Lissio 应用核心 (L3): 全局状态容器 + 显示订阅服务 + 传输/协议操作 + 工作区持久化"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "app"
 
 [lints]
 workspace = true

@@ -1,9 +1,13 @@
 [package]
-name = "mcp-server"
+name = "lissio-mcp-server"
 description = "Lissio MCP 服务器适配器 — 把 control-api 能力核心暴露为 MCP 工具 (streamable-http, 仅 127.0.0.1)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "mcp_server"
 
 [lints]
 workspace = true

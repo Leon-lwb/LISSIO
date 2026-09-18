@@ -1,9 +1,13 @@
 [package]
-name = "backend-cli"
+name = "lissio-backend-cli"
 description = "Lissio 无界面宿主 — 与 Tauri 组合根共用 backend-host 装配, 把 control-api 能力暴露为子命令与 serve 常驻 (含进程内 MCP server)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "backend_cli"
 
 [lints]
 workspace = true

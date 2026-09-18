@@ -1,9 +1,13 @@
 [package]
-name = "evaluator"
+name = "lissio-evaluator"
 description = "Lissio 频谱/Ifft 同步 (spectrum_sync) + 按源过滤订阅支持 (filtered_sources)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "evaluator"
 
 [lints]
 workspace = true

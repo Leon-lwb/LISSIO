@@ -1,9 +1,13 @@
 [package]
-name = "points"
+name = "lissio-points"
 description = "Rich typed industrial point values, quality, descriptors, events, and commands"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "points"
 
 [lints]
 workspace = true

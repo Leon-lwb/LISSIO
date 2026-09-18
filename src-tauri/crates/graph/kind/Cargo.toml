@@ -1,9 +1,13 @@
 [package]
-name = "kind"
+name = "lissio-kind"
 description = "Lissio 节点种类系统 — NodeKind + NodeDef + PortDomain + MathOp + DecoderBlockDef re-export"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "kind"
 
 [lints]
 workspace = true

@@ -1,9 +1,13 @@
 [package]
-name = "rpc-api"
+name = "lissio-rpc-api"
 description = "Lissio 出口无关的命令派发 — IPC 命令名 + JSON 参数映射到 control-api/app 能力 (Tauri IPC / HTTP-RPC / CLI rpc 共用)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "rpc_api"
 
 [lints]
 workspace = true

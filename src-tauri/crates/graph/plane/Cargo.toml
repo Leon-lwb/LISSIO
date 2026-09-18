@@ -1,9 +1,13 @@
 [package]
-name = "plane"
+name = "lissio-plane"
 description = "节点图编译中端 — 值平面/字节平面投影 (拓扑序 + 输入索引) 与字节平面产物 BytePlan"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "plane"
 
 [lints]
 workspace = true

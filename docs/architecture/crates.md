@@ -106,7 +106,12 @@ Create a crate only for an independently changing capability, an inversion
 port, a heavy optional adapter, or cross-crate test support. Otherwise add a
 private module to the capability owner. Names describe the responsibility;
 prefixes (`lissio-*`, `vofa-*`, layer names) and ambiguous standalone names
-(`core`, `runtime`, `types`, `common`) are forbidden.
+(`core`, `runtime`, `types`, `common`) are forbidden for crates, lib targets,
+and directories. Separately, the crates.io package name is a registry
+namespace: it must be `lissio-` + the directory name (underscores as hyphens,
+e.g. `buffer_graph` publishes as `lissio-buffer-graph`), remapped via
+`package =` in `[workspace.dependencies]`; dependency keys, `use` paths, and
+lib/bin target names keep the short responsibility name.
 
 ## Serial discovery and device presentation
 

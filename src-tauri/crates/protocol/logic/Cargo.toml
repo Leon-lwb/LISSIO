@@ -1,9 +1,13 @@
 [package]
-name = "logic"
+name = "lissio-logic"
 description = "逻辑分析仪数据类型 — 采样、事件、过滤、缓冲"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "logic"
 
 [lints]
 workspace = true

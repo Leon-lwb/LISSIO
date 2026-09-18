@@ -1,9 +1,13 @@
 [package]
-name = "chat"
+name = "lissio-chat"
 description = "Lissio AI 对话编排 — 多轮工具调用循环 / 流式事件分发 / 任务取消"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "chat"
 
 [lints]
 workspace = true

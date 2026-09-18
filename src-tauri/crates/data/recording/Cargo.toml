@@ -1,9 +1,13 @@
 [package]
-name = "recording"
+name = "lissio-recording"
 description = "Typed four-domain acquisition recording, recovery, and historical queries"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "recording"
 
 [lints]
 workspace = true

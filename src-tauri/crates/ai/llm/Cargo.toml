@@ -1,9 +1,13 @@
 [package]
-name = "llm"
+name = "lissio-llm"
 description = "Lissio AI 对话 LLM provider 聚合层 (genai 封装: 多 provider / 流式 / 工具调用)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "llm"
 
 [lints]
 workspace = true

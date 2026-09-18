@@ -1,9 +1,13 @@
 [package]
-name = "acquisition"
+name = "lissio-acquisition"
 description = "Typed industrial source capabilities, supervision, bounded lanes, stores, and contract helpers"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "acquisition"
 
 [lints]
 workspace = true

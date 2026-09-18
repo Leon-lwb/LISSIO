@@ -1,9 +1,13 @@
 [package]
-name = "frame-decoder"
+name = "lissio-frame-decoder"
 description = "Lissio 帧解码状态机 — 镜像前端 DecoderBlock 块列表, 字节流 → 帧解析 → 输出端口值"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "frame_decoder"
 
 [lints]
 workspace = true

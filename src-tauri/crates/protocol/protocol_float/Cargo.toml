@@ -1,9 +1,13 @@
 [package]
-name = "protocol_float"
+name = "lissio-protocol-float"
 description = "Lissio 浮点协议引擎 — JustFloat + FireWater"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "protocol_float"
 
 [lints]
 workspace = true

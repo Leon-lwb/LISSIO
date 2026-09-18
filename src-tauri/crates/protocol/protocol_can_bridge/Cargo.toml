@@ -1,9 +1,13 @@
 [package]
-name = "protocol_can_bridge"
+name = "lissio-protocol-can-bridge"
 description = "Lissio CAN 桥接协议引擎 — Slcan + CandleLight + RawData"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "protocol_can_bridge"
 
 [lints]
 workspace = true

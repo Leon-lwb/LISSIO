@@ -1,9 +1,13 @@
 [package]
-name = "backend-server"
+name = "lissio-backend-server"
 description = "Lissio Web 出口组合根 — HTTP-RPC 与 WebSocket 推送, 复用 backend-host 装配与 rpc-api 派发表"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "backend_server"
 
 [lints]
 workspace = true

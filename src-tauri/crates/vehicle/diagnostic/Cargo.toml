@@ -1,9 +1,13 @@
 [package]
-name = "diagnostic"
+name = "lissio-diagnostic"
 description = "诊断协议类型 — ISO-TP / UDS / OBD-II / J1939"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "diagnostic"
 
 [lints]
 workspace = true

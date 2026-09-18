@@ -1,9 +1,13 @@
 [package]
-name = "graph-testkit"
+name = "lissio-graph-testkit"
 description = "节点图测试构造器 — 节点/边/帧源工厂函数, 仅作 dev-dependency 使用"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "graph_testkit"
 
 [lints]
 workspace = true

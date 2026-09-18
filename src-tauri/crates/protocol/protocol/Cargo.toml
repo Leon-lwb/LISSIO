@@ -1,9 +1,13 @@
 [package]
-name = "protocol"
+name = "lissio-protocol"
 description = "Lissio 协议引擎核心 — ProtocolEngine trait + 输入/输出容器 + 解析/切分自由函数"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "protocol"
 
 [lints]
 workspace = true

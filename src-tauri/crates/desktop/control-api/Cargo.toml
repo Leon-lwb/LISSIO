@@ -1,9 +1,13 @@
 [package]
-name = "control-api"
+name = "lissio-control-api"
 description = "Lissio 后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制的工具实现与状态切片 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "control_api"
 
 [lints]
 workspace = true

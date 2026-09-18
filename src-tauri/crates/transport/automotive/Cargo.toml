@@ -1,8 +1,13 @@
 [package]
-name = "automotive"
+name = "lissio-automotive"
+description = "CAN 后端桥接 (Slcan / CandleLight → 统一 CanBackend)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "automotive"
 
 [lints]
 workspace = true
