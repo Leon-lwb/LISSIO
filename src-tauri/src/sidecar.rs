@@ -10,6 +10,15 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, State};
 
 const WEB_PROTOCOL: &str = "lissio.web.v2";
+const DESKTOP_CORS_ORIGINS: &[&str] = &[
+    // Vite development URLs. Keep both spellings because browsers preserve the host in Origin.
+    "http://localhost:1420",
+    "http://127.0.0.1:1420",
+    // Tauri's production custom-protocol origins differ by platform/webview.
+    "tauri://localhost",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+];
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -122,7 +131,8 @@ impl SidecarManager {
             .open(&log_path)
             .map_err(|error| format!("无法打开 sidecar 日志: {error}"))?;
         let stderr = stdout_log.try_clone().map_err(|error| error.to_string())?;
-        let mut child = Command::new(&binary)
+        let mut command = Command::new(&binary);
+        command
             .args([
                 "--bind",
                 "127.0.0.1",
@@ -137,7 +147,9 @@ impl SidecarManager {
             .env("LISSIO_TOKEN", &token)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::from(stderr))
+            .stderr(Stdio::from(stderr));
+        append_desktop_cors_args(&mut command);
+        let mut child = command
             .spawn()
             .map_err(|error| format!("无法启动 {}: {error}", binary.display()))?;
         let stdout = child
@@ -237,6 +249,12 @@ impl SidecarManager {
     }
 }
 
+fn append_desktop_cors_args(command: &mut Command) {
+    for origin in DESKTOP_CORS_ORIGINS {
+        command.arg("--cors-origin").arg(origin);
+    }
+}
+
 fn terminate_child(child: &mut Child) {
     let _ = child.kill();
     let _ = child.wait();
@@ -295,4 +313,27 @@ pub fn backend_sidecar_open_logs(
     app.opener()
         .reveal_item_in_dir(path)
         .map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sidecar_allows_vite_and_tauri_webview_origins() {
+        let mut command = Command::new("lissio-server");
+        append_desktop_cors_args(&mut command);
+        let args = command
+            .get_args()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+
+        for origin in DESKTOP_CORS_ORIGINS {
+            assert!(
+                args.windows(2)
+                    .any(|pair| pair == ["--cors-origin", *origin]),
+                "missing CORS origin {origin} in {args:?}"
+            );
+        }
+    }
 }

@@ -37,6 +37,8 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ConnectionState>('starting');
   const [detail, setDetail] = useState('正在查找后端服务…');
   const [logPath, setLogPath] = useState<string | null>(null);
+  const [showToken, setShowToken] = useState(false);
+  const [copyStatus, setCopyStatus] = useState('');
 
   const showWindow = useCallback(() => {
     if (!desktop) return;
@@ -52,6 +54,10 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       showWindow();
       return;
     }
+    // Keep the actual endpoint visible on the diagnostic page even when CORS, authentication,
+    // or protocol negotiation fails before configureBackend can install the transport.
+    setBase(normalized);
+    setToken(candidateToken);
     setState('checking');
     setDetail(`正在连接 ${normalized}…`);
     try {
@@ -167,6 +173,15 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
     }
   };
 
+  const copyConnection = async () => {
+    try {
+      await navigator.clipboard.writeText(`server=${base}\ntoken=${token}`);
+      setCopyStatus('连接信息已复制');
+    } catch {
+      setCopyStatus('无法访问剪贴板，请手动复制');
+    }
+  };
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
@@ -181,9 +196,15 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
         </label>
         <label className="block text-sm">
           访问令牌
-          <input type="password" autoComplete="off"
-            className="mt-1 w-full rounded border border-border bg-background px-3 py-2"
-            value={token} onChange={(event) => setToken(event.target.value)} />
+          <span className="mt-1 flex gap-2">
+            <input type={showToken ? 'text' : 'password'} autoComplete="off"
+              className="min-w-0 flex-1 rounded border border-border bg-background px-3 py-2"
+              value={token} onChange={(event) => setToken(event.target.value)} />
+            <button type="button" className="rounded border border-border px-3 py-2"
+              onClick={() => setShowToken((visible) => !visible)}>
+              {showToken ? '隐藏' : '显示'}
+            </button>
+          </span>
         </label>
         <div className="flex flex-wrap gap-2">
           <button className="rounded bg-accent px-4 py-2" onClick={() => void connect(base, token)}>
@@ -200,7 +221,14 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
               打开日志目录
             </button>
           )}
+          {desktop && base && token && (
+            <button type="button" className="rounded border border-border px-4 py-2"
+              onClick={() => void copyConnection()}>
+              复制连接信息
+            </button>
+          )}
         </div>
+        {copyStatus && <p className="text-xs opacity-75">{copyStatus}</p>}
         {logPath && <p className="break-all text-xs opacity-60">日志：{logPath}</p>}
         <p className="text-xs opacity-60">状态：{state}</p>
       </section>
