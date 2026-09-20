@@ -1,13 +1,14 @@
 //! 设备节点读任务 — 每个已连接字节设备节点一个
 //!
-//! 循环: subscribe 收字节 → 合批 (try_recv 排空, 上限取配置快照) → raw 收集 → raw 收集 →
-//! 沿全局 BytePlan 路由 (协议解析/帧解码喂入/回注发送) → 统计节流 emit。
+//! 循环: subscribe 收字节 → 合批 (try_recv 排空, 上限取配置快照, 不跨方向) →
+//! raw 收集 (方向取信封: 设备接收 Rx / 发送回环 Tx) → 沿全局 BytePlan 路由
+//! (协议解析/帧解码喂入/回注发送) → 统计节流 emit (rx 统计仅记接收)。
 //! 广播通道关闭 (连接断开) 时退出并 emit Disconnected。
 
 use bus::{AdaptiveController, RuntimeLimits};
 use data_model::{ConnectionState, TransportStats};
 use events::{EventSinkHandle, emit_transport_rx, emit_transport_state};
-use flow::{Boundary, Framing};
+use flow::{Boundary, Direction, Framing};
 use kind::NodeKind;
 use raw_data::RawDataDirection;
 use std::collections::{HashSet, VecDeque};
@@ -197,12 +198,17 @@ pub(super) async fn read_task(
                 first.payload.boundary,
                 Boundary::Complete | Boundary::Continue | Boundary::End
             );
+        // 回环发送与设备接收方向不同, 合并成一批会丢失方向语义 (raw 收集/统计
+        // 按批方向归属), 因此合批只在同方向消息间进行
+        let batch_direction = first.direction;
+        let is_receive = batch_direction == Direction::Receive;
         let mut data = first.payload.bytes.to_vec();
         let mut coalesced = 1usize;
         while can_coalesce && coalesced < 1024 && data.len() < coalesce_cap {
             match rx.try_recv() {
                 Ok(next)
                     if next.gap_before.is_none()
+                        && next.direction == batch_direction
                         && next.payload.framing == Framing::Stream
                         && matches!(
                             next.payload.boundary,
@@ -230,10 +236,15 @@ pub(super) async fn read_task(
             .rx_bytes
             .fetch_add(data.len() as u64, Ordering::Relaxed);
 
-        // 按源原始字节收集 (不随解析积压丢失 — 收集在路由之前完成)
+        // 按源原始字节收集 (不随解析积压丢失 — 收集在路由之前完成)。
+        // 方向取信封: 设备接收为 Rx, 本地发送回环为 Tx — 发送只在此收集一次
         plane.raw_collector_for(&node_id).lock().push_chunk(
             data_model::now_us(),
-            RawDataDirection::Rx,
+            if is_receive {
+                RawDataDirection::Rx
+            } else {
+                RawDataDirection::Tx
+            },
             &data,
         );
 
@@ -305,17 +316,20 @@ pub(super) async fn read_task(
             frame_dispatch::refresh_snapshot(&plane);
         }
 
-        // 统计 (record_rx 由消费侧上报, 经轻量句柄免全局锁)
-        if let Some(live) = &live {
-            live.record_rx(data.len(), summary.frames);
-        }
+        // 统计 (record_rx 由消费侧上报, 经轻量句柄免全局锁;
+        // 发送回环不算接收, 避免 rx 统计被自己的发送虚增)
         if summary.frames > 0 {
             #[allow(clippy::cast_precision_loss)] // EMA 统计近似, 精度损失无影响
             let batch_avg = data.len() as f64 / summary.frames as f64;
             avg_bytes_per_frame = avg_bytes_per_frame.mul_add(0.9, batch_avg * 0.1);
         }
-        acc_bytes += data.len() as u64;
-        acc_frames += summary.frames;
+        if is_receive {
+            if let Some(live) = &live {
+                live.record_rx(data.len(), summary.frames);
+            }
+            acc_bytes += data.len() as u64;
+            acc_frames += summary.frames;
+        }
         plane
             .metrics
             .frames_ingested

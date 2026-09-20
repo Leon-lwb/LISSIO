@@ -1,3 +1,4 @@
+use acquisition::ByteMessage;
 use data_model::{INGEST_CHANNEL_CAPACITY, PortInfo, Result, SerialConfig};
 use error::TransportError;
 use serialport::{DataBits, FlowControl, Parity, StopBits};
@@ -49,7 +50,7 @@ pub fn spawn(
     config: SerialConfig,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     spawn_with_lifecycle(
@@ -73,7 +74,7 @@ pub fn spawn_with_lifecycle(
     lifecycle: Arc<dyn SerialLifecycle>,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     let mut port = serialport::new(&settings.port_name, settings.baud_rate)
@@ -121,7 +122,7 @@ pub fn spawn_with_lifecycle(
             match port.read(&mut buf) {
                 Ok(0) => break,
                 Ok(n) => {
-                    let _ = data_tx_read.send(buf[..n].to_vec());
+                    let _ = data_tx_read.send(ByteMessage::from_device(buf[..n].to_vec()));
                 }
                 Err(ref e) if e.kind() == std::io::ErrorKind::TimedOut => {}
                 Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => {}

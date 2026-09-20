@@ -1,3 +1,4 @@
+use acquisition::ByteMessage;
 use data_model::{INGEST_CHANNEL_CAPACITY, Result, UdpConfig};
 use error::TransportError;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ pub async fn spawn(
     config: UdpConfig,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     let local_addr = format!("{}:{}", config.local_addr, config.local_port);
@@ -48,7 +49,7 @@ pub async fn spawn(
             tokio::select! {
                 result = socket_read.recv(&mut buf[..]) => {
                     match result {
-                        Ok(n) => { let _ = data_tx_read.send(buf[..n].to_vec()); }
+                        Ok(n) => { let _ = data_tx_read.send(ByteMessage::from_device(buf[..n].to_vec())); }
                         Err(e) => {
                             log::error!("UDP 接收错误: {e}");
                             break;

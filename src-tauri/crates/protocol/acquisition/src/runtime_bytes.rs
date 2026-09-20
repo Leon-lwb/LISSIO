@@ -47,7 +47,7 @@ impl AcquisitionRuntime {
             })
     }
 
-    pub fn subscribe_bytes(&self, id: &str) -> Option<broadcast::Receiver<Vec<u8>>> {
+    pub fn subscribe_bytes(&self, id: &str) -> Option<broadcast::Receiver<crate::ByteMessage>> {
         Some(self.byte_entry(id).ok()?.session.byte_stream()?.subscribe())
     }
 

@@ -34,14 +34,18 @@ export class TerminalBuffer {
     const baseOffset = buffer.writtenTotal - buffer.storedBytes;
     const start = Math.max(this.consumedOffset, baseOffset);
     if (buffer.writtenTotal > start) {
-      const chunks = buffer.getChunkEntries();
-      for (const chunk of chunks) {
-        const from = Math.max(chunk.offset, start);
-        const to = Math.min(chunk.offset + chunk.length, buffer.writtenTotal);
-        if (to <= from) continue;
-        const bytes = buffer.readBytesAt(from, to);
-        this.parser.feed(bytes, Math.floor(chunk.timestamp_us / 1000), chunk.direction);
-      }
+    const chunks = buffer.getChunkEntries();
+    for (const chunk of chunks) {
+      const from = Math.max(chunk.offset, start);
+      const to = Math.min(chunk.offset + chunk.length, buffer.writtenTotal);
+      if (to <= from) continue;
+      // 终端只渲染设备流: tx 分片 (本地发送回环) 跳过 — 已发内容由设备回显
+      // 呈现; 设备不回显时用"本地回显" (pushLocal)。否则自回显设备 (如登录
+      // shell) 每条命令会显示两遍
+      if (chunk.direction === 'tx') continue;
+      const bytes = buffer.readBytesAt(from, to);
+      this.parser.feed(bytes, Math.floor(chunk.timestamp_us / 1000), chunk.direction);
+    }
       this.consumedOffset = buffer.writtenTotal;
     }
     // ED2/RIS 清屏: 解析器已清自己的当前行, 这里同步清已提交行

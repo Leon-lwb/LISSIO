@@ -3989,6 +3989,7 @@ dependencies = [
 name = "lissio-pipeline"
 version = "0.6.1"
 dependencies = [
+ "async-trait",
  "criterion",
  "lissio-acquisition",
  "lissio-app",

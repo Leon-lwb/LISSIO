@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc, watch};
 
-use acquisition::{ConnectionControl, TransportBackend, TransportConnection};
+use acquisition::{ByteMessage, ConnectionControl, TransportBackend, TransportConnection};
 use async_trait::async_trait;
 
 /// TestData 每条广播消息覆盖的目标采样时长。数据平面使用同一换算规则把
@@ -118,7 +118,7 @@ pub fn spawn(
     link: TestDataLink,
 ) -> data_model::Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
     watch::Sender<TestDataRuntime>,
 )> {
@@ -174,7 +174,7 @@ pub fn spawn(
                         sample_time_sec += sample_dt;
                     }
 
-                    let _ = data_tx_gen.send(data);
+                    let _ = data_tx_gen.send(ByteMessage::from_device(data));
                 }
                 changed = runtime_rx.changed() => {
                     if changed.is_err() { break; }

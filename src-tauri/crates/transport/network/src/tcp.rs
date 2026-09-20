@@ -1,3 +1,4 @@
+use acquisition::ByteMessage;
 use data_model::{INGEST_CHANNEL_CAPACITY, Result, TcpClientConfig, TcpServerConfig};
 use error::TransportError;
 use std::sync::Arc;
@@ -11,7 +12,7 @@ pub async fn spawn_client(
     config: TcpClientConfig,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     let addr = format!("{}:{}", config.host, config.port);
@@ -40,7 +41,7 @@ pub async fn spawn_client(
                 result = read_half.read(&mut buf[..]) => {
                     match result {
                         Ok(0) => break,
-                        Ok(n) => { let _ = data_tx_read.send(buf[..n].to_vec()); }
+                        Ok(n) => { let _ = data_tx_read.send(ByteMessage::from_device(buf[..n].to_vec())); }
                         Err(e) => {
                             log::error!("TCP 接收错误: {e}");
                             break;
@@ -88,7 +89,7 @@ pub async fn spawn_server(
     config: TcpServerConfig,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     let addr = format!("{}:{}", config.listen_addr, config.listen_port);
@@ -142,7 +143,7 @@ pub async fn spawn_server(
                     result = read_half.read(&mut buf[..]) => {
                         match result {
                             Ok(0) => break,
-                            Ok(n) => { let _ = data_tx_read.send(buf[..n].to_vec()); }
+                            Ok(n) => { let _ = data_tx_read.send(ByteMessage::from_device(buf[..n].to_vec())); }
                             Err(e) => {
                                 log::error!("TCP 服务端接收错误: {e}");
                                 break;

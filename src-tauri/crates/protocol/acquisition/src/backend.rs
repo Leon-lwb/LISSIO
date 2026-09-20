@@ -31,17 +31,45 @@ pub trait ConnectionControl: Send + Sync {
     }
 }
 
+/// 广播通道上的单条字节消息 — 携带方向, 使发送回环与设备接收可区分
+///
+/// 读任务按它决定 raw 收集方向与 rx 统计归属; 回环字节 (Transmit) 仍参与
+/// transport→transport 路由, 但不再被当作设备接收重复收集。
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ByteMessage {
+    pub bytes: Vec<u8>,
+    pub direction: Direction,
+}
+
+impl ByteMessage {
+    /// 设备/网络实际收到的字节 (后端读任务发布)
+    pub const fn from_device(bytes: Vec<u8>) -> Self {
+        Self {
+            bytes,
+            direction: Direction::Receive,
+        }
+    }
+
+    /// 本地写入的回环字节 (`TransportHandle::send` 发布)
+    pub const fn loopback(bytes: Vec<u8>) -> Self {
+        Self {
+            bytes,
+            direction: Direction::Transmit,
+        }
+    }
+}
+
 /// A live, byte-oriented connection produced by every backend.
 pub struct TransportConnection {
     pub write_tx: mpsc::Sender<Vec<u8>>,
-    pub data_tx: broadcast::Sender<Vec<u8>>,
+    pub data_tx: broadcast::Sender<ByteMessage>,
     pub control: Arc<dyn ConnectionControl>,
 }
 
 impl TransportConnection {
     pub fn new(
         write_tx: mpsc::Sender<Vec<u8>>,
-        data_tx: broadcast::Sender<Vec<u8>>,
+        data_tx: broadcast::Sender<ByteMessage>,
         control: Arc<dyn ConnectionControl>,
     ) -> Self {
         Self {
@@ -54,7 +82,7 @@ impl TransportConnection {
     /// Adapt the common cancellation-flag runtime used by byte transports.
     pub fn from_cancel_flag(
         write_tx: mpsc::Sender<Vec<u8>>,
-        data_tx: broadcast::Sender<Vec<u8>>,
+        data_tx: broadcast::Sender<ByteMessage>,
         cancel: Arc<AtomicBool>,
     ) -> Self {
         Self::new(write_tx, data_tx, Arc::new(CancelFlag(cancel)))
@@ -70,7 +98,7 @@ pub struct LegacyFlowReceiver {
     framing: Framing,
     next_sequence: u64,
     pending_gap: Option<FlowGap>,
-    rx: broadcast::Receiver<Vec<u8>>,
+    rx: broadcast::Receiver<ByteMessage>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -89,7 +117,7 @@ impl LegacyFlowReceiver {
         source_id: SourceId,
         connection_epoch: u64,
         framing: Framing,
-        rx: broadcast::Receiver<Vec<u8>>,
+        rx: broadcast::Receiver<ByteMessage>,
     ) -> Self {
         Self {
             source_id,
@@ -104,7 +132,7 @@ impl LegacyFlowReceiver {
     pub async fn recv(&mut self) -> std::result::Result<FlowEnvelope<BytesChunk>, FlowRecvError> {
         loop {
             match self.rx.recv().await {
-                Ok(bytes) => return Ok(self.wrap(bytes)),
+                Ok(message) => return Ok(self.wrap(message)),
                 Err(broadcast::error::RecvError::Lagged(count)) => self.note_lag(count),
                 Err(broadcast::error::RecvError::Closed) => return Err(FlowRecvError::Closed),
             }
@@ -114,7 +142,7 @@ impl LegacyFlowReceiver {
     pub fn try_recv(&mut self) -> std::result::Result<FlowEnvelope<BytesChunk>, FlowTryRecvError> {
         loop {
             match self.rx.try_recv() {
-                Ok(bytes) => return Ok(self.wrap(bytes)),
+                Ok(message) => return Ok(self.wrap(message)),
                 Err(broadcast::error::TryRecvError::Lagged(count)) => self.note_lag(count),
                 Err(broadcast::error::TryRecvError::Empty) => return Err(FlowTryRecvError::Empty),
                 Err(broadcast::error::TryRecvError::Closed) => {
@@ -145,7 +173,7 @@ impl LegacyFlowReceiver {
         });
     }
 
-    fn wrap(&mut self, bytes: Vec<u8>) -> FlowEnvelope<BytesChunk> {
+    fn wrap(&mut self, message: ByteMessage) -> FlowEnvelope<BytesChunk> {
         let sequence = self.next_sequence;
         self.next_sequence = self.next_sequence.saturating_add(1);
         FlowEnvelope {
@@ -154,10 +182,10 @@ impl LegacyFlowReceiver {
             first_sequence: sequence,
             last_sequence: sequence,
             observed_time_unix_ns: now_unix_ns(),
-            direction: Direction::Receive,
+            direction: message.direction,
             gap_before: self.pending_gap.take(),
             payload: BytesChunk {
-                bytes: bytes.into(),
+                bytes: message.bytes.into(),
                 framing: self.framing,
                 boundary: Boundary::Complete,
             },
@@ -214,9 +242,9 @@ mod flow_tests {
         let (tx, rx) = broadcast::channel(2);
         let mut flow =
             LegacyFlowReceiver::new(SourceId::new("udp:test").unwrap(), 4, Framing::Datagram, rx);
-        tx.send(vec![0]).unwrap();
-        tx.send(vec![1]).unwrap();
-        tx.send(vec![2]).unwrap();
+        tx.send(ByteMessage::from_device(vec![0])).unwrap();
+        tx.send(ByteMessage::from_device(vec![1])).unwrap();
+        tx.send(ByteMessage::from_device(vec![2])).unwrap();
 
         let envelope = flow.recv().await.unwrap();
         assert_eq!(envelope.connection_epoch, 4);
@@ -228,5 +256,21 @@ mod flow_tests {
             (0, 0)
         );
         assert_eq!((gap.lost_units, gap.unit), (Some(1), LostUnit::Messages));
+    }
+
+    #[tokio::test]
+    async fn receiver_maps_message_direction_into_envelope() {
+        let (tx, rx) = broadcast::channel(4);
+        let mut flow = LegacyFlowReceiver::new(
+            SourceId::new("serial:test").unwrap(),
+            1,
+            Framing::Stream,
+            rx,
+        );
+        tx.send(ByteMessage::from_device(vec![1])).unwrap();
+        tx.send(ByteMessage::loopback(vec![2])).unwrap();
+
+        assert_eq!(flow.recv().await.unwrap().direction, Direction::Receive);
+        assert_eq!(flow.recv().await.unwrap().direction, Direction::Transmit);
     }
 }

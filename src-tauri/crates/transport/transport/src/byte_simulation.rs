@@ -1,7 +1,7 @@
 use acquisition::handle::TransportHandle;
 use acquisition::{
-    AcquisitionError, AcquisitionResult, AcquisitionRunState, ConnectionControl, DriverContext,
-    SessionCapabilities, SourceSession, TransportConnection,
+    AcquisitionError, AcquisitionResult, AcquisitionRunState, ByteMessage, ConnectionControl,
+    DriverContext, SessionCapabilities, SourceSession, TransportConnection,
 };
 use async_trait::async_trait;
 use data_model::device::SimulationConfig;
@@ -107,7 +107,7 @@ pub fn open(
                         index = index.saturating_add(1);
                     }
                     if context.execution.epoch() == epoch && context.execution.state() == AcquisitionRunState::Running {
-                        let _ = data.send(bytes);
+                        let _ = data.send(ByteMessage::from_device(bytes));
                     }
                 }
             }

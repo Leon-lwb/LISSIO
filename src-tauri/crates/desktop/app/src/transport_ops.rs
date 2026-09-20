@@ -108,14 +108,11 @@ impl AppState {
     }
 
     /// 发送原始字节 (node_id = 目标设备节点 id)
+    ///
+    /// TX 字节经 `TransportHandle::send` 统一回环到本节点接收广播, 由数据平面
+    /// 读任务按信封方向以 Tx 收集一次 — 此处不再旁路重复推入 raw 收集器。
     pub async fn send_raw(&self, node_id: &str, data: Vec<u8>) -> Result<()> {
-        self.transport.send(node_id, &data)?;
-        // TX 方向字节进该源的 raw 收集器 (收集器在 attach 时已建; 未打开时上面的 send 已报错)
-        self.data_plane
-            .raw_collector_for(node_id)
-            .lock()
-            .push_chunk(data_model::now_us(), raw_data::RawDataDirection::Tx, &data);
-        Ok(())
+        self.transport.send(node_id, &data)
     }
 
     /// TextOut 手动发送 — 立即把 textout 节点当前图内文本发往其目标 Transport

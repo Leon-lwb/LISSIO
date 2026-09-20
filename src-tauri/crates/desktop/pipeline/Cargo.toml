@@ -54,6 +54,8 @@ events = { workspace = true }
 app = { workspace = true }
 graph_testkit = { workspace = true }
 criterion = { workspace = true }
+# loopback_direction_tests 自定义 TransportBackend 需要
+async-trait = { workspace = true }
 
 [[bench]]
 name = "eval_bench"

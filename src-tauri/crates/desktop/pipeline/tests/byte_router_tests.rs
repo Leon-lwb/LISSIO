@@ -799,10 +799,10 @@ async fn test_data_700k_full_pipeline_has_per_sample_timestamps() {
             }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
         };
-        let mut data = first;
+        let mut data = first.bytes;
         while data.len() < 64 * 1024 {
             match rx.try_recv() {
-                Ok(mut next) => data.append(&mut next),
+                Ok(mut next) => data.append(&mut next.bytes),
                 Err(tokio::sync::broadcast::error::TryRecvError::Lagged(n)) => {
                     lost_messages += n;
                 }
@@ -955,10 +955,10 @@ async fn run_stream_pressure_case(protocol: ProtocolConfig, channels: usize) {
             }
             Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
         };
-        let mut data = first;
+        let mut data = first.bytes;
         while data.len() < 64 * 1024 {
             match rx.try_recv() {
-                Ok(mut next) => data.append(&mut next),
+                Ok(mut next) => data.append(&mut next.bytes),
                 Err(tokio::sync::broadcast::error::TryRecvError::Lagged(n)) => {
                     lagged += n;
                 }

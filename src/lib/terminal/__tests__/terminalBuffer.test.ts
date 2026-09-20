@@ -108,6 +108,16 @@ describe('TerminalBuffer', () => {
     expect(lines[1].ts).toBe(6_000);
   });
 
+  it('tx 分片不渲染, 设备回显是输入的唯一显示', () => {
+    // 回归: 后端发送回环曾以 rx 进入缓冲, 叠加设备回显导致每条命令显示两遍
+    const buf = new RawDataBuffer(1024);
+    const terminal = new TerminalBuffer(true);
+    buf.pushBatch(batchOf('ls\n', 1_000, 'tx')); // 本地发送回环
+    buf.pushBatch(batchOf('root@board:~# ls\n', 2_000, 'rx')); // 设备回显
+    terminal.consume(buf);
+    expect(linesOf(terminal)).toEqual(['root@board:~# ls']);
+  });
+
   it('行继承所在分片的时间戳', () => {
     const buf = new RawDataBuffer(1024);
     const terminal = new TerminalBuffer(true);

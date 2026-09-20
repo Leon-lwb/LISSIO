@@ -6,8 +6,8 @@ pub mod handle;
 mod point_simulation;
 pub mod simulation;
 pub use backend::{
-    ConnectionControl, FlowRecvError, FlowTryRecvError, LegacyFlowReceiver, TransportBackend,
-    TransportConnection,
+    ByteMessage, ConnectionControl, FlowRecvError, FlowTryRecvError, LegacyFlowReceiver,
+    TransportBackend, TransportConnection,
 };
 pub use handle::LiveNodeHandle;
 mod lanes;

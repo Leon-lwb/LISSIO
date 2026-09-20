@@ -1,3 +1,4 @@
+use acquisition::ByteMessage;
 use data_model::{Result, SlcanConfig};
 use error::TransportError;
 use serial::serial::{SerialLifecycle, SerialSettings};
@@ -15,7 +16,7 @@ pub fn spawn(
     config: SlcanConfig,
 ) -> Result<(
     mpsc::Sender<Vec<u8>>,
-    broadcast::Sender<Vec<u8>>,
+    broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
 )> {
     let settings = SerialSettings {

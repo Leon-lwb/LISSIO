@@ -7,6 +7,7 @@ use data_model::{
     SerialConfig, TransportConfig,
     device::{DriverId, DriverPayload, EndpointId, EndpointSpec, SimulationConfig, TestWaveform},
 };
+use flow::Direction;
 use schema_types::TestDataLink;
 use std::{
     sync::{
@@ -123,12 +124,13 @@ async fn simulation_is_parseable_and_never_opens_or_writes_hardware() {
     runtime.open_endpoint(spec("a", true)).await.unwrap();
     assert!(runtime.send("a", &[1]).is_err());
     let mut rx = runtime.subscribe_bytes("a").unwrap();
-    let bytes = tokio::time::timeout(Duration::from_secs(1), rx.recv())
+    let message = tokio::time::timeout(Duration::from_secs(1), rx.recv())
         .await
         .unwrap()
         .unwrap();
-    assert_eq!(bytes.len(), 12);
-    assert_eq!(&bytes[8..], &[0, 0, 128, 127]);
+    assert_eq!(message.direction, Direction::Receive);
+    assert_eq!(message.bytes.len(), 12);
+    assert_eq!(&message.bytes[8..], &[0, 0, 128, 127]);
     assert_eq!(opens.load(Ordering::SeqCst), 0);
     runtime.close("a").await;
 }
@@ -147,7 +149,8 @@ async fn seeded_simulation_is_reproducible() {
             tokio::time::timeout(Duration::from_secs(1), rx.recv())
                 .await
                 .unwrap()
-                .unwrap(),
+                .unwrap()
+                .bytes,
         );
         runtime.close("repeat").await;
     }

@@ -285,7 +285,7 @@ fn main() {
             }
             let data = if let Some(rx) = &mut rx {
                 match tokio::time::timeout(Duration::from_secs(2), rx.recv()).await.expect("生成器超时") {
-                    Ok(data) => data,
+                    Ok(data) => data.bytes,
                     Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => { lagged += n; continue; }
                     Err(e) => panic!("{e}"),
                 }

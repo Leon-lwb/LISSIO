@@ -5,6 +5,7 @@ use schema_types::TestDataLink;
 use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc};
 
+use crate::backend::ByteMessage;
 use crate::{ConnectionControl, TransportConnection};
 
 /// 单连接句柄 — 一个传输节点实例的全部运行时状态 (crate 内部细节, 经 manager 编排)
@@ -13,7 +14,7 @@ use crate::{ConnectionControl, TransportConnection};
 /// TestData 传输额外持有链路配置热更新通道 (生成随连接生灭, 无独立运行开关)。
 pub struct TransportHandle {
     write_tx: mpsc::Sender<Vec<u8>>,
-    data_tx: broadcast::Sender<Vec<u8>>,
+    data_tx: broadcast::Sender<ByteMessage>,
     control: Arc<dyn ConnectionControl>,
     state: parking_lot::Mutex<ConnectionState>,
     stats: Arc<parking_lot::Mutex<TransportStats>>,
@@ -94,14 +95,15 @@ impl TransportHandle {
 
     /// 发送数据 (try_send, 队列满时立即报错) 并更新 tx 统计
     ///
-    /// 统一回环: 写入任一 Transport 的字节同时发布到本节点的接收广播,
-    /// 使 transport→transport 路由链在写入点不断裂 (发送内容对下游
-    /// Protocol/RawData 等订阅者可见)。无订阅者时广播失败静默忽略。
+    /// 统一回环: 写入任一 Transport 的字节同时以 Transmit 方向发布到本节点的
+    /// 接收广播, 使 transport→transport 路由链在写入点不断裂 (发送内容对下游
+    /// Protocol/RawData 等订阅者可见, 且方向可辨、不与设备接收混淆)。
+    /// 无订阅者时广播失败静默忽略。
     pub fn send(&self, data: &[u8]) -> Result<()> {
         self.write_tx
             .try_send(data.to_vec())
             .map_err(|_| TransportError::Send(std::io::Error::other("channel closed")))?;
-        let _ = self.data_tx.send(data.to_vec());
+        let _ = self.data_tx.send(ByteMessage::loopback(data.to_vec()));
         {
             let mut stats = self.stats.lock();
             stats.tx_bytes += data.len() as u64;
@@ -111,7 +113,7 @@ impl TransportHandle {
     }
 
     /// 订阅接收数据
-    pub fn subscribe(&self) -> broadcast::Receiver<Vec<u8>> {
+    pub fn subscribe(&self) -> broadcast::Receiver<ByteMessage> {
         self.data_tx.subscribe()
     }
 

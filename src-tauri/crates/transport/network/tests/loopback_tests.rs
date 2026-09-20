@@ -42,7 +42,7 @@ async fn tcp_server_and_client_exchange_frames() {
         .await
         .expect("server 应在超时内收到")
         .expect("广播");
-    assert_eq!(got, b"ping");
+    assert_eq!(got.bytes, b"ping");
 
     // server → client
     server
@@ -55,7 +55,7 @@ async fn tcp_server_and_client_exchange_frames() {
         .await
         .expect("client 应在超时内收到")
         .expect("广播");
-    assert_eq!(got, b"pong");
+    assert_eq!(got.bytes, b"pong");
 }
 
 /// 连接拒绝 → TransportError::TcpConnect (host/port 可见, 供前端定位)
@@ -108,5 +108,5 @@ async fn udp_peers_exchange_datagrams() {
         .await
         .expect("B 应在超时内收到")
         .expect("广播");
-    assert_eq!(got, b"datagram");
+    assert_eq!(got.bytes, b"datagram");
 }
