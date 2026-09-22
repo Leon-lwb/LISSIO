@@ -8,6 +8,7 @@ use acquisition::{
     ValidatedConfig,
 };
 use async_trait::async_trait;
+use data_model::CanBitrate;
 use data_model::TransportConfig;
 use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
@@ -94,21 +95,10 @@ impl SourceFactory for ByteDeviceFactory {
         let params = defaults["params"]
             .as_object()
             .expect("transport parameters are objects");
-        let properties: serde_json::Map<String, Value> = params.iter().map(|(key, value)| {
-            let mut field = json!({ "type": if value.is_number() { "integer" } else { "string" }, "default": value });
-            match key.as_str() {
-                "port" | "remote_port" | "listen_port" => { field["minimum"] = json!(1); field["maximum"] = json!(65535); }
-                "local_port" => { field["minimum"] = json!(0); field["maximum"] = json!(65535); }
-                "baud_rate" => { field["minimum"] = json!(1); }
-                "data_bits" => { field["enum"] = json!([5, 6, 7, 8]); }
-                "parity" => { field["enum"] = json!(["none", "odd", "even"]); }
-                "stop_bits" => { field["enum"] = json!(["one", "two"]); }
-                "flow_control" => { field["enum"] = json!(["none", "software", "hardware"]); }
-                "can_bitrate" => { field["enum"] = json!(["Bps10k", "Bps20k", "Bps50k", "Bps100k", "Bps125k", "Bps250k", "Bps500k", "Bps800k", "Bps1M"]); }
-                _ => {}
-            }
-            (key.clone(), field)
-        }).collect();
+        let properties: serde_json::Map<String, Value> = params
+            .iter()
+            .map(|(key, value)| (key.clone(), field_schema(key, value)))
+            .collect();
         DriverSchema {
             schema_version: 1,
             json_schema: json!({ "type": "object", "properties": properties,
@@ -216,6 +206,49 @@ struct ByteSession {
     capabilities: SessionCapabilities,
 }
 
+/// 单个传输参数的 schema 字段 — 默认值取自出厂配置, 枚举约束按字段名注入。
+fn field_schema(key: &str, default: &Value) -> Value {
+    let mut field = json!({ "type": if default.is_number() { "integer" } else { "string" }, "default": default });
+    match key {
+        "port" | "remote_port" | "listen_port" => {
+            field["minimum"] = json!(1);
+            field["maximum"] = json!(65535);
+        }
+        "local_port" => {
+            field["minimum"] = json!(0);
+            field["maximum"] = json!(65535);
+        }
+        "baud_rate" => {
+            field["minimum"] = json!(1);
+        }
+        "data_bits" => {
+            field["enum"] = json!([5, 6, 7, 8]);
+        }
+        "parity" => {
+            field["enum"] = json!(["none", "odd", "even"]);
+        }
+        "stop_bits" => {
+            field["enum"] = json!(["one", "two"]);
+        }
+        "flow_control" => {
+            field["enum"] = json!(["none", "software", "hardware"]);
+        }
+        "can_bitrate" => {
+            field["enum"] = json!(can_bitrate_candidates());
+        }
+        _ => {}
+    }
+    field
+}
+
+/// can_bitrate 候选值 — 直接序列化 [`CanBitrate::ALL`], 与 Rust 枚举零漂移。
+fn can_bitrate_candidates() -> Vec<Value> {
+    CanBitrate::ALL
+        .iter()
+        .map(|bitrate| serde_json::to_value(bitrate).expect("CanBitrate is serializable"))
+        .collect()
+}
+
 #[async_trait]
 impl SourceSession for ByteSession {
     fn epoch(&self) -> u64 {
@@ -233,5 +266,51 @@ impl SourceSession for ByteSession {
     async fn close(&self) -> AcquisitionResult<()> {
         self.handle.close();
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 防漂移桥接: schema 枚举必须等于 `CanBitrate::ALL` 的序列化结果,
+    /// 且每个候选都能被 `CanBitrate` 反序列化接受 (曾因手写 `Bps1M` 大小写漂移)。
+    #[test]
+    fn can_bitrate_schema_enum_matches_rust_variants() {
+        let expected: Vec<Value> = CanBitrate::ALL
+            .iter()
+            .map(|bitrate| serde_json::to_value(bitrate).unwrap())
+            .collect();
+        let field = field_schema("can_bitrate", &json!("Bps500k"));
+        assert_eq!(field["enum"], json!(expected));
+        for candidate in field["enum"].as_array().unwrap() {
+            serde_json::from_value::<CanBitrate>(candidate.clone()).unwrap();
+        }
+    }
+
+    /// 修复前 schema 里的非法字面量: 不允许重新出现在候选列表;
+    /// 反序列化兜底仍接受旧值, 保证旧工作区可加载。
+    #[test]
+    fn can_bitrate_schema_enum_rejects_legacy_mistyped_names() {
+        let field = field_schema("can_bitrate", &json!("Bps500k"));
+        for candidate in field["enum"].as_array().unwrap() {
+            assert_ne!(candidate, &json!("Bps1M"));
+        }
+        assert!(serde_json::from_value::<CanBitrate>(json!("Bps1M")).is_ok());
+        assert!(serde_json::from_value::<CanBitrate>(json!("Bps10k")).is_ok());
+    }
+
+    /// 数值/字符串默认值决定字段类型, 枚举字段不带类型约束之外的信息。
+    #[test]
+    fn field_schema_defaults_from_value_shape() {
+        let numeric = field_schema("baud_rate", &json!(115200));
+        assert_eq!(numeric["type"], "integer");
+        assert_eq!(numeric["minimum"], 1);
+        assert!(numeric.get("enum").is_none());
+
+        let textual = field_schema("port_name", &json!(""));
+        assert_eq!(textual["type"], "string");
+        assert_eq!(textual["default"], "");
+        assert!(textual.get("enum").is_none());
     }
 }

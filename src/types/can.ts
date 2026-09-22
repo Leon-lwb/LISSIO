@@ -39,8 +39,18 @@ export interface CandleDeviceInfo {
   serial_number: string | null;
 }
 
-/// CAN 波特率预设
-export type CanBitrate = 'Bps100k' | 'Bps125k' | 'Bps250k' | 'Bps500k' | 'Bps1m';
+/// CAN 波特率预设 — 与 Rust `CanBitrate` 的 serde 契约名逐字一致, 勿改动大小写
+/// (后端 1M 变体为小写 m; 候选清单以 `CAN_BITRATES` 为准)
+export type CanBitrate =
+  | 'Bps10k'
+  | 'Bps20k'
+  | 'Bps50k'
+  | 'Bps100k'
+  | 'Bps125k'
+  | 'Bps250k'
+  | 'Bps500k'
+  | 'Bps800k'
+  | 'Bps1m';
 
 /// 单个 ID 的 CAN 负载统计 — 与 Rust CanIdLoadStats 对应
 export interface CanIdLoadStats {

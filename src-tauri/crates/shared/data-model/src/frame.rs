@@ -14,37 +14,92 @@
 //!
 //! `timestamp` 字段一律为**微秒 (µs)**,单调时钟 (`SystemTime::now()` since UNIX_EPOCH)。
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// CAN wire bitrate shared by transport configuration and CAN adapters.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+///
+/// Serde 契约名见 [`Self::NAMES`], 与前端 `CanBitrate` 联合类型逐字一致;
+/// 配置 schema 的候选列表一律由 [`Self::ALL`] 生成, 禁止手写字面量。
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
 pub enum CanBitrate {
+    Bps10k,
+    Bps20k,
+    Bps50k,
     Bps100k,
     Bps125k,
     Bps250k,
     Bps500k,
+    Bps800k,
     Bps1m,
 }
 
 impl CanBitrate {
+    /// 全部变体, 按速率升序 — 配置 schema 枚举的唯一事实来源。
+    pub const ALL: [Self; 9] = [
+        Self::Bps10k,
+        Self::Bps20k,
+        Self::Bps50k,
+        Self::Bps100k,
+        Self::Bps125k,
+        Self::Bps250k,
+        Self::Bps500k,
+        Self::Bps800k,
+        Self::Bps1m,
+    ];
+
+    /// serde 契约名, 顺序对应 [`Self::ALL`] — 前端联合类型的镜像, 勿改动大小写。
+    pub const NAMES: &[&str] = &[
+        "Bps10k", "Bps20k", "Bps50k", "Bps100k", "Bps125k", "Bps250k", "Bps500k", "Bps800k",
+        "Bps1m",
+    ];
+
     pub const fn bps(&self) -> u32 {
         match self {
+            Self::Bps10k => 10_000,
+            Self::Bps20k => 20_000,
+            Self::Bps50k => 50_000,
             Self::Bps100k => 100_000,
             Self::Bps125k => 125_000,
             Self::Bps250k => 250_000,
             Self::Bps500k => 500_000,
+            Self::Bps800k => 800_000,
             Self::Bps1m => 1_000_000,
         }
     }
 
+    /// Lawicel slcan 速率命令 (S0..S8)。
     pub const fn slcan_cmd(&self) -> &'static str {
         match self {
+            Self::Bps10k => "S0",
+            Self::Bps20k => "S1",
+            Self::Bps50k => "S2",
             Self::Bps100k => "S3",
             Self::Bps125k => "S4",
             Self::Bps250k => "S5",
             Self::Bps500k => "S6",
+            Self::Bps800k => "S7",
             Self::Bps1m => "S8",
         }
+    }
+
+    /// 解析契约名 — 精确匹配优先, 再按 ASCII 大小写不敏感兜底
+    /// (兼容修复前经 schema 写入的 `Bps1M` 等旧数据)。
+    pub fn parse(name: &str) -> Option<Self> {
+        if let Some(index) = Self::NAMES.iter().position(|candidate| *candidate == name) {
+            return Some(Self::ALL[index]);
+        }
+        let lowered = name.to_ascii_lowercase();
+        let index = Self::NAMES
+            .iter()
+            .position(|candidate| candidate.to_ascii_lowercase() == lowered)?;
+        Some(Self::ALL[index])
+    }
+}
+
+impl<'de> Deserialize<'de> for CanBitrate {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let name = String::deserialize(deserializer)?;
+        Self::parse(&name).ok_or_else(|| serde::de::Error::unknown_variant(&name, Self::NAMES))
     }
 }
 

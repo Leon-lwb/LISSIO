@@ -16,7 +16,7 @@ import { ALL_BACKUP_SECTIONS, type AppSnapshot } from '../tauri/appExport';
 import { schemaFromProtocolConfig } from '../utils/protocolSchema';
 import { rawDataPortId } from '../utils/nodeDef';
 import type { DockNode, DockCard } from '../../store/dockStore';
-import type { WidgetConfig, DataTab, ControlTab, EndpointSpec, ProtocolConfig, ProtocolSchema, SimulationConfig } from '../../types';
+import type { WidgetConfig, DataTab, ControlTab, EndpointSpec, ProtocolConfig, ProtocolSchema, SimulationConfig, SlcanConfig } from '../../types';
 
 const TAB = 'default';
 /// 模板内结构节点 id (应用时由 applySnapshot/mergeTemplate 处理)
@@ -308,7 +308,7 @@ function canTemplate(): AppSnapshot {
     name: 'CAN',
     protocol: { kind: 'Slcan' },
     device: { label: 'Slcan', driver: { driverId: 'slcan', schemaVersion: 1,
-      payload: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } } },
+      payload: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } satisfies SlcanConfig } },
     widgetNodes: [],
     edges: [],
     extraDataTabs: [{ id: 'can-main', type: 'can', name: 'CAN', closable: true }],

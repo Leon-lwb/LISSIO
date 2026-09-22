@@ -122,7 +122,9 @@ impl Default for TestDataConfig {
 }
 
 /// slcan 配置 — 基于 USB-CDC 串口
+// 容器级 serde(default): 旧版 payload 缺字段时按 Default 兜底, 序列化输出不变
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SlcanConfig {
     pub port_name: String,
     pub baud_rate: u32, // 串口波特率 (通常 115200 或 1M)
@@ -141,6 +143,7 @@ impl Default for SlcanConfig {
 
 /// candleLight 配置 — 原生 USB
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CandleConfig {
     pub bus: u8,
     pub address: u8,

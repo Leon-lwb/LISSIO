@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { t } from '../../../i18n';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
+import { CAN_BITRATE_BPS } from '../../../lib/can/canBitrate';
 import type { CanLoadSnapshot, CanIdLoadHistory } from '../../../types';
 
 /// 窗口预设
@@ -13,14 +14,13 @@ export const WINDOW_PRESETS: { label: string; value: number }[] = [
   { label: '10s', value: 10_000_000 },
 ];
 
-/// 波特率预设
-export const BITRATE_PRESETS: { label: string; value: number }[] = [
-  { label: '100k', value: 100_000 },
-  { label: '125k', value: 125_000 },
-  { label: '250k', value: 250_000 },
-  { label: '500k', value: 500_000 },
-  { label: '1M', value: 1_000_000 },
-];
+/// 波特率预设 — 由 CAN_BITRATE_BPS 派生, 与后端速率变体自动保持一致
+export const BITRATE_PRESETS: { label: string; value: number }[] = Object.entries(
+  CAN_BITRATE_BPS,
+).map(([name, bps]) => ({
+  label: name.slice('Bps'.length).replace(/m$/, 'M'),
+  value: bps,
+}));
 
 /// 告警阈值预设
 export const THRESHOLD_PRESETS: { label: string; value: number }[] = [

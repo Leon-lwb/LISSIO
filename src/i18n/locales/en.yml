@@ -1593,6 +1593,15 @@ schemaEnumInputs: Inputs (I)
 schemaEnumOutputs: Outputs (Q)
 schemaEnumMarkers: Markers (M)
 schemaEnumDb: Data blocks (DB)
+schemaEnumBps10k: 10 kbps
+schemaEnumBps20k: 20 kbps
+schemaEnumBps50k: 50 kbps
+schemaEnumBps100k: 100 kbps
+schemaEnumBps125k: 125 kbps
+schemaEnumBps250k: 250 kbps
+schemaEnumBps500k: 500 kbps
+schemaEnumBps800k: 800 kbps
+schemaEnumBps1m: 1 Mbps
 
 devicePanelHint: Click or drag a device onto the canvas, then configure and connect.
 devicePanelSearch: Search name, port, VID/PID…

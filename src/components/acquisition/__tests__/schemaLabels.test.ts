@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { schemaEnumLabel, schemaEnumLabelKey, schemaFieldLabel, schemaFieldLabelKey } from '../schemaLabels';
+import { CAN_BITRATES } from '../../../lib/can/canBitrate';
 
 describe('schemaFieldLabelKey', () => {
   it('maps snake_case serial keys', () => {
@@ -54,8 +55,14 @@ describe('schemaEnumLabelKey', () => {
     expect(schemaEnumLabelKey('holdingRegisters')).toBe('schemaEnumHoldingRegisters');
   });
 
+  it('maps every CAN bitrate variant so dropdowns never fall back to raw names', () => {
+    for (const name of CAN_BITRATES) {
+      expect(schemaEnumLabelKey(name)).toBe(`schemaEnum${name}`);
+    }
+  });
+
   it('returns undefined for unmapped values', () => {
-    expect(schemaEnumLabelKey('Bps500k')).toBeUndefined();
+    expect(schemaEnumLabelKey('mystery_value')).toBeUndefined();
   });
 });
 
@@ -66,7 +73,18 @@ describe('schemaEnumLabel', () => {
     expect(schemaEnumLabel('zh', 'none')).toBe('无');
   });
 
+  it('translates every CAN bitrate variant per language', () => {
+    expect(schemaEnumLabel('zh', 'Bps1m')).toBe('1 Mbps');
+    expect(schemaEnumLabel('en', 'Bps1m')).toBe('1 Mbps');
+    expect(schemaEnumLabel('zh', 'Bps500k')).toBe('500 kbps');
+    expect(schemaEnumLabel('en', 'Bps10k')).toBe('10 kbps');
+    for (const name of CAN_BITRATES) {
+      expect(schemaEnumLabel('zh', name)).toMatch(/kbps|Mbps/);
+      expect(schemaEnumLabel('en', name)).toMatch(/kbps|Mbps/);
+    }
+  });
+
   it('returns undefined for unmapped values', () => {
-    expect(schemaEnumLabel('zh', 'Bps500k')).toBeUndefined();
+    expect(schemaEnumLabel('zh', 'mystery_value')).toBeUndefined();
   });
 });

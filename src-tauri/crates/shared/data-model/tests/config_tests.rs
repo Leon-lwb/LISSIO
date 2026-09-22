@@ -207,6 +207,47 @@ fn candle_config_default_and_roundtrip() {
     }
 }
 
+/// 修复前 schema 曾以 `Bps1M` (大写 M) 写入工作区 — 旧数据必须能加载。
+#[test]
+fn slcan_config_accepts_legacy_uppercase_bitrate() {
+    let restored: TransportConfig = serde_json::from_str(
+        r#"{"kind":"Slcan","params":{"port_name":"COM3","baud_rate":115200,"can_bitrate":"Bps1M"}}"#,
+    )
+    .unwrap();
+    match restored {
+        TransportConfig::Slcan(s) => assert_eq!(s.can_bitrate, CanBitrate::Bps1m),
+        _ => panic!("expected Slcan variant"),
+    }
+}
+
+/// 容器级 `#[serde(default)]`: payload 缺字段时按 Default 兜底, 不再反序列化失败。
+#[test]
+fn slcan_and_candle_configs_fill_missing_fields_from_default() {
+    let slcan: TransportConfig = serde_json::from_str(r#"{"kind":"Slcan","params":{}}"#).unwrap();
+    match slcan {
+        TransportConfig::Slcan(s) => {
+            let d = SlcanConfig::default();
+            assert_eq!(s.port_name, d.port_name);
+            assert_eq!(s.baud_rate, d.baud_rate);
+            assert_eq!(s.can_bitrate, d.can_bitrate);
+        }
+        _ => panic!("expected Slcan variant"),
+    }
+
+    let candle: TransportConfig =
+        serde_json::from_str(r#"{"kind":"CandleLight","params":{"channel":1}}"#).unwrap();
+    match candle {
+        TransportConfig::CandleLight(c) => {
+            let d = CandleConfig::default();
+            assert_eq!(c.bus, d.bus);
+            assert_eq!(c.address, d.address);
+            assert_eq!(c.can_bitrate, d.can_bitrate);
+            assert_eq!(c.channel, 1);
+        }
+        _ => panic!("expected CandleLight variant"),
+    }
+}
+
 // ============================================================
 // WidgetConfig 9 种控件 + ImageFormat + WidgetBinding
 // ============================================================

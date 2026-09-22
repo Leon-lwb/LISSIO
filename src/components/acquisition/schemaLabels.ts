@@ -1,4 +1,5 @@
 import { t, type Lang } from '../../i18n';
+import type { CanBitrate } from '../../types';
 
 const FIELD_KEYS: Record<string, string> = {
   port_name: 'schemaFieldPortName',
@@ -53,6 +54,19 @@ const FIELD_KEYS: Record<string, string> = {
   pollPeriodMs: 'schemaFieldPollPeriodMs',
 };
 
+/// CAN 波特率枚举值 → i18n 键 — Record 键穷举, 新增变体漏配标签时编译报错
+const BITRATE_ENUM_KEYS: Record<CanBitrate, string> = {
+  Bps10k: 'schemaEnumBps10k',
+  Bps20k: 'schemaEnumBps20k',
+  Bps50k: 'schemaEnumBps50k',
+  Bps100k: 'schemaEnumBps100k',
+  Bps125k: 'schemaEnumBps125k',
+  Bps250k: 'schemaEnumBps250k',
+  Bps500k: 'schemaEnumBps500k',
+  Bps800k: 'schemaEnumBps800k',
+  Bps1m: 'schemaEnumBps1m',
+};
+
 const ENUM_KEYS: Record<string, string> = {
   none: 'schemaEnumNone',
   odd: 'schemaEnumOdd',
@@ -73,6 +87,7 @@ const ENUM_KEYS: Record<string, string> = {
   outputs: 'schemaEnumOutputs',
   markers: 'schemaEnumMarkers',
   db: 'schemaEnumDb',
+  ...BITRATE_ENUM_KEYS,
 };
 
 export function schemaFieldLabelKey(name: string): string | undefined {

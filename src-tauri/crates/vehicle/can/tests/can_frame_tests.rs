@@ -70,20 +70,28 @@ fn frame_serde_roundtrip() {
 
 #[test]
 fn bitrate_bps_returns_expected_values() {
+    assert_eq!(CanBitrate::Bps10k.bps(), 10_000);
+    assert_eq!(CanBitrate::Bps20k.bps(), 20_000);
+    assert_eq!(CanBitrate::Bps50k.bps(), 50_000);
     assert_eq!(CanBitrate::Bps100k.bps(), 100_000);
     assert_eq!(CanBitrate::Bps125k.bps(), 125_000);
     assert_eq!(CanBitrate::Bps250k.bps(), 250_000);
     assert_eq!(CanBitrate::Bps500k.bps(), 500_000);
+    assert_eq!(CanBitrate::Bps800k.bps(), 800_000);
     assert_eq!(CanBitrate::Bps1m.bps(), 1_000_000);
 }
 
 #[test]
 fn bitrate_serde_uses_frontend_contract_names() {
     for (bitrate, expected) in [
+        (CanBitrate::Bps10k, "\"Bps10k\""),
+        (CanBitrate::Bps20k, "\"Bps20k\""),
+        (CanBitrate::Bps50k, "\"Bps50k\""),
         (CanBitrate::Bps100k, "\"Bps100k\""),
         (CanBitrate::Bps125k, "\"Bps125k\""),
         (CanBitrate::Bps250k, "\"Bps250k\""),
         (CanBitrate::Bps500k, "\"Bps500k\""),
+        (CanBitrate::Bps800k, "\"Bps800k\""),
         (CanBitrate::Bps1m, "\"Bps1m\""),
     ] {
         assert_eq!(serde_json::to_string(&bitrate).unwrap(), expected);
@@ -94,13 +102,72 @@ fn bitrate_serde_uses_frontend_contract_names() {
     }
 }
 
+/// NAMES 与 ALL 必须逐位对齐 — schema 生成与 parse 都依赖这一不变量。
+#[test]
+fn bitrate_names_align_with_all_variants() {
+    assert_eq!(CanBitrate::ALL.len(), CanBitrate::NAMES.len());
+    for (bitrate, name) in CanBitrate::ALL.iter().zip(CanBitrate::NAMES) {
+        assert_eq!(
+            serde_json::to_string(bitrate).unwrap(),
+            format!("\"{name}\"")
+        );
+    }
+}
+
 #[test]
 fn bitrate_slcan_cmd_mapping() {
+    assert_eq!(CanBitrate::Bps10k.slcan_cmd(), "S0");
+    assert_eq!(CanBitrate::Bps20k.slcan_cmd(), "S1");
+    assert_eq!(CanBitrate::Bps50k.slcan_cmd(), "S2");
     assert_eq!(CanBitrate::Bps100k.slcan_cmd(), "S3");
     assert_eq!(CanBitrate::Bps125k.slcan_cmd(), "S4");
     assert_eq!(CanBitrate::Bps250k.slcan_cmd(), "S5");
     assert_eq!(CanBitrate::Bps500k.slcan_cmd(), "S6");
+    assert_eq!(CanBitrate::Bps800k.slcan_cmd(), "S7");
     assert_eq!(CanBitrate::Bps1m.slcan_cmd(), "S8");
+}
+
+#[test]
+fn bitrate_parse_accepts_contract_names() {
+    for (index, name) in CanBitrate::NAMES.iter().enumerate() {
+        assert_eq!(CanBitrate::parse(name), Some(CanBitrate::ALL[index]));
+    }
+}
+
+/// 修复前 schema 曾以 `Bps1M` (大写 M) 写入工作区 — 反序列化必须兜底。
+#[test]
+fn bitrate_parse_is_case_insensitive_fallback() {
+    assert_eq!(CanBitrate::parse("Bps1M"), Some(CanBitrate::Bps1m));
+    assert_eq!(CanBitrate::parse("bps800K"), Some(CanBitrate::Bps800k));
+    assert_eq!(CanBitrate::parse("BPS500K"), Some(CanBitrate::Bps500k));
+    assert_eq!(CanBitrate::parse("bps10k"), Some(CanBitrate::Bps10k));
+}
+
+#[test]
+fn bitrate_parse_rejects_unknown_names() {
+    assert_eq!(CanBitrate::parse("Bps200k"), None);
+    assert_eq!(CanBitrate::parse("1000000"), None);
+    assert_eq!(CanBitrate::parse(""), None);
+    assert_eq!(CanBitrate::parse(" Bps500k"), None);
+}
+
+#[test]
+fn bitrate_deserialize_accepts_legacy_uppercase_m() {
+    assert_eq!(
+        serde_json::from_str::<CanBitrate>("\"Bps1M\"").unwrap(),
+        CanBitrate::Bps1m
+    );
+    assert_eq!(
+        serde_json::from_str::<CanBitrate>("\"bps800K\"").unwrap(),
+        CanBitrate::Bps800k
+    );
+}
+
+#[test]
+fn bitrate_deserialize_rejects_unknown_and_non_string() {
+    assert!(serde_json::from_str::<CanBitrate>("\"Bps200k\"").is_err());
+    assert!(serde_json::from_str::<CanBitrate>("500000").is_err());
+    assert!(serde_json::from_str::<CanBitrate>("null").is_err());
 }
 
 #[test]

@@ -1593,6 +1593,15 @@ schemaEnumInputs: 输入 (I)
 schemaEnumOutputs: 输出 (Q)
 schemaEnumMarkers: 中间寄存器 (M)
 schemaEnumDb: 数据块 (DB)
+schemaEnumBps10k: 10 kbps
+schemaEnumBps20k: 20 kbps
+schemaEnumBps50k: 50 kbps
+schemaEnumBps100k: 100 kbps
+schemaEnumBps125k: 125 kbps
+schemaEnumBps250k: 250 kbps
+schemaEnumBps500k: 500 kbps
+schemaEnumBps800k: 800 kbps
+schemaEnumBps1m: 1 Mbps
 
 devicePanelHint: 点击或拖动设备到画布，再配置通信参数并连接。
 devicePanelSearch: 搜索名称、端口、VID/PID…
