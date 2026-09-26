@@ -1,0 +1,9 @@
+{
+  "signal": { "waveform": "sine", "frequency": 2.5, "amplitude": 1, "offset": 0 },
+  "sampleRate": 100,
+  "seed": 1,
+  "channels": 4,
+  "overrides": { "ch0": { "waveform": "square", "frequency": 1, "amplitude": 2, "offset": 0.5 } },
+  "referenceNodeId": null,
+  "encoding": null
+}

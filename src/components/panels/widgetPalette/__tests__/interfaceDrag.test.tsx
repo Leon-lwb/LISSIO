@@ -14,18 +14,32 @@ import { deviceDocument } from '../../../../test/nodeDocuments';
 import { api } from '../../../../lib/tauri/tauri';
 import { NodePropertiesPanel } from '../../../nodes/NodePropertiesPanel';
 import { resetCapabilityCatalogForTests } from '../../../../lib/acquisition/capabilityCatalog';
+import { seedModelCatalogForTests, mockPrepareEcho, makeCatalog, defaultTestCatalog } from '../../../../test/modelCatalog';
+import { resetModelCatalogForTests } from '../../../../store/modelCatalogStore';
 import type { DeviceCardModel } from '../../../../lib/acquisition/deviceCardModel';
+import type { ModelDescriptor } from '../../../../types/generated/ModelDescriptor';
+
+/// driver:future 的目录条目 — defaultConfig 提供配置默认值 (后端合同)
+const futureDriverModel: ModelDescriptor = {
+  id: 'driver:future', family: 'device', schemaVersion: 1,
+  display: { fallbackLabel: 'future', category: 'device', sortValue: 0 },
+  ui: { rendererKey: 'acquisition', editorKey: 'acquisition', icon: null },
+  configuration: { schemaVersion: 1, jsonSchema: { type: 'object' }, uiHints: null },
+  defaultConfig: { address: '' }, variants: [], actions: ['createNode'],
+  availability: { state: 'available', reason: null },
+};
 
 
 const operations = { byteSource: false, byteSink: false, discover: false, browse: false, read: true, subscribe: true, write: true, method: false };
 const endpoint = {
   id: 'primary', displayName: 'Future endpoint', transport: 'future', direction: 'peer',
-  status: { state: 'available' }, ports: [],
-  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: { address: { type: 'string' as const, default: '' } } }, uiHints: {} },
+  status: { state: 'available', detail: null }, ports: [],
+  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: { address: { type: 'string' as const, default: '' } } }, uiHints: null },
+  display: null,
 };
 const card: DeviceCardModel = {
   key: 'future:primary', endpoint,
-  adapter: { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint] },
+  adapter: { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint], display: null },
 };
 const capabilityEntry: PaletteEntry = { key: card.key, label: card.adapter.displayName, title: card.adapter.displayName, icon: null, nodeType: 'acquisition', acquisition: card };
 const entries = [capabilityEntry];
@@ -35,13 +49,15 @@ beforeEach(async () => {
   await syncGraph();
   __resetForTests();
   resetCapabilityCatalogForTests();
+  seedModelCatalogForTests(makeCatalog([...defaultTestCatalog().models, futureDriverModel]));
+  mockPrepareEcho();
   vi.stubGlobal('PointerEvent', MouseEvent);
   tauriMock.invoke.mockClear();
   tauriMock.invoke.mockResolvedValue(undefined);
   useAppStore.setState({ rfNodes: [], rfEdges: [], controlTabs: [{ id: 'default', name: 'Tab 1' }], activeControlTabId: 'default', dataTabs: [], lang: 'en' });
   useHistoryStore.getState().clearHistory();
 });
-afterEach(async () => { cleanup(); __resetForTests(); await syncGraph(); vi.restoreAllMocks(); });
+afterEach(async () => { cleanup(); __resetForTests(); resetModelCatalogForTests(); await syncGraph(); vi.restoreAllMocks(); });
 
 describe('all interface palette entries', () => {
   it.each(entries)('$label creates one independent node per click/drop and consumes the trailing click', async (entry) => {
@@ -58,6 +74,9 @@ describe('all interface palette entries', () => {
     fireEvent.pointerMove(window, { button: 0, clientX: 350, clientY: 210 });
     fireEvent.pointerUp(window, { button: 0, clientX: 350, clientY: 210 });
     fireEvent.click(row);
+    // 设备创建经目录 prepare (异步) — 两次创建都就绪后断言
+    await screen.findAllByRole('button', { name: entry.label });
+    await vi.waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(2));
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(2);
     expect(nodes[0].id).not.toBe(nodes[1].id);
@@ -70,6 +89,7 @@ describe('all interface palette entries', () => {
 
   it('persists incomplete drafts and restores delete/undo with the same identity', async () => {
     addPaletteNode(capabilityEntry, { x: 140, y: 220 });
+    await vi.waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     const node = useAppStore.getState().rfNodes[0];
     const device = (node.data as AcquisitionNodeData).node;
     await syncGraph();
@@ -120,6 +140,7 @@ describe('all interface palette entries', () => {
     vi.spyOn(api, 'listAcquisitionNodes').mockResolvedValue([]);
     addPaletteNode(capabilityEntry, { x: 10, y: 20 });
     addPaletteNode(capabilityEntry, { x: 40, y: 50 });
+    await vi.waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(2));
     const firstId = useAppStore.getState().rfNodes[0].id;
     useAppStore.getState().onNodesChange([{ type: 'select', id: firstId, selected: true }]);
     render(<NodePropertiesPanel />);

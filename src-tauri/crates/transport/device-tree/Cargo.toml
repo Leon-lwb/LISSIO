@@ -13,6 +13,7 @@ name = "device_tree"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 acquisition = { workspace = true }
 async-trait = { workspace = true }
 can = { workspace = true }

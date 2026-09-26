@@ -30,6 +30,10 @@ pub struct WaveformSnapshot {
 pub struct AppState {
     /// 传输注册表 (node_id → 连接实例; open 是异步的, 用 tokio mutex)
     pub transport: Arc<AcquisitionRuntime>,
+    /// 模型目录快照 (组合根装配后注入; 只读 — 目录来自实际注册对象)
+    pub model_catalog: RwLock<Option<Arc<data_model::model_descriptor::ModelCatalog>>>,
+    /// 设备树驱动注册表 (描述/校验/目录用; 装配后注入)
+    pub drivers: RwLock<Option<Arc<device_tree::DriverRegistry>>>,
     /// 数据平面状态 (字节平面 BytePlan / protocol_states / source_frames /
     /// 按源 buffers 与 raw_collectors / 读任务句柄) — 取代旧 protocol/protocol_config/
     /// buffer/raw_data_collector 单例字段
@@ -118,9 +122,26 @@ impl AppState {
         Self::with_acquisition(AcquisitionRuntime::default())
     }
 
+    /// 注入模型目录快照 (组合根装配时调用一次; 只读)。
+    pub fn install_model_catalog(&self, catalog: Arc<data_model::model_descriptor::ModelCatalog>) {
+        *self.model_catalog.write() = Some(catalog);
+    }
+
+    /// 注入设备树驱动注册表 (组合根装配时调用一次)。
+    pub fn install_drivers(&self, registry: Arc<device_tree::DriverRegistry>) {
+        *self.drivers.write() = Some(registry);
+    }
+
+    /// 读取模型目录快照。
+    pub fn model_catalog(&self) -> Option<Arc<data_model::model_descriptor::ModelCatalog>> {
+        self.model_catalog.read().clone()
+    }
+
     /// Construct application state with adapters assembled by the composition root.
     pub fn with_acquisition(transport_manager: AcquisitionRuntime) -> Self {
         let transport = Arc::new(transport_manager);
+        let model_catalog = RwLock::new(None);
+        let drivers = RwLock::new(None);
         let graphs = Arc::new(Mutex::new(HashMap::new()));
         let graphs_version = Arc::new(AtomicU64::new(0));
         let source_graphs: crate::SourceGraphs = Arc::new(Mutex::new(HashMap::new()));
@@ -189,6 +210,8 @@ impl AppState {
 
         Self {
             transport,
+            model_catalog,
+            drivers,
             data_plane,
             graphs,
             graphs_version,

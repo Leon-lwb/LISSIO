@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeModel3DConfig } from '../widgetNormalize';
 import {
   model3dAttitudePortIds,
   resolveModel3DRotation,
@@ -35,9 +34,8 @@ describe('Model3D attitude input modes', () => {
     expect(resolveModel3DRotation('quaternion', {})).toEqual([0, 0, 0]);
   });
 
-  it('switches attitude ports and preserves legacy radians semantics', () => {
+  it('switches attitude ports', () => {
     expect(model3dAttitudePortIds('degrees')).toEqual(['roll', 'pitch', 'yaw']);
     expect(model3dAttitudePortIds('quaternion')).toEqual(['q0', 'q1', 'q2', 'q3']);
-    expect(normalizeModel3DConfig({ id: 'legacy' }).attitudeInputMode).toBe('radians');
   });
 });

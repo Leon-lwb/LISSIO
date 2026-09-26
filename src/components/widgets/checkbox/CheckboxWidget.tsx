@@ -6,7 +6,7 @@ import { memo, useEffect } from 'react';
 import type { WidgetConfig } from '../../../types';
 import { sendBindingValue } from '../shared/binding';
 import { useAppStore } from '../../../store/appStore';
-import { widgetInputValue } from '../../../lib/utils/widgetDefaults';
+import { widgetInputValue } from '../../../lib/utils/widgetValue';
 
 interface CheckboxProps {
   widget: Extract<WidgetConfig, { kind: 'Checkbox' }>;

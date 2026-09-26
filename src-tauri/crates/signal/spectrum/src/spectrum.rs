@@ -4,7 +4,7 @@ use crate::{SpectrumFrame, StreamingFft, TransformConfig, TransformError};
 use serde::{Deserialize, Serialize};
 
 /// 频谱输出模式
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, ts_rs::TS)]
 pub enum SpectrumOutput {
     /// 振幅谱 |X(k)| / N
     #[default]
@@ -18,7 +18,7 @@ pub enum SpectrumOutput {
 }
 
 /// 频谱计算结果 — 一组 (频率, 值) 配对
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct SpectrumResult {
     /// 频率 (Hz), 长度 = window_size / 2 + 1
     pub frequencies: Vec<f32>,

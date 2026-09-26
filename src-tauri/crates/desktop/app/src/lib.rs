@@ -22,6 +22,7 @@
 #![recursion_limit = "256"]
 
 pub mod display;
+pub mod models;
 
 mod app_state;
 mod background;

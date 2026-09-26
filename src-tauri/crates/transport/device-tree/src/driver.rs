@@ -9,10 +9,11 @@ use crate::capability::{
 use crate::error::{CloseError, ConfigError, OpenError};
 use crate::model::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use acquisition::{
-    AdapterCapability, ConfigurationSchema, DiscoveredEndpoint, PortDescriptor, ReadCapability,
-    SessionCapabilities, SourceSession, SubscribeCapability, WriteCapability,
+    AdapterCapability, DiscoveredEndpoint, PortDescriptor, ReadCapability, SessionCapabilities,
+    SourceSession, SubscribeCapability, WriteCapability,
 };
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use points::PointDescriptor;
 use serde_json::Value;
 use std::any::Any;
@@ -169,6 +170,17 @@ pub trait NodeDriver: Send + Sync + 'static {
     fn capabilities(&self) -> CapabilityMask;
     fn config_schema(&self) -> ConfigurationSchema;
     fn child_policy(&self) -> ChildPolicy;
+
+    /// 展示名 (目录/调色板用; 翻译仍在前端)。
+    fn display_name(&self) -> String {
+        self.id().as_str().to_owned()
+    }
+
+    /// 创建默认配置 (不含实例身份; 子 ID 由节点 id 确定性派生)。
+    /// None = 该驱动没有有意义的默认配置 (必须由发现补丁或用户填写)。
+    fn default_config(&self, _node_id: &str) -> Option<Value> {
+        None
+    }
 
     /// 返回驱动的产品能力目录。
     fn adapter_capability(&self) -> Option<AdapterCapability> {

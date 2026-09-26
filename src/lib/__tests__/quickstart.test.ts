@@ -1,19 +1,31 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate } from '../quickstart/applyTemplate';
 import { useAppStore } from '../../store/appStore';
 import { selectWidgets } from '../../store/appStoreHelpers';
+import { resetModelCatalogForTests } from '../../store/modelCatalogStore';
+import { seedModelCatalogForTests, mockPrepareEcho } from '../../test/modelCatalog';
 import type { DeviceTreeNodeDecl, ProtocolSchema } from '../../types';
 
 describe('quick-start node documents', () => {
+  beforeEach(() => {
+    seedModelCatalogForTests();
+    mockPrepareEcho();
+  });
+
+  afterEach(() => {
+    resetModelCatalogForTests();
+    vi.restoreAllMocks();
+  });
+
   it('ships the core examples', () => {
     expect(QUICK_START_TEMPLATES.map(template => template.id))
       .toEqual(expect.arrayContaining(['math', 'filter', 'fft', 'can', 'serial', 'demo']));
   });
 
-  it('every template is a self-contained tab-owned v4 document', () => {
+  it('every template is a self-contained tab-owned v4 document', async () => {
     for (const template of QUICK_START_TEMPLATES) {
-      const snapshot = template.build();
+      const snapshot = await template.build();
       expect(snapshot.version).toBe(4);
       const workspace = snapshot.workspace!;
       expect(workspace.tabs).toHaveLength(1);
@@ -31,8 +43,8 @@ describe('quick-start node documents', () => {
     }
   });
 
-  it('the serial example is Serial + test attribute -> JustFloat', () => {
-    const graph = getTemplate('serial')!.build().workspace!.graphs[0];
+  it('the serial example is Serial + test attribute -> JustFloat', async () => {
+    const graph = (await getTemplate('serial')!.build()).workspace!.graphs[0];
     const device = graph.documents.find(document => document.kind === 'device');
     expect(device?.kind === 'device' && device.config.node.driver).toBe('serial');
     const simulation = device?.kind === 'device'
@@ -41,16 +53,16 @@ describe('quick-start node documents', () => {
     expect((simulation?.config as { sampleRate?: number } | undefined)?.sampleRate).toBeGreaterThan(0);
     const protocol = device?.kind === 'device'
       ? device.config.node.children.find(child => child.driver === 'protocol-engine') : undefined;
-    expect((protocol?.config.protocol as { kind?: string } | undefined)?.kind).toBe('JustFloat');
+    expect(((protocol?.config as { protocol?: { kind?: string } }).protocol)?.kind).toBe('JustFloat');
     expect(graph.edges.some(edge => edge.source === protocol?.id)).toBe(true);
   });
 
-  it('custom protocol keeps named decode ports and an encoding rule', () => {
-    const graph = getTemplate('custom-protocol')!.build().workspace!.graphs[0];
+  it('custom protocol keeps named decode ports and an encoding rule', async () => {
+    const graph = (await getTemplate('custom-protocol')!.build()).workspace!.graphs[0];
     const device = graph.documents.find(document => document.kind === 'device');
     const protocol = device?.kind === 'device'
       ? device.config.node.children.find(child => child.driver === 'protocol-engine') : undefined;
-    const schema = protocol?.config.schema as ProtocolSchema | undefined;
+    const schema = (protocol?.config as { schema?: ProtocolSchema }).schema;
     expect(schema?.preset).toBe('custom');
     expect(schema?.decode.filter(block => block.type === 'field').map(block => block.portName))
       .toEqual(['speed', 'temp']);
@@ -60,14 +72,23 @@ describe('quick-start node documents', () => {
 });
 
 describe('template application', () => {
-  beforeEach(() => useAppStore.setState({
-    controlTabs: [{ id: 'default', name: 'Tab 1' }],
-    dataTabs: [], activeControlTabId: 'default', activeDataTabId: '',
-    rfNodes: [], rfEdges: [], connectionStates: {},
-  } as never));
+  beforeEach(() => {
+    seedModelCatalogForTests();
+    mockPrepareEcho();
+    useAppStore.setState({
+      controlTabs: [{ id: 'default', name: 'Tab 1' }],
+      dataTabs: [], activeControlTabId: 'default', activeDataTabId: '',
+      rfNodes: [], rfEdges: [], connectionStates: {},
+    } as never);
+  });
+
+  afterEach(() => {
+    resetModelCatalogForTests();
+    vi.restoreAllMocks();
+  });
 
   it('merge remaps every node and owns all of them from a new tab', async () => {
-    const snapshot = getTemplate('math')!.build();
+    const snapshot = await getTemplate('math')!.build();
     const originalIds = new Set(snapshot.workspace!.graphs[0].documents.map(document => document.id));
     await applyTemplate(snapshot, 'merge');
     const state = useAppStore.getState();
@@ -84,7 +105,7 @@ describe('template application', () => {
   });
 
   it('replace restores the exact document and remains disconnected', async () => {
-    const snapshot = getTemplate('filter')!.build();
+    const snapshot = await getTemplate('filter')!.build();
     await applyTemplate(snapshot, 'replace');
     const state = useAppStore.getState();
     expect(state.rfNodes).toHaveLength(snapshot.workspace!.graphs[0].documents.length);

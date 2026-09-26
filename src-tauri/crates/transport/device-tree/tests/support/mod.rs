@@ -1,5 +1,6 @@
-use acquisition::{CapabilitySet, ConfigurationSchema, PortDescriptor};
+use acquisition::{CapabilitySet, PortDescriptor};
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use device_tree::{
     CapabilityMask, ChildPolicy, CloseError, ConfigError, DriverId, NodeContext, NodeDecl,
     NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime, NodeState, OpenError, ParentContract,

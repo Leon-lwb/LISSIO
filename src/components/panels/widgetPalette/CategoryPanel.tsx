@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
-import { createWidget } from '../../../lib/utils/widgetDefaults';
+import { useModelCatalogStore } from '../../../store/modelCatalogStore';
 import { t } from '../../../i18n';
-import type { WidgetConfig, MathOp, StrOp, PaletteCategoryId } from '../../../types';
-import { isUnaryMathOp } from '../../../types';
+import type { PaletteCategoryId } from '../../../types';
 import type { PaletteEntry } from './paletteModel';
 import { filterSections } from './paletteModel';
 import { buildPaletteSections, CATEGORY_ICONS } from './paletteSections';
@@ -12,7 +11,6 @@ import { DevicePanel } from '../../acquisition/DevicePanel';
 import { PaletteRow } from './PaletteRow';
 import { loadAdapterCapabilities } from '../../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards, type DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
-import { applyTestAttribute } from '../../../lib/acquisition/simulation';
 import { addPaletteNode } from '../../../lib/utils/paletteCreation';
 import { SearchInput } from '../../ui/SearchInput';
 
@@ -20,11 +18,11 @@ export function CategoryPanel() {
   const lang = useAppStore((s) => s.lang);
   const activeCategory = useAppStore((s) => s.activeCategory);
   const openCategory = useAppStore((s) => s.openCategory);
+  const catalogModels = useModelCatalogStore((s) => s.models);
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const scrollSelection = useRef<PaletteCategoryId | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [jumpRequest, setJumpRequest] = useState(0);
-  const addWidget = useAppStore((s) => s.addWidget);
   const activeControlTabId = useAppStore((s) => s.activeControlTabId);
   const openCustomEditor = useAppStore((s) => s.openCustomEditor);
   const [capabilityCards, setCapabilityCards] = useState<DeviceCardModel[]>([]);
@@ -49,8 +47,8 @@ export function CategoryPanel() {
   }, [catalogAttempt]);
 
   const sections = useMemo(
-    () => buildPaletteSections(lang, { capabilityCards, openCustomEditor }),
-    [lang, capabilityCards, openCustomEditor],
+    () => buildPaletteSections(lang, { capabilityCards, openCustomEditor, models: catalogModels }),
+    [lang, capabilityCards, openCustomEditor, catalogModels],
   );
 
   const filteredSections = useMemo(() => filterSections(sections, trimmedQuery), [sections, trimmedQuery]);
@@ -99,36 +97,15 @@ export function CategoryPanel() {
 
   const handleActivate = useCallback(
     (item: PaletteEntry) => {
-      if (item.attribute === 'test-data') { applyTestAttribute(); return; }
+      // Custom 条目 → 编辑器创建路径 (onAdd); 其余单一入口: test-data /
+      // 结构节点 / 目录条目 (含变体) 由 addPaletteNode 分发, 创建走后端 prepare
       if (item.onAdd) {
         item.onAdd();
         return;
       }
-      if (addPaletteNode(item, { x: item.nodeType === 'protocol' ? 300 : 60, y: 60 + Math.random() * 60 })) return;
-      if (!item.kind) return;
-      const kind = item.kind;
-      const widget = createWidget(kind);
-      if (kind === 'Math' && item.op) {
-        const mathWidget = widget as Extract<WidgetConfig, { kind: 'Math' }>;
-        mathWidget.params.op = item.op as MathOp;
-        if (isUnaryMathOp(item.op as MathOp)) {
-          mathWidget.params.inputCount = 1;
-        }
-        mathWidget.params.label = `Math ${item.op}`;
-      }
-      if (kind === 'Str' && item.op) {
-        const strWidget = widget as Extract<WidgetConfig, { kind: 'Str' }>;
-        strWidget.params.op = item.op as StrOp;
-        strWidget.params.label = `Str ${item.op}`;
-      }
-      if (kind === 'Filter' && item.preset) {
-        const filterWidget = widget as Extract<WidgetConfig, { kind: 'Filter' }>;
-        filterWidget.params.preset = item.preset;
-        filterWidget.params.label = `Filter ${item.preset}`;
-      }
-      addWidget(widget, activeControlTabId, { x: 280, y: 80 + Math.random() * 100 });
+      addPaletteNode(item, { x: item.nodeType === 'protocol' ? 300 : 280, y: 80 + Math.random() * 100 }, activeControlTabId);
     },
-    [addWidget, activeControlTabId],
+    [activeControlTabId],
   );
 
   return (

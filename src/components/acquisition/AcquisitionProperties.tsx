@@ -59,7 +59,7 @@ export function AcquisitionProperties({ node }: { node: Node }) {
         schema={card.endpoint.configuration.jsonSchema}
         uiHints={card.endpoint.configuration.uiHints}
         value={device.config} disabled={disabled}
-        onChange={(payload) => updateAcquisitionNode(node.id, { ...device, config: payload as Record<string, unknown> })}
+        onChange={(payload) => updateAcquisitionNode(node.id, { ...device, config: payload })}
       />
       <div className="mt-3 pt-2 border-t border-border">
         {card.adapter.contractVersion !== CAPABILITY_CONTRACT_VERSION && <div className="mb-2 text-xs text-text-secondary">{t(lang, 'capabilityVersionFallback')}</div>}

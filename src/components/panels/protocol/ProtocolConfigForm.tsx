@@ -6,7 +6,9 @@
 import { t, type Lang } from '../../../i18n';
 import { Info } from 'lucide-react';
 import type { ProtocolConfig, ProtocolSchema, LogicDecoderConfig } from '../../../types';
-import { schemaFromProtocolConfig, schemaPortNames } from '../../../lib/utils/protocolSchema';
+import { useModelCatalogStore } from '../../../store/modelCatalogStore';
+import { prepareProtocolDocument } from '../../../lib/models/createFromCatalog';
+import { schemaPortNames } from '../../../lib/utils/protocolSchema';
 import { DraftNumberInput } from '../../ui/fields';
 import { ProtocolBlocksEditor } from './ProtocolBlocksEditor';
 
@@ -30,26 +32,19 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
   const isCustom = !!onSchemaChange && schema?.preset === 'custom';
 
   const updateKind = (kind: ProtocolConfig['kind']) => {
+    // 切换默认配置来自目录 defaultConfig (后端注册表), 唯一来源;
+    // 浮点协议保留用户已选通道数。schema 不在此重建 — 预设 schema 随
+    // setProtocolNodeConfig 经目录 prepare 联动, custom 由用户块编辑管理。
+    const model = useModelCatalogStore.getState().byId[`protocol:${kind}`];
+    const base = (model?.defaultConfig ?? { kind }) as Record<string, unknown>;
     let next: ProtocolConfig;
-    if (kind === 'RawData' || kind === 'Slcan' || kind === 'CandleLight') {
-      if (kind === 'Slcan') next = { kind: 'Slcan' };
-      else if (kind === 'CandleLight') next = { kind: 'CandleLight' };
-      else next = { kind: 'RawData' };
-    } else if (kind === 'JustFloat' || kind === 'FireWater') {
+    if (kind === 'JustFloat' || kind === 'FireWater') {
       const prevChannels = hasChannels ? value.channels : null;
-      next = { kind, channels: prevChannels };
+      next = { ...(base as unknown as ProtocolConfig), kind, channels: prevChannels };
     } else {
-      next = {
-        kind: 'LogicDecode',
-        decoder: {
-          kind: 'Uart',
-          params: { baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', channel: 0 },
-        },
-      };
+      next = { ...base, kind } as unknown as ProtocolConfig;
     }
     onChange(next);
-    // 切换预设 → 工厂重建 schema (custom 下切换即"重置为预设")
-    onSchemaChange?.(schemaFromProtocolConfig(next));
   };
 
   const setAutoMode = (auto: boolean) => {
@@ -62,22 +57,24 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
     onChange({ kind: value.kind, channels: Math.max(1, Math.floor(channels) || 1) });
   };
 
-  /// 当前预设 → custom: 保留工厂生成的块供编辑, legacyConfig 置 null
-  /// (旧数据缺 schema 时先按 config 工厂构造一份)
+  /// 当前预设 → custom: 保留当前 schema 的块供编辑, legacyConfig 置 null
+  /// (schema 由文档提供; 缺失说明数据不完整, 不做本地工厂回退)
   const convertToCustom = () => {
-    if (!onSchemaChange) return;
-    const base = schema ?? schemaFromProtocolConfig(value);
+    if (!onSchemaChange || !schema) return;
     onSchemaChange({
       preset: 'custom',
       legacyConfig: null,
-      decode: base.decode,
-      encode: base.encode ?? null,
+      decode: schema.decode,
+      encode: schema.encode ?? null,
     });
   };
 
-  /// custom → 重置为预设: 按当前 config 工厂重建
+  /// custom → 重置为预设: schema 单一来源 = 目录 prepare
   const resetToPreset = () => {
-    onSchemaChange?.(schemaFromProtocolConfig(value));
+    if (!onSchemaChange) return;
+    void prepareProtocolDocument(value)
+      .then((prepared) => onSchemaChange(prepared.schema))
+      .catch(() => undefined);
   };
 
   const switchDecoderKind = (decKind: LogicDecoderConfig['kind']) => {

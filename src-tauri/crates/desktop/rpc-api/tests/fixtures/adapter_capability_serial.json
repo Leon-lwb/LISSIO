@@ -1,0 +1,65 @@
+{
+  "contractVersion": 1,
+  "adapterId": "serial",
+  "displayName": "Serial",
+  "protocol": "bytes",
+  "transport": "serial",
+  "direction": "peer",
+  "operations": {
+    "byteSource": true,
+    "byteSink": true,
+    "discover": false,
+    "browse": false,
+    "read": false,
+    "subscribe": false,
+    "write": false,
+    "method": false
+  },
+  "dataDomains": [
+    "bytes"
+  ],
+  "endpoints": [
+    {
+      "id": "device",
+      "displayName": "Serial device",
+      "transport": "serial",
+      "direction": "peer",
+      "status": {
+        "state": "available"
+      },
+      "ports": [
+        {
+          "id": "rx",
+          "displayName": "RX",
+          "direction": "output",
+          "dataDomain": "bytes",
+          "operations": {
+            "byteSource": true,
+            "byteSink": false,
+            "discover": false,
+            "browse": false,
+            "read": false,
+            "subscribe": false,
+            "write": false,
+            "method": false
+          },
+          "dataTypes": [
+            "bytes"
+          ]
+        }
+      ],
+      "configuration": {
+        "schemaVersion": 1,
+        "jsonSchema": {
+          "type": "object",
+          "properties": {
+            "port_name": {
+              "type": "string"
+            }
+          }
+        },
+        "uiHints": {}
+      }
+    }
+  ]
+}

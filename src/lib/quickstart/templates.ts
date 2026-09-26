@@ -1,22 +1,20 @@
-//! 快速开始模板 — 内置节点文档 + 窗口组织 + 设备/协议配置
+//! 快速开始模板 — 模板只声明 modelId / 变体 / 显式场景参数与连线布局;
+//! 节点文档由后端 prepare 批量产出 (默认值/归一化的唯一来源)。
 //!
-//! 每个模板返回一份「类快照」(AppSnapshot), 应用时:
+//! 应用时:
 //!   - 替换: 清空工作区后按分区应用 (不含设置)
 //!   - 合并: 作为新控件标签页追加 (见 applyTemplate.ts 的 ID 重映射)
 //!
 //! 内置模板: 数学 / 滤波器 / 频谱分析 / CAN / 串口 / 综合演示。
 
 import { defaultSimulation } from '../acquisition/simulation';
-import { type Node, type Edge } from '@xyflow/react';
-import { createWidget } from '../utils/widgetDefaults';
-import { WIDGET_DEFAULT_WIDTH } from '../utils/widgetSize';
-import { nodeDocument } from '../nodes/document';
-import { edgeToGraphEdge } from '../utils/nodeDef';
+import type { NodeDocument } from '../nodes/document';
+import { prepareNodesFromCatalog, prepareProtocolDocument } from '../models/createFromCatalog';
+import { edgeToGraphEdge, rawDataPortId } from '../utils/nodeDef';
 import { ALL_BACKUP_SECTIONS, type AppSnapshot } from '../tauri/appExport';
-import { schemaFromProtocolConfig } from '../utils/protocolSchema';
-import { rawDataPortId } from '../utils/nodeDef';
+import type { Edge } from '@xyflow/react';
 import type { DockNode, DockCard } from '../../store/dockStore';
-import type { WidgetConfig, DataTab, ControlTab, DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, SimulationConfig, SlcanConfig } from '../../types';
+import type { DataTab, ControlTab, DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, SimulationConfig, SlcanConfig, WidgetConfig } from '../../types';
 
 const TAB = 'default';
 /// 模板内结构节点 id (应用时由 applySnapshot/mergeTemplate 处理)
@@ -25,35 +23,37 @@ const PROTOCOL_ID = 'template-protocol';
 
 // ==================== 构建辅助 ====================
 
-/// 以指定 id/label 创建控件, 覆盖默认随机 id 与 label
-function widget(
-  kind: WidgetConfig['kind'],
-  id: string,
-  label: string,
-  patch?: Record<string, unknown>
-): WidgetConfig {
-  const w = createWidget(kind);
-  const params = w.params as unknown as Record<string, unknown>;
-  params.id = id;
-  if ('label' in params) params.label = label;
-  if (patch) Object.assign(params, patch);
-  return w;
+/// 模板控件声明 — modelId/变体/参数与画布位置, 文档由 prepare 产出
+interface WidgetSpec {
+  modelId: string;
+  variantId?: string;
+  nodeId: string;
+  label: string;
+  position: { x: number; y: number };
+  configPatch?: Record<string, unknown>;
 }
 
-/// 控件节点
-function wnode(id: string, w: WidgetConfig, x: number, y: number): Node {
-  return { id, type: 'widget', position: { x, y }, width: WIDGET_DEFAULT_WIDTH, data: { widget: w, tabId: TAB } };
+async function prepareWidgetSpecs(specs: WidgetSpec[]): Promise<NodeDocument[]> {
+  const prepared = await prepareNodesFromCatalog(specs.map((spec) => ({
+    modelId: spec.modelId,
+    variantId: spec.variantId,
+    nodeId: spec.nodeId,
+    label: spec.label,
+    position: spec.position,
+    configPatch: spec.configPatch,
+    tabId: TAB,
+  })), TAB);
+  return prepared.map((entry) => entry.document);
 }
 
-/// 边
-function edge(
-  id: string,
-  source: string,
-  sourceHandle: string,
-  target: string,
-  targetHandle: string
-): Edge {
-  return { id, source, sourceHandle, target, targetHandle };
+function widgetOf(doc: NodeDocument): { kind: WidgetConfig['kind']; id: string; label: string } | null {
+  if (doc.kind !== 'widget') return null;
+  const params = doc.config.params as { label?: unknown };
+  return {
+    kind: doc.config.widgetKind,
+    id: doc.id,
+    label: typeof params.label === 'string' ? params.label : doc.label,
+  };
 }
 
 type TemplateDevice = Pick<DeviceTreeNodeDecl, 'name' | 'driver' | 'schemaVersion' | 'config'> & { simulation?: SimulationConfig };
@@ -70,10 +70,15 @@ function simulatedSerial(channels: number, sampleRate: number): TemplateDevice {
   };
 }
 
-function deviceNode(device: TemplateDevice, protocol: ProtocolConfig, schema?: ProtocolSchema): Node {
+/// 设备树文档 — 仿真子节点 + 协议引擎子节点 (schema 由 prepareProtocolDocument 产出)
+function deviceNode(device: TemplateDevice, protocol: { protocol: ProtocolConfig; schema: ProtocolSchema }): NodeDocument {
   return {
-    id: TRANSPORT_ID, type: 'acquisition', position: { x: 40, y: 40 }, width: 200,
-    data: { tabId: TAB, label: device.name,
+    id: TRANSPORT_ID,
+    tabId: TAB,
+    label: device.name,
+    kind: 'device',
+    layout: { x: 40, y: 40, width: 200, height: null },
+    config: {
       node: {
         id: TRANSPORT_ID,
         name: device.name,
@@ -92,15 +97,14 @@ function deviceNode(device: TemplateDevice, protocol: ProtocolConfig, schema?: P
           children: [],
         }] : []), {
           id: PROTOCOL_ID,
-          name: schema?.preset === 'custom' ? 'Custom' : protocol.kind,
+          name: protocol.schema.preset === 'custom' ? 'Custom' : protocol.protocol.kind,
           driver: 'protocol-engine',
           schemaVersion: 1,
-          config: { protocol, convertTo: null, schema: schema ?? schemaFromProtocolConfig(protocol) },
+          config: { protocol: protocol.protocol, convertTo: null, schema: protocol.schema },
           enabled: true,
           children: [],
         }],
       },
-      ports: [{ id: 'tx', direction: 'input', domain: 'bytes' }, { id: 'rx', direction: 'output', domain: 'bytes' }],
     },
   };
 }
@@ -122,14 +126,14 @@ const NODE_PROPERTIES_FIXED: DataTab = {
 };
 
 /// 部分控件会派生一个数据 Tab (Waveform/Spectrum/RawData)
-function derivedDataTab(w: WidgetConfig): DataTab | null {
-  switch (w.kind) {
+function derivedDataTab(widget: { kind: WidgetConfig['kind']; id: string; label: string }): DataTab | null {
+  switch (widget.kind) {
     case 'Waveform':
-      return { id: w.params.id, type: 'waveform-extra', name: 'Waveform', widgetId: w.params.id, closable: true };
+      return { id: widget.id, type: 'waveform-extra', name: 'Waveform', widgetId: widget.id, closable: true };
     case 'Spectrum':
-      return { id: w.params.id, type: 'spectrum', name: w.params.label, widgetId: w.params.id, closable: true };
+      return { id: widget.id, type: 'spectrum', name: widget.label, widgetId: widget.id, closable: true };
     case 'RawData':
-      return { id: w.params.id, type: 'raw', name: w.params.label, widgetId: w.params.id, closable: true };
+      return { id: widget.id, type: 'raw', name: widget.label, widgetId: widget.id, closable: true };
     default:
       return null;
   }
@@ -190,24 +194,24 @@ function buildDock(
 /// (compile-errors / compile-results 是 appStore 初始 dataTabs 里固定存在的两个 Tab)
 const TEMPLATE_DEFAULT_ACTIVE_DATA_TAB = 'compile-results-fixed';
 
-/// 组装快照
+/// 组装快照 — widget 文档来自 prepare, 设备树为显式场景声明
 function buildSnapshot(opts: {
   name: string;
-  protocol: ProtocolConfig;
   device: TemplateDevice;
-  widgetNodes: Node[];
+  protocol: { protocol: ProtocolConfig; schema: ProtocolSchema };
+  widgetDocs: NodeDocument[];
   edges: Edge[];
   extraDataTabs?: DataTab[];
-  /// 自定义协议 schema (preset='custom'); 缺省由 protocol 配置工厂生成预设 schema
-  protocolSchema?: ProtocolSchema;
 }): AppSnapshot {
-  const widgets = opts.widgetNodes.map((n) => n.data.widget as WidgetConfig);
+  const widgets = opts.widgetDocs
+    .map(widgetOf)
+    .filter((widget): widget is NonNullable<typeof widget> => widget !== null);
   const controlTabs: ControlTab[] = [
     { id: TAB, name: opts.name },
   ];
   const derivedTabs: DataTab[] = [];
-  for (const w of widgets) {
-    const t = derivedDataTab(w);
+  for (const widget of widgets) {
+    const t = derivedDataTab(widget);
     if (t && !derivedTabs.some((x) => x.id === t.id)) derivedTabs.push(t);
   }
   const extraTabs = opts.extraDataTabs ?? [];
@@ -231,9 +235,9 @@ function buildSnapshot(opts: {
     activeDataTabId,
     activeControlTabId: TAB,
     graphs: [{ tab_id: TAB, documents: [
-      deviceNode(opts.device, opts.protocol, opts.protocolSchema),
-      ...opts.widgetNodes,
-    ].map(nodeDocument),
+      deviceNode(opts.device, opts.protocol),
+      ...opts.widgetDocs,
+    ],
     edges: opts.edges.map(edgeToGraphEdge) }],
     rawDataViewPrefs: {},
     },
@@ -249,153 +253,139 @@ export interface QuickStartTemplate {
   id: string;
   nameKey: string;
   descKey: string;
-  build: () => AppSnapshot;
+  build: () => Promise<AppSnapshot>;
 }
 
-function mathTemplate(): AppSnapshot {
-  const mSin = widget('Math', 'm-sin', 'sin', { op: 'sin', inputCount: 1 });
-  const ndSin = widget('NumberDisplay', 'nd-sin', 'sin(ch0)');
-  const mAdd = widget('Math', 'm-add', 'sum', { op: 'add', inputCount: 2 });
-  const ndAdd = widget('NumberDisplay', 'nd-add', 'ch0+ch1');
+async function mathTemplate(): Promise<AppSnapshot> {
+  const [mSin, ndSin, mAdd, ndAdd] = await prepareWidgetSpecs([
+    { modelId: 'widget:Math', variantId: 'sin', nodeId: 'm-sin', label: 'sin', position: { x: 300, y: 80 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-sin', label: 'sin(ch0)', position: { x: 560, y: 80 } },
+    { modelId: 'widget:Math', variantId: 'add', nodeId: 'm-add', label: 'sum', position: { x: 300, y: 260 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-add', label: 'ch0+ch1', position: { x: 560, y: 260 } },
+  ]);
   return buildSnapshot({
     name: 'Math',
-    protocol: { kind: 'JustFloat', channels: 4 },
     device: simulatedSerial(4, 1000),
-    widgetNodes: [
-      wnode('m-sin', mSin, 300, 80),
-      wnode('nd-sin', ndSin, 560, 80),
-      wnode('m-add', mAdd, 300, 260),
-      wnode('nd-add', ndAdd, 560, 260),
-    ],
+    protocol: await prepareProtocolDocument({ kind: 'JustFloat', channels: 4 }, TAB),
+    widgetDocs: [mSin, ndSin, mAdd, ndAdd],
     edges: [
-      edge('e1', PROTOCOL_ID, 'ch0', 'm-sin', 'in0'),
-      edge('e2', 'm-sin', 'result', 'nd-sin', 'value'),
-      edge('e3', PROTOCOL_ID, 'ch0', 'm-add', 'in0'),
-      edge('e4', PROTOCOL_ID, 'ch1', 'm-add', 'in1'),
-      edge('e5', 'm-add', 'result', 'nd-add', 'value'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'm-sin', targetHandle: 'in0' },
+      { id: 'e2', source: 'm-sin', sourceHandle: 'result', target: 'nd-sin', targetHandle: 'value' },
+      { id: 'e3', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'm-add', targetHandle: 'in0' },
+      { id: 'e4', source: PROTOCOL_ID, sourceHandle: 'ch1', target: 'm-add', targetHandle: 'in1' },
+      { id: 'e5', source: 'm-add', sourceHandle: 'result', target: 'nd-add', targetHandle: 'value' },
     ],
   });
 }
 
-function filterTemplate(): AppSnapshot {
-  const fLp = widget('Filter', 'f-lp', 'Lowpass', { preset: 'Lowpass', cutoff: 100, sampleRate: 1000 });
-  const ndLp = widget('NumberDisplay', 'nd-lp', 'filtered');
-  const wf = widget('Waveform', 'wf-filter', 'Filtered', { channels: 4, dynamicSeries: true });
+async function filterTemplate(): Promise<AppSnapshot> {
+  const [fLp, ndLp, wf] = await prepareWidgetSpecs([
+    { modelId: 'widget:Filter', variantId: 'Lowpass', nodeId: 'f-lp', label: 'Lowpass',
+      position: { x: 300, y: 80 }, configPatch: { cutoff: 100, sampleRate: 1000 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-lp', label: 'filtered', position: { x: 560, y: 80 } },
+    { modelId: 'widget:Waveform', nodeId: 'wf-filter', label: 'Filtered', position: { x: 300, y: 260 },
+      configPatch: { channels: 4, dynamicSeries: true } },
+  ]);
   return buildSnapshot({
     name: 'Filter',
-    protocol: { kind: 'JustFloat', channels: 4 },
     device: simulatedSerial(4, 1000),
-    widgetNodes: [
-      wnode('f-lp', fLp, 300, 80),
-      wnode('nd-lp', ndLp, 560, 80),
-      wnode('wf-filter', wf, 300, 260),
-    ],
+    protocol: await prepareProtocolDocument({ kind: 'JustFloat', channels: 4 }, TAB),
+    widgetDocs: [fLp, ndLp, wf],
     edges: [
-      edge('e1', PROTOCOL_ID, 'ch0', 'f-lp', 'in0'),
-      edge('e2', 'f-lp', 'result', 'nd-lp', 'value'),
-      edge('e3', PROTOCOL_ID, 'ch0', 'wf-filter', 'CH0'),
-      edge('e4', 'f-lp', 'result', 'wf-filter', 'CH1'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'f-lp', targetHandle: 'in0' },
+      { id: 'e2', source: 'f-lp', sourceHandle: 'result', target: 'nd-lp', targetHandle: 'value' },
+      { id: 'e3', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'wf-filter', targetHandle: 'CH0' },
+      { id: 'e4', source: 'f-lp', sourceHandle: 'result', target: 'wf-filter', targetHandle: 'CH1' },
     ],
   });
 }
 
-function canTemplate(): AppSnapshot {
+async function canTemplate(): Promise<AppSnapshot> {
   return buildSnapshot({
     name: 'CAN',
-    protocol: { kind: 'Slcan' },
     device: { name: 'Slcan', driver: 'slcan', schemaVersion: 1,
       config: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } satisfies SlcanConfig },
-    widgetNodes: [],
+    protocol: await prepareProtocolDocument({ kind: 'Slcan' }, TAB),
+    widgetDocs: [],
     edges: [],
     extraDataTabs: [{ id: 'can-main', type: 'can', name: 'CAN', closable: true }],
   });
 }
 
-function serialTemplate(): AppSnapshot {
-  const g0 = widget('Gauge', 'g-ch0', 'CH0');
-  const g1 = widget('Gauge', 'g-ch1', 'CH1');
-  const n2 = widget('NumberDisplay', 'nd-ch2', 'CH2');
-  const n3 = widget('NumberDisplay', 'nd-ch3', 'CH3');
+async function serialTemplate(): Promise<AppSnapshot> {
+  const [g0, g1, n2, n3] = await prepareWidgetSpecs([
+    { modelId: 'widget:Gauge', nodeId: 'g-ch0', label: 'CH0', position: { x: 300, y: 60 } },
+    { modelId: 'widget:Gauge', nodeId: 'g-ch1', label: 'CH1', position: { x: 560, y: 60 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-ch2', label: 'CH2', position: { x: 300, y: 260 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-ch3', label: 'CH3', position: { x: 560, y: 260 } },
+  ]);
   return buildSnapshot({
     name: 'Serial',
-    protocol: { kind: 'JustFloat', channels: null },
     device: simulatedSerial(4, 100),
-    widgetNodes: [
-      wnode('g-ch0', g0, 300, 60),
-      wnode('g-ch1', g1, 560, 60),
-      wnode('nd-ch2', n2, 300, 260),
-      wnode('nd-ch3', n3, 560, 260),
-    ],
+    protocol: await prepareProtocolDocument({ kind: 'JustFloat', channels: null }, TAB),
+    widgetDocs: [g0, g1, n2, n3],
     edges: [
-      edge('e1', PROTOCOL_ID, 'ch0', 'g-ch0', 'value'),
-      edge('e2', PROTOCOL_ID, 'ch1', 'g-ch1', 'value'),
-      edge('e3', PROTOCOL_ID, 'ch2', 'nd-ch2', 'value'),
-      edge('e4', PROTOCOL_ID, 'ch3', 'nd-ch3', 'value'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'g-ch0', targetHandle: 'value' },
+      { id: 'e2', source: PROTOCOL_ID, sourceHandle: 'ch1', target: 'g-ch1', targetHandle: 'value' },
+      { id: 'e3', source: PROTOCOL_ID, sourceHandle: 'ch2', target: 'nd-ch2', targetHandle: 'value' },
+      { id: 'e4', source: PROTOCOL_ID, sourceHandle: 'ch3', target: 'nd-ch3', targetHandle: 'value' },
     ],
   });
 }
 
-function demoTemplate(): AppSnapshot {
-  const fLp = widget('Filter', 'f-lp', 'Lowpass', { preset: 'Lowpass', cutoff: 50, sampleRate: 1000 });
-  const ndLp = widget('NumberDisplay', 'nd-lp', 'filtered');
-  const mSin = widget('Math', 'm-sin', 'sin', { op: 'sin', inputCount: 1 });
-  const gSin = widget('Gauge', 'g-sin', 'sin(ch1)');
-  const wf = widget('Waveform', 'wf', 'Filtered', { channels: 4, dynamicSeries: true });
+async function demoTemplate(): Promise<AppSnapshot> {
+  const [fLp, ndLp, mSin, gSin, wf] = await prepareWidgetSpecs([
+    { modelId: 'widget:Filter', variantId: 'Lowpass', nodeId: 'f-lp', label: 'Lowpass',
+      position: { x: 300, y: 60 }, configPatch: { cutoff: 50, sampleRate: 1000 } },
+    { modelId: 'widget:NumberDisplay', nodeId: 'nd-lp', label: 'filtered', position: { x: 560, y: 60 } },
+    { modelId: 'widget:Math', variantId: 'sin', nodeId: 'm-sin', label: 'sin', position: { x: 300, y: 220 } },
+    { modelId: 'widget:Gauge', nodeId: 'g-sin', label: 'sin(ch1)', position: { x: 560, y: 220 } },
+    { modelId: 'widget:Waveform', nodeId: 'wf', label: 'Filtered', position: { x: 300, y: 400 },
+      configPatch: { channels: 4, dynamicSeries: true } },
+  ]);
   return buildSnapshot({
     name: 'Demo',
-    protocol: { kind: 'JustFloat', channels: 4 },
     device: simulatedSerial(4, 1000),
-    widgetNodes: [
-      wnode('f-lp', fLp, 300, 60),
-      wnode('nd-lp', ndLp, 560, 60),
-      wnode('m-sin', mSin, 300, 220),
-      wnode('g-sin', gSin, 560, 220),
-      wnode('wf', wf, 300, 400),
-    ],
+    protocol: await prepareProtocolDocument({ kind: 'JustFloat', channels: 4 }, TAB),
+    widgetDocs: [fLp, ndLp, mSin, gSin, wf],
     edges: [
-      edge('e1', PROTOCOL_ID, 'ch0', 'f-lp', 'in0'),
-      edge('e2', 'f-lp', 'result', 'nd-lp', 'value'),
-      edge('e3', 'f-lp', 'result', 'wf', 'CH0'),
-      edge('e4', PROTOCOL_ID, 'ch1', 'm-sin', 'in0'),
-      edge('e5', 'm-sin', 'result', 'g-sin', 'value'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'f-lp', targetHandle: 'in0' },
+      { id: 'e2', source: 'f-lp', sourceHandle: 'result', target: 'nd-lp', targetHandle: 'value' },
+      { id: 'e3', source: 'f-lp', sourceHandle: 'result', target: 'wf', targetHandle: 'CH0' },
+      { id: 'e4', source: PROTOCOL_ID, sourceHandle: 'ch1', target: 'm-sin', targetHandle: 'in0' },
+      { id: 'e5', source: 'm-sin', sourceHandle: 'result', target: 'g-sin', targetHandle: 'value' },
     ],
   });
 }
 
-function fftTemplate(): AppSnapshot {
+async function fftTemplate(): Promise<AppSnapshot> {
   // 频域流水线: ch0 → FFT 求解器 → 频谱仪 (连线即数据源) → IFFT 重建回时域 → 波形对比
-  const fft = widget('FFT', 'fft-main', 'FFT', {
-    windowSize: 512,
-    windowType: 'Hann',
-    output: 'Magnitude',
-    sampleRate: 1000,
-  });
-  const spec = widget('Spectrum', 'spec-main', 'Spectrum');
-  const ifft = widget('IFFT', 'ifft-main', 'IFFT');
-  const wf = widget('Waveform', 'wf-ifft', 'Original vs IFFT', { channels: 4, dynamicSeries: true });
+  const [fft, spec, ifft, wf] = await prepareWidgetSpecs([
+    { modelId: 'widget:FFT', nodeId: 'fft-main', label: 'FFT', position: { x: 300, y: 60 },
+      configPatch: { windowSize: 512, windowType: 'Hann', output: 'Magnitude', sampleRate: 1000 } },
+    { modelId: 'widget:Spectrum', nodeId: 'spec-main', label: 'Spectrum', position: { x: 600, y: 60 } },
+    { modelId: 'widget:IFFT', nodeId: 'ifft-main', label: 'IFFT', position: { x: 600, y: 280 } },
+    { modelId: 'widget:Waveform', nodeId: 'wf-ifft', label: 'Original vs IFFT', position: { x: 300, y: 280 },
+      configPatch: { channels: 4, dynamicSeries: true } },
+  ]);
   return buildSnapshot({
     name: 'FFT',
-    protocol: { kind: 'JustFloat', channels: 4 },
     device: simulatedSerial(4, 1000),
-    widgetNodes: [
-      wnode('fft-main', fft, 300, 60),
-      wnode('spec-main', spec, 600, 60),
-      wnode('wf-ifft', wf, 300, 280),
-      wnode('ifft-main', ifft, 600, 280),
-    ],
+    protocol: await prepareProtocolDocument({ kind: 'JustFloat', channels: 4 }, TAB),
+    widgetDocs: [fft, spec, ifft, wf],
     edges: [
-      edge('e1', PROTOCOL_ID, 'ch0', 'fft-main', 'in0'),
-      edge('e2', 'fft-main', 'spectrum', 'spec-main', 'spectrum'),
-      edge('e3', 'fft-main', 'spectrum', 'ifft-main', 'spectrum'),
-      edge('e4', PROTOCOL_ID, 'ch0', 'wf-ifft', 'CH0'),
-      edge('e5', 'ifft-main', 'out0', 'wf-ifft', 'CH1'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'fft-main', targetHandle: 'in0' },
+      { id: 'e2', source: 'fft-main', sourceHandle: 'spectrum', target: 'spec-main', targetHandle: 'spectrum' },
+      { id: 'e3', source: 'fft-main', sourceHandle: 'spectrum', target: 'ifft-main', targetHandle: 'spectrum' },
+      { id: 'e4', source: PROTOCOL_ID, sourceHandle: 'ch0', target: 'wf-ifft', targetHandle: 'CH0' },
+      { id: 'e5', source: 'ifft-main', sourceHandle: 'out0', target: 'wf-ifft', targetHandle: 'CH1' },
     ],
   });
 }
 
 /// 自定义协议演示: custom 块协议 (命名端口) + 多帧 CommandSender
 /// 帧布局与测试属性生成的 JustFloat 线缆格式一致 (2×float32LE + 帧尾)。
-function customProtocolTemplate(): AppSnapshot {
+async function customProtocolTemplate(): Promise<AppSnapshot> {
   const customSchema: ProtocolSchema = {
     preset: 'custom',
     decode: [
@@ -409,55 +399,53 @@ function customProtocolTemplate(): AppSnapshot {
       { type: 'constHex', params: { hex: '00 00 80 7F' } },
     ],
   };
-  const cmd = widget('Command', 'cmd-main', 'Command', {
-    frames: [
-      {
-        id: 'cmd-main-frame-1',
-        label: 'Ping',
-        blocks: [
-          { id: 'b1', type: 'const_hex', hex: 'AA 01' },
-          { id: 'b2', type: 'checksum', checksum: 'sum8' },
+  const [cmd, wf, gTemp, raw] = await prepareWidgetSpecs([
+    { modelId: 'widget:Command', nodeId: 'cmd-main', label: 'Command', position: { x: 260, y: 260 },
+      configPatch: {
+        frames: [
+          {
+            id: 'cmd-main-frame-1',
+            label: 'Ping',
+            blocks: [
+              { id: 'b1', type: 'const_hex', hex: 'AA 01' },
+              { id: 'b2', type: 'checksum', checksum: 'sum8' },
+            ],
+            appendNewline: false,
+            sendMode: 'manual',
+            timerMs: 1000,
+          },
+          {
+            id: 'cmd-main-frame-2',
+            label: 'Set Speed',
+            blocks: [
+              { id: 'b3', type: 'const_hex', hex: 'BB' },
+              { id: 'b4', type: 'var_ref', portName: 'speed', fieldType: 'float32LE' },
+            ],
+            appendNewline: false,
+            sendMode: 'manual',
+            timerMs: 1000,
+          },
         ],
-        appendNewline: false,
-        sendMode: 'manual',
-        timerMs: 1000,
-      },
-      {
-        id: 'cmd-main-frame-2',
-        label: 'Set Speed',
-        blocks: [
-          { id: 'b3', type: 'const_hex', hex: 'BB' },
-          { id: 'b4', type: 'var_ref', portName: 'speed', fieldType: 'float32LE' },
-        ],
-        appendNewline: false,
-        sendMode: 'manual',
-        timerMs: 1000,
-      },
-    ],
-  });
-  const wf = widget('Waveform', 'wf-custom', 'Speed', { channels: 4, dynamicSeries: true });
-  const gTemp = widget('Gauge', 'g-temp', 'Temp');
-  const raw = widget('RawData', 'raw-custom', 'RawData');
+      } },
+    { modelId: 'widget:Waveform', nodeId: 'wf-custom', label: 'Speed', position: { x: 560, y: 60 },
+      configPatch: { channels: 4, dynamicSeries: true } },
+    { modelId: 'widget:Gauge', nodeId: 'g-temp', label: 'Temp', position: { x: 560, y: 260 } },
+    { modelId: 'widget:RawData', nodeId: 'raw-custom', label: 'RawData', position: { x: 820, y: 160 } },
+  ]);
   return buildSnapshot({
     name: 'Custom Protocol',
     // 测试属性按自定义 schema 的编码块生成字节流，custom decode 负责解析。
-    protocol: { kind: 'JustFloat', channels: 2 },
-    protocolSchema: customSchema,
     device: simulatedSerial(2, 1000),
-    widgetNodes: [
-      wnode('wf-custom', wf, 560, 60),
-      wnode('g-temp', gTemp, 560, 260),
-      wnode('cmd-main', cmd, 260, 260),
-      wnode('raw-custom', raw, 820, 160),
-    ],
+    protocol: { protocol: { kind: 'JustFloat', channels: 2 }, schema: customSchema },
+    widgetDocs: [cmd, wf, gTemp, raw],
     edges: [
       // 命名端口 → 波形/仪表 (schema 派生端口 speed/temp)
-      edge('e1', PROTOCOL_ID, 'speed', 'wf-custom', 'CH0'),
-      edge('e2', PROTOCOL_ID, 'temp', 'g-temp', 'value'),
+      { id: 'e1', source: PROTOCOL_ID, sourceHandle: 'speed', target: 'wf-custom', targetHandle: 'CH0' },
+      { id: 'e2', source: PROTOCOL_ID, sourceHandle: 'temp', target: 'g-temp', targetHandle: 'value' },
       // 协议字节出口 → RawData (动态端口 src:<id>:out)
-      edge('e3', PROTOCOL_ID, 'out', 'raw-custom', rawDataPortId(PROTOCOL_ID, 'out')),
+      { id: 'e3', source: PROTOCOL_ID, sourceHandle: 'out', target: 'raw-custom', targetHandle: rawDataPortId(PROTOCOL_ID, 'out') },
       // 多帧发送器 → 设备写入口
-      edge('e4', 'cmd-main', 'loopbackOut', TRANSPORT_ID, 'tx'),
+      { id: 'e4', source: 'cmd-main', sourceHandle: 'loopbackOut', target: TRANSPORT_ID, targetHandle: 'tx' },
     ],
   });
 }

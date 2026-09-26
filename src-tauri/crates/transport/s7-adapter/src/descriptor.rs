@@ -2,10 +2,10 @@ use crate::config::MAX_BYTE_OFFSET;
 use crate::{S7Area, S7DataType, S7Point, SCHEMA_VERSION};
 use acquisition::{
     AdapterCapability, AddressRegion, AddressSpaceDescriptor, CAPABILITY_CONTRACT_VERSION,
-    CapabilitySet, ConfigurationSchema, DisplaySemantics, DriverManifest, EndpointDescriptor,
-    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
-    TransportKind,
+    CapabilitySet, DisplaySemantics, DriverManifest, EndpointDescriptor, EndpointDirection,
+    PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
 };
+use data_model::ConfigurationSchema;
 use flow::PayloadKind;
 use points::{AccessLevel, NativeAddress, PointDataType, PointDescriptor};
 use std::collections::{BTreeMap, BTreeSet};

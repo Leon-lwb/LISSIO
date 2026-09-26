@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 
 /// 滤波器类型 — FIR (任意阶) 或 IIR biquad (二阶)
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 pub enum FilterKind {
     /// FIR 滤波器 — 前馈, 无反馈, 稳定
     /// b: 分子系数 (前馈), 长度 = 阶数 + 1
@@ -26,7 +26,7 @@ pub enum FilterKind {
 }
 
 /// 滤波器预设 — 提供常用模板 (用户也可自定义 FilterKind)
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 pub enum FilterPreset {
     /// 低通 — 截止频率以下的信号通过
     Lowpass { cutoff: f32, sample_rate: f32 },
@@ -292,7 +292,7 @@ pub fn bandstop_biquad(low: f32, high: f32, sample_rate: f32) -> ([f32; 3], [f32
 // - `id`/`label`/`precision` 仅为前端 UI 用, 不参与后端 biquad 计算, **不**纳入此 DTO
 
 /// 滤波器配置 — 前端 Filter widget params 直接下发, 后端派生 FilterKind
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(tag = "preset", rename_all = "lowercase")]
 pub enum FilterConfig {
     /// 低通 — 单一截止频率

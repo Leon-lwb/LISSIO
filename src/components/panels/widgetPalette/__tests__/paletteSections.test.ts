@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DeviceCardModel } from '../../../../lib/acquisition/deviceCardModel';
+import { seedModelCatalogForTests } from '../../../../test/modelCatalog';
+import { resetModelCatalogForTests, useModelCatalogStore } from '../../../../store/modelCatalogStore';
+import { afterAll } from 'vitest';
 import {
   PALETTE_CATEGORY_IDS,
   buildPaletteSections,
@@ -9,13 +12,21 @@ import {
 const operations = { byteSource: false, byteSink: false, discover: false, browse: false, read: true, subscribe: true, write: true, method: false };
 const endpoint = {
   id: 'primary', displayName: 'Endpoint A', transport: 'future', direction: 'peer',
-  status: { state: 'available' }, ports: [],
-  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: {} }, uiHints: {} },
+  status: { state: 'available', detail: null }, ports: [],
+  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: {} }, uiHints: null },
+  display: null,
 };
 const card: DeviceCardModel = {
   key: 'future:primary', endpoint,
-  adapter: { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint] },
+  adapter: { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint], display: null },
 };
+
+const openCustomEditor = vi.fn();
+
+/// 目录驱动的 math/str/filter 变体条目 — models 参数来自模型目录 store
+function sectionsWith(models?: Parameters<typeof buildPaletteSections>[1]['models'], editor: () => void = openCustomEditor) {
+  return buildPaletteSections('zh', { capabilityCards: [card], openCustomEditor: editor, models: models ?? useModelCatalogStore.getState().models });
+}
 
 describe('PALETTE_CATEGORY_IDS', () => {
   it('固定顺序包含全部九个分类', () => {
@@ -47,8 +58,9 @@ describe('categoryLabel', () => {
 });
 
 describe('buildPaletteSections', () => {
-  const openCustomEditor = vi.fn();
-  const sections = buildPaletteSections('zh', { capabilityCards: [card], openCustomEditor });
+  seedModelCatalogForTests();
+
+  const sections = sectionsWith();
 
   it('按固定顺序输出九个分组, header 与 categoryLabel 一致', () => {
     expect(sections.map((s) => s.id)).toEqual([...PALETTE_CATEGORY_IDS]);
@@ -68,7 +80,7 @@ describe('buildPaletteSections', () => {
   });
 
   it('无 capability 时 transport 分组为空数组而非缺失', () => {
-    const empty = buildPaletteSections('zh', { capabilityCards: [], openCustomEditor });
+    const empty = buildPaletteSections('zh', { capabilityCards: [], openCustomEditor, models: [] });
     expect(empty.find((s) => s.id === 'transport')?.entries).toEqual([]);
   });
 
@@ -79,25 +91,42 @@ describe('buildPaletteSections', () => {
     expect(protocol?.entries[2]?.nodeType).toBe('point-selector');
   });
 
-  it('math 分组含算术 op / 滤波 preset / FFT·IFFT', () => {
+  it('math 分组条目来自目录变体 (modelId + variantId), 含 FFT·IFFT', () => {
     const math = sections.find((s) => s.id === 'math');
     const keys = math?.entries.map((e) => e.key) ?? [];
-    expect(keys).toContain('add');
-    expect(keys).toContain('sqrt');
-    expect(keys).toContain('Lowpass');
-    expect(keys).toContain('Bandstop');
+    expect(keys).toContain('widget:Math:add');
+    expect(keys).toContain('widget:Math:sqrt');
+    expect(keys).toContain('widget:Filter:Lowpass');
+    expect(keys).toContain('widget:Filter:Bandstop');
     expect(keys).toContain('FFT');
     expect(keys).toContain('IFFT');
-    const add = math?.entries.find((e) => e.key === 'add');
-    expect(add).toMatchObject({ kind: 'Math', op: 'add' });
-    const lowpass = math?.entries.find((e) => e.key === 'Lowpass');
-    expect(lowpass).toMatchObject({ kind: 'Filter', preset: 'Lowpass' });
+    const add = math?.entries.find((e) => e.variantId === 'add');
+    expect(add).toMatchObject({ kind: 'Math', modelId: 'widget:Math', variantId: 'add' });
+    const lowpass = math?.entries.find((e) => e.variantId === 'Lowpass');
+    expect(lowpass).toMatchObject({ kind: 'Filter', modelId: 'widget:Filter', variantId: 'Lowpass' });
   });
 
-  it('string 分组为 17 种字符串 op 快捷入口', () => {
+  it('string 分组条目来自目录 Str 变体', () => {
     const string = sections.find((s) => s.id === 'string');
-    expect(string?.entries).toHaveLength(17);
-    expect(string?.entries.every((e) => e.kind === 'Str' && e.op)).toBe(true);
+    expect(string?.entries).toHaveLength(2); // fixture: len/concat
+    expect(string?.entries.every((e) => e.kind === 'Str' && e.modelId === 'widget:Str' && e.variantId)).toBe(true);
+  });
+
+  it('目录缺失的变体映射用 fallbackLabel 展示 (新变体免改面板)', () => {
+    const raw = useModelCatalogStore.getState().models;
+    const mathModel = raw.find((m) => m.id === 'widget:Math');
+    const patched = [
+      ...raw.filter((m) => m.id !== 'widget:Math'),
+      {
+        ...mathModel!,
+        variants: [
+          { id: 'future_op', display: { fallbackLabel: 'Math future_op', category: 'variants', sortValue: 99 }, configPatch: { op: 'future_op' } },
+        ],
+      },
+    ];
+    const sections = sectionsWith(patched);
+    const entry = sections.find((s) => s.id === 'math')?.entries.find((e) => e.variantId === 'future_op');
+    expect(entry?.label).toBe('Math future_op');
   });
 
   it('attributes 分组含 test-data 属性入口', () => {
@@ -124,10 +153,12 @@ describe('buildPaletteSections', () => {
   });
 
   it('条目 label/title 随语言切换', () => {
-    const zh = buildPaletteSections('zh', { capabilityCards: [], openCustomEditor });
-    const en = buildPaletteSections('en', { capabilityCards: [], openCustomEditor });
-    const zhAdd = zh.find((s) => s.id === 'math')?.entries.find((e) => e.key === 'add');
-    const enAdd = en.find((s) => s.id === 'math')?.entries.find((e) => e.key === 'add');
+    const zh = buildPaletteSections('zh', { capabilityCards: [], openCustomEditor, models: useModelCatalogStore.getState().models });
+    const en = buildPaletteSections('en', { capabilityCards: [], openCustomEditor, models: useModelCatalogStore.getState().models });
+    const zhAdd = zh.find((s) => s.id === 'input')?.entries.find((e) => e.key === 'Knob');
+    const enAdd = en.find((s) => s.id === 'input')?.entries.find((e) => e.key === 'Knob');
     expect(zhAdd?.label).not.toBe(enAdd?.label);
   });
+
+  afterAll(() => resetModelCatalogForTests());
 });

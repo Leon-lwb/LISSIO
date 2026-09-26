@@ -16,13 +16,11 @@ import { createRunControlSlice, type RunControlSlice } from './slices/runControl
 
 export type { SidebarView } from './slices/sidebar';
 export {
-  createProtocolNode,
   isStructuralNode,
   syncTabGraphToBackend,
   traceProtocolSource,
   downstreamProtocolOf,
 } from './appStoreHelpers';
-export { getEffectiveChannels } from '../lib/utils/protocolSchema';
 
 export type AppStore = SidebarSlice
   & ConnectionSlice

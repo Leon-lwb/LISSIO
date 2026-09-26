@@ -13,7 +13,7 @@
 use serde::{Deserialize, Serialize};
 
 /// 串口奇偶校验
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum Parity {
     #[default]
@@ -23,7 +23,7 @@ pub enum Parity {
 }
 
 /// 串口停止位数
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum StopBits {
     #[default]
@@ -32,7 +32,7 @@ pub enum StopBits {
 }
 
 /// 串口流控模式
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum FlowControl {
     #[default]

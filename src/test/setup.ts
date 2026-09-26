@@ -28,7 +28,23 @@ const tauriMock = vi.hoisted(() => {
     },
 
     // ---- @tauri-apps/api/core ----
-    invoke: vi.fn(() => Promise.resolve(undefined)),
+    // 模型目录三命令给出最小合法响应 — 让目录就绪路径 (BackendConnectionGate
+    // 启动屏障 / modelCatalogStore.load) 在组件测试中可走通;
+    // 其余命令保持 resolve(undefined) (与拆分前一致), 需要数据的用例自行 mock。
+    invoke: vi.fn((cmd: string, args?: Record<string, unknown>): Promise<unknown> => {
+      if (cmd === 'get_model_catalog') {
+        return Promise.resolve({
+          contractVersion: 1,
+          revision: 'rev-mock',
+          models: [],
+        });
+      }
+      if (cmd === 'describe_node_documents') {
+        const request = (args ?? {}) as { requestRevision?: number };
+        return Promise.resolve({ requestRevision: request.requestRevision ?? 0, nodes: [] });
+      }
+      return Promise.resolve(undefined);
+    }),
 
     // ---- @tauri-apps/api/event ----
     listen: vi.fn(() => Promise.resolve(() => undefined)),

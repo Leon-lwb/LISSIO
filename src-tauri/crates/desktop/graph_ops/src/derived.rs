@@ -8,39 +8,13 @@ use pipeline::{NodeDef, NodeKind, PortDomain, port_table, protocol_source_port_n
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::Serialize;
 
-/// 端口域 wire 序列化形态 — 与前端 `domain: 'F32' | 'Bytes' | 'String'` 对齐
-///
-/// `pipeline::PortDomain` 是无 serde 派生的轻量枚举;为 IPC 契约在 derived 模块内
-/// 独立序列化,避免反向修改 kind 的公共 API。
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
-#[serde(rename_all = "PascalCase")]
-pub enum DerivedPortDomain {
-    Points,
-    F32,
-    Bytes,
-    String,
-    Spectrum,
-}
-
-impl From<PortDomain> for DerivedPortDomain {
-    fn from(d: PortDomain) -> Self {
-        match d {
-            PortDomain::Points => Self::Points,
-            PortDomain::F32 => Self::F32,
-            PortDomain::Bytes => Self::Bytes,
-            PortDomain::String => Self::String,
-            PortDomain::Spectrum => Self::Spectrum,
-        }
-    }
-}
-
 /// 单个输出端口的派生元数据 (与前端 `NodeDerived.ports[]` 对应)
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 pub struct NodeDerivedPort {
     /// 端口 id (handle 字符串)
     pub name: String,
     /// 端口承载域 (F32 / Bytes / String)
-    pub domain: DerivedPortDomain,
+    pub domain: PortDomain,
 }
 
 /// 单节点派生数据
@@ -90,9 +64,9 @@ fn derive_node(n: &NodeDef) -> NodeDerived {
                 .map(|port| NodeDerivedPort {
                     name: port.id.clone(),
                     domain: match port.domain {
-                        data_model::device::DevicePortDomain::Bytes => DerivedPortDomain::Bytes,
-                        data_model::device::DevicePortDomain::Points => DerivedPortDomain::Points,
-                        data_model::device::DevicePortDomain::Numeric => DerivedPortDomain::F32,
+                        data_model::device::DevicePortDomain::Bytes => PortDomain::Bytes,
+                        data_model::device::DevicePortDomain::Points => PortDomain::Points,
+                        data_model::device::DevicePortDomain::Numeric => PortDomain::F32,
                         data_model::device::DevicePortDomain::Events => unreachable!(),
                     },
                 })
@@ -105,7 +79,7 @@ fn derive_node(n: &NodeDef) -> NodeDerived {
                 .iter()
                 .map(|name| NodeDerivedPort {
                     name: name.clone(),
-                    domain: DerivedPortDomain::F32,
+                    domain: PortDomain::F32,
                 })
                 .collect(),
             effective_channels: Some(points.len()),
@@ -188,34 +162,18 @@ fn derive_protocol(
     }
 }
 
-/// preset 协议端口表 — 与 `protocol_source_port_names` 一致,
-/// 额外处理 RawData (单 "str" 字符串域, 无 chN)
+/// preset 协议端口表 — 委托 schema_types 的单一权威工厂
+/// (RawData → 单 "str" 字符串域; 其余预设 ch0..chN)
 fn preset_port_names(config: &ProtocolConfig) -> Vec<String> {
-    if matches!(config, ProtocolConfig::RawData) {
-        return vec!["str".to_string()];
-    }
-    let n = protocol_channels_from_config(config);
-    protocol_source_port_names(None, n)
+    schema_types::protocol_port_names(None, config, 0)
 }
 
 /// Protocol 节点端口域: ch0..chN 数值域 (F32); "str" (RawData 原始字节文本) 字符串域
-fn domain_for_protocol_port(name: &str) -> DerivedPortDomain {
+fn domain_for_protocol_port(name: &str) -> PortDomain {
     if name == "str" {
-        DerivedPortDomain::String
+        PortDomain::String
     } else {
-        DerivedPortDomain::F32
-    }
-}
-
-/// 从 ProtocolConfig 提取默认通道数
-fn protocol_channels_from_config(config: &ProtocolConfig) -> usize {
-    match config {
-        ProtocolConfig::JustFloat { channels } | ProtocolConfig::FireWater { channels } => {
-            channels.unwrap_or(4)
-        }
-        // RawData/Slcan/CandleLight/LogicDecode/Diagnostic 不产数值帧,
-        // 端口表为空 (compile  端口数 = 0), 仅 "str" 字符串域 (RawData)
-        _ => 0,
+        PortDomain::F32
     }
 }
 
@@ -229,18 +187,18 @@ fn kind_output_ports(kind: &NodeKind) -> Vec<NodeDerivedPort> {
     match kind {
         NodeKind::Custom { outputs, .. } => outputs
             .iter()
-            .map(|n| port(n.as_str(), DerivedPortDomain::F32))
+            .map(|n| port(n.as_str(), PortDomain::F32))
             .collect(),
         NodeKind::FrameDecoder { .. } | NodeKind::Filter { .. } => Vec::new(),
         _ => port_table(kind)
             .outputs
             .iter()
-            .map(|p| port(p.handle, p.domain.into()))
+            .map(|p| port(p.handle, p.domain))
             .collect(),
     }
 }
 
-fn port(name: &str, domain: DerivedPortDomain) -> NodeDerivedPort {
+fn port(name: &str, domain: PortDomain) -> NodeDerivedPort {
     NodeDerivedPort {
         name: name.to_string(),
         domain,
@@ -302,11 +260,11 @@ mod tests {
             vec![
                 NodeDerivedPort {
                     name: "voltage".into(),
-                    domain: DerivedPortDomain::F32
+                    domain: PortDomain::F32
                 },
                 NodeDerivedPort {
                     name: "current".into(),
-                    domain: DerivedPortDomain::F32
+                    domain: PortDomain::F32
                 },
             ]
         );
@@ -325,12 +283,12 @@ mod tests {
         assert_eq!(
             names,
             vec![
-                ("ch0", DerivedPortDomain::F32),
-                ("ch1", DerivedPortDomain::F32),
-                ("ch2", DerivedPortDomain::F32),
-                ("ch3", DerivedPortDomain::F32),
-                ("ch4", DerivedPortDomain::F32),
-                ("ch5", DerivedPortDomain::F32),
+                ("ch0", PortDomain::F32),
+                ("ch1", PortDomain::F32),
+                ("ch2", PortDomain::F32),
+                ("ch3", PortDomain::F32),
+                ("ch4", PortDomain::F32),
+                ("ch5", PortDomain::F32),
             ]
         );
         assert_eq!(derived[0].effective_channels, Some(6));
@@ -350,7 +308,7 @@ mod tests {
         let derived = compute_derived(&[n]);
         assert_eq!(derived[0].ports.len(), 1);
         assert_eq!(derived[0].ports[0].name, "str");
-        assert_eq!(derived[0].ports[0].domain, DerivedPortDomain::String);
+        assert_eq!(derived[0].ports[0].domain, PortDomain::String);
         assert_eq!(derived[0].effective_channels, Some(1));
     }
 
@@ -375,18 +333,9 @@ mod tests {
             kind: NodeKind::TextInput { text: "hi".into() },
         };
         let derived = compute_derived(&[input, math, text_in]);
-        assert_eq!(
-            derived[0].ports,
-            vec![port("value", DerivedPortDomain::F32)]
-        );
-        assert_eq!(
-            derived[1].ports,
-            vec![port("result", DerivedPortDomain::F32)]
-        );
-        assert_eq!(
-            derived[2].ports,
-            vec![port("str", DerivedPortDomain::String)]
-        );
+        assert_eq!(derived[0].ports, vec![port("value", PortDomain::F32)]);
+        assert_eq!(derived[1].ports, vec![port("result", PortDomain::F32)]);
+        assert_eq!(derived[2].ports, vec![port("str", PortDomain::String)]);
     }
 
     #[test]
@@ -434,8 +383,8 @@ mod tests {
         assert_eq!(
             derived[0].ports,
             vec![
-                port("rx", DerivedPortDomain::Bytes),
-                port("points", DerivedPortDomain::Points),
+                port("rx", PortDomain::Bytes),
+                port("points", PortDomain::Points),
             ]
         );
     }

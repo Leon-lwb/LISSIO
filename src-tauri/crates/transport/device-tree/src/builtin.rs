@@ -8,8 +8,9 @@ use crate::error::{CloseError, ConfigError, ContractError, OpenError};
 use crate::model::{
     ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeId, NodePath, NodeRole, NodeState,
 };
-use acquisition::{ConfigurationSchema, PortDescriptor};
+use acquisition::PortDescriptor;
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

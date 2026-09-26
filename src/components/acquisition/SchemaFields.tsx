@@ -1,28 +1,30 @@
-import type { JsonSchema } from '../../types';
+import type { JsonValue } from '../../types/generated/serde_json/JsonValue';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 import { DraftInput, DraftNumberInput } from '../ui/fields';
-import { defaultsFromSchema } from '../../lib/acquisition/schemaForm';
+import { asFormSchema, defaultsFromSchema } from '../../lib/acquisition/schemaForm';
 import { schemaEnumLabel, schemaFieldLabel } from './schemaLabels';
 
 interface SchemaFieldsProps {
-  schema: JsonSchema;
+  /// wire 上的 jsonSchema (JsonValue); 内部收窄为表单支持的子集
+  schema: JsonValue;
   value: unknown;
   onChange: (value: unknown) => void;
   path?: string;
-  uiHints?: Record<string, Record<string, unknown>>;
+  /// wire 上的 uiHints (JsonValue); 内部收窄为对象视图
+  uiHints?: JsonValue;
   disabled?: boolean;
 }
 
-export function SchemaFields({
-  schema,
-  value,
-  onChange,
-  path = '$',
-  uiHints,
-  disabled = false,
-}: SchemaFieldsProps) {
+export function SchemaFields(props: SchemaFieldsProps) {
+  const { value, onChange, path = '$', disabled = false } = props;
   const lang = useAppStore((state) => state.lang);
+  const schema = asFormSchema(props.schema);
+  const uiHints = asHints(props.uiHints);
+  if (!schema) {
+    // schema 不是本项目支持的表单子集 — 显式提示, 不假装校验成功
+    return <p className="text-[11px] text-warning">{t(lang, 'schemaUnsupported')}</p>;
+  }
   if (schema.type === 'object') {
     const object = asObject(value);
     const entries = Object.entries(schema.properties ?? {}).sort(([left], [right]) => {
@@ -36,7 +38,7 @@ export function SchemaFields({
           <div key={`${path}.${name}`} className="block text-[11px] text-text-secondary">
             <label htmlFor={`${path}.${name}`} className="block mb-1 text-text-secondary">{child.title ?? schemaFieldLabel(lang, name) ?? formatLabel(name)}</label>
             <SchemaFields
-              schema={child}
+              schema={child as JsonValue}
               value={object[name]}
               onChange={(next) => onChange({ ...object, [name]: next })}
               path={`${path}.${name}`}
@@ -55,7 +57,7 @@ export function SchemaFields({
         {items.map((item, index) => (
           <div key={`${path}.${index}`} className="rounded border border-border-subtle p-2">
             <SchemaFields
-              schema={schema.items ?? { type: 'string' }}
+              schema={(schema.items ?? { type: 'string' }) as JsonValue}
               value={item}
               onChange={(next) => onChange(items.map((current, itemIndex) => itemIndex === index ? next : current))}
               path={`${path}[${index}]`}
@@ -141,6 +143,11 @@ export function SchemaFields({
       onCommit={onChange}
     />
   );
+}
+
+function asHints(value: JsonValue | undefined): Record<string, Record<string, unknown>> | undefined {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  return value as Record<string, Record<string, unknown>>;
 }
 
 function asObject(value: unknown): Record<string, unknown> {

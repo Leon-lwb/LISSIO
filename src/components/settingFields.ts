@@ -3,6 +3,7 @@
 //! 从 SettingsModal.tsx 提取，用于保持文件体积可控
 
 import type { AppSettings } from '../settings/defaults';
+import type { ModelDescriptor } from '../types/generated/ModelDescriptor';
 
 export type ControlType =
   | { kind: 'select'; options: { value: string | number; label: string }[] }
@@ -24,7 +25,30 @@ export interface SettingFieldDef {
 }
 
 /// 所有设置项的元数据 — 按分类顺序渲染
-export const SETTING_FIELDS: SettingFieldDef[] = [
+/// AI provider 选项 — 目录 aiProvider 家族是唯一权威 (后端 llm::types::ADAPTERS
+/// 投影); 不再维护前端硬编码名单。
+function aiAdapterField(models: readonly ModelDescriptor[]): SettingFieldDef {
+  const options = models
+    .filter((model) => model.family === 'aiProvider' && (model.actions ?? []).includes('configure'))
+    .map((model) => ({
+      value: model.id.startsWith('aiProvider:') ? model.id.slice('aiProvider:'.length) : model.id,
+      label: model.display.fallbackLabel,
+    }));
+  return {
+    category: 'ai',
+    field: 'adapter',
+    labelKey: 'settingAiAdapter',
+    descKey: 'settingAiAdapterDesc',
+    control: { kind: 'select', options },
+    keywords: ['ai', 'llm', 'provider', '模型', '对话'],
+  };
+}
+
+export function buildSettingFields(models: readonly ModelDescriptor[]): SettingFieldDef[] {
+  return SETTING_FIELDS.map((field) => (field.field === 'adapter' ? aiAdapterField(models) : field));
+}
+
+const SETTING_FIELDS: SettingFieldDef[] = [
   // General
   {
     category: 'general',
@@ -458,25 +482,8 @@ export const SETTING_FIELDS: SettingFieldDef[] = [
     field: 'adapter',
     labelKey: 'settingAiAdapter',
     descKey: 'settingAiAdapterDesc',
-    control: {
-      kind: 'select',
-      options: [
-        { value: 'orcarouter', label: 'OrcaRouter' },
-        { value: 'openai_compatible', label: 'OpenAI 兼容 / Compatible' },
-        { value: 'openai', label: 'OpenAI' },
-        { value: 'anthropic', label: 'Anthropic Claude' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'deepseek', label: 'DeepSeek' },
-        { value: 'moonshot', label: 'Moonshot Kimi' },
-        { value: 'zai', label: '智谱 GLM (Z.ai)' },
-        { value: 'bigmodel', label: '智谱 BigModel' },
-        { value: 'aliyun', label: '阿里云百炼 (Qwen)' },
-        { value: 'openrouter', label: 'OpenRouter' },
-        { value: 'groq', label: 'Groq' },
-        { value: 'xai', label: 'xAI Grok' },
-        { value: 'ollama', label: 'Ollama (本地)' },
-      ],
-    },
+    // 选项由 buildSettingFields 从目录 aiProvider 家族注入
+    control: { kind: 'select', options: [] },
     keywords: ['ai', 'llm', 'provider', '模型', '对话'],
   },
   {
@@ -560,3 +567,4 @@ export const SETTING_FIELDS: SettingFieldDef[] = [
     keywords: ['ai', 'mcp', 'server', '端口', 'port'],
   },
 ];
+

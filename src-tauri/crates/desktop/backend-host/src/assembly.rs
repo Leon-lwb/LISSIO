@@ -31,7 +31,10 @@ impl PointBatchObserver for FourDomainPointObserver {
 /// 装配全部传输/采集适配器 — 字节设备工厂 + 可选工业协议适配器。
 ///
 /// `modbus-tcp` / `modbus-rtu` / `s7` feature 控制后三类适配器是否注册。
-pub fn build_acquisition_runtime() -> acquisition::AcquisitionRuntime {
+pub fn build_acquisition_runtime() -> (
+    acquisition::AcquisitionRuntime,
+    Arc<device_tree::DriverRegistry>,
+) {
     use acquisition::{AcquisitionRunState, ExecutionGate, TransportBackend};
     use data_model::{
         CandleConfig, SerialConfig, SlcanConfig, TcpClientConfig, TcpServerConfig, TransportConfig,
@@ -129,9 +132,60 @@ pub fn build_acquisition_runtime() -> acquisition::AcquisitionRuntime {
     registry
         .register(Arc::new(s7_adapter::S7Driver::new(execution.clone())))
         .expect("fresh device-tree registry accepts S7");
-    acquisition::AcquisitionRuntime::new(Arc::new(
-        device_tree::DeviceTreeAcquisition::with_execution(registry, execution),
-    ))
+    let runtime = acquisition::AcquisitionRuntime::new(Arc::new(
+        device_tree::DeviceTreeAcquisition::with_execution(registry.clone(), execution),
+    ));
+    (runtime, registry)
+}
+
+/// 组装模型目录 — 从设备树注册表与 L4 provider 注册表投影 (WP5 统一 RPC)。
+pub fn build_model_catalog(
+    drivers: &Arc<device_tree::DriverRegistry>,
+) -> app::models::ModelCatalogSnapshot {
+    use app::models::{CatalogSources, ModelDescriptor, ModelDisplay, ModelFamily, ModelUiHints};
+
+    let providers: Vec<ModelDescriptor> = llm::types::list_adapters()
+        .iter()
+        .map(|adapter| ModelDescriptor {
+            id: format!("aiProvider:{}", adapter.id),
+            family: ModelFamily::AiProvider,
+            schema_version: 1,
+            display: ModelDisplay::fallback(adapter.label),
+            ui: ModelUiHints::default(),
+            configuration: data_model::model_descriptor::ConfigurationSchema {
+                schema_version: 1,
+                json_schema: serde_json::json!({
+                    "type": "object",
+                    "properties": {
+                        "baseUrl": { "type": "string" },
+                        "apiKey": { "type": "string", "writeOnly": true },
+                        "model": { "type": "string" },
+                        "temperature": { "type": "number" },
+                        "maxTokens": { "type": "integer", "minimum": 1 },
+                    },
+                }),
+                ui_hints: serde_json::json!({
+                    "requiresCustomUrl": adapter.requires_custom_url,
+                    "requiresApiKey": adapter.requires_api_key,
+                    "defaultBaseUrl": adapter.default_base_url,
+                }),
+            },
+            // 目录不携带密钥 — 密钥来源仍是系统凭据库
+            default_config: serde_json::json!({
+                "adapter": adapter.id,
+                "baseUrl": adapter.default_base_url,
+                "requiresApiKey": adapter.requires_api_key,
+            }),
+            variants: Vec::new(),
+            actions: vec![data_model::model_descriptor::ModelAction::Configure],
+            availability: data_model::model_descriptor::ModelAvailability::AVAILABLE,
+        })
+        .collect();
+    app::models::build_model_catalog(CatalogSources {
+        drivers,
+        ai_providers: &providers,
+    })
+    .expect("model catalog assembles from registered drivers")
 }
 
 /// 把四域点位投影观察者挂到采集运行时 (与打开端点配对)。

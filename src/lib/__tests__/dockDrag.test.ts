@@ -325,7 +325,7 @@ describe('dockDrag 指针拖拽控制器', () => {
     const handler = vi.fn();
     dockDrag.registerCanvasHandler(zone, (x, y, spec) => { handler(x, y, spec); });
 
-    const spec: WidgetDragSpec = { kind: 'Math', op: 'add' };
+    const spec: WidgetDragSpec = { kind: 'Math', modelId: 'widget:Math', variantId: 'add' };
     dockDrag.begin({ clientX: 10, clientY: 10, button: 0 }, { kind: 'widget', widget: spec, label: 'Math add' });
     moveTo(40, 40);
 

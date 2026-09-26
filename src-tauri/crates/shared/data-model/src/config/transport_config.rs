@@ -12,7 +12,7 @@ use crate::CanBitrate;
 use crate::serial_params::{FlowControl, Parity, StopBits};
 
 /// 传输层后端 — tagged enum, 序列化 `{ kind, params }`
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(tag = "kind", content = "params")]
 pub enum TransportConfig {
     Serial(SerialConfig),
@@ -25,7 +25,7 @@ pub enum TransportConfig {
 }
 
 /// 串口传输参数
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct SerialConfig {
     pub port_name: String,
     pub baud_rate: u32,
@@ -49,7 +49,7 @@ impl Default for SerialConfig {
 }
 
 /// UDP 传输参数
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct UdpConfig {
     pub local_addr: String,
     pub remote_addr: String,
@@ -69,7 +69,7 @@ impl Default for UdpConfig {
 }
 
 /// TCP 客户端参数
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct TcpClientConfig {
     pub host: String,
     pub port: u16,
@@ -85,7 +85,7 @@ impl Default for TcpClientConfig {
 }
 
 /// TCP 服务端参数
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct TcpServerConfig {
     pub listen_addr: String,
     pub listen_port: u16,
@@ -101,7 +101,7 @@ impl Default for TcpServerConfig {
 }
 
 /// 内置测试数据源参数
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct TestDataConfig {
     /// 通道数
     pub channels: usize,
@@ -123,7 +123,7 @@ impl Default for TestDataConfig {
 
 /// slcan 配置 — 基于 USB-CDC 串口
 // 容器级 serde(default): 旧版 payload 缺字段时按 Default 兜底, 序列化输出不变
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(default)]
 pub struct SlcanConfig {
     pub port_name: String,
@@ -142,7 +142,7 @@ impl Default for SlcanConfig {
 }
 
 /// candleLight 配置 — 原生 USB
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(default)]
 pub struct CandleConfig {
     pub bus: u8,
@@ -163,7 +163,7 @@ impl Default for CandleConfig {
 }
 
 /// 测试信号波形类型
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum TestSignal {
     Sine,
     Square,

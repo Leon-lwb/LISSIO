@@ -16,7 +16,7 @@ function mockInvokeReject(error: unknown): void {
 }
 function mockInvokeImpl(impl: (cmd: string) => unknown): void {
   tauriMock.invoke.mockImplementation(
-    ((cmd: string) => Promise.resolve().then(() => impl(cmd))) as unknown as () => Promise<undefined>,
+    (cmd: string) => Promise.resolve().then(() => impl(cmd)),
   );
 }
 

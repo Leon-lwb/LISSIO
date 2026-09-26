@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 /// 算术运算种类
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum MathOp {
     Add,

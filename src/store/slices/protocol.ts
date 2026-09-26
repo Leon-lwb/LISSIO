@@ -5,7 +5,8 @@ import { t } from '../../i18n';
 import type { ProtocolConfig, ProtocolSchema } from '../../types';
 import type { AppSlice } from './types';
 import type { ProtocolNodeData } from '../appStoreHelpers';
-import { getEffectiveChannels, schemaFromProtocolConfig, schemaPortNames } from '../../lib/utils/protocolSchema';
+import { prepareProtocolDocument } from '../../lib/models/createFromCatalog';
+import { schemaPortNames } from '../../lib/utils/protocolSchema';
 import {
   withHistoryOp,
   beginHistoryOp,
@@ -34,32 +35,45 @@ export const createProtocolSlice: AppSlice<ProtocolSlice> = (set, get) => {
     detectedChannels: {},
 
     setProtocolNodeConfig: async (nodeId, config) => {
-      // 1. 更新节点 data (通道数立即按新配置重算)
-      beginHistoryOp();
-      const detected = get().detectedChannels[nodeId] ?? null;
-      const effective = getEffectiveChannels(config, detected);
-      // schema 联动: 预设 (或缺失) → 按新 config 工厂重建; custom → 保留用户块
+      // 1. schema 单一来源: 目录 prepare 产出与 config 对应的预设协议文档
+      //    (custom schema 由 setProtocolNodeSchema 管理, preset 变化时才重建)
       const prevNode = get().rfNodes.find((n) => n.id === nodeId);
       const prevSchema = prevNode ? (prevNode.data as ProtocolNodeData).schema : undefined;
-      const schema = prevSchema?.preset === 'custom' ? prevSchema : schemaFromProtocolConfig(config);
+      const keepCustom = prevSchema?.preset === 'custom';
+      let prepared: Awaited<ReturnType<typeof prepareProtocolDocument>> | null = null;
+      if (!keepCustom) {
+        try {
+          prepared = await prepareProtocolDocument(config);
+        } catch (error) {
+          const lang = get().lang;
+          notify.error(t(lang, 'notifSetProtocolFailed'), nodeError(lang, error), { source: 'setProtocol' });
+          return;
+        }
+      }
+      const nextConfig = prepared?.protocol ?? config;
+      const schema = keepCustom
+        ? (prevSchema)
+        : prepared!.schema;
+      const channels = schemaPortNames(schema.decode).length;
+      beginHistoryOp();
       set((s) => ({
         rfNodes: s.rfNodes.map((n) =>
           n.id === nodeId && n.type === 'protocol'
-            ? { ...n, data: { ...n.data, config, channels: effective, schema, label: config.kind } }
+            ? { ...n, data: { ...n.data, config: nextConfig, channels, schema, label: nextConfig.kind } }
             : n
         ),
       }));
       // 文档变更已在上面同步完成 — 立即提交历史 (await 之后的后端调用不属于文档态)
       commitHistoryOp(
-        { opKey: 'opUpdateProtocolConfig', detailText: config.kind, target: protocolTarget() },
+        { opKey: 'opUpdateProtocolConfig', detailText: nextConfig.kind, target: protocolTarget() },
         { coalesceKey: `protocol.config.${nodeId}` }
       );
       // 2. 后端运行时引擎 (图同步是权威, 此调用让引擎立即重建;
       //    手动模式 buffer 通道数 + 推送记录复位都在 set_protocol 内一并完成,
       //    自动模式由后端 protocol:channels-detected 事件驱动前端响应)
       try {
-        await api.setProtocol(nodeId, config);
-        if ((config.kind === 'JustFloat' || config.kind === 'FireWater') && config.channels != null) {
+        await api.setProtocol(nodeId, nextConfig);
+        if ((nextConfig.kind === 'JustFloat' || nextConfig.kind === 'FireWater') && nextConfig.channels != null) {
           set((s) => ({ detectedChannels: { ...s.detectedChannels, [nodeId]: null } }));
         }
       } catch (e) {
@@ -94,7 +108,7 @@ export const createProtocolSlice: AppSlice<ProtocolSlice> = (set, get) => {
         set((s) => ({
           rfNodes: s.rfNodes.map((n) => {
             if (n.id !== nodeId || n.type !== 'protocol') return n;
-            // custom 下节点端口数跟随 decode 块派生 (摘要显示用; 端口名以 protocolPortNames 为准)
+            // custom 下节点端口数跟随 decode 块派生 (schemaPortNames, 与 Rust port_names 同规则)
             const channels = schema.preset === 'custom'
               ? schemaPortNames(schema.decode).length
               : (n.data as ProtocolNodeData).channels;

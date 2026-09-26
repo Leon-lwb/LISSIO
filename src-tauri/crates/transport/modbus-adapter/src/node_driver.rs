@@ -2,10 +2,11 @@
 
 use crate::factory::{ModbusFactory, ModbusRtuFactory};
 use acquisition::{
-    AdapterCapability, AddressSpaceDescriptor, ConfigurationSchema, DiscoveredEndpoint,
-    ExecutionGate, PortDescriptor, SourceFactory, SourceSupervisor,
+    AdapterCapability, AddressSpaceDescriptor, DiscoveredEndpoint, ExecutionGate, PortDescriptor,
+    SourceFactory, SourceSupervisor,
 };
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use device_tree::{
     Capability, CapabilityMask, ChildPolicy, ConfigError, DriverId, NodeContext, NodeDriver,
     NodeId, NodeRole, NodeRuntime, OpenError, ParentContract, SourceRuntimeBuilder,

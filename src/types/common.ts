@@ -160,28 +160,6 @@ export function isUnaryMathOp(op: MathOp): boolean {
 }
 
 /// 计算数学运算结果 (输入为 number[], 输出为单 number)
-export function computeMathResult(op: MathOp, inputs: number[]): number {
-  const vals = inputs.filter((v) => typeof v === 'number' && !Number.isNaN(v));
-  if (vals.length === 0) return 0;
-  switch (op) {
-    case 'add': return vals.reduce((a, b) => a + b, 0);
-    case 'sub': return vals.reduce((a, b) => a - b, 0);
-    case 'mul': return vals.reduce((a, b) => a * b, 1);
-    case 'div': return vals.reduce((a, b) => (b === 0 ? 0 : a / b), vals[0] ?? 0);
-    case 'avg': return vals.reduce((a, b) => a + b, 0) / vals.length;
-    case 'min': return Math.min(...vals);
-    case 'max': return Math.max(...vals);
-    case 'abs': return Math.abs(vals[0]);
-    case 'neg': return -vals[0];
-    case 'square': return vals[0] * vals[0];
-    case 'sqrt': return vals[0] < 0 ? 0 : Math.sqrt(vals[0]);
-    case 'sin': return Math.sin(vals[0]);
-    case 'cos': return Math.cos(vals[0]);
-    case 'tan': return Math.tan(vals[0]);
-    case 'log': return vals[0] <= 0 ? 0 : Math.log(vals[0]);
-    default: return 0;
-  }
-}
 
 // ============ 字符串操作控件 ============
 //

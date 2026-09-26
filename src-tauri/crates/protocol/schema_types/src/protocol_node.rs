@@ -4,7 +4,7 @@ use crate::{ProtocolConfig, ProtocolSchema};
 use serde::{Deserialize, Serialize};
 
 /// 协议节点的解析、转换和自定义帧配置。
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolNodeConfig {
     pub protocol: ProtocolConfig,

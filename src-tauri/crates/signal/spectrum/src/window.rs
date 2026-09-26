@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 /// 窗函数类型
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default, ts_rs::TS)]
 pub enum WindowType {
     /// 矩形窗 (不加窗)
     Rect,

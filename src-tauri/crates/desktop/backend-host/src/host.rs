@@ -46,7 +46,10 @@ pub async fn assemble(
     sink: EventSinkHandle,
 ) -> Result<BackendHost, String> {
     let config_dir = crate::resolve_config_dir(config_dir);
-    let state = AppState::with_acquisition(crate::build_acquisition_runtime());
+    let (runtime, drivers) = crate::build_acquisition_runtime();
+    let state = AppState::with_acquisition(runtime);
+    state.install_model_catalog(std::sync::Arc::new(crate::build_model_catalog(&drivers)));
+    state.install_drivers(drivers.clone());
     crate::install_point_observer(&state);
     crate::install_envelope_engine(&state);
     crate::install_serial_discovery(&state);

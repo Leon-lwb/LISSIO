@@ -1,153 +1,100 @@
-import { describe, expect, it } from 'vitest';
-import { getWidgetPorts } from '../WidgetPorts';
-import type { StrOp, WidgetConfig } from '../../../types';
-import { STR_OP_PORTS } from '../../../types';
-import { createWidget } from '../../../lib/utils/widgetDefaults';
+import { beforeEach, describe, expect, it } from 'vitest';
+import type { Node } from '@xyflow/react';
+import { nodeDefinition } from '../registry';
+import { useDescribeStore } from '../../../lib/models/describeStore';
+import { useAppStore } from '../../../store/appStore';
+import type { NodeDescription } from '../../../types/generated/NodeDescription';
+import type { NodePortDescriptor } from '../../../types/generated/NodePortDescriptor';
 
-/// Command 控件 (两帧, var_ref 端口有重复)
-const CMD_WIDGET: WidgetConfig = {
-  kind: 'Command',
-  params: {
-    id: 'cmd-1',
-    label: 'Cmd',
-    frames: [
-      {
-        id: 'f1', label: 'F1', appendNewline: false, sendMode: 'manual', timerMs: 100,
-        blocks: [
-          { id: 'a', type: 'var_ref', portName: 'speed', fieldType: 'uint16LE' },
-          { id: 'b', type: 'const_hex', hex: 'AA' },
-        ],
-      },
-      {
-        id: 'f2', label: 'F2', appendNewline: false, sendMode: 'timer', timerMs: 100,
-        blocks: [
-          { id: 'c', type: 'var_ref', portName: 'speed', fieldType: 'uint16LE' },
-          { id: 'd', type: 'var_ref', portName: 'temp', fieldType: 'int16LE' },
-        ],
-      },
-    ],
-    loopbackEnabled: false,
-    loopbackHistory: [],
-  },
-};
+/// 端口表的前端消费守卫: 端口内容唯一权威是 describe_node_documents,
+/// registry.ports 只做 wire→UI 词表映射 (后端端口表语义由 widgets/tests.rs 保证)。
 
-describe('getWidgetPorts - Command 多帧', () => {
-  it('输入端口 = 所有帧 var_ref 块 portName 并集 (去重保序)', () => {
-    const { inputs, outputs } = getWidgetPorts(CMD_WIDGET);
-    expect(inputs.map((p) => p.id)).toEqual(['speed', 'temp']);
-    // loopbackOut 字节出口保留
-    expect(outputs.map((p) => p.id)).toEqual(['loopbackOut']);
-    expect(outputs[0].domain).toBe('bytes');
-  });
-
-  it('旧版单帧配置 (blocks 在顶层) 也能派生端口', () => {
-    const legacy = {
-      kind: 'Command',
-      params: {
-        id: 'cmd-2',
-        label: 'Cmd',
-        blocks: [{ id: 'a', type: 'var_ref', portName: 'dir', fieldType: 'uint8' }],
-        appendNewline: false,
-        loopbackEnabled: false,
-        sendMode: 'manual',
-        timerMs: 100,
-        loopbackHistory: [],
-      },
-    } as unknown as WidgetConfig;
-    const { inputs } = getWidgetPorts(legacy);
-    expect(inputs.map((p) => p.id)).toEqual(['dir']);
-  });
-});
-
-/// Str 控件工厂 (默认 pos/len/size, 端口仅由 op 决定)
-function strWidget(op: StrOp): WidgetConfig {
-  return { kind: 'Str', params: { id: 's1', label: 'Str', op, pos: 1, len: 0, size: 0 } };
+function port(handle: string, domain: NodePortDescriptor['domain']): NodePortDescriptor {
+  return { handle, label: '', domain, connectDomains: [], dynamic: false, maxConnections: null };
 }
 
-const STR_OPS: StrOp[] = [
-  'len', 'find', 'contains', 'left', 'right', 'mid', 'concat',
-  'insert', 'delete', 'replace', 'upper', 'lower', 'trim', 'reverse',
-  // 转换算子 (数值 ↔ 文本)
-  'format', 'parse', 'encode_hex',
-];
+function adoptDescription(nodeId: string, inputs: NodePortDescriptor[], outputs: NodePortDescriptor[]): void {
+  const description: NodeDescription = {
+    nodeId,
+    requestRevision: 1,
+    status: 'ready',
+    inputs,
+    outputs,
+    defaultInput: null,
+    defaultOutput: null,
+    effectiveChannels: null,
+    hint: null,
+    issues: [],
+  };
+  useDescribeStore.getState().adopt([description]);
+}
 
-describe('getWidgetPorts - Str 字符串操作', () => {
-  it('STR_OP_PORTS 覆盖全部 17 个 op', () => {
-    expect(Object.keys(STR_OP_PORTS).sort()).toEqual([...STR_OPS].sort());
+function widgetNode(id: string, kind: string): Node {
+  return {
+    id,
+    type: 'widget',
+    position: { x: 0, y: 0 },
+    data: { tabId: 'default', widget: { kind, params: { id, label: kind } } },
+  };
+}
+
+const EMPTY_CTX = {} as never;
+
+describe('registry.ports - describe 映射', () => {
+  beforeEach(() => {
+    useDescribeStore.getState().clear();
+    useAppStore.setState({ rfNodes: [], rfEdges: [] });
   });
 
-  it.each(STR_OPS)('op=%s 的输入/输出端口与 STR_OP_PORTS 一致', (op) => {
-    const meta = STR_OP_PORTS[op];
-    const { inputs, outputs } = getWidgetPorts(strWidget(op));
-    expect(inputs).toEqual(meta.inputs);
-    expect(outputs).toEqual([{ id: 'result', label: 'result', domain: meta.outputDomain }]);
+  it('Command 多帧端口并集经描述透传 (去重保序在 后端/描述侧 完成)', () => {
+    adoptDescription('cmd-1',
+      [port('speed', 'F32'), port('temp', 'F32')],
+      [port('loopbackOut', 'Bytes')]);
+    const table = nodeDefinition(widgetNode('cmd-1', 'Command')).ports(widgetNode('cmd-1', 'Command'), EMPTY_CTX);
+    expect(table.inputs.map((p) => p.id)).toEqual(['speed', 'temp']);
+    expect(table.outputs.map((p) => ({ id: p.id, domain: p.domain }))).toEqual([
+      { id: 'loopbackOut', domain: 'bytes' },
+    ]);
   });
 
-  it('输出域覆盖数值与字符串两类 (len → time, concat → string)', () => {
-    expect(getWidgetPorts(strWidget('len')).outputs[0].domain).toBe('time');
-    expect(getWidgetPorts(strWidget('find')).outputs[0].domain).toBe('time');
-    expect(getWidgetPorts(strWidget('contains')).outputs[0].domain).toBe('time');
-    expect(getWidgetPorts(strWidget('concat')).outputs[0].domain).toBe('string');
-    expect(getWidgetPorts(strWidget('upper')).outputs[0].domain).toBe('string');
-  });
-
-  it.each(STR_OPS)('op=%s 的内联数值端口均为输入端口表中的 time 域端口', (op) => {
-    const meta = STR_OP_PORTS[op];
-    const timePortIds = meta.inputs.filter((p) => p.domain === 'time').map((p) => p.id);
-    for (const id of meta.inlineNumPorts) {
-      expect(timePortIds).toContain(id);
-    }
-  });
-
-  it('关键 op 的端口形状与后端端口表一致', () => {
-    // mid: str (string) + pos/len (time) → result (string)
-    expect(getWidgetPorts(strWidget('mid'))).toEqual({
-      inputs: [
-        { id: 'str', label: 'str', domain: 'string' },
-        { id: 'pos', label: 'pos', domain: 'time' },
-        { id: 'len', label: 'len', domain: 'time' },
-      ],
-      outputs: [{ id: 'result', label: 'result', domain: 'string' }],
-    });
-    // replace: str1/str2 (string) + pos/len (time) → result (string)
-    expect(getWidgetPorts(strWidget('replace')).inputs.map((p) => p.id)).toEqual(['str1', 'str2', 'pos', 'len']);
-    // insert: str1/str2 (string) + pos (time)
-    expect(getWidgetPorts(strWidget('insert')).inputs.map((p) => p.id)).toEqual(['str1', 'str2', 'pos']);
-    // left: str (string) + size (time)
-    expect(getWidgetPorts(strWidget('left')).inputs.map((p) => p.id)).toEqual(['str', 'size']);
-  });
-});
-
-/// TextInput 控件 (文本输入源, 无输入端口)
-const TEXT_INPUT_WIDGET: WidgetConfig = {
-  kind: 'TextInput',
-  params: { id: 'ti-1', label: 'TextInput', text: 'hello', placeholder: '' },
-};
-
-describe('getWidgetPorts - TextInput 文本输入', () => {
-  it('无输入端口, 输出恰为 str (string 域)', () => {
-    const { inputs, outputs } = getWidgetPorts(TEXT_INPUT_WIDGET);
-    expect(inputs).toEqual([]);
-    expect(outputs.map((p) => ({ id: p.id, domain: p.domain }))).toEqual([
+  it('Str 字符串/数值域按描述词表映射 (mid: str+pos+len → result)', () => {
+    adoptDescription('s1',
+      [port('str', 'String'), port('pos', 'F32'), port('len', 'F32')],
+      [port('result', 'String')]);
+    const table = nodeDefinition(widgetNode('s1', 'Str')).ports(widgetNode('s1', 'Str'), EMPTY_CTX);
+    expect(table.inputs.map((p) => ({ id: p.id, domain: p.domain }))).toEqual([
       { id: 'str', domain: 'string' },
+      { id: 'pos', domain: 'time' },
+      { id: 'len', domain: 'time' },
     ]);
-  });
-});
-
-describe('getWidgetPorts - Model3D 姿态输入格式', () => {
-  it('欧拉角模式暴露 roll/pitch/yaw 端口', () => {
-    const widget = createWidget('Model3D');
-    expect(getWidgetPorts(widget).inputs.map((p) => p.id)).toEqual([
-      'x', 'y', 'z', 'roll', 'pitch', 'yaw',
-    ]);
+    expect(table.outputs[0].domain).toBe('string');
   });
 
-  it('四元数模式切换为 q0/q1/q2/q3 端口', () => {
-    const widget = createWidget('Model3D');
-    if (widget.kind !== 'Model3D') throw new Error('expected Model3D widget');
-    widget.params.attitudeInputMode = 'quaternion';
-    expect(getWidgetPorts(widget).inputs.map((p) => p.id)).toEqual([
-      'x', 'y', 'z', 'q0', 'q1', 'q2', 'q3',
-    ]);
+  it('TextInput 无输入, 输出恰为 str (string 域)', () => {
+    adoptDescription('ti-1', [], [port('str', 'String')]);
+    const table = nodeDefinition(widgetNode('ti-1', 'TextInput')).ports(widgetNode('ti-1', 'TextInput'), EMPTY_CTX);
+    expect(table.inputs).toEqual([]);
+    expect(table.outputs.map((p) => ({ id: p.id, domain: p.domain }))).toEqual([{ id: 'str', domain: 'string' }]);
+  });
+
+  it('Model3D 姿态端口 (欧拉/四元数) 随描述切换', () => {
+    adoptDescription('m3d-1', [port('x', 'F32'), port('y', 'F32'), port('z', 'F32'), port('roll', 'F32'), port('pitch', 'F32'), port('yaw', 'F32')], []);
+    expect(nodeDefinition(widgetNode('m3d-1', 'Model3D')).ports(widgetNode('m3d-1', 'Model3D'), EMPTY_CTX).inputs.map((p) => p.id))
+      .toEqual(['x', 'y', 'z', 'roll', 'pitch', 'yaw']);
+    adoptDescription('m3d-1', [port('x', 'F32'), port('y', 'F32'), port('z', 'F32'), port('q0', 'F32'), port('q1', 'F32'), port('q2', 'F32'), port('q3', 'F32')], []);
+    expect(nodeDefinition(widgetNode('m3d-1', 'Model3D')).ports(widgetNode('m3d-1', 'Model3D'), EMPTY_CTX).inputs.map((p) => p.id))
+      .toEqual(['x', 'y', 'z', 'q0', 'q1', 'q2', 'q3']);
+  });
+
+  it('Spectrum 域映射为 freq', () => {
+    adoptDescription('fft-1', [port('in0', 'F32')], [port('spectrum', 'Spectrum')]);
+    const table = nodeDefinition(widgetNode('fft-1', 'FFT')).ports(widgetNode('fft-1', 'FFT'), EMPTY_CTX);
+    expect(table.outputs[0].domain).toBe('freq');
+  });
+
+  it('描述缺失 (absent/pending) 时端口表为空 — 不本地回退', () => {
+    const table = nodeDefinition(widgetNode('w-1', 'Knob')).ports(widgetNode('w-1', 'Knob'), EMPTY_CTX);
+    expect(table.inputs).toEqual([]);
+    expect(table.outputs).toEqual([]);
   });
 });

@@ -13,6 +13,7 @@ name = "filter"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 serde = { workspace = true }
 
 [dev-dependencies]

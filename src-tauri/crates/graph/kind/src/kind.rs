@@ -22,7 +22,7 @@ use crate::str_op::{StrNumParams, StrOp};
 /// 节点种类 — 决定节点如何被评估
 ///
 /// 注意：不派生 `PartialEq`（`TransportConfig`/`ProtocolConfig` 未实现 `PartialEq`）。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(tag = "kind", content = "params")]
 pub enum NodeKind {
     /// Typed device source; the endpoint configuration owns its identity.
@@ -137,7 +137,7 @@ pub enum NodeKind {
 }
 
 /// 文本下发换行模式 — 发送时附加到文本末尾
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum NewlineMode {
     #[default]

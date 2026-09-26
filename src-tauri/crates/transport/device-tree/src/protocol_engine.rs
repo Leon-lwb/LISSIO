@@ -8,8 +8,9 @@ use crate::{
     DriverId, FrameSubscription, NodeContext, NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime,
     NodeState, OpenError, ParentContract, RuntimeCapabilities, ValidatedNodeConfig,
 };
-use acquisition::{CapabilitySet, ConfigurationSchema, PortDescriptor, PortDirection};
+use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use flow::{BytesChunk, FlowEnvelope, PayloadKind};
 use schema_types::ProtocolNodeConfig;
 use serde_json::{Value, json};

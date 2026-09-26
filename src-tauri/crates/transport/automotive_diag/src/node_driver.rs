@@ -2,10 +2,10 @@
 
 use crate::DiagnosticEngine;
 use acquisition::{
-    AcquisitionError, AcquisitionResult, CapabilitySet, ConfigurationSchema, PortDescriptor,
-    PortDirection,
+    AcquisitionError, AcquisitionResult, CapabilitySet, PortDescriptor, PortDirection,
 };
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use device_tree::{
     CapabilityMask, ChildPolicy, ConfigError, DriverId, ISOTP_REQUEST_PORT_ID, InvokeCapability,
     NodeContext, NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime, NodeState, OpenError,

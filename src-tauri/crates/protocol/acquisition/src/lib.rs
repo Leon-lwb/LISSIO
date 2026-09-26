@@ -18,9 +18,8 @@ mod unconfigured;
 
 pub use capabilities::{
     AdapterCapability, AddressRegion, AddressSpaceDescriptor, CAPABILITY_CONTRACT_VERSION,
-    ConfigurationSchema, DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor,
-    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
-    TransportKind,
+    DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor, EndpointDirection, PortDescriptor,
+    PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
 };
 pub use lanes::{CommandLane, EventLane, EventLaneReceiver, LaneError, StateLane, StateLaneStats};
 pub use plane::{AcquisitionBackend, AcquisitionRuntime};
@@ -68,7 +67,7 @@ pub enum AcquisitionError {
     Driver(String),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DriverManifest {
     pub id: DriverId,
@@ -77,7 +76,7 @@ pub struct DriverManifest {
     pub capabilities: CapabilitySet,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DriverSchema {
     pub schema_version: u32,
@@ -88,7 +87,7 @@ pub struct DriverSchema {
 // 能力位图按命名 bool 字段表达 — 每一位都是稳定的外部合同 (驱动清单/IPC),
 // 收敛成位标志或嵌套分组会降低序列化可读性
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct CapabilitySet {
     pub byte_source: bool,
@@ -101,7 +100,7 @@ pub struct CapabilitySet {
     pub method: bool,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SessionCapabilities {
     pub available: CapabilitySet,
@@ -285,21 +284,21 @@ pub trait ReadCapability: Send + Sync {
     async fn read(&self, request: ReadRequest) -> AcquisitionResult<ReadResult>;
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct SubscriptionIntent {
     pub points: Vec<PointId>,
     pub acquisition: AcquisitionIntent,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PointRejection {
     pub point_id: PointId,
     pub reason: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct EffectiveSubscription {
     pub accepted: Vec<PointId>,

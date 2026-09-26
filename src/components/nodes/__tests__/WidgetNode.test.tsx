@@ -12,7 +12,7 @@ vi.mock('@xyflow/react', async (importOriginal) => {
 });
 
 import { WidgetNode } from '../WidgetNode';
-import { createWidget } from '../../../lib/utils/widgetDefaults';
+import { widgetFixture } from '../../../test/widgetFixtures';
 import { useAppStore } from '../../../store/appStore';
 
 describe('WidgetNode title rename', () => {
@@ -28,7 +28,7 @@ describe('WidgetNode title rename', () => {
   });
 
   it('renames on title-bar double click and keeps window IDs stable', () => {
-    const widget = createWidget('Waveform');
+    const widget = widgetFixture('Waveform');
     const node = {
       id: widget.params.id,
       type: 'widget',
@@ -55,7 +55,7 @@ describe('WidgetNode title rename', () => {
   });
 
   it('keeps editing an empty name until cancelled with Escape', () => {
-    const widget = createWidget('Knob');
+    const widget = widgetFixture('Knob');
     const data = { widget, tabId: 'default' };
     useAppStore.setState({
       rfNodes: [{ id: widget.params.id, type: 'widget' as const, position: { x: 0, y: 0 }, data }],

@@ -2,13 +2,13 @@
 use acquisition::handle::TransportHandle;
 use acquisition::{
     AcquisitionError, AcquisitionResult, AdapterCapability, CAPABILITY_CONTRACT_VERSION,
-    CapabilitySet, ConfigurationSchema, DriverManifest, DriverSchema, EndpointDescriptor,
-    EndpointDirection, PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus,
-    SessionCapabilities, SourceFactory, SourceSession, TransportBackend, TransportKind,
-    ValidatedConfig,
+    CapabilitySet, DriverManifest, DriverSchema, EndpointDescriptor, EndpointDirection,
+    PortDescriptor, PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, SessionCapabilities,
+    SourceFactory, SourceSession, TransportBackend, TransportKind, ValidatedConfig,
 };
 use async_trait::async_trait;
 use data_model::CanBitrate;
+use data_model::ConfigurationSchema;
 use data_model::TransportConfig;
 use data_model::device::{DriverId, DriverPayload};
 use flow::PayloadKind;
@@ -24,6 +24,11 @@ pub struct ByteDeviceFactory {
 }
 
 impl ByteDeviceFactory {
+    /// 驱动的默认传输配置 (装配时以 TransportConfig::default 传入)。
+    pub const fn defaults(&self) -> &TransportConfig {
+        &self.defaults
+    }
+
     pub fn new(
         id: &str,
         name: &str,

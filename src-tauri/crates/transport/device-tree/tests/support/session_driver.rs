@@ -1,9 +1,8 @@
 //! 用固定会话工厂验证生产共享运行时的数据语义。
 use super::TestFactory;
-use acquisition::{
-    ConfigurationSchema, ExecutionGate, PortDescriptor, SourceFactory, SourceSupervisor,
-};
+use acquisition::{ExecutionGate, PortDescriptor, SourceFactory, SourceSupervisor};
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use device_tree::{
     CapabilityMask, ChildPolicy, ConfigError, DriverId, NodeContext, NodeDriver, NodeId, NodeRole,
     NodeRuntime, OpenError, ParentContract, SourceRuntimeBuilder, SourceValidationState,

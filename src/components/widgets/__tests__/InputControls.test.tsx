@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useAppStore } from '../../../store/appStore';
 import { selectWidgets } from '../../../store/appStoreHelpers';
-import { createWidget, widgetInputValue } from '../../../lib/utils/widgetDefaults';
+import { widgetInputValue } from '../../../lib/utils/widgetValue';
+import { widgetFixture } from '../../../test/widgetFixtures';
 import { Knob } from '../knob/KnobWidget';
 import { Slider } from '../slider/SliderWidget';
 import { Radio } from '../radio/RadioWidget';
@@ -29,7 +30,7 @@ const widgetNodeOf = (widget: { kind: string; params: { id: string } }) => ({
 
 describe('numeric input controls', () => {
   it('previews slider changes without persisting, then commits on release', () => {
-    const widget = createWidget('Slider');
+    const widget = widgetFixture('Slider');
     if (widget.kind !== 'Slider') throw new Error('expected Slider');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Slider widget={widget} />);
@@ -46,7 +47,7 @@ describe('numeric input controls', () => {
   });
 
   it('supports relative pointer dragging on the knob', () => {
-    const widget = createWidget('Knob');
+    const widget = widgetFixture('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Knob widget={widget} />);
@@ -84,7 +85,7 @@ describe('numeric input controls', () => {
   });
 
   it('rotates during number-stepper changes and commits once on release', () => {
-    const widget = createWidget('Knob');
+    const widget = widgetFixture('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Knob widget={widget} />);
@@ -105,7 +106,7 @@ describe('numeric input controls', () => {
 
 describe('choice input controls', () => {
   it('persists radio selection by stable option id', () => {
-    const widget = createWidget('Radio');
+    const widget = widgetFixture('Radio');
     if (widget.kind !== 'Radio') throw new Error('expected Radio');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     render(<Radio widget={widget} />);
@@ -118,7 +119,7 @@ describe('choice input controls', () => {
   });
 
   it('renders a true multi-select and sums selected values', () => {
-    const widget = createWidget('Checkbox');
+    const widget = widgetFixture('Checkbox');
     if (widget.kind !== 'Checkbox') throw new Error('expected Checkbox');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
     const view = render(<Checkbox widget={widget} />);

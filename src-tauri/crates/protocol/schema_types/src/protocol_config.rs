@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 /// 协议配置
 /// channels: None = 自动检测通道数, Some(n) = 手动指定
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(tag = "kind")]
 pub enum ProtocolConfig {
     JustFloat {

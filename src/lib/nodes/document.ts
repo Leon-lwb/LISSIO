@@ -2,8 +2,8 @@ import type { Node } from '@xyflow/react';
 import type { DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, WidgetConfig } from '../../types';
 import type { AcquisitionNodeData } from '../acquisition/acquisitionNodes';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
-import { widgetToNodeKind } from '../utils/nodeDef';
-import { getEffectiveChannels } from '../utils/protocolSchema';
+import { customWidgetPortDeclaration } from '../utils/nodeDef';
+import { schemaPortNames } from '../utils/protocolSchema';
 
 type Business =
   | { kind: 'device'; config: { node: DeviceTreeNodeDecl } }
@@ -33,13 +33,13 @@ export function nodeDocument(node: Node): NodeDocument {
       business = { kind: 'protocol', config: { protocol: data.config, convertTo: data.convertTo, schema: data.schema } };
       break;
     }
-    case 'pointSelector': business = { kind: 'pointSelector', config: { points: node.data.points as string[] } }; break;
+    case 'point-selector': business = { kind: 'pointSelector', config: { points: node.data.points as string[] } }; break;
     case 'widget': {
       const widget = node.data.widget as WidgetConfig;
       const { id: _id, label: widgetLabel, ...params } = widget.params;
       label = widgetLabel;
-      const lowered = widget.kind === 'Custom' ? widgetToNodeKind(widget) : null;
-      business = { kind: 'widget', config: { widgetKind: widget.kind, params, customPorts: lowered?.kind === 'Custom' ? lowered.params : null } };
+      const customPorts = widget.kind === 'Custom' ? customWidgetPortDeclaration(widget) : null;
+      business = { kind: 'widget', config: { widgetKind: widget.kind, params, customPorts } };
       break;
     }
     default: throw new Error(`Unknown node kind: ${node.type}`);
@@ -74,7 +74,7 @@ export function canvasNode(doc: NodeDocument, previous?: Node): Node {
       },
     };
     case 'protocol': return { ...base, type: 'protocol', data: { ...base.data, config: doc.config.protocol, convertTo: doc.config.convertTo,
-      schema: doc.config.schema, channels: getEffectiveChannels(doc.config.protocol, null) } };
+      schema: doc.config.schema, channels: schemaPortNames(doc.config.schema?.decode ?? []).length } };
     case 'pointSelector': return { ...base, type: 'point-selector', data: { ...base.data, points: doc.config.points } };
     case 'widget': return { ...base, type: 'widget', data: { ...base.data,
       widget: { kind: doc.config.widgetKind, params: { ...doc.config.params, id: doc.id, label: doc.label } } } };

@@ -1640,6 +1640,7 @@ deviceTreeEnabled: 启用节点
 deviceTreeRemove: 删除子树
 deviceTreeConfigure: 节点配置
 deviceTreeSelect: 选择节点以编辑配置
+schemaUnsupported: 该配置 schema 含暂不支持的字段形式，请使用 JSON 编辑。
 deviceTreeReconnect: 修改配置或拓扑会关闭所属设备，请重新连接以应用更改。
 deviceTreeCanvasNode: 此节点由画布连线归属设备，点击下方按钮编辑。
 deviceTreeEditCanvas: 打开画布节点属性
@@ -1669,3 +1670,5 @@ deviceTreeCatalog: 发现硬件设备
 deviceTreeSubtreeHint: 删除节点及其子节点，并移除相关数据连线。
 deviceTreeAddChild: 添加子节点
 deviceTreeCanvasBadge: 画布
+catalogCreateFailed: 节点创建失败
+unsupportedWidget: 未知控件

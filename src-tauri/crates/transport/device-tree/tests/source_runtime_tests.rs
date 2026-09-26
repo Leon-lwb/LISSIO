@@ -3,13 +3,13 @@ mod session_driver;
 use session_driver::SessionDriver;
 
 use acquisition::{
-    AdapterCapability, ByteMessage, CapabilitySet, ConfigurationSchema, DriverManifest,
-    DriverSchema, EndpointDescriptor, EndpointDirection, InvokeCapability, PortDescriptor,
-    PortDirection, ProtocolKind, ReadCapability, RuntimeState, RuntimeStatus, SessionCapabilities,
-    SourceFactory, SourceSession, TransportConnection, TransportKind, ValidatedConfig,
-    WriteCapability,
+    AdapterCapability, ByteMessage, CapabilitySet, DriverManifest, DriverSchema,
+    EndpointDescriptor, EndpointDirection, InvokeCapability, PortDescriptor, PortDirection,
+    ProtocolKind, ReadCapability, RuntimeState, RuntimeStatus, SessionCapabilities, SourceFactory,
+    SourceSession, TransportConnection, TransportKind, ValidatedConfig, WriteCapability,
 };
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use data_model::device::{DriverId, DriverPayload, SimulationConfig};
 use device_tree::{
     CapabilityMask, DeviceTree, DriverRegistry, NodeContext, NodeDecl, NodeDriver, NodeId,

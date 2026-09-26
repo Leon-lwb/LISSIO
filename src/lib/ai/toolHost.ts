@@ -12,8 +12,8 @@
 
 import { transport } from '../rpc';
 import { useAppStore } from '../../store/appStore';
+import { useModelCatalogStore } from '../../store/modelCatalogStore';
 import type { Node } from '@xyflow/react';
-import { createWidget } from '../utils/widgetDefaults';
 import {
   isStructuralNode,
   type ProtocolNodeData,
@@ -22,7 +22,7 @@ import { addAcquisitionNode, updateAcquisitionNode, type AcquisitionNodeData } f
 import { loadAdapterCapabilities } from '../acquisition/capabilityCatalog';
 import { buildDeviceCards } from '../acquisition/deviceCardModel';
 import { nodeDocument } from '../nodes/document';
-import { addPointSelectorNode } from '../utils/paletteCreation';
+import { createNodeFromCatalog } from '../models/createFromCatalog';
 import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate, type TemplateApplyMode } from '../quickstart/applyTemplate';
 import { t } from '../../i18n';
@@ -34,17 +34,6 @@ interface AiToolInvoke {
   name: string;
   arguments: Record<string, unknown>;
 }
-
-/// 合法 widget kind 清单 (与 `WidgetConfig` 联合类型一致, 供运行时校验)。
-export const WIDGET_KINDS = [
-  'Knob', 'Button', 'Radio', 'Checkbox', 'Slider', 'Label', 'Waveform',
-  'PieChart', 'Image', 'Gauge', 'Progress', 'LED', 'NumberDisplay', 'Custom', 'Math',
-  'Filter', 'FFT', 'IFFT', 'Spectrum', 'Model3D', 'Command', 'FrameDecoder',
-  'TableView', 'RawData', 'Trigger', 'TextDisplay', 'TextInput', 'Str', 'TextOut',
-] as const;
-
-/// 合法 transport / protocol kind 清单。
-const PROTOCOL_KINDS = ['JustFloat', 'FireWater', 'RawData', 'Slcan', 'CandleLight', 'LogicDecode'] as const;
 
 /** 工具 handler — 返回值作为工具结果回传 (JSON 序列化);抛错即工具失败。 */
 type ToolHandler = (args: Record<string, unknown>) => unknown;
@@ -99,18 +88,19 @@ function nodeOrThrow(nodeId: string): Node {
   return node;
 }
 
-/** 构造协议配置 (kind 不可变, JustFloat/FireWater 支持 channels)。 */
-function buildProtocolConfig(kind: string, config: unknown): ProtocolConfig {
-  const c =
-    config !== null && typeof config === 'object' && !Array.isArray(config)
-      ? (config as Record<string, unknown>)
-      : {};
-  if (kind === 'JustFloat' || kind === 'FireWater') {
-    const channels = typeof c.channels === 'number' ? c.channels : null;
-    return { kind, channels };
+/** 目录中可创建的模型清单 — kind 白名单的唯一权威是模型目录。 */
+function catalogModelOrThrow(modelId: string): void {
+  const catalog = useModelCatalogStore.getState();
+  if (catalog.status !== 'ready') {
+    throw new Error('模型目录尚未就绪 (稍后重试)');
   }
-  // RawData/Slcan/CandleLight/LogicDecode — 字段透传 (如 LogicDecode.decoder)
-  return { kind, ...c } as unknown as ProtocolConfig;
+  const model = catalog.byId[modelId];
+  if (!model || !(model.actions ?? []).includes('createNode')) {
+    const creatable = catalog.models
+      .filter((m) => (m.actions ?? []).includes('createNode') && m.id.startsWith(modelId.split(':')[0]))
+      .map((m) => m.id.split(':')[1] ?? m.id);
+    throw new Error(`未知模型 ${modelId} (可选: ${creatable.join('/') || '无'})`);
+  }
 }
 
 // ============ Handlers ============
@@ -140,24 +130,24 @@ function getWorkspace(): unknown {
   };
 }
 
-/** 添加节点 (transport / protocol / widget)。 */
+/** 添加节点 (transport / protocol / widget) — 全部走目录创建服务。 */
 async function addNode(args: Record<string, unknown>): Promise<unknown> {
   const type = str(args, 'type');
   const kind = str(args, 'kind');
-  const position = positionOf(args);
-  const before = new Set(useAppStore.getState().rfNodes.map((n) => n.id));
+  const position = positionOf(args) ?? { x: 300, y: 60 };
+  const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
+  if (!useAppStore.getState().controlTabs.some(tab => tab.id === tabId)) {
+    throw new Error(`tab 不存在: ${tabId}`);
+  }
+  const patch = obj(args, 'config');
 
   if (type === 'device') {
-    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
     const cards = buildDeviceCards(await loadAdapterCapabilities());
     const endpointId = optStr(args, 'endpoint_id');
     const card = cards.find(candidate => candidate.adapter.adapterId === kind &&
       (!endpointId || candidate.endpoint.id === endpointId));
     if (!card) throw new Error(`设备能力不存在: ${kind}`);
-    addAcquisitionNode(card, position, tabId);
-    const created = useAppStore.getState().rfNodes.find((n) => !before.has(n.id));
-    if (!created) throw new Error('节点创建失败');
-    const patch = obj(args, 'config');
+    const created = await addAcquisitionNode(card, position, tabId);
     if (Object.keys(patch).length > 0) {
       const { node } = created.data as AcquisitionNodeData;
       updateAcquisitionNode(created.id, { ...node, config: deepMerge(node.config, patch) });
@@ -166,43 +156,38 @@ async function addNode(args: Record<string, unknown>): Promise<unknown> {
   }
 
   if (type === 'protocol') {
-    if (!(PROTOCOL_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(`未知协议类型 ${kind} (可选: ${PROTOCOL_KINDS.join('/')})`);
-    }
-    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
-    if (!useAppStore.getState().controlTabs.some(tab => tab.id === tabId)) {
-      throw new Error(`tab 不存在: ${tabId}`);
-    }
-    const config = buildProtocolConfig(kind, args.config);
-    useAppStore.getState().addProtocolNode(config, position, tabId);
-    const created = useAppStore.getState().rfNodes.find((n) => !before.has(n.id));
-    if (!created) throw new Error('节点创建失败');
+    catalogModelOrThrow(`protocol:${kind}`);
+    const config = patch.kind === undefined
+      ? ({ kind, ...patch } as unknown as ProtocolConfig)
+      : (patch as unknown as ProtocolConfig);
+    const created = await createNodeFromCatalog({
+      modelId: `protocol:${kind}`,
+      position,
+      tabId,
+      configPatch: { protocol: config },
+    });
     return { node_id: created.id };
   }
 
   if (type === 'point-selector') {
-    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
-    if (!useAppStore.getState().controlTabs.some(tab => tab.id === tabId)) {
-      throw new Error(`tab 不存在: ${tabId}`);
-    }
-    return { node_id: addPointSelectorNode(position ?? { x: 300, y: 60 }, tabId) };
+    const created = await createNodeFromCatalog({
+      modelId: 'pointSelector',
+      position,
+      tabId,
+      label: '点位选择',
+    });
+    return { node_id: created.id };
   }
 
   if (type === 'widget') {
-    if (!(WIDGET_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(`未知控件类型 ${kind} (可选: ${WIDGET_KINDS.join('/')})`);
-    }
-    const tabId = optStr(args, 'tab_id') ?? useAppStore.getState().activeControlTabId;
-    if (!useAppStore.getState().controlTabs.some((tab) => tab.id === tabId)) {
-      throw new Error(`tab 不存在: ${tabId}`);
-    }
-    const widget = createWidget(kind as WidgetConfig['kind']);
-    const patch = obj(args, 'config');
-    if (Object.keys(patch).length > 0) {
-      widget.params = deepMerge(widget.params, patch);
-    }
-    useAppStore.getState().addWidget(widget, tabId, position);
-    return { node_id: widget.params.id };
+    catalogModelOrThrow(`widget:${kind}`);
+    const created = await createNodeFromCatalog({
+      modelId: `widget:${kind}`,
+      position,
+      tabId,
+      configPatch: Object.keys(patch).length > 0 ? patch : undefined,
+    });
+    return { node_id: created.id };
   }
 
   throw new Error(`未知节点类别 ${type} (可选: device/protocol/point-selector/widget)`);
@@ -230,16 +215,17 @@ async function updateNodeConfig(args: Record<string, unknown>): Promise<unknown>
     const data = target.data as unknown as ProtocolNodeData;
     const cur = data.config;
     const nextKind = typeof patch.kind === 'string' ? patch.kind : cur.kind;
-    const config =
-      nextKind !== cur.kind
-        ? buildProtocolConfig(nextKind, patch)
-        : buildProtocolConfig(cur.kind, { ...(cur as Record<string, unknown>), ...patch });
+    const merged = { ...(cur as Record<string, unknown>), ...patch };
+    const config = nextKind !== cur.kind
+      ? (merged as unknown as ProtocolConfig)
+      : ({ kind: cur.kind, ...merged } as unknown as ProtocolConfig);
     await useAppStore.getState().setProtocolNodeConfig(nodeId, config);
     if ('convertTo' in patch || 'convert_to' in patch) {
       const cv = (patch.convertTo ?? patch.convert_to) as Record<string, unknown> | null;
-      useAppStore
-        .getState()
-        .setProtocolNodeConvertTo(nodeId, cv ? buildProtocolConfig(str(cv, 'kind'), cv) : null);
+      const cvConfig = cv
+        ? ({ kind: str(cv, 'kind'), ...cv } as unknown as ProtocolConfig)
+        : null;
+      useAppStore.getState().setProtocolNodeConvertTo(nodeId, cvConfig);
     }
     return { ok: true };
   }
@@ -317,7 +303,7 @@ async function applyTemplateTool(args: Record<string, unknown>): Promise<unknown
     throw new Error(`模板不存在: ${templateId} (先 list_templates 查询)`);
   }
   const mode: TemplateApplyMode = args.mode === 'replace' ? 'replace' : 'merge';
-  await applyTemplate(tpl.build(), mode);
+  await applyTemplate(await tpl.build(), mode);
   return { ok: true, mode };
 }
 

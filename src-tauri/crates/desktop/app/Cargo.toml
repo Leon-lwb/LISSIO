@@ -13,7 +13,11 @@ name = "app"
 workspace = true
 
 [dependencies]
+async-trait = { workspace = true }
+ts-rs = { workspace = true }
 kind = { workspace = true }
+schema_types = { workspace = true }
+device_tree = { workspace = true }
 points = { workspace = true }
 # L2 严格相邻 — 数据平面 / 数据总线 / 流框架 / 调度 / 运行时门面
 # (GraphEvalState + StreamGroupState + 4 个 snapshot 类型定义在 pipeline;
@@ -38,7 +42,6 @@ spectrum = { workspace = true }
 measurement = { workspace = true }
 subscription = { workspace = true }
 events = { workspace = true }
-schema_types = { workspace = true }
 error = { workspace = true }
 
 # runtime
@@ -48,6 +51,7 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
+
 [dev-dependencies]
 criterion = { workspace = true }
 

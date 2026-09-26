@@ -52,18 +52,9 @@ export interface CandleDeviceInfo {
   serial_number: string | null;
 }
 
-/// CAN 波特率预设 — 与 Rust `CanBitrate` 的 serde 契约名逐字一致, 勿改动大小写
-/// (后端 1M 变体为小写 m; 候选清单以 `CAN_BITRATES` 为准)
-export type CanBitrate =
-  | 'Bps10k'
-  | 'Bps20k'
-  | 'Bps50k'
-  | 'Bps100k'
-  | 'Bps125k'
-  | 'Bps250k'
-  | 'Bps500k'
-  | 'Bps800k'
-  | 'Bps1m';
+// CAN 波特率 — wire 类型由 Rust 生成 (data_model::CanBitrate), 拼写逐字一致
+// (后端 1M 变体为小写 m); 候选清单以 `CAN_BITRATES` 为准
+export type { CanBitrate } from './generated/CanBitrate';
 
 /// 单个 ID 的 CAN 负载统计 — 与 Rust CanIdLoadStats 对应
 export interface CanIdLoadStats {
@@ -111,17 +102,6 @@ export interface CanIdLoadHistory {
   history: CanLoadHistoryPoint[];
 }
 
-/// slcan 传输配置
-export interface SlcanConfig {
-  port_name: string;
-  baud_rate: number;
-  can_bitrate: CanBitrate;
-}
-
-/// candleLight 传输配置
-export interface CandleConfig {
-  bus: number;
-  address: number;
-  can_bitrate: CanBitrate;
-  channel: number;
-}
+// slcan / candleLight 传输配置 — wire 类型由 Rust 生成
+export type { SlcanConfig } from './generated/SlcanConfig';
+export type { CandleConfig } from './generated/CandleConfig';

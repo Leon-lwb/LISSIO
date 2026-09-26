@@ -20,7 +20,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 ///
 /// Serde 契约名见 [`Self::NAMES`], 与前端 `CanBitrate` 联合类型逐字一致;
 /// 配置 schema 的候选列表一律由 [`Self::ALL`] 生成, 禁止手写字面量。
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, ts_rs::TS)]
 pub enum CanBitrate {
     Bps10k,
     Bps20k,
@@ -104,7 +104,7 @@ impl<'de> Deserialize<'de> for CanBitrate {
 }
 
 /// 解析后的数据帧 — 协议引擎输出的标准格式
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct DataFrame {
     /// 时间戳 (微秒, monotonic)
     pub timestamp: u64,
@@ -148,7 +148,7 @@ impl DataFrame {
 }
 
 /// 原始数据块 — 未经协议解析的字节流
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct RawData {
     pub timestamp: u64,
     pub data: Vec<u8>,
@@ -162,7 +162,7 @@ impl RawData {
 }
 
 /// 连接状态
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum ConnectionState {
     Disconnected,
     Connecting,
@@ -171,7 +171,7 @@ pub enum ConnectionState {
 }
 
 /// 串口端口信息 (跨平台)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct PortInfo {
     pub name: String,
     pub port_type: String,
@@ -184,7 +184,7 @@ pub struct PortInfo {
 }
 
 /// 传输统计
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ts_rs::TS)]
 pub struct TransportStats {
     pub rx_bytes: u64,
     pub tx_bytes: u64,

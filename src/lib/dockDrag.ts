@@ -19,16 +19,18 @@
 
 import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
 import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
-import type { DiscoveredEndpoint, FilterPresetKind, MathOp, StrOp, WidgetConfig } from '../types';
+import type { DiscoveredEndpoint, WidgetConfig } from '../types';
 import type { DeviceCardModel } from './acquisition/deviceCardModel';
 
 /// 从控件面板拖出的控件参数 (拖到画布)
 export interface WidgetDragSpec {
   /// 控件类型 — 结构节点条目 (`nodeType` 设置) 时缺省
   kind?: WidgetConfig['kind'];
-  /// 操作变体 — Math 用 MathOp, Str 用 StrOp (按 kind 区分)
-  op?: MathOp | StrOp;
-  preset?: FilterPresetKind;
+  /// 目录模型 id + 变体 (Math/Str 运算、Filter 预设等) — 目录创建服务消费
+  modelId?: string;
+  variantId?: string;
+  /// 文档显示名 (变体 fallbackLabel) — prepare 的 label 覆盖
+  documentLabel?: string;
   /// 结构节点类型
   nodeType?: 'protocol' | 'acquisition' | 'point-selector';
   attribute?: 'test-data';

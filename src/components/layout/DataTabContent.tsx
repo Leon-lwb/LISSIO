@@ -273,6 +273,10 @@ export const DataTabContent = memo(function DataTabContent({ tabId }: { tabId: s
     if (primaryProtocolConfig.kind === 'RawData' || primaryProtocolConfig.kind === 'Slcan' || primaryProtocolConfig.kind === 'CandleLight' || primaryProtocolConfig.kind === 'LogicDecode') {
       return 4;
     }
+    if (primaryProtocolConfig.kind === 'Diagnostic') {
+      // 诊断协议走独立管线, 不产数值通道; 波形默认占位与其他无通道协议一致
+      return 4;
+    }
     return (primaryProtocolConfig.channels ?? detectedChannels ?? (winChannelCount || 4));
   }, [primaryProtocolConfig, detectedChannels, winChannelCount]);
 

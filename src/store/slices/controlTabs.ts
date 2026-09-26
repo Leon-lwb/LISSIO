@@ -1,6 +1,6 @@
 import { t } from '../../i18n';
-import { createWidget } from '../../lib/utils/widgetDefaults';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
+import { createNodeFromCatalog } from '../../lib/models/createFromCatalog';
 import { notify, formatError } from '../../lib/tauri/notifications';
 import { api } from '../../lib/tauri/tauri';
 import { nanoid } from 'nanoid';
@@ -47,9 +47,12 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
         }
         get().addControlTab(t(get().lang, 'defaultCanvas'));
         const tabId = get().activeControlTabId;
-        const raw = createWidget('RawData');
-        get().addWidget(raw, tabId, { x: 560, y: 120 });
-        await get().seedInitialGraph(raw.params.id, 'user');
+        const raw = await createNodeFromCatalog({
+          modelId: 'widget:RawData',
+          position: { x: 560, y: 120 },
+          tabId,
+        });
+        await get().seedInitialGraph(raw.id, 'user');
       } catch (error) {
         notify.error(t(get().lang, 'defaultCanvasUnavailable'), formatError(error));
       }

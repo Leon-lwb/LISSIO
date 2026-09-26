@@ -1,10 +1,9 @@
 import type { Node } from '@xyflow/react';
-import { nanoid } from 'nanoid';
 import type { DeviceTreeNodeDecl, DiscoveredEndpoint, SimulationConfig } from '../../types';
 import { useAppStore } from '../../store/appStore';
 import { withHistoryOp } from '../../store/historyStore';
 import { api } from '../tauri/tauri';
-import { defaultsFromSchema, mergeSchemaPatch } from './schemaForm';
+import { createNodeFromCatalog, prepareNodesFromCatalog } from '../models/createFromCatalog';
 import type { DeviceCardModel } from './deviceCardModel';
 import { uniqueDeviceTreeName, walkDeviceTree } from './deviceTreeModel';
 
@@ -20,65 +19,74 @@ export interface AcquisitionNodeData extends Record<string, unknown> {
 
 export function simulationConfig(node: DeviceTreeNodeDecl): SimulationConfig | null {
   const child = node.children.find((item) => item.enabled && item.driver === SIMULATION_DRIVER_ID);
-  return child ? child.config as unknown as SimulationConfig : null;
+  return child ? child.config as SimulationConfig : null;
 }
 
 export function withSimulation(node: DeviceTreeNodeDecl, simulation: SimulationConfig | null): DeviceTreeNodeDecl {
   const existing = node.children.find(item => item.driver === SIMULATION_DRIVER_ID);
   if (!simulation) return { ...node, children: node.children.filter(item => item.driver !== SIMULATION_DRIVER_ID) };
   if (existing) return { ...node, children: node.children.map(item => item.id === existing.id
-    ? { ...item, config: simulation as unknown as Record<string, unknown> } : item) };
+    ? { ...item, config: simulation } : item) };
   return { ...node, children: [...node.children, {
       id: `${node.id}::simulation`,
       name: uniqueDeviceTreeName(node, 'simulation'),
       driver: SIMULATION_DRIVER_ID,
       schemaVersion: 1,
-      config: simulation as unknown as Record<string, unknown>,
+      config: simulation,
       enabled: true,
       children: [],
     }] };
 }
 
-export function acquisitionNodeFromDecl(
-  node: DeviceTreeNodeDecl,
-  position = { x: 60, y: 60 },
-  card?: DeviceCardModel,
-  tabId = useAppStore.getState().activeControlTabId,
-): Node<AcquisitionNodeData> {
-  return {
-    id: node.id,
-    type: 'acquisition',
+/// 设备画布视图的能力数据装配 — 与工作区水合同一来源 (能力端点投影),
+/// 不进入 NodeDocument (端口是运行时投影, 不是静态文档字段)。
+export function decorateAcquisitionNode(node: Node, card: DeviceCardModel): void {
+  const data = node.data as AcquisitionNodeData;
+  data.card = card;
+  data.ports = card.endpoint.ports.map((port) => ({ id: port.id, direction: port.direction, domain: port.dataDomain }));
+}
+
+/** 只准备不插入 — 种子/模板装配设备树用 (子节点随根文档一次写入)。 */
+export async function prepareAcquisitionNode(
+  card: DeviceCardModel,
+  position: { x: number; y: number } = { x: 60, y: 60 },
+  tabId?: string,
+  discovered?: DiscoveredEndpoint,
+): Promise<Node> {
+  const [prepared] = await prepareNodesFromCatalog([{
+    modelId: `driver:${card.adapter.adapterId}`,
     position,
-    width: 200,
-    data: {
-      tabId,
-      label: node.name,
-      node,
-      card,
-      ports: card?.endpoint.ports.map((port) => ({ id: port.id, direction: port.direction, domain: port.dataDomain })),
+    tabId,
+    label: discovered?.displayName ?? (card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName),
+    configPatch: {
+      capabilityEndpointId: card.endpoint.id,
+      ...(discovered?.configurationPatch ? { config: discovered.configurationPatch } : {}),
     },
-  };
+    decorate: (node) => decorateAcquisitionNode(node, card),
+  }]);
+  return prepared.node;
 }
 
-export function createAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string, discovered?: DiscoveredEndpoint): Node<AcquisitionNodeData> {
-  const id = `acquisition-${nanoid(8)}`;
-  return acquisitionNodeFromDecl({
-    id,
-    name: discovered?.displayName ?? (card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName),
-    driver: card.adapter.adapterId,
-    schemaVersion: card.endpoint.configuration.schemaVersion,
-    config: mergeSchemaPatch(defaultsFromSchema(card.endpoint.configuration.jsonSchema), discovered?.configurationPatch ?? {}) as Record<string, unknown>,
-    enabled: true,
-    capabilityEndpointId: card.endpoint.id,
-    children: [],
-  }, position, card, tabId);
-}
-
-export function addAcquisitionNode(card: DeviceCardModel, position?: { x: number; y: number }, tabId?: string, discovered?: DiscoveredEndpoint): void {
-  withHistoryOp({ opKey: 'opAddTransportNode', detailText: card.adapter.displayName, target: { kind: 'node', node: { kind: 'transport' } } }, () => {
-    const node = createAcquisitionNode(card, position, tabId, discovered);
-    useAppStore.setState((s) => ({ rfNodes: [...s.rfNodes, node] }));
-    useAppStore.getState().syncAllTabGraphs();
+/**
+ * 设备条目创建 — 目录 `driver:*` (后端 default_config 为配置默认值的单一来源)
+ * + 能力端点绑定 (capabilityEndpointId 经 configPatch 传入 prepare)。
+ */
+export async function addAcquisitionNode(
+  card: DeviceCardModel,
+  position?: { x: number; y: number },
+  tabId?: string,
+  discovered?: DiscoveredEndpoint,
+): Promise<Node> {
+  return createNodeFromCatalog({
+    modelId: `driver:${card.adapter.adapterId}`,
+    position: position ?? { x: 60, y: 60 },
+    tabId,
+    label: discovered?.displayName ?? (card.adapter.endpoints.length === 1 ? card.adapter.displayName : card.endpoint.displayName),
+    configPatch: {
+      capabilityEndpointId: card.endpoint.id,
+      ...(discovered?.configurationPatch ? { config: discovered.configurationPatch } : {}),
+    },
+    decorate: (node) => decorateAcquisitionNode(node, card),
   });
 }
 
@@ -95,9 +103,9 @@ export function updateAcquisitionNode(nodeId: string, node: DeviceTreeNodeDecl):
     schemaVersion: value.schemaVersion,
     // Signal parameters may be updated live; source format changes require reopening.
     config: value.driver === SIMULATION_DRIVER_ID ? {
-      encoding: value.config.encoding,
-      channels: value.config.channels,
-      referenceNodeId: value.config.referenceNodeId,
+      encoding: (value.config as Partial<SimulationConfig>).encoding,
+      channels: (value.config as Partial<SimulationConfig>).channels,
+      referenceNodeId: (value.config as Partial<SimulationConfig>).referenceNodeId,
     } : value.config,
     children: value.children.map(structure),
   });

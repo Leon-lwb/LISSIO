@@ -7,6 +7,24 @@ import {
   validateConnection,
   type DerivedPort,
 } from '../utils/connectionRules';
+import { useDescribeStore } from '../models/describeStore';
+import type { NodeDescription } from '../../types/generated/NodeDescription';
+import type { NodePortDescriptor } from '../../types/generated/NodePortDescriptor';
+
+/// 控件端口唯一权威 = describe_node_documents — 测试以描述夹具驱动
+function port(handle: string, domain: NodePortDescriptor['domain']): NodePortDescriptor {
+  return { handle, label: '', domain, connectDomains: [], dynamic: false, maxConnections: null };
+}
+function adoptDescription(nodeId: string, inputs: NodePortDescriptor[], outputs: NodePortDescriptor[]): void {
+  const description: NodeDescription = {
+    nodeId, requestRevision: 1, status: 'ready', inputs, outputs,
+    defaultInput: null, defaultOutput: null, effectiveChannels: null, hint: null, issues: [],
+  };
+  useDescribeStore.getState().adopt([description]);
+}
+adoptDescription('w1', [port('CH0', 'F32'), port('CH1', 'F32')], []);
+adoptDescription('w-fft', [port('in0', 'F32')], [port('spectrum', 'Spectrum')]);
+adoptDescription('w-gauge', [port('value', 'F32')], []);
 
 const TRANSPORT: Node = {
   id: 'tp1',
@@ -112,7 +130,7 @@ describe('nodePortTable (统一端口表)', () => {
     expect(t.outputs.some((p) => p.id.startsWith('ch'))).toBe(false);
   });
 
-  it('RawData widget 动态 src: 口不入静态表', () => {
+  it('RawData widget: 描述未到达 (absent) 时空表, 动态 src: 口随描述更新', () => {
     const t = nodePortTable(RAWDATA_WIDGET, CTX);
     expect(t.inputs).toEqual([]);
   });

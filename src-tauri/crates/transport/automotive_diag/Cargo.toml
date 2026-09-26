@@ -13,6 +13,7 @@ name = "automotive_diag"
 workspace = true
 
 [dependencies]
+data_model = { workspace = true }
 acquisition = { workspace = true }
 async-trait = { workspace = true }
 device_tree = { workspace = true }

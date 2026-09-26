@@ -16,8 +16,13 @@ export const WidgetProperties = memo(function WidgetProperties({ node }: { node:
   const updateWidget = useAppStore((s) => s.updateWidget);
   if (!widget) return null;
   const update = (next: WidgetConfig) => updateWidget(widget.params.id, next);
+  // 未知 kind → 受限展示 (保留原始文档; 不猜默认编辑器、不崩溃)
+  const def = WIDGET_REGISTRY[widget.kind];
+  if (!def) {
+    return <p className="text-xs text-text-secondary">{`未知控件 ${widget.kind}: 原始配置已保留, 仅支持查看与删除。`}</p>;
+  }
   // def.Properties 是该 kind 的专属编辑节; update 收窄由调用处保证同 kind
-  const Properties = WIDGET_REGISTRY[widget.kind].Properties;
+  const Properties = def.Properties;
   return (
     <>
 

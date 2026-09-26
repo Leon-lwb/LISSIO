@@ -3,12 +3,13 @@ import type { DiscoveredEndpoint } from '../../../types';
 import { endpointHardwareDetails, endpointSubtitle, endpointTypeLabel, isEndpointApplied } from '../discoveredEndpoints';
 
 function endpoint(patch: Record<string, unknown>, metadata: Record<string, unknown> = {}): DiscoveredEndpoint {
+  // 测试输入来自运行时 JSON, 收窄为 wire 的 JsonValue 视图
   return {
     adapterId: 'serial',
     discoveryId: '/dev/ttyUSB0',
     displayName: 'USB Serial',
-    configurationPatch: patch,
-    metadata,
+    configurationPatch: patch as DiscoveredEndpoint['configurationPatch'],
+    metadata: metadata as DiscoveredEndpoint['metadata'],
   };
 }
 

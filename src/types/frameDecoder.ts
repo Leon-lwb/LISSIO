@@ -72,9 +72,9 @@ export type DecoderBlock =
       /// 整数字段类型 (uint8/16/32 LE/BE)
       fieldType: FieldType;
       /// 输出端口名 (默认 "length")
-      portName?: string;
+      portName?: string | null;
       /// 长度单位: bytes=字节数, fields=后续 field 块重复次数
-      unit?: 'bytes' | 'fields';
+      unit?: 'bytes' | 'fields' | null;
       matchId?: number | null;
     }
   | {
@@ -84,7 +84,7 @@ export type DecoderBlock =
       /// 整数字段类型
       fieldType: FieldType;
       /// 输出端口名 (默认 "id_value")
-      portName?: string;
+      portName?: string | null;
     }
   | {
       id: string;
@@ -123,13 +123,13 @@ export type DecoderBlock =
       /// 校验算法
       algorithm: ChecksumType;
       /// 自定义脚本 (algorithm='custom' 时使用)
-      customScript?: string;
+      customScript?: string | null;
       /// 校验覆盖范围
       cover: DecoderChecksumCover;
       /// cover='range' 时的起始字节偏移 (相对帧头之后)
-      coverStart?: number;
+      coverStart?: number | null;
       /// cover='range' 时的结束字节偏移 ( exclusive)
-      coverEnd?: number;
+      coverEnd?: number | null;
       /// 校验字节在帧中的位置
       position: DecoderChecksumPosition;
       /// 仅当 id_value === matchId 时执行

@@ -13,6 +13,7 @@ name = "kind"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 data_model = { workspace = true }

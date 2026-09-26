@@ -25,6 +25,7 @@ mod devices;
 mod export;
 mod frame_decoder;
 mod graph;
+pub mod models;
 mod pipeline;
 mod recording;
 mod transport;
@@ -102,6 +103,9 @@ pub async fn dispatch_with_context(
         "list_acquisition_endpoints" => acquisition::list_acquisition_endpoints(host),
         "list_device_tree_nodes" => Ok(acquisition::list_device_tree_nodes(host)),
         "list_driver_manifests" => Ok(acquisition::list_driver_manifests(host)),
+        "get_model_catalog" => models::get_model_catalog(host, cmd, &args).await,
+        "prepare_node_documents" => models::prepare_node_documents(host, cmd, &args).await,
+        "describe_node_documents" => models::describe_node_documents(host, cmd, &args).await,
         "describe_acquisition_points" => acquisition::describe_acquisition_points(host, cmd, &args),
         "discover_acquisition_endpoints" => {
             acquisition::discover_acquisition_endpoints(host, cmd, &args)

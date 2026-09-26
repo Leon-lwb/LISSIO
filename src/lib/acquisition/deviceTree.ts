@@ -1,7 +1,6 @@
 import { nanoid } from 'nanoid';
-import type { DeviceTreeNodeDecl, ProtocolConfig } from '../../types';
+import type { DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema } from '../../types';
 import { useAppStore } from '../../store/appStore';
-import { schemaFromProtocolConfig } from '../utils/protocolSchema';
 import { updateAcquisitionNode, SIMULATION_DRIVER_ID, type AcquisitionNodeData } from './acquisitionNodes';
 import { defaultSimulation } from './simulation';
 import { findDeviceTreeNode, removeDeviceTreeNode, updateDeviceTreeNode, uniqueDeviceTreeName,
@@ -9,19 +8,23 @@ import { findDeviceTreeNode, removeDeviceTreeNode, updateDeviceTreeNode, uniqueD
 
 export * from './deviceTreeModel';
 
+/**
+ * 协议引擎子节点 — {protocol, convertTo, schema} 必须整体传入; schema 的
+ * 单一来源是目录 prepare (prepareProtocolDocument), 本模块不再派生。
+ */
 export function createProtocolEngineNode(
   parent: DeviceTreeNodeDecl,
-  protocol: ProtocolConfig = { kind: 'JustFloat', channels: null },
+  config: { protocol: ProtocolConfig; convertTo: ProtocolConfig | null; schema: ProtocolSchema },
 ): DeviceTreeNodeDecl {
-  return { id: `protocol-${nanoid(8)}`, name: uniqueDeviceTreeName(parent, protocol.kind),
+  return { id: `protocol-${nanoid(8)}`, name: uniqueDeviceTreeName(parent, config.protocol.kind),
     driver: PROTOCOL_ENGINE_DRIVER_ID, schemaVersion: 1, enabled: true,
-    config: { protocol, convertTo: null, schema: schemaFromProtocolConfig(protocol) }, children: [] };
+    config: { ...config }, children: [] };
 }
 
 export function createSimulationNode(parent: DeviceTreeNodeDecl): DeviceTreeNodeDecl {
   return { id: `${parent.id}::simulation`, name: uniqueDeviceTreeName(parent, 'simulation'),
     driver: SIMULATION_DRIVER_ID, schemaVersion: 1, enabled: true,
-    config: defaultSimulation() as unknown as Record<string, unknown>, children: [] };
+    config: defaultSimulation(), children: [] };
 }
 
 function getRoot(rootId: string): DeviceTreeNodeDecl | undefined {

@@ -23,6 +23,7 @@ pub mod config;
 pub mod device;
 pub mod device_tree;
 pub mod frame;
+pub mod model_descriptor;
 pub mod serial_params;
 
 /// Transport → 数据平面 ingest 广播通道容量。
@@ -43,4 +44,5 @@ pub use error::{AppError as Error, Result};
 pub use frame::{
     CanBitrate, ConnectionState, DataFrame, PortInfo, RawData, TransportStats, now_us,
 };
+pub use model_descriptor::ConfigurationSchema;
 pub use serial_params::{FlowControl, Parity, StopBits};

@@ -61,7 +61,8 @@ export function QuickStartPanel() {
   };
 
   const requestApply = (tpl: QuickStartTemplate) => {
-    void chooseAndApply(tpl.build(), t(lang, tpl.nameKey));
+    // 模板经后端 prepare 批量产出文档 — 构建为异步
+    void tpl.build().then((snap) => chooseAndApply(snap, t(lang, tpl.nameKey)));
   };
 
   const requestImport = async () => {

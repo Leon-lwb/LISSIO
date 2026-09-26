@@ -13,6 +13,7 @@ name = "diagnostic"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
 serde = { workspace = true }

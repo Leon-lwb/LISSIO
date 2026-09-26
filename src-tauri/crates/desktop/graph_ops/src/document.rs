@@ -151,18 +151,9 @@ pub async fn apply_document(
                     params,
                 });
                 hint.raw_data = widget_kind == "RawData";
-                hint.default_input = match widget_kind.as_str() {
-                    "Math" | "Filter" | "FFT" => Some("in0".into()),
-                    "IFFT" | "Spectrum" => Some("spectrum".into()),
-                    "TextDisplay" | "TextOut" => Some("text".into()),
-                    "Trigger" => Some("trigger".into()),
-                    "RawData" => Some("data".into()),
-                    "Waveform" | "PieChart" | "Image" | "Gauge" | "Progress" | "LED"
-                    | "NumberDisplay" | "Label" | "Model3D" | "Command" | "TableView" => {
-                        Some("value".into())
-                    }
-                    _ => None,
-                };
+                // 默认 handle 规则单一来源: app::models::describe (描述与提交共用)
+                hint.default_input =
+                    app::models::describe::default_handle_for(widget_kind, &[], true);
             }
             NodeBusiness::Device { .. } => {
                 if let kind::NodeKind::Acquisition { ports, .. } = &node.kind {

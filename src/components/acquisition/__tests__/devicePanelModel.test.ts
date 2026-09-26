@@ -5,15 +5,15 @@ import { groupDevices } from '../devicePanelModel';
 
 function card(id: string): DeviceCardModel {
   const endpoint = { id: 'main', displayName: id, transport: 'serial', direction: 'peer',
-    status: { state: 'available' }, ports: [], configuration: { schemaVersion: 1, jsonSchema: {}, uiHints: {} } };
+    status: { state: 'available', detail: null }, ports: [], configuration: { schemaVersion: 1, jsonSchema: {}, uiHints: null }, display: null };
   return { key: id, endpoint, adapter: { adapterId: id, displayName: id, contractVersion: 1,
     protocol: id, transport: 'serial', direction: 'peer', dataDomains: [], endpoints: [endpoint],
-    operations: { discover: true, byteSource: true, byteSink: true, browse: false, read: false, subscribe: false, write: false, method: false } } };
+    operations: { discover: true, byteSource: true, byteSink: true, browse: false, read: false, subscribe: false, write: false, method: false }, display: null } };
 }
 function endpoint(adapterId: string, id?: string, path = 'COM3'): DiscoveredEndpoint {
   return { adapterId, discoveryId: path, displayName: 'USB Serial',
-    configurationPatch: adapterId === 'rtu' ? { portName: path } : { port_name: path },
-    metadata: { deviceId: id, vid: 0x1234, pid: 0x5678, serialNumber: 'same' } };
+    configurationPatch: (adapterId === 'rtu' ? { portName: path } : { port_name: path }),
+    metadata: { deviceId: id ?? '', vid: 0x1234, pid: 0x5678, serialNumber: 'same' } };
 }
 
 describe('groupDevices', () => {

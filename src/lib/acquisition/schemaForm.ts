@@ -1,4 +1,12 @@
 import type { JsonSchema } from '../../types';
+import type { JsonValue } from '../../types/generated/serde_json/JsonValue';
+
+/// 把 wire 上的 jsonSchema (JsonValue) 收窄为表单引擎支持的 schema 子集。
+/// 不是该子集 (或非对象) 时返回 null — 调用方必须显式处理, 不能假装校验成功。
+export function asFormSchema(value: JsonValue): JsonSchema | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value;
+}
 
 export function defaultsFromSchema(schema: JsonSchema): unknown {
   if (schema.default !== undefined) return structuredClone(schema.default);

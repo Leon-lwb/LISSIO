@@ -19,6 +19,7 @@ mod math_op;
 mod ports;
 mod spec;
 mod str_op;
+pub mod widgets;
 
 pub use decoder_block::{
     AsciiBase, DecoderBlockDef, DecoderChecksumCover, DecoderChecksumPosition, FieldType,
@@ -33,6 +34,10 @@ pub use ports::{
 };
 pub use spec::{NodeDef, protocol_source_port_names};
 pub use str_op::{StrNumParams, StrOp, StrResult, str_num_default};
+pub use widgets::{
+    WidgetDefinition, WidgetPort, WidgetPortTable, definition as widget_definition, definitions,
+    ensure_valid, lower as lower_widget, normalize_params, ports_for,
+};
 
 /// 判断 (StrOp, 输入端口) 是否取内联回退文本 (`NodeKind::Str::tmpl`, 仅 FORMAT "fmt") —
 /// lowering / 快慢两条求值路径共用的单一事实源

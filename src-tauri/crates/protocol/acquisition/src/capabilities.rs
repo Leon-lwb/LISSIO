@@ -1,4 +1,5 @@
 use crate::{CapabilitySet, DriverId};
+use data_model::ConfigurationSchema;
 use flow::PayloadKind;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -9,7 +10,7 @@ pub const CAPABILITY_CONTRACT_VERSION: u32 = 1;
 
 /// Protocol identity is explicit on the wire and never inferred from a Rust
 /// type or a frontend renderer name.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "kebab-case")]
 pub enum ProtocolKind {
     Bytes,
@@ -18,7 +19,7 @@ pub enum ProtocolKind {
     S7,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum TransportKind {
     Udp,
@@ -27,7 +28,7 @@ pub enum TransportKind {
     Serial,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum EndpointDirection {
     Client,
@@ -35,7 +36,7 @@ pub enum EndpointDirection {
     Peer,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum PortDirection {
     Input,
@@ -43,7 +44,7 @@ pub enum PortDirection {
     Bidirectional,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum RuntimeState {
     Available,
@@ -51,7 +52,7 @@ pub enum RuntimeState {
     Experimental,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeStatus {
     pub state: RuntimeState,
@@ -59,16 +60,7 @@ pub struct RuntimeStatus {
     pub detail: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ConfigurationSchema {
-    pub schema_version: u32,
-    pub json_schema: Value,
-    #[serde(default)]
-    pub ui_hints: Value,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct AddressRegion {
     pub id: String,
@@ -79,7 +71,7 @@ pub struct AddressRegion {
     pub writable: bool,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct AddressSpaceDescriptor {
     pub unit: String,
@@ -87,7 +79,7 @@ pub struct AddressSpaceDescriptor {
 }
 
 /// Optional visual meaning. Values are semantic hints, not component names.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DisplaySemantics {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,7 +90,7 @@ pub struct DisplaySemantics {
     pub tags: BTreeSet<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct PortDescriptor {
     pub id: String,
@@ -114,7 +106,7 @@ pub struct PortDescriptor {
     pub display: Option<DisplaySemantics>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct EndpointDescriptor {
     pub id: String,
@@ -128,7 +120,7 @@ pub struct EndpointDescriptor {
     pub display: Option<DisplaySemantics>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct AdapterCapability {
     pub contract_version: u32,
@@ -146,7 +138,7 @@ pub struct AdapterCapability {
 
 /// A concrete endpoint option found by an adapter. The configuration patch is
 /// merged into that adapter's schema defaults and remains protocol-neutral.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DiscoveredEndpoint {
     pub adapter_id: DriverId,

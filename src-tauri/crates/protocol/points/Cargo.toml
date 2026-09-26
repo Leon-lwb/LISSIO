@@ -13,6 +13,7 @@ name = "points"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 flow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

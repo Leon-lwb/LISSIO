@@ -10,7 +10,7 @@ export function groupDevices(cards: DeviceCardModel[], discoveries: Record<strin
   for (const card of cards) {
     if (card.endpoint.status.state === 'unavailable') continue;
     for (const endpoint of discoveries[card.adapter.adapterId] ?? []) {
-      const identity = endpoint.metadata.deviceId;
+      const identity = endpoint.metadata?.deviceId;
       const id = typeof identity === 'string' && identity.trim()
         ? identity : JSON.stringify([card.adapter.adapterId, endpoint.discoveryId]);
       const device = devices.get(id) ?? { id, options: [] };

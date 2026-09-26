@@ -149,7 +149,7 @@ impl SourceFactory for ModbusRtuFactory {
     }
 }
 
-fn driver_schema(schema: acquisition::ConfigurationSchema) -> DriverSchema {
+fn driver_schema(schema: data_model::ConfigurationSchema) -> DriverSchema {
     DriverSchema {
         schema_version: schema.schema_version,
         json_schema: schema.json_schema,

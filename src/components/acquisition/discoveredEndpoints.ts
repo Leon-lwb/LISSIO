@@ -27,7 +27,7 @@ export interface EndpointHardwareDetails {
 }
 
 export function endpointHardwareDetails(endpoint: DiscoveredEndpoint): EndpointHardwareDetails {
-  const { metadata } = endpoint;
+  const metadata = endpoint.metadata ?? {};
   const vid = typeof metadata.vid === 'number' ? metadata.vid : undefined;
   const pid = typeof metadata.pid === 'number' ? metadata.pid : undefined;
   return {
@@ -51,7 +51,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 /** Device type comes from the backend's OS enumeration, never from its path. */
 export function endpointTypeLabel(endpoint: DiscoveredEndpoint, lang: Lang): string | undefined {
-  switch (endpoint.metadata.portType) {
+  switch (endpoint.metadata?.portType) {
     case 'Bluetooth': return t(lang, 'deviceTypeBluetooth');
     case 'USB': return t(lang, 'deviceTypeUsb');
     case 'PCI': return t(lang, 'deviceTypePci');

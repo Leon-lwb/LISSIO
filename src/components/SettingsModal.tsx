@@ -40,7 +40,8 @@ import { ThemeEditor } from './ThemeEditor';
 import { SystemPromptEditor } from './SystemPromptEditor';
 import { BUILT_IN_THEMES, type ThemeDefinition } from '../settings/theme';
 import type { SettingFieldDef} from './settingFields';
-import { SETTING_FIELDS } from './settingFields';
+import { buildSettingFields } from './settingFields';
+import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
 import { formatError } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
@@ -122,11 +123,15 @@ export function SettingsModal() {
     };
   }, [isOpen, close]);
 
+  // 设置项清单 — AI provider 选项来自模型目录 (aiProvider 家族)
+  const catalogModels = useModelCatalogStore((s) => s.models);
+  const settingFields = useMemo(() => buildSettingFields(catalogModels), [catalogModels]);
+
   // 搜索过滤
   const filteredFields = useMemo(() => {
-    if (!searchQuery.trim()) return SETTING_FIELDS;
+    if (!searchQuery.trim()) return settingFields;
     const q = searchQuery.toLowerCase();
-    return SETTING_FIELDS.filter((f) => {
+    return settingFields.filter((f) => {
       const label = t(lang, f.labelKey).toLowerCase();
       const desc = t(lang, f.descKey).toLowerCase();
       const category = t(lang, CATEGORY_LABEL_KEY[f.category]).toLowerCase();
@@ -138,7 +143,7 @@ export function SettingsModal() {
         (f.keywords?.some((k) => k.toLowerCase().includes(q)) ?? false)
       );
     });
-  }, [lang, searchQuery]);
+  }, [lang, searchQuery, settingFields]);
 
   // 按分类分组
   const groupedFields = useMemo(() => {

@@ -1,9 +1,10 @@
 //! Native ISO-TP node driver over a typed CAN-frame parent.
 
 use crate::{IsoTpSession, IsoTpSessionHandle};
-use acquisition::{CapabilitySet, ConfigurationSchema, PortDescriptor, PortDirection};
+use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use can::CanFrame;
+use data_model::ConfigurationSchema;
 use data_model::Result as DataResult;
 use device_tree::{
     CAN_FRAMES_PORT_ID, Capability, CapabilityMask, ChildPolicy, ConfigError, DriverId,

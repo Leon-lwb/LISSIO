@@ -1,7 +1,7 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, WidgetConfig } from '../../types';
 import type { AcquisitionNodeData } from './acquisitionNodes';
-import { getEffectiveChannels, schemaFromProtocolConfig } from '../utils/protocolSchema';
+import { schemaPortNames } from '../utils/protocolSchema';
 
 export const PROTOCOL_ENGINE_DRIVER_ID = 'protocol-engine';
 
@@ -77,8 +77,9 @@ export function deviceTreeCanvasNodes(nodes: Node[]): Node[] {
       for (const child of parent.children) {
         const enabled = ancestorsEnabled && child.enabled;
         if (child.driver === PROTOCOL_ENGINE_DRIVER_ID) {
-          const config = (child.config.protocol ?? { kind: 'JustFloat', channels: null }) as ProtocolConfig;
-          const schema = child.config.schema as ProtocolSchema | null | undefined;
+          const childConfig = child.config as Record<string, unknown>;
+          const config = (childConfig.protocol ?? { kind: 'JustFloat', channels: null }) as ProtocolConfig;
+          const schema = childConfig.schema as ProtocolSchema;
           result.push({
             id: child.id,
             type: 'protocol',
@@ -89,8 +90,8 @@ export function deviceTreeCanvasNodes(nodes: Node[]): Node[] {
             deletable: false,
             connectable: enabled,
             data: { tabId: root.data.tabId, label: child.name, treeRootId: root.id, treeParentId: parent.id,
-              enabled, config, convertTo: child.config.convertTo ?? null,
-              schema: schema ?? schemaFromProtocolConfig(config), channels: getEffectiveChannels(config, null) },
+              enabled, config, convertTo: (childConfig.convertTo) ?? null,
+              schema, channels: schema?.preset != null ? schemaPortNames(schema.decode).length : ((config as { channels?: number | null }).channels ?? 0) },
           });
         }
         visit(child, depth + 1, enabled);

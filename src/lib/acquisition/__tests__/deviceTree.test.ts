@@ -4,7 +4,8 @@ import type { DeviceTreeNodeDecl } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { useHistoryStore } from '../../../store/historyStore';
 import { api } from '../../tauri/tauri';
-import { acquisitionNodeFromDecl, simulationConfig, updateAcquisitionNode, withSimulation } from '../acquisitionNodes';
+import { simulationConfig, updateAcquisitionNode, withSimulation } from '../acquisitionNodes';
+import { acquisitionNodeFromDecl } from '../../../test/acquisitionFixtures';
 import { defaultSimulation, resolveSimulation } from '../simulation';
 import {
   addDeviceTreeChild, buildDeviceTree, createProtocolEngineNode, createSimulationNode,
@@ -55,9 +56,15 @@ describe('device-tree declaration operations', () => {
   });
 
   it('creates protocol and simulation declarations without colliding with sibling names', () => {
-    const first = createProtocolEngineNode(decl('root'));
+    // {protocol, convertTo, schema} 整体传入 — schema 单一来源是目录 prepare
+    const config = {
+      protocol: { kind: 'JustFloat' as const, channels: null },
+      convertTo: null,
+      schema: { preset: 'justFloat' as const, legacyConfig: { kind: 'JustFloat' as const, channels: null }, decode: [] },
+    };
+    const first = createProtocolEngineNode(decl('root'), config);
     const parent = decl('root', [first]);
-    const second = createProtocolEngineNode(parent);
+    const second = createProtocolEngineNode(parent, config);
     expect(first.id).not.toBe(second.id);
     expect(second).toMatchObject({ driver: 'protocol-engine', name: 'JustFloat 2', enabled: true,
       config: { protocol: { kind: 'JustFloat' }, convertTo: null, schema: { preset: 'justFloat' } } });
@@ -163,7 +170,7 @@ describe('device-tree store changes', () => {
     expect(sync).toHaveBeenCalled();
     expect(useAppStore.getState().connectionStates.root).toBe('Disconnected');
     useHistoryStore.getState().undo();
-    expect((useAppStore.getState().rfNodes[0].data.node as DeviceTreeNodeDecl).children[0].config.protocol).toEqual({ kind: 'JustFloat', channels: 2 });
+    expect(((useAppStore.getState().rfNodes[0].data.node as DeviceTreeNodeDecl).children[0].config as { protocol: unknown }).protocol).toEqual({ kind: 'JustFloat', channels: 2 });
   });
 
   it('removes subtree edges atomically and restores them on undo', () => {

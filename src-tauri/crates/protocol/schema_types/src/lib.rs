@@ -25,6 +25,7 @@
 pub mod checksum;
 pub mod decoder_block;
 pub mod hex;
+pub mod preset;
 pub mod protocol_config;
 pub mod protocol_node;
 pub mod schema_frame;
@@ -35,6 +36,11 @@ pub use decoder_block::{
     LengthUnit,
 };
 pub use hex::parse_hex;
+pub use preset::{
+    DEFAULT_PRESET_CHANNELS, candle_light_schema, effective_channels, firewater_schema,
+    justfloat_schema, logic_decode_schema, protocol_port_names, raw_data_schema,
+    schema_from_protocol_config, slcan_schema,
+};
 pub use protocol_config::ProtocolConfig;
 pub use protocol_node::ProtocolNodeConfig;
 pub use schema_frame::{

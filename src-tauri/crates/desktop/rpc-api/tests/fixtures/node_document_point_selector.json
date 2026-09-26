@@ -1,0 +1,8 @@
+{
+  "id": "points-1",
+  "tabId": "tab-1",
+  "label": "Point Selector",
+  "layout": { "x": 200, "y": 260, "width": 200, "height": null },
+  "kind": "pointSelector",
+  "config": { "points": ["ch0", "ch1"] }
+}

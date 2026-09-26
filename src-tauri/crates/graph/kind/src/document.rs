@@ -6,7 +6,7 @@ use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeLayout {
     pub x: f64,
@@ -15,7 +15,7 @@ pub struct NodeLayout {
     pub height: Option<f64>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(tag = "kind", content = "config", rename_all = "camelCase")]
 pub enum NodeBusiness {
     Device {
@@ -39,13 +39,13 @@ pub enum NodeBusiness {
     },
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 pub struct CustomPorts {
     pub inputs: Vec<String>,
     pub outputs: Vec<String>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct NodeDocument {
     pub id: String,

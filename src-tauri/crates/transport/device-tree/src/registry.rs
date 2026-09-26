@@ -9,7 +9,8 @@ use crate::error::{ConfigError, ContractError};
 use crate::model::{
     DEVICE_TREE_SCHEMA_VERSION, DeviceTreeDocument, DriverId, NodeDecl, NodeId, NodePath, NodeRole,
 };
-use acquisition::{AdapterCapability, ConfigurationSchema, DiscoveredEndpoint, PortDescriptor};
+use acquisition::{AdapterCapability, DiscoveredEndpoint, PortDescriptor};
+use data_model::ConfigurationSchema;
 use parking_lot::RwLock;
 use points::PointDescriptor;
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 /// 驱动目录的可序列化能力投影。
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DriverProjection {
     pub driver_id: DriverId,

@@ -277,6 +277,12 @@ export const api = {
   listDriverManifests: () =>
     transport.call<DriverManifestProjection[]>('list_driver_manifests'),
 
+  getModelCatalog: () => transport.call<unknown>('get_model_catalog'),
+  prepareNodeDocuments: (request: Record<string, unknown>) =>
+    transport.call<unknown>('prepare_node_documents', request),
+  describeNodeDocuments: (request: Record<string, unknown>) =>
+    transport.call<unknown>('describe_node_documents', request),
+
   readAcquisitionPoints: (nodeId: string, pointIds: string[]) =>
     transport.call<PointReadResult>('read_acquisition_points', { nodeId, pointIds }),
 

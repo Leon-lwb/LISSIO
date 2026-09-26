@@ -10,17 +10,14 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
-import { createWidget } from '../../lib/utils/widgetDefaults';
 import { t } from '../../i18n';
 import { notify } from '../../lib/tauri/notifications';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
 import { dockDrag, type WidgetDragSpec } from '../../lib/dockDrag';
-import type { MathOp, StrOp } from '../../types';
-import { isUnaryMathOp } from '../../types';
 import { applyTestAttribute } from '../../lib/acquisition/simulation';
-import { deviceTreeCanvasNodes, deviceTreeCanvasEdges } from '../../lib/acquisition/deviceTreeModel';
 import { addPaletteNode } from '../../lib/utils/paletteCreation';
+import { deviceTreeCanvasNodes, deviceTreeCanvasEdges } from '../../lib/acquisition/deviceTreeModel';
 import { REACT_FLOW_NODE_TYPES } from '../nodes/registry';
 import { validateConnection } from '../../lib/utils/connectionRules';
 import { openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
@@ -53,7 +50,6 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   const onNodesChange = useAppStore((s) => s.onNodesChange);
   const onEdgesChange = useAppStore((s) => s.onEdgesChange);
   const onConnect = useAppStore((s) => s.onConnect);
-  const addWidget = useAppStore((s) => s.addWidget);
   const openCategory = useAppStore((s) => s.openCategory);
   const reactFlow = useReactFlow();
 
@@ -157,43 +153,19 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   // 从控件面板拖出控件 — 指针事件落点 (dockDrag 控制器命中 canvas 投放区后调用)
   const createFromDrop = useCallback(
     (x: number, y: number, spec: WidgetDragSpec) => {
+      // test-data 落点区分: 投到节点上 = 给该节点注入测试属性; 投到空白画布 = 全局
       if (spec.attribute === 'test-data') {
         const target = document.elementFromPoint(x, y)?.closest('[data-node-id]')?.getAttribute('data-node-id');
         if (target) applyTestAttribute(target);
+        else addPaletteNode(spec, { x: 0, y: 0 }, tabId);
         return;
       }
-      // 用 screenToFlowPosition 正确处理 zoom/pan 后的坐标转换
+      // 用 screenToFlowPosition 正确处理 zoom/pan 后的坐标转换;
+      // 结构节点 / 目录条目 (含变体) 全部由 addPaletteNode 分发 (创建走后端 prepare)
       const position = reactFlow.screenToFlowPosition({ x, y });
-
-      // 设备、协议和点位选择等结构节点
-      if (addPaletteNode(spec, position, tabId)) return;
-      if (!spec.kind) return;
-
-      const widget = createWidget(spec.kind);
-      // 算术控件: 应用拖拽时携带的 op
-      if (widget.kind === 'Math' && spec.op) {
-        const mathWidget = widget;
-        mathWidget.params.op = spec.op as MathOp;
-        if (isUnaryMathOp(spec.op as MathOp)) {
-          mathWidget.params.inputCount = 1;
-        }
-        mathWidget.params.label = `Math ${spec.op}`;
-      }
-      // 字符串控件: 应用拖拽时携带的 op
-      if (widget.kind === 'Str' && spec.op) {
-        const strWidget = widget;
-        strWidget.params.op = spec.op as StrOp;
-        strWidget.params.label = `Str ${spec.op}`;
-      }
-      // 滤波器控件: 应用拖拽时携带的 preset
-      if (widget.kind === 'Filter' && spec.preset) {
-        const filterWidget = widget;
-        filterWidget.params.preset = spec.preset;
-        filterWidget.params.label = `Filter ${spec.preset}`;
-      }
-      addWidget(widget, tabId, position);
+      addPaletteNode(spec, position, tabId);
     },
-    [addWidget, tabId, reactFlow]
+    [tabId, reactFlow]
   );
 
   // 当前可见画布注册为控件投放目标 (按画布元素注册 — 多个控制卡片并存时落点各归其主)

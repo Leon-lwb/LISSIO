@@ -21,6 +21,8 @@ function port(id: string, dataDomain: string): PortDescriptor {
     dataDomain,
     operations,
     dataTypes: [],
+    addressSpace: null,
+    display: null,
   };
 }
 
@@ -34,32 +36,35 @@ function adapter(): AdapterCapability {
     direction: 'peer',
     operations,
     dataDomains: ['points', 'future-domain'],
+    display: null,
     endpoints: [
       {
         id: 'primary',
         displayName: 'Primary',
         transport: 'future-transport',
         direction: 'peer',
-        status: { state: 'experimental' },
+        status: { state: 'experimental', detail: null },
         ports: [port('points', 'points'), port('events', 'future-domain')],
         configuration: {
           schemaVersion: 3,
           jsonSchema: { type: 'object' },
           uiHints: {},
         },
+        display: null,
       },
       {
         id: 'secondary',
         displayName: 'Secondary',
         transport: 'future-transport',
         direction: 'server',
-        status: { state: 'available' },
+        status: { state: 'available', detail: null },
         ports: [],
         configuration: {
           schemaVersion: 4,
           jsonSchema: { type: 'object' },
           uiHints: {},
         },
+        display: null,
       },
     ],
   };

@@ -35,8 +35,8 @@ export interface DerivedPort {
  *
  * - device: 由后端能力目录派生输入/输出端口
  * - protocol: in (输入/字节) / out (输出/字节) + 数值口 ch0..chN (时域) 或
- *   RawData 预设的 str (字符串域) — 数值口读 derivedPorts, 兜底 protocolPortNames
- * - widget: getWidgetPorts 静态表; RawData 的动态 `src:` 输入口不在表中
+ *   RawData 预设的 str (字符串域) — 运行时读 derivedPorts, 静态读 describe
+ * - widget: describe_node_documents 端口表; RawData 的动态 `src:` 输入口随描述更新
  *   (连线时由后端/前端自动改写, 见 validateConnection 的 RawData 特判)
  */
 export function nodePortTable(

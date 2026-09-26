@@ -2,7 +2,7 @@ import type { Node, Edge } from '@xyflow/react';
 import type { WidgetConfig } from '../../types';
 import { traceTransportSource } from '../../store/appStoreHelpers';
 import { rawDataPortId } from './nodeDef';
-import { getWidgetPorts } from '../../components/nodes/WidgetPorts';
+import { getDescribeEntry, describeDomainToUi } from '../models/describeStore';
 
 /// RawData 通道种类:
 /// - decoder-node: FrameDecoder 的 raw 口 → 节点旁路收集器 (该解码器每帧消费的整帧字节)
@@ -52,18 +52,14 @@ export function classifyRawDataChannel(
     }
     return { kind: 'numeric', transportId: null };
   }
-  // 控件字符串域输出口 (端口表单一权威: getWidgetPorts) → 字符串平面历史
+  // 控件字符串域输出口 (端口单一权威: describe_node_documents) → 字符串平面历史
   const sourceWidget = widgets.find((w) => w.params.id === channel.sourceId);
   if (sourceWidget) {
-    try {
-      const output = getWidgetPorts(sourceWidget).outputs.find(
-        (p) => p.id === (channel.sourceHandle ?? 'data')
-      );
-      if (output?.domain === 'string') {
-        return { kind: 'string', transportId: null };
-      }
-    } catch {
-      // Custom widget 代码求值失败 → 回退数值通道
+    const output = getDescribeEntry(channel.sourceId).description?.outputs.find(
+      (p) => p.handle === (channel.sourceHandle ?? 'data')
+    );
+    if (output && describeDomainToUi(output.domain) === 'string') {
+      return { kind: 'string', transportId: null };
     }
   }
   return { kind: 'numeric', transportId: null };

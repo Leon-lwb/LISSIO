@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::kind::NodeKind;
 
 /// 节点定义 — 通过 IPC 从前端同步到后端
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 pub struct NodeDef {
     pub id: String,
     pub tab_id: String,

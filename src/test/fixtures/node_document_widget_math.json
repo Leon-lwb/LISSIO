@@ -1,0 +1,12 @@
+{
+  "id": "w1",
+  "tabId": "tab-1",
+  "label": "Math add",
+  "layout": { "x": 120, "y": 80, "width": null, "height": null },
+  "kind": "widget",
+  "config": {
+    "widgetKind": "Math",
+    "params": { "op": "add", "inputCount": 2, "unit": "V" },
+    "customPorts": null
+  }
+}

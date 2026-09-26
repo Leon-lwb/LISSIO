@@ -21,8 +21,35 @@ vi.hoisted(() => {
 import { useAppStore } from '../appStore';
 import { selectWidgets } from '../appStoreHelpers';
 import { useHistoryStore } from '../historyStore';
-import { createWidget } from '../../lib/utils/widgetDefaults';
-import type { DataTab } from '../../types';
+import { nanoid } from 'nanoid';
+import type { Node } from '@xyflow/react';
+import type { DataTab, WidgetConfig } from '../../types';
+
+/// 历史操作的控件夹具 — 与后端目录默认值同形的静态数据 (非生产工厂)
+function testWidget(kind: 'Waveform' | 'Knob' | 'Slider'): WidgetConfig {
+  const id = nanoid(8);
+  switch (kind) {
+    case 'Waveform':
+      return { kind, params: { id, label: 'Waveform', channels: 4, max_points: 10000, visible_channels: [true, true, true, true] } };
+    case 'Knob':
+      return { kind, params: { id, label: 'Knob', min: 0, max: 100, step: 1, value: 50, binding: { mode: 'None' } } };
+    case 'Slider':
+      return { kind, params: { id, label: 'Slider', min: 0, max: 100, step: 1, value: 50, binding: { mode: 'None' } } };
+  }
+}
+
+/// 经 addCanvasNodes 插入 (与生产一致 — 目录创建服务的唯一写入路径)
+function addTestWidget(kind: 'Waveform' | 'Knob' | 'Slider'): string {
+  const widget = testWidget(kind);
+  const node: Node = {
+    id: widget.params.id,
+    type: 'widget',
+    position: { x: 0, y: 0 },
+    data: { widget, tabId: 'default' },
+  };
+  useAppStore.getState().addCanvasNodes([node]);
+  return widget.params.id;
+}
 
 const FIXED_DATA_TABS: DataTab[] = [
   { id: 'compile-errors-fixed', type: 'compile-errors', name: 'Compile Errors', closable: false },
@@ -60,7 +87,7 @@ describe('historyStore 撤销/重做核心', () => {
     const app = () => useAppStore.getState();
     const tabsBefore = app().dataTabs.length;
 
-    app().addWidget(createWidget('Waveform'), 'default');
+    addTestWidget('Waveform');
 
     expect(selectWidgets(app())).toHaveLength(1);
     // Waveform 有数据窗口 Tab — addWidget 自动追加
@@ -94,7 +121,7 @@ describe('historyStore 撤销/重做核心', () => {
 
   it('窗口型控件改名时同步数据 Tab 名称且保持 ID 不变', () => {
     const app = () => useAppStore.getState();
-    app().addWidget(createWidget('Waveform'), 'default');
+    addTestWidget('Waveform');
     const widget = selectWidgets(app())[0];
     const tab = app().dataTabs.find((item) => item.widgetId === widget.params.id);
     expect(tab).toBeDefined();
@@ -113,7 +140,7 @@ describe('historyStore 撤销/重做核心', () => {
   it('同控件连续参数更新在时间窗内合并为一条', () => {
     const app = () => useAppStore.getState();
 
-    app().addWidget(createWidget('Knob'), 'default');
+    addTestWidget('Knob');
     expect(useHistoryStore.getState().entries).toHaveLength(2);
 
     const id = selectWidgets(app())[0].params.id;
@@ -149,7 +176,7 @@ describe('historyStore 撤销/重做核心', () => {
 
   it('输入预览不改配置或历史，提交只落一次最终值', () => {
     const app = () => useAppStore.getState();
-    app().addWidget(createWidget('Slider'), 'default');
+    addTestWidget('Slider');
     const slider = selectWidgets(app())[0];
     expect(slider.kind).toBe('Slider');
     if (slider.kind !== 'Slider') return;
@@ -170,7 +197,7 @@ describe('historyStore 撤销/重做核心', () => {
   it('跳转任意历史点后提交新操作丢弃其后的分支', () => {
     const app = () => useAppStore.getState();
 
-    app().addWidget(createWidget('Knob'), 'default');
+    addTestWidget('Knob');
     app().renameControlTab('default', 'Renamed');
     let hs = useHistoryStore.getState();
     expect(hs.entries).toHaveLength(3);
@@ -192,8 +219,13 @@ describe('historyStore 撤销/重做核心', () => {
 
   it('清空历史回到仅含基线的单条状态', () => {
     const app = () => useAppStore.getState();
-    app().addWidget(createWidget('Knob'), 'default');
-    app().addProtocolNode();
+    addTestWidget('Knob');
+    // 协议节点经 addCanvasNodes (目录创建服务的唯一写入路径) — opAddProtocolNode
+    useAppStore.getState().addCanvasNodes([{
+      id: 'protocol-1', type: 'protocol', position: { x: 0, y: 0 },
+      data: { tabId: 'default', label: 'JustFloat', config: { kind: 'JustFloat', channels: null },
+        convertTo: null, schema: { preset: 'justFloat', legacyConfig: { kind: 'JustFloat', channels: null }, decode: [] }, channels: 0 },
+    }]);
     expect(useHistoryStore.getState().entries.length).toBeGreaterThanOrEqual(3);
 
     useHistoryStore.getState().clearHistory();
@@ -209,7 +241,7 @@ describe('historyStore 撤销/重做核心', () => {
 
   it('未触及文档切片的变更不产生历史条目 (快照相等跳过)', () => {
     const app = () => useAppStore.getState();
-    app().addWidget(createWidget('Knob'), 'default');
+    addTestWidget('Knob');
     const lenAfterAdd = useHistoryStore.getState().entries.length;
 
     // 仅打开自定义控件编辑器 (widgetId 已存在) — 只改 customEditorState, 不入历史
@@ -221,7 +253,7 @@ describe('historyStore 撤销/重做核心', () => {
     const app = () => useAppStore.getState();
 
     // 1) 基线在此操作之前捕获 — 此时还不存在独立查看面板
-    app().addWidget(createWidget('Knob'), 'default');
+    addTestWidget('Knob');
 
     // 2) 之后才打开 CAN 帧 + 操作历史面板
     app().addCanTab();

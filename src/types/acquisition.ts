@@ -1,34 +1,109 @@
+// 前端类型入口 — 设备与能力。
+//
+// wire 类型由 Rust 生成 (`src/types/generated/`, 由 check:contracts 阻止漂移),
+// 本文件只做 re-export 与少量前端视图类型, 禁止手写 wire 镜像。
 export const CAPABILITY_CONTRACT_VERSION = 1;
 
-/// Capability descriptors are an open backend-owned vocabulary. Keeping these
-/// values open lets a newer adapter render through the generic card without a
-/// matching frontend release.
-export type ProtocolKind = string;
-export type CapabilityTransport = string;
-export type EndpointDirection = string;
-export type CapabilityPortDirection = string;
-export type CapabilityDataDomain = string;
-export type CapabilityRuntimeState = string;
+import type { PointQuality as GeneratedPointQuality } from './generated/PointQuality';
+import type { PointValue as GeneratedPointValue } from './generated/PointValue';
+import type { JsonValue } from './generated/serde_json/JsonValue';
 
-export interface CapabilitySet {
-  byteSource: boolean;
-  byteSink: boolean;
-  discover: boolean;
-  browse: boolean;
-  read: boolean;
-  subscribe: boolean;
-  write: boolean;
-  method: boolean;
-}
+// ---- 生成 wire 类型 re-export (保留前端历史命名) ----
+//
+// 能力描述符的词表字段 (protocol/transport/direction/domain) 在前端是**开放词表**
+// (设计决策): 较新的 adapter 可能上报本前端不认识的取值, 它们必须仍能通过通用
+// 卡片渲染 (见 deviceCardModel.test.ts)。generated 枚举是 wire 拼写的权威;
+// 下面的视图类型只把词表字段放宽为 string, 其余字段保持生成形状。
 
+import type {
+  AdapterCapability as GeneratedAdapterCapability,
+} from './generated/AdapterCapability';
+import type {
+  EndpointDescriptor as GeneratedEndpointDescriptor,
+} from './generated/EndpointDescriptor';
+import type {
+  PortDescriptor as GeneratedPortDescriptor,
+} from './generated/PortDescriptor';
+import type {
+  RuntimeStatus as GeneratedRuntimeStatus,
+} from './generated/RuntimeStatus';
+import type {
+  DisplaySemantics as GeneratedDisplaySemantics,
+} from './generated/DisplaySemantics';
+import type {
+  DriverProjection as GeneratedDriverProjection,
+} from './generated/DriverProjection';
+
+export type RuntimeStatus = Omit<GeneratedRuntimeStatus, 'state'> & { state: string };
+
+export type PortDescriptor = Omit<GeneratedPortDescriptor, 'direction' | 'dataDomain'> & {
+  direction: string;
+  dataDomain: string;
+};
+
+export type EndpointDescriptor = Omit<GeneratedEndpointDescriptor, 'transport' | 'direction' | 'ports' | 'status'> & {
+  transport: string;
+  direction: string;
+  status: RuntimeStatus;
+  ports: PortDescriptor[];
+};
+
+export type AdapterCapability = Omit<
+  GeneratedAdapterCapability,
+  'protocol' | 'transport' | 'direction' | 'dataDomains' | 'endpoints' | 'display'
+> & {
+  protocol: string;
+  transport: string;
+  direction: string;
+  dataDomains: string[];
+  endpoints: EndpointDescriptor[];
+  display: GeneratedDisplaySemantics | null;
+};
+
+export type { CapabilitySet } from './generated/CapabilitySet';
+export type { DisplaySemantics } from './generated/DisplaySemantics';
+export type { AddressRegion } from './generated/AddressRegion';
+export type { AddressSpaceDescriptor } from './generated/AddressSpaceDescriptor';
+export type { DiscoveredEndpoint } from './generated/DiscoveredEndpoint';
+export type { DriverPayload } from './generated/DriverPayload';
+export type { CapabilityMask } from './generated/CapabilityMask';
+export type { RuntimeState as CapabilityRuntimeState } from './generated/RuntimeState';
+export type {
+  NodeState as DeviceNodeState,
+} from './generated/NodeState';
+export type {
+  NodeSnapshot as DeviceTreeNodeSnapshot,
+} from './generated/NodeSnapshot';
+export type DriverManifestProjection = Omit<
+  GeneratedDriverProjection,
+  'ports'
+> & {
+  ports: PortDescriptor[];
+};
+export type { SignalParameters } from './generated/SignalParameters';
+export type { SimulationConfig } from './generated/SimulationConfig';
+export type { SessionCapabilities } from './generated/SessionCapabilities';
+export type { AcquisitionIntent } from './generated/AcquisitionIntent';
+export type { EffectiveSubscription } from './generated/EffectiveSubscription';
+export type { PointValue } from './generated/PointValue';
+export type { PointQuality } from './generated/PointQuality';
+export type { PointDescriptor } from './generated/PointDescriptor';
+export type {
+  NodeDecl as DeviceTreeNodeDecl,
+} from './generated/NodeDecl';
+
+// ---- 前端视图类型 (非 wire 镜像) ----
+
+/// 表单引擎消费的 JSON Schema 子集 — `ConfigurationSchema.jsonSchema` (JsonValue)
+/// 的收窄视图。schemaForm 只支持该子集; 任何更宽的形式必须给出明确提示。
 export interface JsonSchema {
   $schema?: string;
   $id?: string;
   title?: string;
   description?: string;
   type?: 'object' | 'array' | 'string' | 'integer' | 'number' | 'boolean';
-  default?: unknown;
-  enum?: unknown[];
+  default?: JsonValue;
+  enum?: JsonValue[];
   minimum?: number;
   maximum?: number;
   minLength?: number;
@@ -38,200 +113,24 @@ export interface JsonSchema {
   additionalProperties?: boolean;
 }
 
-export interface ConfigurationSchema {
-  schemaVersion: number;
-  jsonSchema: JsonSchema;
-  uiHints: Record<string, Record<string, unknown>>;
-}
-
-export interface DisplaySemantics {
-  category?: string;
-  symbol?: string;
-  tags: string[];
-}
-
-export interface AddressRegion {
-  id: string;
-  displayName: string;
-  minimum: number;
-  maximum: number;
-  readable: boolean;
-  writable: boolean;
-}
-
-export interface AddressSpaceDescriptor {
-  unit: string;
-  regions: AddressRegion[];
-}
-
-export interface PortDescriptor {
-  id: string;
-  displayName: string;
-  direction: CapabilityPortDirection;
-  dataDomain: CapabilityDataDomain;
-  operations: CapabilitySet;
-  addressSpace?: AddressSpaceDescriptor;
-  dataTypes: string[];
-  display?: DisplaySemantics;
-}
-
-export interface EndpointDescriptor {
-  id: string;
-  displayName: string;
-  transport: CapabilityTransport;
-  direction: EndpointDirection;
-  status: { state: CapabilityRuntimeState; detail?: string };
-  ports: PortDescriptor[];
-  configuration: ConfigurationSchema;
-  display?: DisplaySemantics;
-}
-
-export interface AdapterCapability {
-  contractVersion: number;
-  adapterId: string;
-  displayName: string;
-  protocol: ProtocolKind;
-  transport: CapabilityTransport;
-  direction: EndpointDirection;
-  operations: CapabilitySet;
-  dataDomains: CapabilityDataDomain[];
-  endpoints: EndpointDescriptor[];
-  display?: DisplaySemantics;
-}
-
-export interface DiscoveredEndpoint {
-  adapterId: string;
-  discoveryId: string;
-  displayName: string;
-  configurationPatch: Record<string, unknown>;
-  metadata: Record<string, unknown>;
-}
-
-export interface DriverPayload {
-  driverId: string;
-  schemaVersion: number;
-  payload: Record<string, unknown>;
-}
-
-export interface DeviceTreeNodeDecl {
-  id: string;
-  name: string;
-  driver: string;
-  schemaVersion: number;
-  config: Record<string, unknown>;
-  enabled: boolean;
-  capabilityEndpointId?: string;
-  children: DeviceTreeNodeDecl[];
-}
-
-export interface SignalParameters {
-  waveform: 'sine' | 'square' | 'triangle' | 'sawtooth' | 'random' | 'dc';
-  frequency: number;
-  amplitude: number;
-  offset: number;
-}
-
-export interface SimulationConfig {
-  signal: SignalParameters;
-  sampleRate: number;
-  seed: number;
-  channels: number;
-  overrides: Record<string, SignalParameters>;
-  referenceNodeId: string | null;
-  encoding: Record<string, unknown> | null;
-}
-
+/// 画布连接视角的节点状态子集 (disabled/validating 不进入连接判定)。
 export type EndpointConnectionState =
   | { state: 'connecting' | 'closing' | 'closed' }
-  | { state: 'online'; connectionEpoch: number }
+  | { state: 'online'; connection_epoch: number }
   | { state: 'degraded'; detail: string }
   | { state: 'backoff'; attempt: number };
 
-export interface PointDescriptor {
-  id: string;
-  path: string[];
-  name: string;
-  dataType: string;
-  access: 'readOnly' | 'writeOnly' | 'readWrite';
-  engineeringUnit: string | null;
-  semantic: Record<string, string>;
-  nativeAddress: { domain: string; value: unknown };
-}
-
-export interface SessionCapabilities {
-  available: CapabilitySet;
-  maxReadPoints: number;
-  maxWritePoints: number;
-  minPeriodMs: number | null;
-  maxPeriodMs: number | null;
-  sourceTimestamps: boolean;
-  serverTimestamps: boolean;
-  idempotentWrites: boolean;
-}
-
-export interface CapabilityMask {
-  byteSource: boolean;
-  byteSink: boolean;
-  canFrameSource: boolean;
-  canFrameSink: boolean;
-  read: boolean;
-  subscribe: boolean;
-  write: boolean;
-  invoke: boolean;
-  browse: boolean;
-  discover: boolean;
-}
-
-export type DeviceNodeState =
-  | { state: 'disabled' | 'validating' | 'connecting' | 'closing' | 'closed' }
-  | { state: 'online'; connectionEpoch: number }
-  | { state: 'degraded'; detail: string }
-  | { state: 'backoff'; attempt: number };
-
-export interface DeviceTreeNodeSnapshot {
-  nodeId: string;
-  nodePath: string;
-  driver: string;
-  enabled: boolean;
-  state: DeviceNodeState;
-  capabilities: CapabilityMask;
-  issue?: { errorKind: string; detail: string } | null;
-}
-
-export interface DriverManifestProjection {
-  driverId: string;
-  role: 'bus' | 'protocol' | 'endpoint' | 'virtual';
-  capabilities: CapabilityMask;
-  configSchema: ConfigurationSchema;
-  ports: PortDescriptor[];
-  childPolicy?: { allowed: Record<string, { minimum: number; maximum: number | null }> };
-}
-
-export type PointValue =
-  | { kind: 'null' }
-  | { kind: 'bool'; value: boolean }
-  | { kind: 'i64' | 'u64' | 'decimal' | 'string' | 'dateTime'; value: string }
-  | { kind: 'f64'; value: number }
-  | { kind: 'bytes'; value: number[] }
-  | { kind: 'enum'; value: { value: string; label?: string } }
-  | { kind: 'array'; value: PointValue[] }
-  | { kind: 'struct'; value: { name: string; value: PointValue }[] };
-
-export interface PointQuality {
-  validity: 'good' | 'uncertain' | 'bad';
-  flags: number;
-  native: { domain: string; code: string; detail: string | null } | null;
-}
-
+/// 点位采样 (envelope 之后的载荷视图; envelope 合同待后续工作包导出)。
 export interface PointSample {
   key: { sourceId: string; pointId: string };
-  value: PointValue | null;
-  quality: PointQuality;
+  value: GeneratedPointValue | null;
+  quality: GeneratedPointQuality;
   sourceTimeUnixNs: number | null;
   serverTimeUnixNs: number | null;
   receivedTimeUnixNs: number;
 }
 
+/// 点位读取结果 (envelope 视图)。
 export interface PointReadResult {
   batch: {
     sourceId: string;
@@ -244,30 +143,16 @@ export interface PointReadResult {
   };
 }
 
-export interface AcquisitionIntent {
-  mode: 'auto' | 'poll' | 'subscribe' | 'onDemand';
-  requestedPeriodMs: number | null;
-  deadband: number | null;
-  priority: 'low' | 'normal' | 'high';
-  delivery: 'state' | 'event';
-}
-
-export interface EffectiveSubscription {
-  accepted: string[];
-  rejected: { pointId: string; reason: string }[];
-  effectivePeriodMs: number | null;
-  ordered: boolean;
-  mayHaveGaps: boolean;
-}
-
+/// 点位写入请求 (envelope 合同待后续工作包导出)。
 export interface PointWriteRequest {
   correlationId: string;
   deadlineUnixNs: number;
   idempotencyKey: string | null;
-  items: { pointId: string; value: PointValue }[];
+  items: { pointId: string; value: GeneratedPointValue }[];
 }
 
+/// 点位写入结果。
 export interface PointWriteResult {
   correlationId: string;
-  items: { pointId: string; quality: PointQuality }[];
+  items: { pointId: string; quality: GeneratedPointQuality }[];
 }

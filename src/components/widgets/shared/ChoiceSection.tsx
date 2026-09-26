@@ -9,7 +9,7 @@ import { nanoid } from 'nanoid';
 import type { ChoiceOption, WidgetConfig } from '../../../types';
 import { t } from '../../../i18n';
 import { useAppStore } from '../../../store/appStore';
-import { widgetInputValue } from '../../../lib/utils/widgetDefaults';
+import { widgetInputValue } from '../../../lib/utils/widgetValue';
 import { sendBindingValue } from './binding';
 import { NumberField, TextField } from '../../ui/fields';
 

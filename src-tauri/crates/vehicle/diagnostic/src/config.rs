@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// ISO-TP 地址模式 (Normal / Extended / Mixed)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum IsoTpAddressMode {
     #[default]
@@ -13,7 +13,7 @@ pub enum IsoTpAddressMode {
 }
 
 /// ISO-TP 会话配置 (与 libautomotive `IsoTpConfig` 概念对齐)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub struct IsoTpConfig {
     pub tx_id: u32,
     pub rx_id: u32,
@@ -39,7 +39,7 @@ impl Default for IsoTpConfig {
 }
 
 /// UDS 客户端配置
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub struct UdsConfig {
     pub p2_timeout_ms: u32,
     pub tester_present_interval_ms: u32,
@@ -55,7 +55,7 @@ impl Default for UdsConfig {
 }
 
 /// OBD-II 客户端配置
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub struct ObdConfig {
     /// 轮询间隔 (ms)
     pub poll_interval_ms: u32,
@@ -76,7 +76,7 @@ impl Default for ObdConfig {
 }
 
 /// J1939 解码器配置
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default, ts_rs::TS)]
 pub struct J1939Config {
     /// 默认源地址
     pub source_address: u8,
@@ -85,7 +85,7 @@ pub struct J1939Config {
 }
 
 /// 诊断配置 — 用于 `ProtocolConfig::Diagnostic` 变体
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(tag = "kind")]
 pub enum DiagnosticConfig {
     /// 仅 ISO-TP 透传 (调试用)

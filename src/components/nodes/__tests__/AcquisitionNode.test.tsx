@@ -52,18 +52,19 @@ function adapter(): AdapterCapability {
     direction: 'client',
     operations,
     dataDomains: ['points'],
+    display: null,
     endpoints: [{
       id: 'serial-client',
       displayName: 'Modbus RTU device',
       transport: 'serial',
       direction: 'client',
-      status: { state: 'available' },
+      status: { state: 'available', detail: null },
       ports: [
-        { id: 'request', displayName: 'Request', direction: 'input', dataDomain: 'points', operations, dataTypes: [] },
-        { id: 'points', displayName: 'Points', direction: 'bidirectional', dataDomain: 'points', operations, dataTypes: [] },
-        { id: 'events', displayName: 'Events', direction: 'output', dataDomain: 'points', operations, dataTypes: [] },
+        { id: 'request', displayName: 'Request', direction: 'input', dataDomain: 'points', operations, dataTypes: [], addressSpace: null, display: null },
+        { id: 'points', displayName: 'Points', direction: 'bidirectional', dataDomain: 'points', operations, dataTypes: [], addressSpace: null, display: null },
+        { id: 'events', displayName: 'Events', direction: 'output', dataDomain: 'points', operations, dataTypes: [], addressSpace: null, display: null },
       ],
-      configuration: { schemaVersion: 1, jsonSchema: { type: 'object' }, uiHints: {} },
+      configuration: { schemaVersion: 1, jsonSchema: { type: 'object' }, uiHints: null }, display: null,
     }],
   };
 }

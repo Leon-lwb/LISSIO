@@ -18,6 +18,7 @@ export default tseslint.config(
       'coverage/**',
       'docs/**',
       '**/*.d.ts',
+      'src/types/generated/**',
       'promo*.html',
       'index.html',
       'eslint.config.js',

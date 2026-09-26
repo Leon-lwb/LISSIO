@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useModelCatalogStore } from '../store/modelCatalogStore';
+import { invalidateDescriptions } from '../lib/models/describeStore';
 import {
   configureBackend,
   disconnectBackend,
@@ -90,6 +92,10 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       if (!desktop) saveWebEndpoint({ base: normalized, token: candidateToken });
       setBase(normalized);
       setToken(candidateToken);
+      // 新连接代际: 目录/节点描述与旧连接缓存隔离, 立即加载
+      const generation = useModelCatalogStore.getState().bumpGeneration();
+      invalidateDescriptions();
+      void useModelCatalogStore.getState().load(generation);
       setState('connected');
     } catch (error) {
       setState('unreachable');
@@ -143,10 +149,14 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       }).then((response) => {
         if (response.ok) return;
         disconnectBackend();
+        useModelCatalogStore.getState().bumpGeneration();
+        invalidateDescriptions();
         setState(response.status === 401 ? 'unauthorized' : 'unreachable');
         setDetail(response.status === 401 ? '后端拒绝了当前访问令牌' : `后端连接中断：HTTP ${response.status}`);
       }).catch(async () => {
         disconnectBackend();
+        useModelCatalogStore.getState().bumpGeneration();
+        invalidateDescriptions();
         if (desktop) {
           const info = await transport.call<SidecarInfo>('backend_sidecar_info').catch(() => null);
           setState(info?.status === 'failed' ? 'crashed' : 'unreachable');
@@ -160,7 +170,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
     return () => window.clearInterval(timer);
   }, [base, desktop, state, token]);
 
-  if (state === 'connected') return children;
+  if (state === 'connected') return <CatalogGate>{children}</CatalogGate>;
 
   const restart = async () => {
     setState('starting');
@@ -231,6 +241,64 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
         {copyStatus && <p className="text-xs opacity-75">{copyStatus}</p>}
         {logPath && <p className="break-all text-xs opacity-60">日志：{logPath}</p>}
         <p className="text-xs opacity-60">状态：{state}</p>
+      </section>
+    </main>
+  );
+}
+
+/// 启动屏障 — 后端连接可用后, 模型目录就绪前不放行业务 UI (App 挂载即会
+/// 恢复工作区并触发图同步, 目录失败时不得恢复/不得写空工作区覆盖原文件)。
+/// 目录失败/不兼容显示可重试页; 重试只重新拉取目录, 不触碰工作区。
+export function CatalogGate({ children }: { children: ReactNode }) {
+  const status = useModelCatalogStore((s) => s.status);
+  const error = useModelCatalogStore((s) => s.error);
+  const contractVersion = useModelCatalogStore((s) => s.contractVersion);
+
+  useEffect(() => {
+    if (status !== 'idle') return;
+    const { generation, load } = useModelCatalogStore.getState();
+    void load(generation);
+  }, [status]);
+
+  const retry = () => {
+    const { generation, load } = useModelCatalogStore.getState();
+    void load(generation);
+  };
+
+  if (status === 'ready') return <>{children}</>;
+
+  if (status === 'incompatible') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
+          <h1 className="m-0 text-xl font-semibold">模型目录版本不兼容</h1>
+          <p className="mt-2 text-sm opacity-75">
+            前端契约版本为 1，后端报告 {contractVersion}。请升级前端或后端后重试。
+          </p>
+          <button className="rounded bg-accent px-4 py-2" onClick={retry}>重新加载目录</button>
+        </section>
+      </main>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
+          <h1 className="m-0 text-xl font-semibold">模型目录加载失败</h1>
+          <p className="mt-2 text-sm opacity-75">{error ?? '未知错误'}</p>
+          <p className="text-xs opacity-60">工作区保持原样，未做任何写入。</p>
+          <button className="rounded bg-accent px-4 py-2" onClick={retry}>重试</button>
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+      <section className="module-card w-full max-w-lg space-y-3 p-6" aria-live="polite" aria-busy="true">
+        <h1 className="m-0 text-xl font-semibold">正在加载模型目录…</h1>
+        <p className="mt-2 text-sm opacity-75">目录就绪后才会恢复工作区。</p>
       </section>
     </main>
   );

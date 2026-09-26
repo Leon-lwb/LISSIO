@@ -16,13 +16,17 @@ export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query:
   const devices = groupDevices(cards, discoveries);
   const visible = devices.filter((device) => device.options.some(({ card, endpoint }) => {
     const hardware = endpointHardwareDetails(endpoint);
-    return [adapterLabel(card), endpoint.displayName, endpoint.discoveryId, hardware.vidPid,
+    const haystack = [
+      adapterLabel(card), endpoint.displayName, endpoint.discoveryId, hardware.vidPid,
       hardware.manufacturer, hardware.serialNumber, endpointTypeLabel(endpoint, lang),
-      endpoint.metadata.description, endpoint.metadata.product].join(' ').toLowerCase().includes(query);
+      endpoint.metadata?.description, endpoint.metadata?.product,
+    ].map((value) => (typeof value === 'string' ? value : '')).join(' ').toLowerCase();
+    return haystack.includes(query);
   }));
   const manualCards = cards.filter((card) => adapterLabel(card).toLowerCase().includes(query));
   const add = ({ card, endpoint }: DeviceOption) => {
-    addAcquisitionNode(card, { x: 60, y: 60 + Math.random() * 100 }, undefined, endpoint);
+    void addAcquisitionNode(card, { x: 60, y: 60 + Math.random() * 100 }, undefined, endpoint)
+      .catch(() => undefined);
     setAdded(endpoint.displayName);
   };
   return (
@@ -53,7 +57,7 @@ export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query:
             }}
             onClick={() => {
               if (dockDrag.consumeClick()) return;
-              addAcquisitionNode(card);
+              void addAcquisitionNode(card).catch(() => undefined);
               setAdded(adapterLabel(card));
             }} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-xs text-text-secondary hover:bg-bg-hover disabled:opacity-40">
             <Cable size={13} /><span className="min-w-0 flex-1 truncate">{adapterLabel(card)}</span><Plus size={12} />
@@ -72,7 +76,7 @@ function DeviceRow({ device, disabled, onAdd }: { device: PanelDevice; disabled:
   const hardware = endpointHardwareDetails(endpoint);
   const subtitle = endpointSubtitle(endpoint);
   const typeLabel = endpointTypeLabel(endpoint, lang);
-  const Icon = endpoint.metadata.portType === 'Bluetooth' ? Bluetooth : Cable;
+  const Icon = endpoint.metadata?.portType === 'Bluetooth' ? Bluetooth : Cable;
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-bg-inset">
       <button type="button" disabled={disabled}
@@ -90,7 +94,7 @@ function DeviceRow({ device, disabled, onAdd }: { device: PanelDevice; disabled:
           <span className="block truncate text-xs font-medium text-text-primary" title={endpoint.displayName}>{endpoint.displayName}</span>
           {subtitle && <span className="block truncate font-mono text-[10px] text-text-muted" title={subtitle}>{subtitle}</span>}
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-text-secondary">
-            {typeLabel && <span title={endpoint.metadata.portType === 'Bluetooth' ? t(lang, 'deviceBluetoothNoUsbIds') : undefined}>{typeLabel}</span>}
+            {typeLabel && <span title={endpoint.metadata?.portType === 'Bluetooth' ? t(lang, 'deviceBluetoothNoUsbIds') : undefined}>{typeLabel}</span>}
             {hardware.vidPid && <span className="rounded bg-bg-subtle px-1 font-mono">VID {hardware.vidPid.split(':')[0]} · PID {hardware.vidPid.split(':')[1]}</span>}
           </span>
           {(hardware.manufacturer != null || hardware.serialNumber != null) && <span className="block break-all text-[10px] text-text-muted">{[hardware.manufacturer, hardware.serialNumber && `SN ${hardware.serialNumber}`].filter(Boolean).join(' · ')}</span>}

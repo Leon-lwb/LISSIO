@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { createWidget } from '../../../lib/utils/widgetDefaults';
-import { normalizeWidgetConfig } from '../../../lib/utils/widgetNormalize';
+import { widgetFixture } from '../../../test/widgetFixtures';
 import { ProgressBar } from '../progress/ProgressBarWidget';
 
 describe('ProgressBar (display range contract)', () => {
   it('renders readout placeholder and min/max tick labels with no data', () => {
-    const widget = normalizeWidgetConfig(createWidget('Progress'));
+    const widget = widgetFixture('Progress');
     if (widget.kind !== 'Progress') throw new Error('expected Progress');
     render(<ProgressBar widget={widget} />);
 
@@ -17,7 +16,7 @@ describe('ProgressBar (display range contract)', () => {
   });
 
   it('formats readout with configured manual range and precision', () => {
-    const widget = normalizeWidgetConfig(createWidget('Progress'));
+    const widget = widgetFixture('Progress');
     if (widget.kind !== 'Progress') throw new Error('expected Progress');
     const configured = {
       ...widget,

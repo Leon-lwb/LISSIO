@@ -52,7 +52,7 @@ export function resolveSimulation(device: Node, nodes: Node[], edges: Edge[]): S
   if (!encoding) throw new Error('请选择生成格式；自定义解析器需要配置编码规则。');
   const schema = (encoding as { schema?: ProtocolSchema }).schema;
   if (schema?.preset === 'custom' && !schema.encode?.length) throw new Error('自定义解析器缺少编码规则。');
-  return { ...simulation, encoding };
+  return { ...simulation, encoding: encoding as SimulationConfig['encoding'] };
 }
 
 function parserEncoding(parser: Node): { protocol: ProtocolConfig; schema: ProtocolSchema } | null {

@@ -12,7 +12,6 @@ import { nanoid } from 'nanoid';
 import { api } from '../../lib/tauri/tauri';
 import { setInputValue as apiSetInputValue, submitCustomOutput as apiSubmitCustomOutput } from '../../lib/buffers/graphSubscription';
 import {
-  createProtocolNode,
   isStructuralNode,
   syncTabGraphToBackend,
   removeTabGraphFromBackend,
@@ -21,7 +20,8 @@ import {
 } from '../appStoreHelpers';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards } from '../../lib/acquisition/deviceCardModel';
-import { createAcquisitionNode, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
+import { prepareAcquisitionNode, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
+import { prepareProtocolDocument } from '../../lib/models/createFromCatalog';
 import { deviceTreeCanvasNodes, walkDeviceTree } from '../../lib/acquisition/deviceTreeModel';
 import { createProtocolEngineNode } from '../../lib/acquisition/deviceTree';
 import { useDockStore } from '../dockStore';
@@ -30,7 +30,7 @@ import { rawDataPortId } from '../../lib/utils/nodeDef';
 import { withHistoryOp } from '../historyStore';
 import type { HistoryTarget, NodeOpRef } from '../historyStore';
 import { nodeLabelOf, nodeRefOf } from '../../lib/utils/nodeKindVisuals';
-import type { DeviceTreeNodeDecl, ProtocolConfig, WidgetConfig } from '../../types';
+import type { DeviceTreeNodeDecl, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
 
 export interface GraphSlice {
@@ -55,7 +55,6 @@ export interface GraphSlice {
   removeTabGraph: (tabId: string) => void;
   setInputValue: (widgetId: string, value: number) => void;
   submitCustomOutput: (widgetId: string, outputs: Record<string, number>) => void;
-  addProtocolNode: (config?: ProtocolConfig, position?: { x: number; y: number }, tabId?: string) => void;
   removeNode: (nodeId: string) => void;
   /// 设置节点显式尺寸 (属性面板数字输入; undefined = 恢复内容自适应)
   setNodeSize: (nodeId: string, size: { width?: number; height?: number }) => void;
@@ -143,19 +142,6 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
       void apiSubmitCustomOutput(widgetId, outputs);
     },
 
-    addProtocolNode: (config, position, tabId) =>
-      withHistoryOp(
-        {
-          opKey: 'opAddProtocolNode',
-          detailText: config?.kind ?? undefined,
-          target: { kind: 'node', node: { kind: 'protocol' } },
-        },
-        () => {
-        const node = createProtocolNode(config, position, tabId);
-        set((s) => ({ rfNodes: [...s.rfNodes, node] }));
-        get().syncAllTabGraphs();
-      }),
-
     removeNode: (nodeId) => {
       const victim = get().rfNodes.find((n: Node) => n.id === nodeId);
       if (victim?.type === 'widget') {
@@ -222,15 +208,18 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
         if (state.rfNodes.some(n => n.data.tabId === tabId && n.id !== rawDataWidgetId)) return;
         const card = buildDeviceCards(adapters).find(c => c.adapter.adapterId === 'serial');
         if (!card) return;
-        const device = createAcquisitionNode(card, { x: 60, y: 100 }, tabId);
+        // 设备根节点 (目录 driver 默认配置) + 协议引擎子节点
+        // (schema 单一来源 = 目录 prepare)
+        const device = await prepareAcquisitionNode(card, { x: 60, y: 100 }, tabId);
+        const { protocol, schema } = await prepareProtocolDocument(DEFAULT_PROTOCOL_CONFIG, tabId);
+        const protocolChild = createProtocolEngineNode(device.data.node as DeviceTreeNodeDecl, { protocol, convertTo: null, schema });
+        (device.data.node as DeviceTreeNodeDecl).children.push(protocolChild);
         device.selected = true;
-        const protocol = createProtocolEngineNode(device.data.node, DEFAULT_PROTOCOL_CONFIG);
-        device.data.node.children.push(protocol);
         set(s => ({
           rfNodes: [...s.rfNodes.map(n => ({ ...n, selected: false })), device],
           activeControlTabId: tabId,
         }));
-        get().onConnect({ source: protocol.id, sourceHandle: 'out', target: rawDataWidgetId, targetHandle: 'data' });
+        get().onConnect({ source: protocolChild.id, sourceHandle: 'out', target: rawDataWidgetId, targetHandle: 'data' });
         get().addNodePropertiesTab();
         get().setActiveDataTab(rawDataWidgetId);
         const dock = useDockStore.getState();

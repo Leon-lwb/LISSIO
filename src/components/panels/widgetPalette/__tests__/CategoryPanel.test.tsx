@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { DiscoveredEndpoint } from '../../../../types';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ActivityBar } from '../../../layout/ActivityBar';
 import { CategoryPanel } from '../CategoryPanel';
@@ -8,18 +9,42 @@ import { dockDrag, __resetForTests } from '../../../../lib/dockDrag';
 import { addPaletteNode } from '../../../../lib/utils/paletteCreation';
 import { api } from '../../../../lib/tauri/tauri';
 import { resetCapabilityCatalogForTests } from '../../../../lib/acquisition/capabilityCatalog';
+import { seedModelCatalogForTests, mockPrepareEcho, makeCatalog, defaultTestCatalog } from '../../../../test/modelCatalog';
+import { resetModelCatalogForTests } from '../../../../store/modelCatalogStore';
+import type { ModelDescriptor } from '../../../../types/generated/ModelDescriptor';
+import type { JsonValue } from '../../../../types/generated/serde_json/JsonValue';
+
+/// 设备条目夹具 — defaultConfig 即 prepare 的配置默认值来源 (后端合同)
+function deviceModel(driverId: string, defaultConfig: Record<string, unknown>): ModelDescriptor {
+  return {
+    id: `driver:${driverId}`, family: 'device', schemaVersion: 1,
+    display: { fallbackLabel: driverId, category: 'device', sortValue: 0 },
+    ui: { rendererKey: 'acquisition', editorKey: 'acquisition', icon: null },
+    configuration: { schemaVersion: 1, jsonSchema: { type: 'object' }, uiHints: null },
+    defaultConfig: defaultConfig as ModelDescriptor['defaultConfig'], variants: [], actions: ['createNode'],
+    availability: { state: 'available', reason: null },
+  };
+}
+const catalogWithTestDrivers = (): ReturnType<typeof makeCatalog> => makeCatalog([
+  ...defaultTestCatalog().models,
+  deviceModel('future', { baud: 115200 }),
+  deviceModel('rtu', {}),
+]);
 
 const operations = { byteSource: false, byteSink: false, discover: false, browse: false, read: true, subscribe: true, write: true, method: false };
 const endpoint = {
   id: 'primary', displayName: 'Endpoint A', transport: 'future', direction: 'peer',
-  status: { state: 'available' }, ports: [],
-  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: {} }, uiHints: {} },
+  status: { state: 'available', detail: null }, ports: [],
+  configuration: { schemaVersion: 3, jsonSchema: { type: 'object' as const, properties: {} }, uiHints: null },
+  display: null,
 };
-const adapter = { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint] };
+const adapter = { adapterId: 'future', displayName: 'Future interface', contractVersion: 1, protocol: 'future', transport: 'future', direction: 'peer', operations, dataDomains: ['points'], endpoints: [endpoint], display: null };
 
 beforeEach(() => {
   __resetForTests();
   resetCapabilityCatalogForTests();
+  seedModelCatalogForTests(catalogWithTestDrivers());
+  mockPrepareEcho();
   useHistoryStore.getState().clearHistory();
   useAppStore.setState({
     rfNodes: [],
@@ -36,6 +61,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   __resetForTests();
+  resetModelCatalogForTests();
   vi.restoreAllMocks();
 });
 
@@ -152,7 +178,7 @@ describe('CategoryPanel', () => {
     vi.spyOn(api, 'discoverAcquisitionEndpoints').mockResolvedValue([{
       adapterId: 'future', discoveryId: 'COM3', displayName: 'USB sensor',
       configurationPatch: { port: 'COM3' }, metadata: {},
-    }]);
+    }] as DiscoveredEndpoint[]);
     render(<CategoryPanel />);
     const device = await screen.findByRole('button', { name: /USB sensor/ });
     const begin = vi.spyOn(dockDrag, 'begin').mockImplementation(() => undefined);
@@ -164,6 +190,8 @@ describe('CategoryPanel', () => {
     expect(addPaletteNode(spec.widget, { x: 410, y: 220 }, 'default')).toBe(true);
     vi.spyOn(dockDrag, 'consumeClick').mockReturnValue(true);
     fireEvent.click(device);
+    // 设备创建经目录 prepare (异步) — 节点就绪后断言
+    await waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(1);
     expect(nodes[0]).toMatchObject({ position: { x: 410, y: 220 }, data: { node: {
@@ -207,6 +235,7 @@ describe('CategoryPanel', () => {
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '1a86' } });
     expect(device).toBeInTheDocument();
     fireEvent.click(device);
+    await waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(1);
     expect(nodes[0].data.node).toMatchObject({ name: 'USB sensor',
@@ -238,9 +267,11 @@ describe('CategoryPanel', () => {
     vi.spyOn(api, 'listAdapterCapabilities').mockResolvedValue(['serial', 'rtu'].map((id) => ({
       ...adapter, adapterId: id, displayName: id, operations: { ...operations, discover: true },
     })));
-    vi.spyOn(api, 'discoverAcquisitionEndpoints').mockImplementation((id) => Promise.resolve([{
+    const patchFor = (id: string): JsonValue =>
+      id === 'rtu' ? { portName: 'COM3' } : { port_name: 'COM3' };
+    vi.spyOn(api, 'discoverAcquisitionEndpoints').mockImplementation((id): Promise<DiscoveredEndpoint[]> => Promise.resolve([{
       adapterId: id, discoveryId: 'COM3', displayName: 'USB bridge',
-      configurationPatch: id === 'rtu' ? { portName: 'COM3' } : { port_name: 'COM3' },
+      configurationPatch: patchFor(id),
       metadata: { deviceId: 'serial:COM3' },
     }]));
     useAppStore.setState({ activeCategory: 'transport' });
@@ -248,6 +279,7 @@ describe('CategoryPanel', () => {
     expect(await screen.findAllByText('USB bridge')).toHaveLength(1);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'rtu:primary' } });
     fireEvent.click(screen.getByRole('button', { name: /USB bridge/ }));
+    await waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     expect(useAppStore.getState().rfNodes[0].data.node).toMatchObject({
       driver: 'rtu', config: { portName: 'COM3' },
     });
@@ -257,6 +289,8 @@ describe('CategoryPanel', () => {
     render(<CategoryPanel />);
     await flush();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+    // 目录变体条目经 prepare 创建 (异步), 文档显示名取变体 fallbackLabel
+    await waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(1);
     const widget = (nodes[0].data as { widget: { kind: string; params: { op?: string; label?: string } } }).widget;

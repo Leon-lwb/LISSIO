@@ -7,7 +7,7 @@ use crate::hex::parse_hex;
 use crate::protocol_config::ProtocolConfig;
 
 /// schema 预设 — 所有现有协议 kind 都是 schema 的预设
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub enum SchemaPreset {
     JustFloat,
@@ -26,7 +26,7 @@ pub enum SchemaPreset {
 ///
 /// PartialEq 为手工实现: legacy_config (ProtocolConfig) 已派生 PartialEq,
 /// 沿用应用层惯例用 serde 值比较。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolSchema {
     pub preset: SchemaPreset,
@@ -85,7 +85,7 @@ impl ProtocolSchema {
 }
 
 /// 编码块定义 (镜像前端 CommandBlock, serde tag="type" content="params" + camelCase)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(
     tag = "type",
     content = "params",

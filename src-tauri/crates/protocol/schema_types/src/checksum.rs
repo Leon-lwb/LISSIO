@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 /// 校验算法 (与前端 ChecksumType 对齐, serde rename 显式指定字符串)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum ChecksumAlgorithm {
     #[serde(rename = "none")]
     None,

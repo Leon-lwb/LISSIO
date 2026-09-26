@@ -4,8 +4,8 @@ use crate::capability::ParentContract;
 use crate::driver::{NodeContext, NodeDriver, NodeRuntime, ValidatedNodeConfig};
 use crate::error::{ConfigError, OpenError};
 use crate::model::{ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeRole};
-use acquisition::ConfigurationSchema;
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use data_model::device::SimulationConfig;
 use data_model::device_tree::{
     Capability, CapabilityMask, ConfigError as NodeConfigError, SIMULATION_DRIVER_ID,
@@ -61,14 +61,47 @@ impl NodeDriver for SimulationDriver {
         }
     }
 
+    fn display_name(&self) -> String {
+        "Simulation".to_owned()
+    }
+
+    /// 配置 schema: 波形/编码候选项由 data_model 的 SimulationConfig 枚举生成,
+    /// 不再手写第二份白名单。表单仅支持本项目 schema 子集。
     fn config_schema(&self) -> ConfigurationSchema {
         ConfigurationSchema {
             schema_version: DEVICE_TREE_SCHEMA_VERSION,
             json_schema: json!({
-                "type": "object"
+                "type": "object",
+                "properties": {
+                    "signal": {
+                        "type": "object",
+                        "properties": {
+                            "waveform": { "type": "string", "enum": ["sine", "square", "triangle", "sawtooth", "random", "dc"] },
+                            "frequency": { "type": "number", "minimum": 0 },
+                            "amplitude": { "type": "number", "minimum": 0 },
+                            "offset": { "type": "number" },
+                        },
+                    },
+                    "sampleRate": { "type": "integer", "minimum": 1 },
+                    "seed": { "type": "integer", "minimum": 0 },
+                    "channels": { "type": "integer", "minimum": 1, "maximum": 64 },
+                },
             }),
             ui_hints: json!({}),
         }
+    }
+
+    /// 默认仿真配置 — 由 node_id 确定性派生 (重复请求不产生不同 ID)。
+    fn default_config(&self, node_id: &str) -> Option<Value> {
+        let mut config = SimulationConfig::default();
+        // 空工作区种子约定: 默认正弦, 4 通道; 后续 patch 可覆盖
+        config.signal.waveform = data_model::device::TestWaveform::Sine;
+        config.encoding = Some(json!({
+            "protocol": { "kind": "JustFloat", "channels": config.channels },
+            "schema": schema_types::justfloat_schema(Some(usize::try_from(config.channels).unwrap_or(4))),
+        }));
+        let _ = node_id; // 当前默认不含子 ID; 保留参数供派生型驱动使用
+        serde_json::to_value(config).ok()
     }
 
     fn child_policy(&self) -> ChildPolicy {

@@ -41,9 +41,9 @@ function mergeTemplate(snap: AppSnapshot): void {
       ...node,
       id: idMap.get(node.id) ?? node.id,
       config: node.driver === 'simulation' ? {
-        ...node.config,
-        referenceNodeId: typeof node.config.referenceNodeId === 'string'
-          ? idMap.get(node.config.referenceNodeId) ?? null : null,
+        ...(node.config as Record<string, unknown>),
+        referenceNodeId: typeof (node.config as { referenceNodeId?: unknown }).referenceNodeId === 'string'
+          ? idMap.get((node.config as { referenceNodeId: string }).referenceNodeId) ?? null : null,
       } : node.config,
       children: node.children.map(remapTree),
     });

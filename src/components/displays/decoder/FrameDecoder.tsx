@@ -49,7 +49,7 @@ interface FrameDecoderProps {
 ///   manual 模式: 用户输入 HEX/ASCII → api.parseFrameDecoderInput (临时 FrameParser.parse_once)
 ///                → 返回 outputs + valid + consumedBytes → 前端显示
 ///
-/// 节点端口: 从 blocks 中 field/bitfield/length/id 块推导输出端口 (见 WidgetNode.getWidgetPorts)
+/// 节点端口: 由后端 describe 依 blocks 派生 (field/bitfield/length/id 块)
 export function FrameDecoder({ widget }: FrameDecoderProps) {
   const params = widget.params;
   const { id, blocks, mode } = params;

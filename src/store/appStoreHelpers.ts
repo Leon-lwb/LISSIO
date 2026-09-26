@@ -1,7 +1,6 @@
 import { nodeDocument, canvasNode } from '../lib/nodes/document';
 import { deviceTreeCanvasNodes, walkDeviceTree } from '../lib/acquisition/deviceTreeModel';
 import { type Node, type Edge } from '@xyflow/react';
-import { nanoid } from 'nanoid';
 import type { AcquisitionNodeData } from '../lib/acquisition/acquisitionNodes';
 import { loadAdapterCapabilities } from '../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards } from '../lib/acquisition/deviceCardModel';
@@ -20,11 +19,7 @@ import { notify } from '../lib/tauri/notifications';
 import { nodeError } from '../lib/tauri/errorGuidance';
 import { parseNodeError } from '../types/errors';
 import { t } from '../i18n';
-import {
-  getEffectiveChannels,
-  schemaFromProtocolConfig,
-} from '../lib/utils/protocolSchema';
-import { widgetInputValue } from '../lib/utils/widgetDefaults';
+import { widgetInputValue } from '../lib/utils/widgetValue';
 import type {
   DataTab,
   WidgetConfig,
@@ -52,27 +47,6 @@ export interface ProtocolNodeData extends CanvasNodeData {
 }
 
 export const DEFAULT_PROTOCOL_CONFIG: ProtocolConfig = { kind: 'JustFloat', channels: null };
-
-/// 在指定页签创建协议节点
-export function createProtocolNode(
-  config: ProtocolConfig = DEFAULT_PROTOCOL_CONFIG,
-  position?: { x: number; y: number },
-  tabId = useAppStore.getState().activeControlTabId,
-): Node {
-  return {
-    id: `protocol-${nanoid(8)}`,
-    type: 'protocol',
-    position: position ?? { x: 300, y: 60 },
-    data: {
-      tabId,
-      config,
-      convertTo: null,
-      channels: getEffectiveChannels(config, null),
-      schema: schemaFromProtocolConfig(config),
-      label: config.kind,
-    } satisfies ProtocolNodeData,
-  };
-}
 
 /// 节点是否为设备、协议或点位选择等结构节点
 export function isStructuralNode(n: Node): boolean {

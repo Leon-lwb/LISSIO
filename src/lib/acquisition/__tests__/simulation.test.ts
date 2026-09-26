@@ -3,8 +3,9 @@ import type { Edge, Node } from '@xyflow/react';
 import { api } from '../../tauri/tauri';
 import { useAppStore } from '../../../store/appStore';
 import { useHistoryStore } from '../../../store/historyStore';
-import { createWidget } from '../../utils/widgetDefaults';
-import { acquisitionNodeFromDecl, simulationConfig, type AcquisitionNodeData } from '../acquisitionNodes';
+import { widgetFixture } from '../../../test/widgetFixtures';
+import { simulationConfig, type AcquisitionNodeData } from '../acquisitionNodes';
+import { acquisitionNodeFromDecl } from '../../../test/acquisitionFixtures';
 import { applyTestAttribute } from '../simulation';
 import { tauriMock } from '../../../test/setup';
 
@@ -30,7 +31,7 @@ const device = (): Node<AcquisitionNodeData> => {
 };
 
 const display = (): Node => {
-  const widget = createWidget('NumberDisplay');
+  const widget = widgetFixture('NumberDisplay');
   widget.params.id = 'display-1';
   return {
     id: 'display-1',

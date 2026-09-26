@@ -13,6 +13,7 @@ name = "rpc_api"
 workspace = true
 
 [dependencies]
+ts-rs = { workspace = true }
 ai-host = { workspace = true }
 acquisition = { workspace = true }
 app = { workspace = true }
@@ -22,7 +23,13 @@ can = { workspace = true }
 can_transport = { workspace = true }
 control-api = { workspace = true }
 data_model = { workspace = true }
+device_tree = { workspace = true }
+diagnostic = { workspace = true }
 error = { workspace = true }
+flow = { workspace = true }
+filter = { workspace = true }
+spectrum = { workspace = true }
+trigger = { workspace = true }
 events = { workspace = true }
 chat-session = { workspace = true }
 llm = { workspace = true }

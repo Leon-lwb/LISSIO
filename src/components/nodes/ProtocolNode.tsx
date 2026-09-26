@@ -3,7 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
-import { isRawDataPreset, protocolPortNames } from '../../lib/utils/protocolSchema';
+import { useDescribeEntry, describeDomainToUi } from '../../lib/models/describeStore';
 import { NodeFrame } from './NodeFrame';
 import { removeDeviceTreeChild, updateDeviceTreeChild } from '../../lib/acquisition/deviceTree';
 
@@ -12,14 +12,19 @@ export const ProtocolNode = memo(function ProtocolNode({ id, data, selected }: N
   const remove = useAppStore((s) => s.removeNode);
   const rename = useAppStore((s) => s.renameNode);
   const derived = useAppStore((s) => s.derivedPorts[id]);
-  const detected = useAppStore((s) => s.detectedChannels[id] ?? null);
+  const description = useDescribeEntry(id).description;
   const config = data as ProtocolNodeData;
   const treeRootId = typeof data.treeRootId === 'string' ? data.treeRootId : null;
-  const ports = derived?.ports.map((port) => port.name) ?? protocolPortNames(config, detected);
-  const raw = isRawDataPreset(config);
+  // 端口显示: 运行时派生 (graph:derived) 优先, 静态模型视图来自 describe
+  const ports = derived?.ports.map((port) => port.name)
+    ?? (description?.outputs ?? []).map((port) => port.handle);
+  const raw = ports.length === 1 && ports[0] === 'str';
   return <NodeFrame id={id} tabId={data.tabId as string} label={config.label} selected={selected}
     color="#75beff" inputs={[{ id: 'in', domain: 'bytes' }]}
-    outputs={[{ id: 'out', domain: 'bytes' }, ...ports.map((name) => ({ id: name, domain: raw && name === 'str' ? 'string' : 'time' }))]}
+    outputs={[{ id: 'out', domain: 'bytes' }, ...ports.map((name) => ({
+      id: name,
+      domain: describeDomainToUi(description?.outputs.find((p) => p.handle === name)?.domain ?? 'F32'),
+    }))]}
     onRemove={() => treeRootId ? removeDeviceTreeChild(treeRootId, id) : remove(id)}
     onRename={(label) => { if (treeRootId) updateDeviceTreeChild(treeRootId, id, { name: label }); else rename(id, label); }}
     onOpen={treeRootId ? () => useAppStore.getState().revealDeviceTreeNode(id) : undefined}>

@@ -19,6 +19,8 @@ modbus-rtu = ["dep:modbus-adapter"]
 s7 = ["dep:s7-adapter"]
 
 [dependencies]
+serde_json = { workspace = true }
+llm = { workspace = true }
 ai-host = { workspace = true }
 app = { workspace = true }
 acquisition = { workspace = true }

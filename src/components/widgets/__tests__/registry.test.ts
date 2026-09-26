@@ -1,22 +1,22 @@
-// ============ Widget 注册表完整性守卫 ============
+// ============ Widget UI 注册表完整性守卫 ============
 //
-// registry 的 Record<WidgetKind, WidgetDef> 在编译期强制穷举 union;
-// 本测试在运行期兜底各平行站点 (默认工厂 / 端口表 / 尺寸表 / 归一化) 的
-// 一致性 — 新增控件 kind 时任何一处遗漏都会在这里 (或编译期) 暴露。
+// registry 是纯 UI registry (renderer/editor/icon)。业务默认值/归一化/端口表
+// 的单一权威在后端 kind::widgets 注册表 (后端测试保证); 前端守卫覆盖:
+// UI 挂载完整性、尺寸表、输入取值语义, 以及测试目录 fixture 与 registry
+// 的 kind 集合一致 (fixture 是组件测试中目录的替身)。
 
 import { describe, expect, it } from 'vitest';
 import { WIDGET_DEFS, WIDGET_REGISTRY, type WidgetKind } from '../registry';
-import { createWidget, widgetInputValue } from '../../../lib/utils/widgetDefaults';
-import { normalizeWidgetConfig } from '../../../lib/utils/widgetNormalize';
-import { getWidgetPorts } from '../../nodes/WidgetPorts';
+import { widgetInputValue } from '../../../lib/utils/widgetValue';
 import { WIDGET_SIZE_LIMITS } from '../../../lib/utils/widgetSize';
 import { t } from '../../../i18n';
+import { WIDGET_TEST_KINDS } from '../../../test/modelCatalog';
 import type { WidgetConfig } from '../../../types';
 
 const ALL_KINDS = Object.keys(WIDGET_REGISTRY) as WidgetKind[];
 
 describe('widget registry completeness', () => {
-  it('every def has component, icon, labelKey and valid i18n label', () => {
+  it('every def has component, icon and valid i18n label', () => {
     for (const def of WIDGET_DEFS) {
       // memo 组件是 ExoticComponent 对象 — 只能断言「已挂载实现」
       expect(def.Component, `${def.kind}.Component`).toBeDefined();
@@ -28,47 +28,20 @@ describe('widget registry completeness', () => {
     }
   });
 
-  it('every kind has a default factory, ports and size limits', () => {
+  it('every kind has UI size limits', () => {
     for (const kind of ALL_KINDS) {
-      const widget = createWidget(kind);
-      expect(widget.kind).toBe(kind);
-      expect(widget.params.id, `${kind}.id`).toBeTypeOf('string');
-      const ports = getWidgetPorts(widget);
-      expect(Array.isArray(ports.inputs)).toBe(true);
-      expect(Array.isArray(ports.outputs)).toBe(true);
       expect(WIDGET_SIZE_LIMITS[kind], `${kind}.sizeLimits`).toBeDefined();
     }
   });
 
-  it('normalizeWidgetConfig is idempotent for every default factory output', () => {
-    for (const kind of ALL_KINDS) {
-      const widget = createWidget(kind);
-      const once = normalizeWidgetConfig(widget);
-      const twice = normalizeWidgetConfig(once);
-      expect(twice, kind).toEqual(once);
-    }
-  });
-
-  it('display range config survives normalize on Gauge / Progress', () => {
-    for (const kind of ['Gauge', 'Progress'] as const) {
-      const widget = normalizeWidgetConfig(createWidget(kind));
-      const params = widget.params as unknown as { range: { mode: string; min: number; max: number; majorTicks: number } };
-      expect(params.range.mode).toBe('manual');
-      expect(params.range.min).toBeLessThan(params.range.max);
-      expect(params.range.majorTicks).toBeGreaterThanOrEqual(2);
-    }
-  });
-
-  it('registry kinds match the AI tool whitelist', async () => {
-    // lib/ai/toolHost 的 WIDGET_KINDS 是运行时校验用的独立清单 — 必须与 registry 同步
-    const { WIDGET_KINDS } = await import('../../../lib/ai/toolHost');
-    expect([...ALL_KINDS].sort()).toEqual([...WIDGET_KINDS].sort());
+  it('registry kinds match the test catalog widget models (目录 kind 集合同步)', () => {
+    expect([...ALL_KINDS].sort()).toEqual([...WIDGET_TEST_KINDS].sort());
   });
 
   it('input value helpers stay null for non-input kinds', () => {
     const nonInput: WidgetConfig['kind'][] = ['Gauge', 'Progress', 'Waveform', 'Label'];
     for (const kind of nonInput) {
-      expect(widgetInputValue(createWidget(kind))).toBeNull();
+      expect(widgetInputValue({ kind, params: { id: 'x', label: kind } } as WidgetConfig)).toBeNull();
     }
   });
 });

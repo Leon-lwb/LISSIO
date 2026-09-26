@@ -7,7 +7,7 @@ use data_model::{Parity, StopBits};
 // ============ 采样与事件 ============
 
 /// 逻辑分析仪采样 — 多通道数字电平快照
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub struct LogicSample {
     /// 时间戳(微秒)
     pub timestamp: u64,
@@ -34,7 +34,7 @@ impl LogicSample {
 }
 
 /// 逻辑采样批次(无序集合)
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ts_rs::TS)]
 pub struct LogicBatch {
     pub samples: Vec<LogicSample>,
 }
@@ -62,7 +62,7 @@ impl LogicBatch {
 }
 
 /// I2C 事件
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum I2cEvent {
     Start,
     Stop,
@@ -71,7 +71,7 @@ pub enum I2cEvent {
 }
 
 /// 协议解码结果
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum DecodedEvent {
     Uart {
         timestamp: u64,
@@ -115,7 +115,7 @@ impl DecodedEvent {
 ///
 /// 所有字段为 None 时匹配全部采样;设置掩码后按
 /// `(channels & mask) == (value & mask)` 匹配(value 缺省为 0)。
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ts_rs::TS)]
 pub struct LogicSampleFilter {
     /// 通道位图掩码 — 只关心这些通道
     pub channel_mask: Option<u32>,
@@ -149,7 +149,7 @@ impl LogicSampleFilter {
 /// 所有字段为 None 时匹配全部事件;`kind` 为协议名("uart"/"i2c"/"spi"),
 /// `byte_pattern` 对事件载荷字节(UART byte / I2C addr+data / SPI mosi+miso)
 /// 做子串匹配。
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq, Eq, ts_rs::TS)]
 pub struct DecodedEventFilter {
     /// 协议类型过滤(大小写不敏感): "uart" | "i2c" | "spi"
     pub kind: Option<String>,
@@ -215,7 +215,7 @@ impl DecodedEventFilter {
 ///
 /// `PartialEq`:`schema` 模型中 `DecoderBlockDef::Samples` 内嵌本配置,块列表
 /// 比较(`FrameParser::matches_config`)需要逐字段相等判定。
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(tag = "kind", content = "params")]
 pub enum LogicDecoderConfig {
     Uart {
@@ -253,7 +253,7 @@ impl LogicDecoderConfig {
 // ============ 批次类型 ============
 
 /// 逻辑采样批次 — 通过 Channel 推送到前端
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ts_rs::TS)]
 pub struct LogicSampleBatch {
     /// 组级单调序号 — 分片并发推送时前端按 `seq` 重组
     #[serde(default)]
@@ -262,7 +262,7 @@ pub struct LogicSampleBatch {
 }
 
 /// 解码事件批次 — 通过 Channel 推送到前端
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, ts_rs::TS)]
 pub struct DecodedEventBatch {
     /// 组级单调序号 — 分片并发推送时前端按 `seq` 重组
     #[serde(default)]

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import { NodeFrame } from './NodeFrame';
+import type { JsonValue } from '../../types/generated/serde_json/JsonValue';
 import { useAppStore } from '../../store/appStore';
 import { withHistoryOp } from '../../store/historyStore';
 import { api } from '../../lib/tauri/tauri';
@@ -26,7 +27,7 @@ export function PointSelectorProperties({ node }: { node: Node }) {
   useEffect(() => {
     let active = true;
     setDescriptors([]); setError('');
-    if (device) void api.describeAcquisitionPoints({ driverId: device.driver, schemaVersion: device.schemaVersion, payload: device.config }).then(points => { if (active) setDescriptors(points); }).catch(cause => { if (active) setError(String(cause)); });
+    if (device) void api.describeAcquisitionPoints({ driverId: device.driver, schemaVersion: device.schemaVersion, payload: device.config as JsonValue }).then(points => { if (active) setDescriptors(points); }).catch(cause => { if (active) setError(String(cause)); });
     return () => { active = false; };
   }, [device]);
   const points = node.data.points as string[];

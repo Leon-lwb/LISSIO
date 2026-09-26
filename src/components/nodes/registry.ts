@@ -2,10 +2,8 @@ import type { ComponentType } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
 import type { DomainType, WidgetConfig } from '../../types';
 import type { DerivedPort, NodePortTable, PortInfo } from '../../lib/utils/connectionRules';
-import { getWidgetPorts } from './WidgetPorts';
+import { getDescribeEntry, describeDomainToUi } from '../../lib/models/describeStore';
 import { widgetMinSize, type WidgetSizeLimits } from '../../lib/utils/widgetSize';
-import { isRawDataPreset, protocolPortNames } from '../../lib/utils/protocolSchema';
-import type { ProtocolNodeData } from '../../store/appStoreHelpers';
 import type { AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { WidgetNode } from './WidgetNode';
 import { AcquisitionNode } from './AcquisitionNode';
@@ -31,6 +29,15 @@ export interface NodeDefinition {
 
 const domain = (value: string): DomainType =>
   value === 'points' ? 'points' : value === 'bytes' ? 'bytes' : value === 'string' ? 'string' : 'time';
+
+/// 描述端口 → 前端端口表 (NodePortDomain wire 与 graph:derived 同源)
+function describePorts(nodeId: string): NodePortTable {
+  const description = getDescribeEntry(nodeId).description;
+  if (!description) return { inputs: [], outputs: [] };
+  const toUi = (ports: typeof description.inputs): PortInfo[] =>
+    ports.map((port) => ({ id: port.handle, domain: describeDomainToUi(port.domain) }));
+  return { inputs: toUi(description.inputs), outputs: toUi(description.outputs) };
+}
 
 const definitions: Record<CanvasNodeType, NodeDefinition> = {
   acquisition: {
@@ -59,12 +66,12 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
     renderer: ProtocolNode,
     properties: ProtocolProperties,
     ports(node, context) {
-      const data = node.data as ProtocolNodeData;
+      // 运行时检测的派生端口 (graph:derived) 优先; 静态模型视图来自
+      // describe_node_documents — 前端不再本地派生协议端口
       const derived = context.derivedPorts?.[node.id]?.ports;
       const names: PortInfo[] = derived?.length
         ? derived.map(port => ({ id: port.name, domain: port.domain === 'Spectrum' ? 'freq' : port.domain === 'String' ? 'string' : 'time' }))
-        : protocolPortNames(data, context.detectedChannels?.[node.id] ?? null)
-          .map(id => ({ id, domain: isRawDataPreset(data) && id === 'str' ? 'string' : 'time' }));
+        : describePorts(node.id).outputs;
       return { inputs: [{ id: 'in', domain: 'bytes' }], outputs: [{ id: 'out', domain: 'bytes' }, ...names] };
     },
     size: () => ({ minW: 180, minH: 90 }),
@@ -72,11 +79,7 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
   widget: {
     renderer: WidgetNode,
     properties: WidgetProperties,
-    ports(node) {
-      const widget = node.data.widget as WidgetConfig;
-      if (widget.kind === 'RawData') return { inputs: [], outputs: [] };
-      return getWidgetPorts(widget);
-    },
+    ports: node => describePorts(node.id),
     size: node => widgetMinSize((node.data.widget as WidgetConfig).kind),
   },
 };

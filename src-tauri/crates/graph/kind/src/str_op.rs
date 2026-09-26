@@ -30,7 +30,7 @@ use crate::ports::{PortDomain, PortSpec};
 pub use input_ports::{input_ports_for, output_domain_for};
 
 /// 字符串操作种类
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum StrOp {
     Len,
@@ -68,7 +68,7 @@ pub enum StrResult {
 ///
 /// 端口未连接时求值使用此处的回退值；端口已连接时忽略。各 op 只用与自己相关的字段。
 /// 默认值：pos = 1（1-based 起点），len/size = 0（到末尾/全部）
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, ts_rs::TS)]
 pub struct StrNumParams {
     pub pos: f32,
     pub len: f32,

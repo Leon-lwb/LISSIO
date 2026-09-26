@@ -5,10 +5,11 @@ import { useAppStore } from '../../store/appStore';
 import type { DeviceTreeNodeDecl, DriverManifestProjection, ProtocolConfig, ProtocolSchema, SimulationConfig } from '../../types';
 import { findDeviceTreeNode, updateDeviceTreeChild, validateDeviceTreeName, type DeviceTreeItem } from '../../lib/acquisition/deviceTree';
 import type { AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
-import { schemaFromProtocolConfig } from '../../lib/utils/protocolSchema';
+import { prepareProtocolDocument } from '../../lib/models/createFromCatalog';
 import { openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
 import { ProtocolConfigForm } from '../panels/protocol/ProtocolConfigForm';
 import { SchemaFields } from './SchemaFields';
+import { asFormSchema } from '../../lib/acquisition/schemaForm';
 import { SimulationNodeFields } from './SimulationNodeFields';
 
 export function DeviceTreeInspector({ item, root, manifest }: {
@@ -28,7 +29,7 @@ export function DeviceTreeInspector({ item, root, manifest }: {
   const configChange = (patch: Record<string, unknown>) => {
     const currentRoot = useAppStore.getState().rfNodes.find(n => n.id === item.rootId);
     const current = currentRoot && findDeviceTreeNode((currentRoot.data as AcquisitionNodeData).node, item.id);
-    if (current) change({ config: { ...current.config, ...patch } });
+    if (current) change({ config: { ...(current.config as Record<string, unknown>), ...patch } });
   };
   if (!device) return <div className="space-y-3 text-xs">
     <p className="text-text-secondary">{t(lang, 'deviceTreeCanvasNode')}</p>
@@ -57,8 +58,17 @@ export function DeviceTreeInspector({ item, root, manifest }: {
     <div className="rounded bg-bg-inset px-2 py-1.5 text-text-muted break-all"><span>{t(lang, 'deviceTreeDriver')}: </span><code>{device.driver}</code></div>
     {device.driver === 'protocol-engine' && config.protocol ? <>
       <ProtocolConfigForm value={config.protocol} lang={lang} nameSuffix={`-tree-${item.id}`}
-        schema={config.schema ?? schemaFromProtocolConfig(config.protocol)}
-        onChange={protocol => configChange({ protocol, schema: config.schema?.preset === 'custom' ? config.schema : schemaFromProtocolConfig(protocol) })}
+        schema={config.schema ?? undefined}
+        onChange={protocol => {
+          // 预设 schema 单一来源 = 目录 prepare; custom 保留用户块
+          if (config.schema?.preset === 'custom') {
+            configChange({ protocol });
+            return;
+          }
+          void prepareProtocolDocument(protocol)
+            .then(prepared => configChange({ protocol: prepared.protocol, schema: prepared.schema }))
+            .catch(() => undefined);
+        }}
         onSchemaChange={schema => configChange({ schema })} />
       <label>{t(lang, 'convertTo')}
         <select className="form-select mt-1" value={config.convertTo?.kind ?? ''} onChange={event => {
@@ -69,12 +79,12 @@ export function DeviceTreeInspector({ item, root, manifest }: {
           {['JustFloat', 'FireWater', 'RawData'].map(value => <option key={value}>{value}</option>)}
         </select>
       </label>
-    </> : device.driver === 'simulation' ? <SimulationNodeFields config={device.config as unknown as SimulationConfig}
+    </> : device.driver === 'simulation' ? <SimulationNodeFields config={device.config as SimulationConfig}
       onChange={patch => configChange(patch)} />
-      : manifest?.configSchema.jsonSchema.properties && Object.keys(manifest.configSchema.jsonSchema.properties).length > 0
+      : manifest && Object.keys(asFormSchema(manifest.configSchema.jsonSchema)?.properties ?? {}).length > 0
         ? <SchemaFields schema={manifest.configSchema.jsonSchema} uiHints={manifest.configSchema.uiHints}
-          value={device.config} path={`device-tree-${device.id}`} onChange={value => change({ config: value as Record<string, unknown> })} />
-        : <JsonConfig config={device.config} onChange={value => change({ config: value })} />}
+          value={device.config} path={`device-tree-${device.id}`} onChange={value => change({ config: value })} />
+        : <JsonConfig config={device.config as Record<string, unknown>} onChange={value => change({ config: value })} />}
     <p className="text-[11px] leading-relaxed text-text-muted">{t(lang, 'deviceTreeReconnect')}</p>
   </div>;
 }

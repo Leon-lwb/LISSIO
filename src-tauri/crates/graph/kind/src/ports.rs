@@ -29,18 +29,12 @@ pub const RAW_DATA_PORT_PREFIX: &str = "src:";
 
 // ============ 端口域（PortDomain）============
 
-/// 端口域 — 边两端端口域必须一致，否则编译报 DomainMismatch
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum PortDomain {
-    Points,
-    /// 数值平面（f32 槽位模型）
-    F32,
-    /// 字节平面（`Vec<u8>`，事件驱动）
-    Bytes,
-    /// 字符串平面（`String`，事件驱动；与 graphOutputs 平行存在）
-    String,
-    Spectrum,
-}
+/// 端口域 — 边两端端口域必须一致，否则编译报 DomainMismatch。
+///
+/// 词表统一为 `data_model::model_descriptor::NodePortDomain` (wire 拼写
+/// PascalCase: "Points"/"F32"/"Bytes"/"String"/"Spectrum"), 与图派生
+/// (`graph_ops::derived`) 和节点描述共享同一枚举, 不再有第二套转换。
+pub use data_model::model_descriptor::NodePortDomain as PortDomain;
 
 // ============ 强类型端口表 ============
 

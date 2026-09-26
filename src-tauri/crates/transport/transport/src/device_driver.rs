@@ -2,10 +2,11 @@
 
 use crate::device_factory::ByteDeviceFactory;
 use acquisition::{
-    AdapterCapability, ConfigurationSchema, DiscoveredEndpoint, ExecutionGate, PortDescriptor,
-    SourceFactory, SourceSupervisor,
+    AdapterCapability, DiscoveredEndpoint, ExecutionGate, PortDescriptor, SourceFactory,
+    SourceSupervisor,
 };
 use async_trait::async_trait;
+use data_model::ConfigurationSchema;
 use data_model::TransportConfig;
 use data_model::device_tree::NodeId;
 use device_tree::{
@@ -94,6 +95,16 @@ impl NodeDriver for ByteDeviceDriver {
 
     fn config_schema(&self) -> ConfigurationSchema {
         self.schema.clone()
+    }
+
+    fn display_name(&self) -> String {
+        self.factory.manifest().display_name.clone()
+    }
+
+    /// 创建默认配置 — TransportConfig 序列化为 { kind, params }。
+    /// 后端工厂在 prepare 时按 driver 选择, 不从前端白名单查表。
+    fn default_config(&self, _node_id: &str) -> Option<Value> {
+        serde_json::to_value(self.factory.defaults()).ok()
     }
 
     fn child_policy(&self) -> ChildPolicy {

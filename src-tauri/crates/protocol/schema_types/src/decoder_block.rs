@@ -10,7 +10,7 @@ use logic::LogicDecoderConfig;
 ///
 /// serde rename_all="kebab-case" 与前端 PascalCase 不同 —
 /// 这里使用 serde rename 显式指定每个变体的字符串, 确保与前端 TS 联合类型字符串完全一致。
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum FieldType {
     #[serde(rename = "uint8")]
     UInt8,
@@ -166,7 +166,7 @@ impl FieldType {
 }
 
 /// 帧解码块的覆盖范围 (校验计算的字节范围)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
 pub enum DecoderChecksumCover {
     /// 从帧开头到本校验块之前的所有字节
@@ -179,7 +179,7 @@ pub enum DecoderChecksumCover {
 /// - Append:  校验字节位于帧末尾 (在 tail 之前)
 /// - Inline:  校验字节位于当前位置 (在块列表中该 checksum 块的位置)
 /// - Prepend: 校验字节位于帧头之后 (在 header 之后)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
 pub enum DecoderChecksumPosition {
     Append,
@@ -190,7 +190,7 @@ pub enum DecoderChecksumPosition {
 /// 长度块的单位
 /// - Bytes:  字节数 (length 值表示后续字段的字节长度)
 /// - Fields: 后续 field 块重复次数 (length 值表示后续 field 块重复 N 次)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "snake_case")]
 pub enum LengthUnit {
     Bytes,
@@ -198,7 +198,7 @@ pub enum LengthUnit {
 }
 
 /// ASCII 字段的进制 (AsciiField 块用)
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum AsciiBase {
     Hex,
@@ -218,7 +218,7 @@ pub enum AsciiBase {
 /// - Csv:        FireWater 类分隔符文本帧 (一行 = 一帧, 按 separator 切分到各端口)
 /// - AsciiField: Slcan 类 ASCII 定宽字段 (按进制解析 digits 个字符)
 /// - Samples:    逻辑解码采样块 (LogicDecode 类, 整块委托给逻辑解码器)
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 #[serde(
     tag = "type",
     rename_all = "camelCase",

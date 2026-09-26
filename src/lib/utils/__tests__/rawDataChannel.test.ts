@@ -18,8 +18,25 @@ vi.hoisted(() => {
 });
 
 import { classifyRawDataChannel, resolveRawDataChannelKey, resolveRawDataStatusTransport } from '../rawDataChannel';
+import { useDescribeStore } from '../../models/describeStore';
 import type { Node, Edge } from '@xyflow/react';
 import type { WidgetConfig } from '../../../types';
+import type { NodeDescription } from '../../../types/generated/NodeDescription';
+import type { NodePortDescriptor } from '../../../types/generated/NodePortDescriptor';
+
+/// 控件端口唯一权威 = describe_node_documents — 字符串域判定以描述夹具驱动
+function adoptPorts(nodeId: string, outputs: { handle: string; domain: NodePortDescriptor['domain'] }[]): void {
+  const description: NodeDescription = {
+    nodeId, requestRevision: 1, status: 'ready', inputs: [],
+    outputs: outputs.map((p) => ({ handle: p.handle, label: '', domain: p.domain, connectDomains: [], dynamic: false, maxConnections: null })),
+    defaultInput: null, defaultOutput: null, effectiveChannels: null, hint: null, issues: [],
+  };
+  useDescribeStore.getState().adopt([description]);
+}
+adoptPorts('w-trigger', [{ handle: 'value', domain: 'F32' }, { handle: 'matched', domain: 'F32' }, { handle: 'text', domain: 'String' }]);
+adoptPorts('w-input', [{ handle: 'str', domain: 'String' }]);
+adoptPorts('w-str', [{ handle: 'result', domain: 'String' }]);
+adoptPorts('w-str-len', [{ handle: 'result', domain: 'F32' }]);
 
 const TRANSPORT_NODE: Node = {
   id: 'transport-1',

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { PaletteCategoryId, WidgetCategory } from '../../../types';
 import type { DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
-import type { WidgetConfig, MathOp, StrOp, FilterPresetKind } from '../../../types';
+import type { WidgetConfig } from '../../../types';
 
 /// 面板项统一模型 — 各分类项归一成同构条目, 渲染走同一套行样式
 export interface PaletteEntry {
@@ -9,9 +9,11 @@ export interface PaletteEntry {
   kind?: WidgetConfig['kind'];
   icon: ReactNode;
   label: string;
-  /// 操作变体 — Math 用 MathOp, Str 用 StrOp (按 kind 区分)
-  op?: MathOp | StrOp;
-  preset?: FilterPresetKind;
+  /// 目录模型 id + 变体 — 目录创建服务消费 (Math/Str 运算、Filter 预设等)
+  modelId?: string;
+  variantId?: string;
+  /// 文档显示名 (变体 fallbackLabel, 如 'Math add') — prepare 的 label 覆盖
+  documentLabel?: string;
   /// 结构节点条目: 设备 / 协议 / 点位选择
   nodeType?: 'protocol' | 'acquisition' | 'point-selector';
   attribute?: 'test-data';
@@ -43,7 +45,7 @@ export function filterSections(
     .map((section) => ({
       ...section,
       entries: section.entries.filter(
-        (e) => [section.header, e.label, e.title, e.key, e.kind, e.op, e.preset]
+        (e) => [section.header, e.label, e.title, e.key, e.kind, e.variantId, e.modelId]
           .some((value) => value?.toLowerCase().includes(q)),
       ),
     }))

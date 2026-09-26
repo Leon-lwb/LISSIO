@@ -1,8 +1,9 @@
 //! Native CAN-channel node driver over a typed byte parent.
 
-use acquisition::{CapabilitySet, ConfigurationSchema, PortDescriptor, PortDirection};
+use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use can::{CanDirection, CanFrame};
+use data_model::ConfigurationSchema;
 use device_tree::{
     CAN_FRAMES_PORT_ID, CanFrameSinkCapability, CanFrameSourceCapability, Capability,
     CapabilityMask, ChildPolicy, ConfigError, DriverId, FrameSubscription, NodeContext, NodeDriver,

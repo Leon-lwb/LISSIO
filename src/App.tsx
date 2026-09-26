@@ -21,9 +21,10 @@ import { useLayoutStore, AI_FLOAT_MIN_W, AI_FLOAT_MIN_H } from './store/layoutSt
 import { AiChatPanel } from './components/ai/AiChatPanel';
 import { useUpdateStore } from './store/updateStore';
 import { t } from './i18n';
-import { createWidget } from './lib/utils/widgetDefaults';
 import { openDataPanelAndReveal } from './lib/utils/revealDataTab';
+import { seedStartupWorkspace } from './lib/models/startupSeed';
 import { initAiToolHost } from './lib/ai/toolHost';
+import { startDescribeSync, stopDescribeSync } from './lib/models/describeStore';
 import { useCanFrameSubscription } from './lib/buffers/useCanFrameSubscription';
 import { resolveStartupFlow, shouldShowGuideAfterUpdate } from './lib/startupFlow';
 
@@ -157,19 +158,13 @@ function App() {
   }, [initEventListeners, loadSettings, refreshPorts]);
 
   // 首次启动种子: 工作区由后端持久化, 仅在"无持久化工作区且画布为空"时
-  // 默认创建 Serial → JustFloat → RawData，底部打开数据，右上显示 Serial 配置。
+  // 经目录创建服务 prepare 一次 RawData (目录由启动屏障保证就绪)。
+  // 启动屏障完成 → 描述同步启动 (端口表来自 describe_node_documents)。
   useEffect(() => {
-    if (!workspaceReady || workspaceRestored) return;
-    const st = useAppStore.getState();
-    if (st.rfNodes.length === 0 && !st.dataTabs.some((t) => t.type === 'raw')) {
-      const rawWidget = createWidget('RawData');
-      st.addWidget(rawWidget, 'default', { x: 560, y: 120 });
-      // 空图时再给出 设备→协议解析→RawData 初始连线, 新用户开箱即有完整数据通路
-      const fresh = useAppStore.getState();
-      if (!fresh.rfNodes.some((n) => n.type === 'acquisition' || n.type === 'protocol')) {
-        void fresh.seedInitialGraph(rawWidget.params.id);
-      }
-    }
+    if (!workspaceReady) return undefined;
+    startDescribeSync();
+    if (!workspaceRestored) void seedStartupWorkspace();
+    return () => stopDescribeSync();
   }, [workspaceReady, workspaceRestored]);
 
   // 设置加载完成后: 显示主窗口, 待首帧真正绘制后再关启动页。

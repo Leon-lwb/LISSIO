@@ -8,6 +8,7 @@ import { formatError } from '../../lib/tauri/notifications';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards, type DeviceCardModel } from '../../lib/acquisition/deviceCardModel';
 import { addAcquisitionNode, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
+import { prepareProtocolDocument } from '../../lib/models/createFromCatalog';
 import {
   addDeviceTreeChild, buildDeviceTree, createProtocolEngineNode, createSimulationNode,
   removeDeviceTreeChild, type DeviceTreeItem,
@@ -15,7 +16,7 @@ import {
 import { refreshDeviceNodeSnapshots, useDeviceNodeSnapshot } from '../../lib/acquisition/useDeviceNodeSnapshot';
 import { SearchInput } from '../ui/SearchInput';
 import { DeviceTreeInspector } from './DeviceTreeInspector';
-import { defaultsFromSchema } from '../../lib/acquisition/schemaForm';
+import { asFormSchema, defaultsFromSchema } from '../../lib/acquisition/schemaForm';
 import { uniqueDeviceTreeName } from '../../lib/acquisition/deviceTree';
 import { nanoid } from 'nanoid';
 
@@ -97,10 +98,10 @@ export function DeviceTreePanel() {
       <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-40" title={t(lang, 'deviceTreeAddRoot')}
         aria-label={t(lang, 'deviceTreeAddRoot')} disabled={pending || !card} onClick={() => {
           if (!card) return;
-          addAcquisitionNode(card, { x: 60, y: 80 + tree.length * 200 }, tabId);
-          const allNodes = useAppStore.getState().rfNodes;
-          const added = allNodes[allNodes.length - 1];
-          if (added) select(added.id);
+          // 目录创建为异步 — 节点就绪后再选中
+          void addAcquisitionNode(card, { x: 60, y: 80 + tree.length * 200 }, tabId)
+            .then((node) => select(node.id))
+            .catch(() => undefined);
         }}><Plus size={15} /></button>
       <button type="button" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-40" disabled={pending}
         title={t(lang, 'refresh')} aria-label={t(lang, 'refresh')} onClick={() => { setAttempt(value => value + 1); void refreshDeviceNodeSnapshots(); }}>
@@ -134,8 +135,13 @@ export function DeviceTreePanel() {
         <div className="mb-3 flex flex-col gap-1">
           {canAddProtocol && <button type="button" className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-[11px] hover:bg-bg-hover"
             onClick={() => {
-              const child = createProtocolEngineNode(selected.node!);
-              if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
+              // 协议引擎子节点的 schema 单一来源 = 目录 prepare
+              void prepareProtocolDocument({ kind: 'JustFloat', channels: null })
+                .then((prepared) => {
+                  const child = createProtocolEngineNode(selected.node!, { protocol: prepared.protocol, convertTo: null, schema: prepared.schema });
+                  if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
+                })
+                .catch(() => undefined);
             }}><Binary size={13} />{t(lang, 'deviceTreeAddProtocol')}</button>}
           {canAddSimulation && <button type="button" className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-[11px] hover:bg-bg-hover"
             onClick={() => {
@@ -154,7 +160,7 @@ export function DeviceTreePanel() {
                 const parent = selected.node!;
                 const child = { id: `device-${nanoid(8)}`, name: uniqueDeviceTreeName(parent, driver.driverId),
                   driver: driver.driverId, schemaVersion: driver.configSchema.schemaVersion,
-                  config: defaultsFromSchema(driver.configSchema.jsonSchema) as Record<string, unknown>, enabled: true, children: [] };
+                  config: defaultsFromSchema(asFormSchema(driver.configSchema.jsonSchema) ?? {}) as Record<string, unknown>, enabled: true, children: [] };
                 if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
               }}><Plus size={14} /></button>
           </div>}
