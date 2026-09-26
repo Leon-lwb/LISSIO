@@ -33,6 +33,9 @@ shared assembly (`backend-host`), and two push ports
 matrix and conventions: [exits.md](exits.md); Web protocol contract and the
 per-command capability matrix: [web-exit.md](web-exit.md).
 
+设备拓扑、驱动契约、能力投影和子树生命周期的统一模型见
+[device-tree.md](device-tree.md)。
+
 ## Domains
 
 ```mermaid
@@ -62,7 +65,7 @@ allowed when they also satisfy the layer rule.
 | vehicle | `can`, `diagnostic` |
 | protocol | `logic`, `protocol`, `schema`, `frame-decoder`, `points`, `acquisition` |
 | graph | `trigger`, `graph`, `graph-testkit` |
-| transport | `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `modbus-adapter`, `s7-adapter` |
+| transport | `device-tree`, `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `automotive-isotp`, `automotive-diag`, `modbus-adapter`, `s7-adapter` |
 | data | `bus`, `recording` |
 | workspace | `workspace` |
 | ai | `chat`, `llm`, `chat-session`, `mcp-client` |

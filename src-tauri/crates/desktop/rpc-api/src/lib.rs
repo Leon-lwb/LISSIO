@@ -100,6 +100,8 @@ pub async fn dispatch_with_context(
         "list_candle_devices" => devices::list_candle_devices(),
         "list_adapter_capabilities" => acquisition::list_adapter_capabilities(host),
         "list_acquisition_endpoints" => acquisition::list_acquisition_endpoints(host),
+        "list_device_tree_nodes" => Ok(acquisition::list_device_tree_nodes(host)),
+        "list_driver_manifests" => Ok(acquisition::list_driver_manifests(host)),
         "describe_acquisition_points" => acquisition::describe_acquisition_points(host, cmd, &args),
         "discover_acquisition_endpoints" => {
             acquisition::discover_acquisition_endpoints(host, cmd, &args)

@@ -159,8 +159,8 @@ async function addNode(args: Record<string, unknown>): Promise<unknown> {
     if (!created) throw new Error('节点创建失败');
     const patch = obj(args, 'config');
     if (Object.keys(patch).length > 0) {
-      const { spec } = created.data as AcquisitionNodeData;
-      updateAcquisitionNode(created.id, { ...spec, driver: { ...spec.driver, payload: deepMerge(spec.driver.payload, patch) } });
+      const { node } = created.data as AcquisitionNodeData;
+      updateAcquisitionNode(created.id, { ...node, config: deepMerge(node.config, patch) });
     }
     return { node_id: created.id };
   }
@@ -213,24 +213,21 @@ async function updateNodeConfig(args: Record<string, unknown>): Promise<unknown>
   const nodeId = str(args, 'node_id');
   const patch = obj(args, 'config');
   if (Object.keys(patch).length === 0) throw new Error('缺少 config');
-  const node = nodeOrThrow(nodeId);
+  const target = nodeOrThrow(nodeId);
 
-  if (node.type === 'widget') {
-    const widget = node.data.widget as WidgetConfig;
+  if (target.type === 'widget') {
+    const widget = target.data.widget as WidgetConfig;
     const next = { ...widget, params: deepMerge(widget.params, patch) } as WidgetConfig;
     useAppStore.getState().updateWidget(nodeId, next);
     return { ok: true };
   }
-  if (node.type === 'acquisition') {
-    const { spec } = node.data as AcquisitionNodeData;
-    updateAcquisitionNode(nodeId, {
-      ...spec,
-      driver: { ...spec.driver, payload: deepMerge(spec.driver.payload, patch) },
-    });
+  if (target.type === 'acquisition') {
+    const { node } = target.data as AcquisitionNodeData;
+    updateAcquisitionNode(nodeId, { ...node, config: deepMerge(node.config, patch) });
     return { ok: true };
   }
-  if (node.type === 'protocol') {
-    const data = node.data as unknown as ProtocolNodeData;
+  if (target.type === 'protocol') {
+    const data = target.data as unknown as ProtocolNodeData;
     const cur = data.config;
     const nextKind = typeof patch.kind === 'string' ? patch.kind : cur.kind;
     const config =

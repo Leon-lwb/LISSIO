@@ -1,21 +1,15 @@
 //! Persisted device identity and simulation configuration. No runtime dependencies.
 
+pub use crate::device_tree::DriverId;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct DriverId(pub String);
-
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-#[serde(transparent)]
-pub struct EndpointId(pub String);
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DriverPayload {
-    pub driver_id: DriverId,
+    pub driver_id: crate::device_tree::DriverId,
     pub schema_version: u32,
     pub payload: Value,
 }
@@ -101,16 +95,4 @@ impl Default for SimulationConfig {
             encoding: None,
         }
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EndpointSpec {
-    pub id: EndpointId,
-    pub label: String,
-    pub enabled: bool,
-    pub capability_endpoint_id: Option<String>,
-    pub driver: DriverPayload,
-    #[serde(default)]
-    pub simulation: Option<SimulationConfig>,
 }

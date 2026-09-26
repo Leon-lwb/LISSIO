@@ -30,6 +30,8 @@ pub const SUPPORTED: &[&str] = &[
     "discover_acquisition_endpoints",
     "validate_adapter_configuration",
     "list_acquisition_endpoints",
+    "list_device_tree_nodes",
+    "list_driver_manifests",
     "latest_acquisition_samples",
     "open_acquisition_endpoint",
     "close_acquisition_endpoint",

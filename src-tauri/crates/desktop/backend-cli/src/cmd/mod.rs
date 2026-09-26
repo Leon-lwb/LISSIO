@@ -73,22 +73,22 @@ pub enum EndpointAction {
         /// 图中设备节点 id (Acquisition 节点)
         node_id: String,
     },
-    /// 关闭端点
+    /// 关闭采集节点
     Close {
-        /// 端点 id (即图中设备节点 id)
-        endpoint_id: String,
+        /// 图中 Acquisition 节点 id
+        node_id: String,
     },
-    /// 读取端点点位值
+    /// 读取采集节点点位值
     Read {
-        /// 端点 id
-        endpoint_id: String,
+        /// 图中 Acquisition 节点 id
+        node_id: String,
         /// 点位 id 列表 (逗号分隔)
         point_ids: String,
     },
-    /// 写入端点点位值 (request JSON 文件, 与 IPC 同构)
+    /// 写入采集节点点位值 (request JSON 文件, 与 IPC 同构)
     Write {
-        /// 端点 id
-        endpoint_id: String,
+        /// 图中 Acquisition 节点 id
+        node_id: String,
         /// WriteRequest JSON 文件路径
         request_file: String,
     },

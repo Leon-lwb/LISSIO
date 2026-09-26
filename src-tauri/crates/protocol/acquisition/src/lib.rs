@@ -6,14 +6,15 @@ pub mod handle;
 mod point_simulation;
 pub mod simulation;
 pub use backend::{
-    ByteMessage, ConnectionControl, FlowRecvError, FlowTryRecvError, LegacyFlowReceiver,
-    TransportBackend, TransportConnection,
+    ByteMessage, ConnectionControl, FlowReceiver, FlowRecvError, FlowTryRecvError,
+    LegacyFlowReceiver, TransportBackend, TransportConnection,
 };
 pub use handle::LiveNodeHandle;
 mod lanes;
-mod runtime;
+mod plane;
 mod stores;
 mod supervisor;
+mod unconfigured;
 
 pub use capabilities::{
     AdapterCapability, AddressRegion, AddressSpaceDescriptor, CAPABILITY_CONTRACT_VERSION,
@@ -22,19 +23,20 @@ pub use capabilities::{
     TransportKind,
 };
 pub use lanes::{CommandLane, EventLane, EventLaneReceiver, LaneError, StateLane, StateLaneStats};
-pub use runtime::{AcquisitionRuntime, EndpointConnectionState, EndpointSnapshot};
+pub use plane::{AcquisitionBackend, AcquisitionRuntime};
 pub use stores::{CommandLedger, CommandStatus, EventLog, PointStore};
 pub use supervisor::{SourceState, SourceSupervisor, SupervisorHandle};
+pub use unconfigured::UnconfiguredAcquisitionBackend;
 
 use async_trait::async_trait;
-use data_model::device::{DriverId, DriverPayload};
+use data_model::device::DriverPayload;
+use data_model::device_tree::DriverId;
 use flow::PayloadKind;
 use points::{
     AcquisitionIntent, PointEnvelope, PointId, ReadRequest, ReadResult, WriteRequest, WriteResult,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::pin::Pin;
@@ -52,8 +54,8 @@ pub enum AcquisitionError {
     DriverMismatch { expected: String, actual: String },
     #[error("unknown driver: {0}")]
     UnknownDriver(String),
-    #[error("unknown endpoint: {0}")]
-    UnknownEndpoint(String),
+    #[error("unknown node: {0}")]
+    UnknownNode(String),
     #[error("source is busy")]
     Busy,
     #[error("source is closed")]
@@ -236,8 +238,8 @@ pub trait SourceFactory: Send + Sync {
         let expected = &self.manifest().id;
         if config.driver_id() != expected {
             return Err(AcquisitionError::DriverMismatch {
-                expected: expected.0.clone(),
-                actual: config.driver_id().0.clone(),
+                expected: expected.to_string(),
+                actual: config.driver_id().to_string(),
             });
         }
         config.open(context).await
@@ -269,6 +271,9 @@ pub trait SourceSession: Send + Sync {
         None
     }
     fn writer(&self) -> Option<&dyn WriteCapability> {
+        None
+    }
+    fn invoker(&self) -> Option<&dyn InvokeCapability> {
         None
     }
     async fn stopped(&self) -> AcquisitionResult<()>;
@@ -318,6 +323,11 @@ pub trait WriteCapability: Send + Sync {
     async fn write(&self, request: WriteRequest) -> AcquisitionResult<WriteResult>;
 }
 
+#[async_trait]
+pub trait InvokeCapability: Send + Sync {
+    async fn invoke(&self, method: &str, args: Value) -> AcquisitionResult<Value>;
+}
+
 /// Returns an internal consistency error when declared capability bits and
 /// session handles disagree. Adapters use this in their contract tests.
 pub fn validate_capability_contract(session: &dyn SourceSession) -> AcquisitionResult<()> {
@@ -330,6 +340,7 @@ pub fn validate_capability_contract(session: &dyn SourceSession) -> AcquisitionR
             session.subscriber().is_some(),
         ),
         ("write", declared.write, session.writer().is_some()),
+        ("method", declared.method, session.invoker().is_some()),
     ];
     for (name, bit, handle) in checks {
         if bit != handle {
@@ -339,44 +350,4 @@ pub fn validate_capability_contract(session: &dyn SourceSession) -> AcquisitionR
         }
     }
     Ok(())
-}
-
-/// Cold-path registry populated only by the composition root.
-#[derive(Default)]
-pub struct SourceRegistry {
-    factories: parking_lot::RwLock<BTreeMap<DriverId, std::sync::Arc<dyn SourceFactory>>>,
-}
-
-impl SourceRegistry {
-    pub fn register(&self, factory: std::sync::Arc<dyn SourceFactory>) {
-        self.factories
-            .write()
-            .insert(factory.manifest().id.clone(), factory);
-    }
-
-    pub fn factory(&self, driver_id: &DriverId) -> Option<std::sync::Arc<dyn SourceFactory>> {
-        self.factories.read().get(driver_id).cloned()
-    }
-
-    pub fn manifests(&self) -> Vec<DriverManifest> {
-        self.factories
-            .read()
-            .values()
-            .map(|factory| factory.manifest().clone())
-            .collect()
-    }
-
-    pub fn adapter_capabilities(&self) -> Vec<AdapterCapability> {
-        self.factories
-            .read()
-            .values()
-            .map(|factory| factory.adapter_capability())
-            .collect()
-    }
-
-    pub fn discover(&self, driver_id: &DriverId) -> AcquisitionResult<Vec<DiscoveredEndpoint>> {
-        self.factory(driver_id)
-            .ok_or_else(|| AcquisitionError::UnknownDriver(driver_id.0.clone()))?
-            .discover()
-    }
 }

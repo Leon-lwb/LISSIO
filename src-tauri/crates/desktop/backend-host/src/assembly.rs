@@ -32,14 +32,16 @@ impl PointBatchObserver for FourDomainPointObserver {
 ///
 /// `modbus-tcp` / `modbus-rtu` / `s7` feature 控制后三类适配器是否注册。
 pub fn build_acquisition_runtime() -> acquisition::AcquisitionRuntime {
-    use acquisition::TransportBackend;
+    use acquisition::{AcquisitionRunState, ExecutionGate, TransportBackend};
     use data_model::{
         CandleConfig, SerialConfig, SlcanConfig, TcpClientConfig, TcpServerConfig, TransportConfig,
         UdpConfig,
     };
-    use transport::device_factory::ByteDeviceFactory;
+    use transport::device_driver::ByteDeviceDriver;
+    use transport::test_data::TestDataBackend;
 
-    let registry = Arc::new(acquisition::SourceRegistry::default());
+    let execution = ExecutionGate::new(AcquisitionRunState::Stopped);
+    let registry = Arc::new(device_tree::DriverRegistry::new());
     let serial = Arc::new(serial::SerialBackend) as Arc<dyn TransportBackend>;
     let network = Arc::new(network::NetworkBackend) as Arc<dyn TransportBackend>;
     let can = Arc::new(can_transport::CanTransportBackend) as Arc<dyn TransportBackend>;
@@ -81,15 +83,55 @@ pub fn build_acquisition_runtime() -> acquisition::AcquisitionRuntime {
             can,
         ),
     ] {
-        registry.register(Arc::new(ByteDeviceFactory::new(id, label, config, backend)));
+        registry
+            .register(Arc::new(ByteDeviceDriver::new(
+                id,
+                label,
+                config,
+                backend,
+                device_tree::NodeRole::Bus,
+                execution.clone(),
+            )))
+            .expect("fresh device-tree registry accepts byte drivers");
     }
+    registry
+        .register(Arc::new(automotive::CanChannelDriver::new()))
+        .expect("fresh device-tree registry accepts CAN channel");
+    registry
+        .register(Arc::new(automotive_isotp::IsoTpNodeDriver::new()))
+        .expect("fresh device-tree registry accepts ISO-TP");
+    registry
+        .register(Arc::new(automotive_diag::DiagnosticNodeDriver::new()))
+        .expect("fresh device-tree registry accepts diagnostics");
+    registry
+        .register(Arc::new(ByteDeviceDriver::new(
+            "test-data",
+            "Test Data",
+            TransportConfig::TestData(data_model::TestDataConfig::default()),
+            Arc::new(TestDataBackend),
+            device_tree::NodeRole::Virtual,
+            execution.clone(),
+        )))
+        .expect("fresh device-tree registry accepts test data");
     #[cfg(feature = "modbus-tcp")]
-    registry.register(Arc::new(modbus_adapter::ModbusFactory::default()));
+    registry
+        .register(Arc::new(modbus_adapter::ModbusTcpDriver::new(
+            execution.clone(),
+        )))
+        .expect("fresh device-tree registry accepts Modbus TCP");
     #[cfg(feature = "modbus-rtu")]
-    registry.register(Arc::new(modbus_adapter::ModbusRtuFactory::default()));
+    registry
+        .register(Arc::new(modbus_adapter::ModbusRtuDriver::new(
+            execution.clone(),
+        )))
+        .expect("fresh device-tree registry accepts Modbus RTU");
     #[cfg(feature = "s7")]
-    registry.register(Arc::new(s7_adapter::S7Factory::default()));
-    acquisition::AcquisitionRuntime::new(registry)
+    registry
+        .register(Arc::new(s7_adapter::S7Driver::new(execution.clone())))
+        .expect("fresh device-tree registry accepts S7");
+    acquisition::AcquisitionRuntime::new(Arc::new(
+        device_tree::DeviceTreeAcquisition::with_execution(registry, execution),
+    ))
 }
 
 /// 把四域点位投影观察者挂到采集运行时 (与打开端点配对)。

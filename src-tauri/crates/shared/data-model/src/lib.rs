@@ -21,6 +21,7 @@
 
 pub mod config;
 pub mod device;
+pub mod device_tree;
 pub mod frame;
 pub mod serial_params;
 

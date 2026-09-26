@@ -7,3 +7,7 @@
 mod bridge;
 
 pub use bridge::{BackendKind, BridgeCanBackend};
+
+mod node_driver;
+
+pub use node_driver::{CAN_CHANNEL_DRIVER_ID, CanChannelConfig, CanChannelDriver, CanEncoding};

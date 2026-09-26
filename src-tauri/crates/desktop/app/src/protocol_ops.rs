@@ -28,16 +28,16 @@ impl AppState {
         // 协议变化 → TestData 生成格式失效: 断开所有打开的 TestData 传输
         {
             let manager = &self.transport;
-            let test_nodes: Vec<String> = manager
+            let test_nodes: Vec<data_model::device_tree::NodeId> = manager
                 .list_open()
                 .into_iter()
                 .filter(|id| matches!(manager.config(id), Some(TransportConfig::TestData(_))))
                 .collect();
             if !test_nodes.is_empty() {
                 for id in &test_nodes {
-                    self.data_plane.detach(id);
+                    self.data_plane.detach(id.as_str());
                     manager.close(id).await;
-                    emit_transport_state(sink, id, ConnectionState::Disconnected);
+                    emit_transport_state(sink, id.as_str(), ConnectionState::Disconnected);
                 }
                 log::info!(
                     "协议切换: 自动断开 TestData 连接 ({} 个), 请重新连接",

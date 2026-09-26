@@ -8,13 +8,11 @@
 //! `pipeline::DataPlaneState` 与 `app_state` 经由 `data_plane` re-export 的 `DataPlaneState`
 //! 两个同源码类型, 测试编译失败 (E0308), 故以 tests/ 集成测试形式存在。
 
-use acquisition::{AcquisitionRuntime, ConnectionControl, SourceRegistry, TransportConnection};
+use acquisition::{ConnectionControl, TransportConnection};
 use app::AppState;
 use buffer_graph::Edge;
-use data_model::device::{
-    DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-    EndpointSpec, SimulationConfig,
-};
+use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain, SimulationConfig};
+use data_model::device_tree::{NodeDecl, NodeId};
 use data_model::{SerialConfig, TransportConfig};
 use graph::BytePlan;
 use kind::{DecoderBlockDef, FieldType, NodeDef, NodeKind};
@@ -22,6 +20,8 @@ use pipeline::DataPlaneState;
 use pipeline::byte_router::route_bytes;
 use pipeline::decoder_feed::DecoderFeedCache;
 use schema_types::{ProtocolConfig, ProtocolSchema, SchemaPreset, TestDataLink};
+
+mod common;
 
 fn node(id: &str, kind: NodeKind) -> NodeDef {
     NodeDef {
@@ -78,16 +78,11 @@ const fn firewater(channels: Option<usize>) -> NodeKind {
 
 /// 内存构造数据平面: 工作区运行时节点索引 + BytePlan + protocol_states 同步
 fn setup_plane(nodes: Vec<NodeDef>, edges: Vec<Edge>) -> DataPlaneState {
-    let registry = std::sync::Arc::new(SourceRegistry::default());
-    registry.register(std::sync::Arc::new(
-        transport::device_factory::ByteDeviceFactory::new(
-            "serial",
-            "Serial",
-            TransportConfig::Serial(SerialConfig::default()),
-            std::sync::Arc::new(transport::test_data::TestDataBackend),
-        ),
+    let state = AppState::with_acquisition(common::runtime(
+        "serial",
+        TransportConfig::Serial(SerialConfig::default()),
+        std::sync::Arc::new(transport::test_data::TestDataBackend),
     ));
-    let state = AppState::with_acquisition(AcquisitionRuntime::new(registry));
     let plane = state.data_plane;
     {
         let mut g = plane.global_nodes.lock();
@@ -102,50 +97,48 @@ fn setup_plane(nodes: Vec<NodeDef>, edges: Vec<Edge>) -> DataPlaneState {
     plane
 }
 
-fn simulated_serial(id: &str, sample_rate: u32, protocol: ProtocolConfig) -> EndpointSpec {
+fn simulated_serial(id: &str, sample_rate: u32, protocol: ProtocolConfig) -> NodeDecl {
     let defaults = serde_json::to_value(TransportConfig::Serial(SerialConfig::default())).unwrap();
-    EndpointSpec {
-        id: EndpointId(id.into()),
-        label: id.into(),
-        enabled: true,
-        capability_endpoint_id: Some("device".into()),
-        driver: DriverPayload {
-            driver_id: DriverId("serial".into()),
-            schema_version: 1,
-            payload: defaults["params"].clone(),
-        },
-        simulation: Some(SimulationConfig {
+    common::node(
+        id,
+        "serial",
+        defaults["params"].clone(),
+        Some(SimulationConfig {
             sample_rate,
             channels: 1,
             encoding: Some(serde_json::json!({ "protocol": protocol, "schema": null })),
             ..Default::default()
         }),
-    }
+    )
 }
 
-fn serial_spec(id: &str, baud_rate: u32) -> EndpointSpec {
+fn serial_spec(id: &str, baud_rate: u32) -> NodeDecl {
     let defaults = serde_json::to_value(TransportConfig::Serial(data_model::SerialConfig {
         baud_rate,
         ..Default::default()
     }))
     .unwrap();
-    EndpointSpec {
-        id: EndpointId(id.into()),
-        label: id.into(),
-        enabled: true,
-        capability_endpoint_id: Some("device".into()),
-        driver: DriverPayload {
-            driver_id: DriverId("serial".into()),
-            schema_version: 1,
-            payload: defaults["params"].clone(),
-        },
-        simulation: None,
-    }
+    common::node(id, "serial", defaults["params"].clone(), None)
 }
 
-fn device_kind(spec: EndpointSpec) -> NodeKind {
+fn node_id(value: &str) -> NodeId {
+    NodeId::new(value).unwrap()
+}
+
+fn update_simulation(node: &mut NodeDecl, update: impl FnOnce(&mut SimulationConfig)) {
+    let child = node
+        .children
+        .iter_mut()
+        .find(|child| child.driver.as_str() == data_model::device_tree::SIMULATION_DRIVER_ID)
+        .expect("simulation child");
+    let mut config: SimulationConfig = serde_json::from_value(child.config.clone()).unwrap();
+    update(&mut config);
+    child.config = serde_json::to_value(config).unwrap();
+}
+
+fn device_kind(spec: NodeDecl) -> NodeKind {
     NodeKind::Acquisition {
-        spec,
+        node: spec,
         ports: vec![
             DevicePort {
                 id: "rx".into(),
@@ -224,7 +217,7 @@ async fn simulation_session_updates_sample_clock_without_reanchoring() {
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
-    plane.transport.open_endpoint(spec.clone()).await.unwrap();
+    plane.transport.open_node(spec.clone()).await.unwrap();
     let mut cache = DecoderFeedCache::new();
     route_bytes(&plane, None, "tp", b"1\n2\n3\n4\n", 0, &mut cache, None).await;
     plane.flush_eval();
@@ -237,7 +230,9 @@ async fn simulation_session_updates_sample_clock_without_reanchoring() {
 
     // 运行时参数热更新只替换后续采样间隔，不把采样时钟重新锚定到墙钟。
     let mut updated = spec;
-    updated.simulation.as_mut().unwrap().sample_rate = 350_000;
+    update_simulation(&mut updated, |simulation| {
+        simulation.sample_rate = 350_000;
+    });
     assert!(plane.transport.reconcile(&[updated]).await.is_empty());
     route_bytes(&plane, None, "tp", b"5\n6\n7\n", 0, &mut cache, None).await;
     plane.flush_eval();
@@ -258,7 +253,7 @@ async fn simulation_session_updates_sample_clock_without_reanchoring() {
             .windows(2)
             .all(|pair| (2.0..=4.0).contains(&(pair[1] - pair[0])))
     );
-    plane.transport.close("tp").await;
+    plane.transport.close(&node_id("tp")).await;
 }
 
 #[tokio::test]
@@ -275,7 +270,7 @@ async fn connected_simulation_session_supplies_exact_clock() {
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
-    plane.transport.open_endpoint(spec).await.unwrap();
+    plane.transport.open_node(spec).await.unwrap();
 
     let mut cache = DecoderFeedCache::new();
     route_bytes(&plane, None, "tp", b"1\n2\n3\n4\n", 0, &mut cache, None).await;
@@ -287,7 +282,7 @@ async fn connected_simulation_session_supplies_exact_clock() {
         (0.004..=0.005).contains(&-timestamps[0]),
         "必须使用连接会话的 700 kHz: {timestamps:?}"
     );
-    plane.transport.close("tp").await;
+    plane.transport.close(&node_id("tp")).await;
 }
 
 #[tokio::test]
@@ -1181,4 +1176,60 @@ async fn frame_queue_overflow_keeps_newest_batches() {
     let sf = plane.source_frames.lock();
     let f = sf.get("pt").expect("pt 应有最新帧");
     assert_eq!(f.channels, vec![300.0, 300.0, 300.0]);
+}
+
+#[tokio::test]
+async fn slcan_wire_frames_reach_can_buffer_with_explicit_direction() {
+    let plane = setup_plane(
+        vec![
+            node("slcan-device", byte_device("slcan-device")),
+            node(
+                "slcan-protocol",
+                NodeKind::Protocol {
+                    config: ProtocolConfig::Slcan,
+                    convert_to: None,
+                    schema: None,
+                },
+            ),
+        ],
+        vec![edge("slcan-device", "rx", "slcan-protocol", "in")],
+    );
+    let mut cache = DecoderFeedCache::new();
+
+    pipeline::byte_router::route_bytes_with_direction(
+        &plane,
+        None,
+        "slcan-device",
+        b"\xff>t1232AABB\r\n",
+        0,
+        &mut cache,
+        None,
+        can::CanDirection::Rx,
+    )
+    .await;
+    pipeline::byte_router::route_bytes_with_direction(
+        &plane,
+        None,
+        "slcan-device",
+        b"t4561CC\r",
+        0,
+        &mut cache,
+        None,
+        can::CanDirection::Tx,
+    )
+    .await;
+
+    let frames = plane.can_buffer.lock().get_recent(2);
+    assert_eq!(frames.len(), 2);
+    assert_eq!(frames[0].id, 0x123);
+    assert_eq!(frames[0].direction, can::CanDirection::Rx);
+    assert_eq!(frames[1].id, 0x456);
+    assert_eq!(frames[1].direction, can::CanDirection::Tx);
+
+    let event = app::display::DisplayEvent::CanFrames(can::CanFrameBatch { seq: 7, frames });
+    let json = serde_json::to_value(&event).unwrap();
+    assert_eq!(json["kind"], "can_frames");
+    assert_eq!(json["payload"]["seq"], 7);
+    assert_eq!(json["payload"]["frames"][0]["direction"], "Rx");
+    assert_eq!(json["payload"]["frames"][1]["direction"], "Tx");
 }

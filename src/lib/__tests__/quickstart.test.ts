@@ -3,6 +3,7 @@ import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate } from '../quickstart/applyTemplate';
 import { useAppStore } from '../../store/appStore';
 import { selectWidgets } from '../../store/appStoreHelpers';
+import type { DeviceTreeNodeDecl, ProtocolSchema } from '../../types';
 
 describe('quick-start node documents', () => {
   it('ships the core examples', () => {
@@ -22,9 +23,10 @@ describe('quick-start node documents', () => {
       expect(ids.size).toBe(graph.documents.length);
       expect(graph.documents.every(document => document.tabId === graph.tab_id)).toBe(true);
       expect(graph.documents.some(document => document.kind === 'device')).toBe(true);
-      expect(graph.documents.some(document => document.kind === 'protocol')).toBe(true);
-      expect(graph.edges.every(edge => ids.has(edge.source) && ids.has(edge.target))).toBe(true);
-      expect(graph.documents.some(document => document.kind === 'device')).toBe(true);
+      const device = graph.documents.find(document => document.kind === 'device');
+      const childIds = device?.kind === 'device' ? device.config.node.children.map(child => child.id) : [];
+      expect(device?.kind === 'device' && device.config.node.children.some(child => child.driver === 'protocol-engine')).toBe(true);
+      expect(graph.edges.every(edge => [...ids, ...childIds].includes(edge.source) && [...ids, ...childIds].includes(edge.target))).toBe(true);
       expect(snapshot.dockCards?.['properties-main']?.tabIds).toEqual(['node-properties-fixed']);
     }
   });
@@ -32,22 +34,27 @@ describe('quick-start node documents', () => {
   it('the serial example is Serial + test attribute -> JustFloat', () => {
     const graph = getTemplate('serial')!.build().workspace!.graphs[0];
     const device = graph.documents.find(document => document.kind === 'device');
-    const protocol = graph.documents.find(document => document.kind === 'protocol');
-    expect(device?.kind === 'device' && device.config.driver.driverId).toBe('serial');
-    expect(device?.attributes.testData?.sampleRate).toBeGreaterThan(0);
-    expect(protocol?.kind === 'protocol' && protocol.config.protocol.kind).toBe('JustFloat');
-    expect(graph.edges.some(edge => edge.source === device?.id && edge.target === protocol?.id)).toBe(true);
+    expect(device?.kind === 'device' && device.config.node.driver).toBe('serial');
+    const simulation = device?.kind === 'device'
+      ? device.config.node.children.find((child) => child.driver === 'simulation')
+      : undefined;
+    expect((simulation?.config as { sampleRate?: number } | undefined)?.sampleRate).toBeGreaterThan(0);
+    const protocol = device?.kind === 'device'
+      ? device.config.node.children.find(child => child.driver === 'protocol-engine') : undefined;
+    expect((protocol?.config.protocol as { kind?: string } | undefined)?.kind).toBe('JustFloat');
+    expect(graph.edges.some(edge => edge.source === protocol?.id)).toBe(true);
   });
 
   it('custom protocol keeps named decode ports and an encoding rule', () => {
     const graph = getTemplate('custom-protocol')!.build().workspace!.graphs[0];
-    const protocol = graph.documents.find(document => document.kind === 'protocol');
-    expect(protocol?.kind).toBe('protocol');
-    if (protocol?.kind !== 'protocol') return;
-    expect(protocol.config.schema.preset).toBe('custom');
-    expect(protocol.config.schema.decode.filter(block => block.type === 'field').map(block => block.portName))
+    const device = graph.documents.find(document => document.kind === 'device');
+    const protocol = device?.kind === 'device'
+      ? device.config.node.children.find(child => child.driver === 'protocol-engine') : undefined;
+    const schema = protocol?.config.schema as ProtocolSchema | undefined;
+    expect(schema?.preset).toBe('custom');
+    expect(schema?.decode.filter(block => block.type === 'field').map(block => block.portName))
       .toEqual(['speed', 'temp']);
-    expect(protocol.config.schema.encode?.length).toBeGreaterThan(0);
+    expect(schema?.encode?.length).toBeGreaterThan(0);
     expect(graph.edges.some(edge => edge.source_handle === 'speed')).toBe(true);
   });
 });
@@ -68,7 +75,12 @@ describe('template application', () => {
     const nodes = state.rfNodes.filter(node => node.data.tabId === tab.id);
     expect(nodes).toHaveLength(snapshot.workspace!.graphs[0].documents.length);
     expect(nodes.every(node => !originalIds.has(node.id))).toBe(true);
-    expect(state.rfEdges.every(edge => nodes.some(node => node.id === edge.source) && nodes.some(node => node.id === edge.target))).toBe(true);
+    const treeIds = nodes.flatMap(node => node.type === 'acquisition'
+      ? ((node.data.node as DeviceTreeNodeDecl).children.map(child => child.id)) : []);
+    expect(treeIds).not.toContain('template-protocol');
+    expect(treeIds.some(id => state.rfEdges.some(edge => edge.source === id))).toBe(true);
+    expect(state.rfEdges.every(edge => [...nodes.map(node => node.id), ...treeIds].includes(edge.source)
+      && [...nodes.map(node => node.id), ...treeIds].includes(edge.target))).toBe(true);
   });
 
   it('replace restores the exact document and remains disconnected', async () => {

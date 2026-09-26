@@ -19,6 +19,7 @@ import { applySnapshot, collectPartialSnapshot, detectPresentSections, parseSnap
 import { useAppStore } from '../../store/appStore';
 import { tauriMock } from '../../test/setup';
 import { deviceDocument, protocolDocument } from '../../test/nodeDocuments';
+import { canvasNode } from '../nodes/document';
 
 function snapshot(): AppSnapshot {
   return {
@@ -48,6 +49,22 @@ describe('atomic workspace export', () => {
     expect(parsed.version).toBe(4);
     expect(parsed.workspace?.graphs[0].documents).toHaveLength(2);
     expect(detectPresentSections(parsed)).toEqual(['workspace']);
+  });
+
+  it('retains output connections from protocol children in workspace backups', () => {
+    const device = deviceDocument();
+    if (device.kind !== 'device') throw new Error('expected device document');
+    device.config.node.children = [{ id: 'nested-parser', name: 'Nested parser', driver: 'protocol-engine',
+      schemaVersion: 1, config: { protocol: { kind: 'RawData' }, convertTo: null, schema: null },
+      enabled: true, children: [] }];
+    useAppStore.setState({
+      controlTabs: [{ id: 'default', name: 'Tab 1' }],
+      rfNodes: [canvasNode(device), canvasNode(protocolDocument())],
+      rfEdges: [{ id: 'output', source: 'nested-parser', sourceHandle: 'out', target: 'parser', targetHandle: 'in' }],
+    });
+    const exported = collectPartialSnapshot(['workspace']);
+    expect(exported.workspace?.graphs[0].edges).toMatchObject([{ id: 'output', source: 'nested-parser' }]);
+    expect(() => parseSnapshot(serializeSnapshot(exported))).not.toThrow();
   });
 
   it('rejects old, empty, cross-tab and dangling documents', () => {

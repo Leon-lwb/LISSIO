@@ -18,3 +18,7 @@ mod tx;
 
 pub use error::{AutomotiveError, AutomotiveResult};
 pub use session::{IsoTpSession, IsoTpSessionHandle};
+
+mod node_driver;
+
+pub use node_driver::{ISOTP_DRIVER_ID, IsoTpAddressing, IsoTpNodeConfig, IsoTpNodeDriver};

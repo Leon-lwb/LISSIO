@@ -7,7 +7,7 @@
 //
 // 用法:
 //   node scripts/stress/mcp.mjs [--port 18765] open <node_id>
-//   node scripts/stress/mcp.mjs [--port 18765] close <endpoint_id>
+//   node scripts/stress/mcp.mjs [--port 18765] close <node_id>
 //   node scripts/stress/mcp.mjs [--port 18765] run <start|pause|stop>
 //   node scripts/stress/mcp.mjs [--port 18765] buffer <source>
 //   node scripts/stress/mcp.mjs [--port 18765] raw <source> [max_bytes]
@@ -92,7 +92,7 @@ const { options, positional } = parseArgs(process.argv.slice(2));
 const [command, first, second] = positional;
 const tools = {
   open: ['open_endpoint', () => ({ node_id: first })],
-  close: ['close_endpoint', () => ({ endpoint_id: first })],
+  close: ['close_endpoint', () => ({ node_id: first })],
   run: ['run_workspace', () => ({ action: first })],
   buffer: ['get_buffer_info', () => ({ source: first })],
   raw: ['get_raw_data', () => ({ source: first, max_bytes: Number(second ?? 4096) })],

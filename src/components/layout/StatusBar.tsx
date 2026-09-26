@@ -8,7 +8,7 @@ import { CanLoadAlarm } from './CanLoadAlarm';
 import { PipelineDropAlarm } from './PipelineDropAlarm';
 import { UpdateIndicator } from './UpdateIndicator';
 import { useSettingsStore } from '../../store/settingsStore';
-import { usePrimaryDeviceSpec, usePrimaryProtocolConfig } from '../../lib/hooks/usePrimaryNodes';
+import { usePrimaryDeviceNode, usePrimaryProtocolConfig } from '../../lib/hooks/usePrimaryNodes';
 import CompileStatusIndicator from './CompileStatusIndicator';
 import { RunControls } from './RunControls';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -58,7 +58,7 @@ export const StatusBar = memo(function StatusBar() {
   const rxFrames = useAppStore((s) => Object.values(s.nodeStats).reduce((a, v) => a + v.rx_frames, 0));
   const txFrames = useAppStore((s) => Object.values(s.nodeStats).reduce((a, v) => a + v.tx_frames, 0));
   // 仅订阅 kind 标量 — 修改传输/协议参数 (如串口端口名) 不触发状态栏重渲染
-  const transportKind = usePrimaryDeviceSpec()?.driver.driverId;
+  const transportKind = usePrimaryDeviceNode()?.driver;
   const protocolKind = usePrimaryProtocolConfig()?.kind;
   const refreshPorts = useAppStore((s) => s.refreshPorts);
   const openSettings = useSettingsStore((s) => s.open);

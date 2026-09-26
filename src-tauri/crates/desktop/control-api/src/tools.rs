@@ -45,9 +45,8 @@ pub async fn list_devices(tb: &Toolbox) -> Value {
 /// 向传输节点发送原始字节,返回发送字节数。
 pub async fn send_bytes(tb: &Toolbox, node_id: &str, data: &[u8]) -> Result<Value, String> {
     let len = data.len();
-    tb.transport
-        .send(node_id, data)
-        .map_err(|e| e.to_string())?;
+    let node = data_model::device_tree::NodeId::new(node_id).map_err(|e| e.to_string())?;
+    tb.transport.send(&node, data).map_err(|e| e.to_string())?;
     push_tx_raw(tb, node_id, data);
     Ok(json!({ "sent_bytes": len }))
 }
@@ -300,9 +299,8 @@ pub async fn send_can_frame(
     if data.is_empty() {
         return Err("该 Protocol 节点不是 CAN 协议 (encode_can 为空)".to_string());
     }
-    tb.transport
-        .send(node_id, &data)
-        .map_err(|e| e.to_string())?;
+    let node = data_model::device_tree::NodeId::new(node_id).map_err(|e| e.to_string())?;
+    tb.transport.send(&node, &data).map_err(|e| e.to_string())?;
     Ok(json!({ "sent_bytes": data.len(), "protocol_node": proto_id }))
 }
 

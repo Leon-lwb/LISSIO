@@ -2,18 +2,16 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::can_model::{CanDirection, CanDlc, CanFrameBody, CanFrameError, CanFrameParts, CanId};
+
 // ============ CAN Frame Base Types ============
 
-/// CAN frame direction
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub enum CanDirection {
-    #[default]
-    Rx,
-    Tx,
-}
-
-/// CAN frame — normalized CAN data model
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// CAN frame — normalized CAN data model.
+///
+/// The public field shape is the stable IPC JSON contract. Prefer the validated
+/// constructors and [`Self::parts`] in new code; custom serde normalizes legacy
+/// remote frames while preserving the existing wire shape.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanFrame {
     pub timestamp: u64,
     pub id: u32,
@@ -24,14 +22,39 @@ pub struct CanFrame {
     pub direction: CanDirection,
 }
 
+#[derive(Serialize)]
+struct CanFrameWireRef<'a> {
+    timestamp: u64,
+    id: u32,
+    extended: bool,
+    rtr: bool,
+    dlc: u8,
+    data: &'a [u8],
+    direction: CanDirection,
+}
+
+#[derive(Deserialize)]
+struct CanFrameWire {
+    timestamp: u64,
+    id: u32,
+    extended: bool,
+    #[serde(default)]
+    rtr: bool,
+    dlc: u8,
+    #[serde(default)]
+    data: Vec<u8>,
+    #[serde(default)]
+    direction: CanDirection,
+}
+
 impl CanFrame {
-    /// Construct a CAN frame with given timestamp, ID, direction and data.
-    ///
-    /// `data` exceeding 8 bytes is truncated to match the CAN DLC limit.
-    #[allow(clippy::cast_possible_truncation)]
+    /// Construct a standard data frame, truncating legacy overlong payloads.
     pub fn new(timestamp: u64, id: u32, data: Vec<u8>, direction: CanDirection) -> Self {
-        let dlc = u8::try_from(data.len().min(8)).expect("dlc is capped at 8");
-        let data = data.into_iter().take(dlc as usize).collect();
+        let data = data
+            .into_iter()
+            .take(CanDlc::MAX as usize)
+            .collect::<Vec<_>>();
+        let dlc = u8::try_from(data.len()).unwrap_or(CanDlc::MAX);
         Self {
             timestamp,
             id,
@@ -43,9 +66,127 @@ impl CanFrame {
         }
     }
 
-    /// Number of data bytes (based on DLC)
+    pub fn from_parts(parts: CanFrameParts) -> Result<Self, CanFrameError> {
+        let (rtr, dlc, data) = match parts.body {
+            CanFrameBody::Data { dlc, bytes } => {
+                if dlc.as_usize() != bytes.len() {
+                    return Err(CanFrameError::DataLengthMismatch);
+                }
+                (false, dlc.raw(), bytes)
+            }
+            CanFrameBody::Remote { requested_dlc } => (true, requested_dlc.raw(), Vec::new()),
+        };
+        Ok(Self {
+            timestamp: parts.timestamp,
+            id: parts.id.raw(),
+            extended: parts.id.is_extended(),
+            rtr,
+            dlc,
+            data,
+            direction: parts.direction,
+        })
+    }
+
+    pub fn data(
+        timestamp: u64,
+        id: CanId,
+        data: Vec<u8>,
+        direction: CanDirection,
+    ) -> Result<Self, CanFrameError> {
+        Self::from_parts(CanFrameParts {
+            timestamp,
+            id,
+            body: CanFrameBody::from_data(data)?,
+            direction,
+        })
+    }
+
+    pub fn remote(
+        timestamp: u64,
+        id: CanId,
+        requested_dlc: CanDlc,
+        direction: CanDirection,
+    ) -> Self {
+        Self::from_parts(CanFrameParts {
+            timestamp,
+            id,
+            body: CanFrameBody::remote(requested_dlc),
+            direction,
+        })
+        .expect("remote frame construction is valid")
+    }
+
+    pub fn id(&self) -> Result<CanId, CanFrameError> {
+        CanId::new(self.id, self.extended)
+    }
+
+    pub fn body(&self) -> Result<CanFrameBody, CanFrameError> {
+        let dlc = CanDlc::new(self.dlc).ok_or(CanFrameError::InvalidDlc)?;
+        if self.rtr {
+            return if self.data.is_empty() {
+                Ok(CanFrameBody::Remote { requested_dlc: dlc })
+            } else {
+                Err(CanFrameError::RemoteFrameHasData)
+            };
+        }
+        if dlc.as_usize() != self.data.len() {
+            return Err(CanFrameError::DataLengthMismatch);
+        }
+        Ok(CanFrameBody::Data {
+            dlc,
+            bytes: self.data.clone(),
+        })
+    }
+
+    pub fn parts(&self) -> Result<CanFrameParts, CanFrameError> {
+        Ok(CanFrameParts {
+            timestamp: self.timestamp,
+            id: self.id()?,
+            body: self.body()?,
+            direction: self.direction,
+        })
+    }
+
+    pub fn validate(&self) -> Result<(), CanFrameError> {
+        self.parts().map(|_| ())
+    }
+
+    /// Number of data bytes (based on DLC).
     pub const fn data_len(&self) -> usize {
         self.dlc as usize
+    }
+}
+
+impl Serialize for CanFrame {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        CanFrameWireRef {
+            timestamp: self.timestamp,
+            id: self.id,
+            extended: self.extended,
+            rtr: self.rtr,
+            dlc: self.dlc,
+            data: &self.data,
+            direction: self.direction,
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CanFrame {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let wire = CanFrameWire::deserialize(deserializer)?;
+        let data = if wire.rtr { Vec::new() } else { wire.data };
+        let frame = Self {
+            timestamp: wire.timestamp,
+            id: wire.id,
+            extended: wire.extended,
+            rtr: wire.rtr,
+            dlc: wire.dlc,
+            data,
+            direction: wire.direction,
+        };
+        frame.validate().map_err(serde::de::Error::custom)?;
+        Ok(frame)
     }
 }
 
@@ -54,60 +195,22 @@ impl CanFrame {
 /// CAN filter configuration — controls which frames pass through via ID bitmask
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CanFilter {
-    /// Whether the filter is enabled
     pub enabled: bool,
-    /// Standard frame ID mask (only keeps bits where the mask is 1 in the lower 11 bits)
     pub id_mask_std: u16,
-    /// Extended frame ID mask (only keeps bits where the mask is 1 in the lower 29 bits)
     pub id_mask_ext: u32,
 }
 
 impl CanFilter {
-    /// Check if a frame matches the filter conditions
-    ///
-    /// When disabled, always matches; when enabled, applies ID mask separately for standard/extended frames.
-    /// Frames with `(frame.id & mask) != 0` are considered a match.
-    pub const fn matches(&self, frame: &CanFrame) -> bool {
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn matches(&self, frame: &CanFrame) -> bool {
         if !self.enabled {
             return true;
         }
         if frame.extended {
             (frame.id & self.id_mask_ext) != 0
         } else {
-            (frame.id & self.id_mask_std as u32) != 0
+            (frame.id & u32::from(self.id_mask_std)) != 0
         }
-    }
-}
-
-/// CAN frame filter matcher — direction + whitelist/blacklist
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct CanFrameFilter {
-    /// Whether to receive Rx frames only
-    pub rx_only: bool,
-    /// Whether to receive Tx frames only
-    pub tx_only: bool,
-    /// ID whitelist (empty means no restriction)
-    pub id_whitelist: Vec<u32>,
-    /// ID blacklist
-    pub id_blacklist: Vec<u32>,
-}
-
-impl CanFrameFilter {
-    /// Check if a frame matches the filter conditions
-    pub fn matches(&self, frame: &CanFrame) -> bool {
-        if self.rx_only && frame.direction != CanDirection::Rx {
-            return false;
-        }
-        if self.tx_only && frame.direction != CanDirection::Tx {
-            return false;
-        }
-        if !self.id_whitelist.is_empty() && !self.id_whitelist.contains(&frame.id) {
-            return false;
-        }
-        if self.id_blacklist.contains(&frame.id) {
-            return false;
-        }
-        true
     }
 }
 
@@ -119,7 +222,6 @@ pub struct CanFrameBatch {
 }
 
 impl CanFrameBatch {
-    /// Construct an empty batch
     pub const fn new(seq: u64) -> Self {
         Self {
             seq,
@@ -127,12 +229,10 @@ impl CanFrameBatch {
         }
     }
 
-    /// Number of frames
     pub const fn len(&self) -> usize {
         self.frames.len()
     }
 
-    /// Whether the batch is empty
     pub const fn is_empty(&self) -> bool {
         self.frames.is_empty()
     }

@@ -1126,9 +1126,12 @@ helpAiSteps: |-
 
 # CAN
 canFrames: CAN Frames
+canInvalidFilterId: Invalid CAN ID filter; enter a hexadecimal ID from 0x000 to 0x1FFFFFFF
 canFilterById: Filter by ID (HEX)
 canSender: CAN Sender
 frameList: Frame List
+canLatestById: Latest by ID
+canFrameCount: Frames
 busActivity: Bus Activity
 idDistribution: ID Distribution
 extendedFrame: Extended Frame
@@ -1625,3 +1628,44 @@ paletteJumpTo: Jump to category
 addDefaultCanvas: Add default canvas
 defaultCanvas: Default canvas
 defaultCanvasUnavailable: Unable to add the default canvas. Check the serial device catalog and try again.
+
+deviceTreeTitle: Device tree
+deviceTreeHint: Assemble connections, protocol engines, and test data into a device tree. Connect protocol outputs to displays on the canvas.
+deviceTreeEmpty: No devices yet. Add a connection or a test data source to start.
+deviceTreeSearch: Search devices, protocols, or node IDs
+deviceTreeAddRoot: Add device
+deviceTreeAddProtocol: Add protocol engine
+deviceTreeAddSimulation: Add test data
+deviceTreeEnabled: Enable node
+deviceTreeRemove: Delete subtree
+deviceTreeConfigure: Node configuration
+deviceTreeSelect: Select a node to edit its configuration
+deviceTreeReconnect: Changing configuration or topology closes the device. Reconnect to apply your changes.
+deviceTreeCanvasNode: This node belongs to the device through a canvas connection. Use the button below to edit it.
+deviceTreeEditCanvas: Open canvas node properties
+deviceTreeUnavailable: Could not load the device catalog
+deviceTreePath: Node path
+deviceTreeDisabled: Disabled
+deviceTreeClosed: Disconnected
+deviceTreeOnline: Connected
+deviceTreeBusy: Connecting
+deviceTreeFailed: Connection error
+deviceTreeCollapse: Collapse
+deviceTreeExpand: Expand
+deviceTreeInvalidName: Use a nonempty name without /, unique among sibling nodes.
+deviceTreeSimulationHint: When enabled, test data replaces the parent device input without accessing hardware.
+deviceTreeSignal: Waveform
+deviceTreeFrequency: Frequency (Hz)
+deviceTreeAmplitude: Amplitude
+deviceTreeOffset: Offset
+deviceTreeSampleRate: Sample rate (Hz)
+deviceTreeSeed: Random seed
+deviceTreeEncoding: Data format
+deviceTreeAutoEncoding: Match protocol engine automatically
+deviceTreeJsonConfig: Driver configuration (JSON)
+deviceTreeApply: Apply configuration
+deviceTreeDriver: Driver
+deviceTreeCatalog: Discover hardware devices
+deviceTreeSubtreeHint: Delete this node, its descendants, and their data connections.
+deviceTreeAddChild: Add child node
+deviceTreeCanvasBadge: Canvas

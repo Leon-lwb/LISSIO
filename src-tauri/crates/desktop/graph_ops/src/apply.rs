@@ -131,6 +131,11 @@ pub async fn apply_tab_graph_parts(
         }
     }
 
+    let mut nodes = nodes;
+    let mut compile_edges = edges.clone();
+    crate::device_tree::project(&mut nodes, &mut compile_edges)?;
+    crate::simulation::resolve(&mut nodes, &compile_edges);
+
     let mut node_ids = std::collections::HashSet::with_capacity(nodes.len());
     for node in &nodes {
         if node.tab_id != tab_id {
@@ -164,12 +169,12 @@ pub async fn apply_tab_graph_parts(
 
     // 1. ProtocolSource 自动注入 (后端单一权威 — 前端不再下发 ProtocolSource NodeDef)
     let mut compile_nodes = nodes.clone();
-    compile_nodes.extend(inject_protocol_sources(&nodes, &edges));
+    compile_nodes.extend(inject_protocol_sources(&nodes, &compile_edges));
 
     // 2. 本 tab 数值图编译 — 失败时构造 `CompileReport` 并 emit `graph:compile` 事件,
     //    真实编译错误原样返回 (占位假错误会吞掉域不匹配等可用原因)
     let compiled =
-        match pipeline::CompiledGraph::compile(tab_id.clone(), compile_nodes, edges.clone()) {
+        match pipeline::CompiledGraph::compile(tab_id.clone(), compile_nodes, compile_edges) {
             Ok(g) => g,
             Err(e) => {
                 let report = error::CompileReport::new(e.clone());

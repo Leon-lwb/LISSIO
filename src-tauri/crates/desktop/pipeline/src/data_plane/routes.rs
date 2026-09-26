@@ -15,6 +15,22 @@ use super::{
 };
 
 impl DataPlaneState {
+    /// 丢弃暂停期间未完成的字节帧，恢复后由同一设备树来源重新同步。
+    pub fn reset_protocol_parsers(&self) {
+        let nodes = self.global_nodes.lock();
+        for (id, state) in self.protocol_states.lock().iter() {
+            if let Some(NodeKind::Protocol {
+                config,
+                convert_to,
+                schema,
+            }) = nodes.get(id).map(|node| &node.kind)
+            {
+                *state.lock() =
+                    ProtocolNodeState::new(config, convert_to.as_ref(), schema.as_ref());
+            }
+        }
+    }
+
     /// 同步 protocol_states 与运行时节点索引中的 Protocol 节点 (图重编译后调用):
     /// 新增/配置变更 → 重建引擎; 节点删除 → 移除状态并清理 source_frames/source_texts 对应项
     pub fn sync_protocol_states(&self) {
@@ -142,7 +158,9 @@ impl DataPlaneState {
     pub async fn attach(&self, sink: EventSinkHandle, node_id: &str) {
         self.ensure_eval_worker();
         self.detach(node_id);
-        let rx = self.transport.subscribe_flow(node_id);
+        let rx = data_model::device_tree::NodeId::new(node_id)
+            .ok()
+            .and_then(|node_id| self.transport.subscribe_flow(&node_id));
         let Some(rx) = rx else {
             log::warn!("读任务挂载失败: 设备会话未打开: {node_id}");
             return;

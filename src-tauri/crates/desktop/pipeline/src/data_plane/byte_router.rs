@@ -52,6 +52,30 @@ pub async fn route_bytes(
     dec_cache: &mut DecoderFeedCache,
     live: Option<&acquisition::LiveNodeHandle>,
 ) -> RouteSummary {
+    route_bytes_with_direction(
+        plane,
+        sink,
+        source_id,
+        data,
+        depth_hint,
+        dec_cache,
+        live,
+        can::CanDirection::Rx,
+    )
+    .await
+}
+
+/// Route bytes with an explicit CAN direction for send-loopback paths.
+pub async fn route_bytes_with_direction(
+    plane: &DataPlaneState,
+    sink: Option<&dyn BackendEventSink>,
+    source_id: &str,
+    data: &[u8],
+    depth_hint: usize,
+    dec_cache: &mut DecoderFeedCache,
+    live: Option<&acquisition::LiveNodeHandle>,
+    can_direction: can::CanDirection,
+) -> RouteSummary {
     let mut summary = RouteSummary::default();
     route_inner(
         plane,
@@ -63,6 +87,7 @@ pub async fn route_bytes(
         &mut summary,
         0,
         live,
+        can_direction,
     )
     .await;
     summary
@@ -79,6 +104,7 @@ pub(super) async fn route_inner(
     summary: &mut RouteSummary,
     depth: usize,
     live: Option<&acquisition::LiveNodeHandle>,
+    can_direction: can::CanDirection,
 ) {
     if depth > MAX_ROUTE_DEPTH {
         log::warn!("字节路由深度超限 ({}), 丢弃 {} 字节", source_id, data.len());
@@ -145,8 +171,18 @@ pub(super) async fn route_inner(
         // 每组只喂代表节点一次, 组员 fan-out
         for (_, repr, members) in &groups {
             feed_protocol(
-                plane, sink, source_id, repr, members, data, depth_hint, dec_cache, summary, depth,
+                plane,
+                sink,
+                source_id,
+                repr,
+                members,
+                data,
+                depth_hint,
+                dec_cache,
+                summary,
+                depth,
                 live,
+                can_direction,
             )
             .await;
         }
@@ -173,6 +209,7 @@ pub(super) async fn route_inner(
                     summary,
                     depth,
                     live,
+                    can_direction,
                 )
                 .await;
             }
@@ -220,7 +257,15 @@ async fn dispatch_non_protocol(
         }
         (NodeKind::Acquisition { .. }, TRANSPORT_TX_HANDLE) => {
             // 协议转换回注 / 命令发送落地 — try_lock 避免与 open 的长持锁互等
-            match plane.transport.send(target, data) {
+            let send_result = data_model::device_tree::NodeId::new(target)
+                .map_err(|_| {
+                    data_model::Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("invalid device node id: {target}"),
+                    ))
+                })
+                .and_then(|node_id| plane.transport.send(&node_id, data));
+            match send_result {
                 Ok(()) => summary.tx_sends += 1,
                 Err(e) => {
                     summary.tx_errors += 1;

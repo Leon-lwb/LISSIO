@@ -13,6 +13,7 @@ name = "automotive_isotp"
 workspace = true
 
 [dependencies]
+async-trait = { workspace = true }
 acquisition = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }
@@ -21,10 +22,14 @@ transport = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
+device_tree = { workspace = true }
+flow = { workspace = true }
+parking_lot = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 error = { workspace = true }
 
 [dev-dependencies]
-async-trait = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 4

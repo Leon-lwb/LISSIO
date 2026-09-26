@@ -10,4 +10,5 @@ pub mod can_backend;
 pub mod test_data;
 pub use can_backend::CanBackend;
 mod byte_simulation;
+pub mod device_driver;
 pub mod device_factory;

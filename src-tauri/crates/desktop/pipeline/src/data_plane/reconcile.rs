@@ -78,18 +78,18 @@ impl DataPlaneState {
     /// 调用前应先执行 `sync_protocol_states` (protocol_states / source_frames 清理)。
     pub async fn reconcile(&self) {
         let sets = snapshot_node_sets(self);
-        let specs = self
+        let nodes = self
             .global_nodes
             .lock()
             .values()
             .filter_map(|node| match &node.kind {
-                NodeKind::Acquisition { spec, .. } => Some(spec.clone()),
+                NodeKind::Acquisition { node, .. } => Some(node.clone()),
                 _ => None,
             })
             .collect::<Vec<_>>();
-        for id in self.transport.reconcile(&specs).await {
-            self.detach(&id);
-            self.mark_source_disconnected(&id);
+        for id in self.transport.reconcile(&nodes).await {
+            self.detach(id.as_str());
+            self.mark_source_disconnected(id.as_str());
         }
 
         // 悬空 ProtocolSource 警告 (不编译失败; 按 graphs_version 去重避免刷屏)
@@ -106,18 +106,18 @@ impl DataPlaneState {
 
         // 孤儿设备: 会话仍 open 但运行时索引已无该设备节点
         // → detach 读任务 + close 连接
-        let orphans: Vec<String> = {
+        let orphans: Vec<data_model::device_tree::NodeId> = {
             let manager = &self.transport;
             manager
                 .list_open()
                 .into_iter()
-                .filter(|id| !sets.devices.contains(id))
+                .filter(|id| !sets.devices.contains(id.as_str()))
                 .collect()
         };
         if !orphans.is_empty() {
             let manager = &self.transport;
             for id in orphans {
-                self.detach(&id);
+                self.detach(id.as_str());
                 manager.close(&id).await;
                 log::info!("图重编译: 清理孤儿设备会话 {id}");
             }

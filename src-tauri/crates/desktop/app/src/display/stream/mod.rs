@@ -58,7 +58,8 @@ async fn can_bitrate(state: &AppState, node_id: &str, override_bps: Option<u32>)
         return value;
     }
     let manager = &state.transport;
-    match manager.config(node_id) {
+    let node = data_model::device_tree::NodeId::new(node_id).ok();
+    match node.and_then(|node| manager.config(&node)) {
         Some(data_model::TransportConfig::Slcan(config)) => config.can_bitrate.bps(),
         Some(data_model::TransportConfig::CandleLight(config)) => config.can_bitrate.bps(),
         _ => 500_000,
@@ -287,15 +288,21 @@ pub async fn subscribe_data(
             }
         }
         DisplayRequest::CanFrames { filter } => match filter {
-            Some(filter) => spawn_stream(
-                state,
-                FilteredCanStreamSource::new(state.can_buffer.clone(), filter),
-                on_event,
-                interval,
-                max_items,
-                "过滤 CAN",
-                json_event(DisplayEvent::CanFrames),
-            ),
+            Some(filter) => {
+                let source = FilteredCanStreamSource::try_new(state.can_buffer.clone(), filter)
+                    .map_err(|error| {
+                        data_model::Error::Protocol(error::ProtocolError::Parse(error.to_string()))
+                    })?;
+                spawn_stream(
+                    state,
+                    source,
+                    on_event,
+                    interval,
+                    max_items,
+                    "过滤 CAN",
+                    json_event(DisplayEvent::CanFrames),
+                );
+            }
             None => spawn_stream(
                 state,
                 CanStreamSource::new(state.can_buffer.clone(), max_items),

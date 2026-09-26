@@ -10,10 +10,23 @@ use std::collections::{HashSet, VecDeque};
 pub fn resolve(nodes: &mut [NodeDef], edges: &[Edge]) {
     let snapshot = nodes.to_vec();
     for node in nodes {
-        let NodeKind::Acquisition { spec, ports } = &mut node.kind else {
+        let NodeKind::Acquisition {
+            node: device,
+            ports,
+        } = &mut node.kind
+        else {
             continue;
         };
-        let Some(simulation) = &mut spec.simulation else {
+        let Some(simulation_node) = device
+            .children
+            .iter_mut()
+            .find(|child| child.driver.as_str() == data_model::device_tree::SIMULATION_DRIVER_ID)
+        else {
+            continue;
+        };
+        let Ok(mut simulation) = serde_json::from_value::<data_model::device::SimulationConfig>(
+            simulation_node.config.clone(),
+        ) else {
             continue;
         };
         if ports
@@ -63,6 +76,8 @@ pub fn resolve(nodes: &mut [NodeDef], edges: &[Edge]) {
                     .and_then(|(_, encoding)| encoding.clone())
             },
         );
+        simulation_node.config =
+            serde_json::to_value(simulation).expect("simulation configuration is serializable");
     }
 }
 

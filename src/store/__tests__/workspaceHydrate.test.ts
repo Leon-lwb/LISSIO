@@ -22,7 +22,7 @@ it('restores every node kind, draft attribute, label and layout from one documen
   const docs = [deviceDocument(), protocolDocument(), widgetDocument()];
   vi.spyOn(api, 'workspaceGet').mockResolvedValue({ version: 3, tabs: [{ id: 'default', name: 'One' }], data_tabs: [],
     graphs: [{ tab_id: 'default', documents: docs, edges: [] }] });
-  const open = vi.spyOn(api, 'openAcquisitionEndpoint');
+  const open = vi.spyOn(api, 'openAcquisitionNode');
   expect(await hydrateWorkspaceFromBackend()).toBe(true);
   expect(useAppStore.getState().rfNodes.map(nodeDocument)).toEqual(docs);
   expect(open).not.toHaveBeenCalled();
@@ -41,7 +41,9 @@ it('keeps devices and protocols in their saved tab without duplication', async (
 it('preserves an unavailable driver draft without opening hardware', async () => {
   const doc = deviceDocument();
   if (doc.kind !== 'device') throw new Error('fixture');
-  doc.config.driver = { driverId: 'unavailable', schemaVersion: 9, payload: { draft: true } };
+  doc.config.node.driver = 'unavailable';
+  doc.config.node.schemaVersion = 9;
+  doc.config.node.config = { draft: true };
   vi.spyOn(api, 'workspaceGet').mockResolvedValue({ version: 1, tabs: [], data_tabs: [], graphs: [{ tab_id: 'default', documents: [doc], edges: [] }] });
   await hydrateWorkspaceFromBackend();
   expect(nodeDocument(useAppStore.getState().rfNodes[0])).toEqual(doc);

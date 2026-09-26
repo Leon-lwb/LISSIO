@@ -59,22 +59,20 @@ it('seeds Serial → JustFloat → RawData, opens raw below and selects Serial f
   const rawId = addRaw();
   await useAppStore.getState().seedInitialGraph(rawId);
   const state = useAppStore.getState();
-  expect(state.rfNodes).toHaveLength(3);
+  expect(state.rfNodes).toHaveLength(2);
   const device = state.rfNodes.find(n => n.type === 'acquisition')!;
-  const protocol = state.rfNodes.find(n => n.type === 'protocol')!;
+  const protocol = (device.data.node as { children: { id: string; driver: string; config: { protocol: { kind: string } } }[] }).children[0];
   expect(device.selected).toBe(true);
-  expect(device.data.spec).toMatchObject({ driver: { driverId: 'serial', payload: { baud_rate: 115200 } } });
-  expect(device.data.spec).not.toHaveProperty('simulation');
-  expect(protocol.data.config).toMatchObject({ kind: 'JustFloat' });
+  expect(device.data.node).toMatchObject({ driver: 'serial', config: { baud_rate: 115200 } });
+  expect(protocol).toMatchObject({ driver: 'protocol-engine', config: { protocol: { kind: 'JustFloat' } } });
   expect(state.rfEdges).toEqual(expect.arrayContaining([
-    expect.objectContaining({ source: device.id, target: protocol.id }),
     expect.objectContaining({ source: protocol.id, target: rawId }),
   ]));
   expect(useDockStore.getState().cards['data-main'].activeTabId).toBe(rawId);
   expect(useDockStore.getState().cards['properties-main'].activeTabId).toBe('node-properties-fixed');
   expect(useDockStore.getState().root).toEqual(initialDock.root);
   await state.seedInitialGraph(rawId);
-  expect(useAppStore.getState().rfNodes).toHaveLength(3);
+  expect(useAppStore.getState().rfNodes).toHaveLength(2);
 });
 
 it('does not seed over a restored workspace', async () => {
@@ -91,7 +89,7 @@ it('adds a default canvas from a restored workspace without changing existing no
   const state = useAppStore.getState();
   expect(state.controlTabs).toHaveLength(2);
   expect(state.rfNodes.find(node => node.id === oldRawId)?.data.tabId).toBe('default');
-  expect(state.rfNodes.filter(node => node.data.tabId === state.activeControlTabId)).toHaveLength(3);
+  expect(state.rfNodes.filter(node => node.data.tabId === state.activeControlTabId)).toHaveLength(2);
   expect(state.rfNodes.find(node => node.selected)?.type).toBe('acquisition');
   expect(useDockStore.getState().cards['control-main'].activeTabId).toBe(state.activeControlTabId);
   const raw = state.dataTabs.find(tab => tab.type === 'raw' && tab.id !== oldRawId)!;

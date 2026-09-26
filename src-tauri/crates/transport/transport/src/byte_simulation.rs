@@ -42,7 +42,8 @@ impl SourceSession for Session {
         Ok(())
     }
     async fn stopped(&self) -> AcquisitionResult<()> {
-        self.close().await
+        self.handle.wait_closed().await;
+        Ok(())
     }
     async fn close(&self) -> AcquisitionResult<()> {
         self.handle.close();

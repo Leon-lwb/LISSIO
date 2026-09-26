@@ -8,9 +8,9 @@ import type {
   WidgetConfig,
 } from '../../types';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
-import type { AcquisitionNodeData } from './acquisitionNodes';
-import { updateAcquisitionNode } from './acquisitionNodes';
+import { simulationConfig, updateAcquisitionNode, withSimulation, type AcquisitionNodeData } from './acquisitionNodes';
 import { useAppStore } from '../../store/appStore';
+import { deviceTreeCanvasEdges, deviceTreeCanvasNodes } from './deviceTreeModel';
 
 export const defaultSimulation = (): SimulationConfig => ({
   signal: { waveform: 'sine', frequency: 1, amplitude: 1, offset: 0 },
@@ -18,13 +18,15 @@ export const defaultSimulation = (): SimulationConfig => ({
 });
 
 export function downstreamParsers(device: Node, nodes: Node[], edges: Edge[]): Node[] {
+  const allNodes = [...nodes, ...deviceTreeCanvasNodes(nodes)];
+  const allEdges = [...edges, ...deviceTreeCanvasEdges(nodes)];
   const visited = new Set([device.id]);
   const queue = [device.id];
   const parsers: Node[] = [];
   while (queue.length) {
     const source = queue.shift();
-    for (const edge of edges.filter(e => e.source === source)) {
-      const target = nodes.find(n => n.id === edge.target && n.data.tabId === device.data.tabId);
+    for (const edge of allEdges.filter(e => e.source === source && ['rx', 'out', 'raw'].includes(e.sourceHandle ?? '') && e.targetHandle === 'in')) {
+      const target = allNodes.find(n => n.id === edge.target && n.data.tabId === device.data.tabId && n.data.enabled !== false);
       if (!target || visited.has(target.id)) continue;
       visited.add(target.id);
       if (target.type === 'protocol' || (target.data.widget as { kind?: string } | undefined)?.kind === 'FrameDecoder') parsers.push(target);
@@ -36,7 +38,7 @@ export function downstreamParsers(device: Node, nodes: Node[], edges: Edge[]): N
 
 export function resolveSimulation(device: Node, nodes: Node[], edges: Edge[]): SimulationConfig | null {
   const data = device.data as AcquisitionNodeData;
-  const simulation = data.spec.simulation;
+  const simulation = simulationConfig(data.node);
   if (!simulation) return null;
   if (data.ports?.some(p => p.domain === 'points')) return simulation;
   const parsers = downstreamParsers(device, nodes, edges);
@@ -85,8 +87,13 @@ export function applyTestAttribute(nodeId?: string): boolean {
   const selected = state.rfNodes.filter(n => n.selected && n.data.tabId === state.activeControlTabId);
   const node = nodeId ? state.rfNodes.find(n => n.id === nodeId) : selected.length === 1 ? selected[0] : undefined;
   if (node?.type !== 'acquisition') return false;
-  const { spec } = node.data as AcquisitionNodeData;
-  if (!spec.simulation) updateAcquisitionNode(node.id, { ...spec, simulation: defaultSimulation() });
+  const { node: device } = node.data as AcquisitionNodeData;
+  if (!simulationConfig(device)) {
+    const existing = device.children.find(child => child.driver === 'simulation');
+    const updated = existing ? { ...device, children: device.children.map(child => child.id === existing.id
+      ? { ...child, enabled: true } : child) } : withSimulation(device, defaultSimulation());
+    updateAcquisitionNode(node.id, updated);
+  }
   state.onNodesChange(state.rfNodes.map(n => ({ id: n.id, type: 'select', selected: n.id === node.id })));
   openNodePropertiesPanel();
   return true;

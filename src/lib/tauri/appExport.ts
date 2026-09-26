@@ -8,6 +8,7 @@
 
 import { platform } from '../platform';
 import { canvasNode, nodeDocument, type NodeDocument } from '../nodes/document';
+import { deviceTreeCanvasNodes, walkDeviceTree } from '../acquisition/deviceTreeModel';
 import { edgeToGraphEdge } from '../utils/nodeDef';
 import type { GraphEdge } from '../utils/nodeDef';
 import { useAppStore } from '../../store/appStore';
@@ -122,7 +123,7 @@ export function collectSnapshot(): AppSnapshot {
       tabs: app.controlTabs.map(({ id, name }) => ({ id, name })),
       graphs: app.controlTabs.map(tab => {
         const nodes = app.rfNodes.filter(n => n.data.tabId === tab.id);
-        const ids = new Set(nodes.map(n => n.id));
+        const ids = new Set([...nodes, ...deviceTreeCanvasNodes(nodes)].map(n => n.id));
         return { tab_id: tab.id, documents: nodes.map(nodeDocument),
           edges: app.rfEdges.filter(e => ids.has(e.source) && ids.has(e.target)).map(edgeToGraphEdge) };
       }),
@@ -201,16 +202,23 @@ function validateWorkspace(workspace: WorkspaceDocument): void {
   const tabs = new Set(workspace.tabs.map(tab => tab.id));
   if (tabs.size !== workspace.tabs.length || workspace.graphs.length !== tabs.size) throw new Error('工作区页签重复或缺少节点文档');
   const ids = new Set<string>();
+  const allTreeIds = new Set<string>();
   const graphTabs = new Set<string>();
   for (const graph of workspace.graphs) {
     if (!tabs.has(graph.tab_id) || graphTabs.has(graph.tab_id)) throw new Error('节点文档页签无效');
     graphTabs.add(graph.tab_id);
-    const localIds = new Set(graph.documents.map(doc => doc.id));
+    const localIds = new Set(graph.documents.flatMap(doc => doc.kind === 'device'
+      ? walkDeviceTree(doc.config.node).map(node => node.id) : [doc.id]));
+    if (localIds.size !== graph.documents.reduce((count, doc) => count + (doc.kind === 'device'
+      ? walkDeviceTree(doc.config.node).length : 1), 0)) throw new Error('设备树节点标识重复');
+    for (const id of localIds) {
+      if (allTreeIds.has(id)) throw new Error('设备树节点标识重复');
+      allTreeIds.add(id);
+    }
     for (const doc of graph.documents) {
       if (!doc.id || ids.has(doc.id) || doc.tabId !== graph.tab_id || !doc.label?.trim()) throw new Error('节点标识或页签归属无效');
       if (!Number.isFinite(doc.layout.x) || !Number.isFinite(doc.layout.y) ||
         [doc.layout.width, doc.layout.height].some(size => size != null && (!Number.isFinite(size) || size <= 0))) throw new Error('节点布局无效');
-      if (doc.kind !== 'device' && doc.attributes.testData) throw new Error('测试属性只能附加到设备');
       if (!['device', 'protocol', 'pointSelector', 'widget'].includes(doc.kind)) throw new Error('节点类型无效');
       canvasNode(doc);
       ids.add(doc.id);
@@ -226,7 +234,8 @@ function validateWorkspace(workspace: WorkspaceDocument): void {
 /// v3: 波形/原始数据容量按源 (节点) 生效，对当前图中全部 Protocol/设备节点应用
 function applyDataCapacity(settings: AppSettings) {
   const data = settings.data;
-  const nodes = useAppStore.getState().rfNodes;
+  const sourceNodes = useAppStore.getState().rfNodes;
+  const nodes = [...sourceNodes, ...deviceTreeCanvasNodes(sourceNodes)];
   for (const n of nodes) {
     if (n.type === 'protocol') {
       api.setWaveformBufferCapacity(n.id, data.waveformBufferPoints).catch((e: unknown) =>

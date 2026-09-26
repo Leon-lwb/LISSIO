@@ -7,9 +7,11 @@
 pub mod candle;
 pub mod rawdata;
 pub mod slcan;
+mod slcan_codec;
 
 pub use candle::{
     CAND_CMD_RX, CAND_CMD_TX, CAND_FRAME_SIZE, CAND_ID_EFF, CAND_ID_MASK, CAND_ID_RTR, CandleEngine,
 };
 pub use rawdata::RawDataEngine;
 pub use slcan::SlcanEngine;
+pub use slcan_codec::{SlcanDecodeBatch, SlcanDecodeError, SlcanDecoder, SlcanMessage};

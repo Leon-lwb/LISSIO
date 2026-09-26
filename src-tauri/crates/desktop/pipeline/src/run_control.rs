@@ -66,6 +66,7 @@ pub async fn apply_run_action(
                     group.seq.store(0, Ordering::Release);
                 }
                 graph_eval::reset_all_transient_state(&plane.eval);
+                plane.reset_protocol_parsers();
                 plane.eval.send.lock().reset_schedules();
             }
             // 进入 Stopped: 暂停语义 + 清空待发送任务

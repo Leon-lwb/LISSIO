@@ -5,6 +5,7 @@ mod codec;
 mod config;
 pub(crate) mod descriptor;
 mod factory;
+mod node_driver;
 mod planner;
 pub(crate) mod read;
 #[cfg(test)]
@@ -18,6 +19,7 @@ pub use config::{
     ReconnectConfig, SerialDataBits, SerialFlowControl, SerialParity, SerialStopBits, WordOrder,
 };
 pub use factory::{ModbusFactory, ModbusRtuFactory};
+pub use node_driver::{ModbusRtuDriver, ModbusTcpDriver};
 pub use planner::{PlanError, PlannedPoint, ReadPlan, plan_reads};
 
 /// Stable driver identifier used in persisted driver payloads.

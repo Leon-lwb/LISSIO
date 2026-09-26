@@ -113,13 +113,15 @@ export interface DriverPayload {
   payload: Record<string, unknown>;
 }
 
-export interface EndpointSpec {
+export interface DeviceTreeNodeDecl {
   id: string;
-  label: string;
+  name: string;
+  driver: string;
+  schemaVersion: number;
+  config: Record<string, unknown>;
   enabled: boolean;
   capabilityEndpointId?: string;
-  driver: DriverPayload;
-  simulation?: SimulationConfig | null;
+  children: DeviceTreeNodeDecl[];
 }
 
 export interface SignalParameters {
@@ -167,14 +169,42 @@ export interface SessionCapabilities {
   idempotentWrites: boolean;
 }
 
-export interface EndpointSnapshot {
-  id: string;
-  label: string;
-  adapterId: string;
-  capabilityEndpointId?: string;
-  state: EndpointConnectionState;
-  capabilities?: SessionCapabilities;
-  points: PointDescriptor[];
+export interface CapabilityMask {
+  byteSource: boolean;
+  byteSink: boolean;
+  canFrameSource: boolean;
+  canFrameSink: boolean;
+  read: boolean;
+  subscribe: boolean;
+  write: boolean;
+  invoke: boolean;
+  browse: boolean;
+  discover: boolean;
+}
+
+export type DeviceNodeState =
+  | { state: 'disabled' | 'validating' | 'connecting' | 'closing' | 'closed' }
+  | { state: 'online'; connectionEpoch: number }
+  | { state: 'degraded'; detail: string }
+  | { state: 'backoff'; attempt: number };
+
+export interface DeviceTreeNodeSnapshot {
+  nodeId: string;
+  nodePath: string;
+  driver: string;
+  enabled: boolean;
+  state: DeviceNodeState;
+  capabilities: CapabilityMask;
+  issue?: { errorKind: string; detail: string } | null;
+}
+
+export interface DriverManifestProjection {
+  driverId: string;
+  role: 'bus' | 'protocol' | 'endpoint' | 'virtual';
+  capabilities: CapabilityMask;
+  configSchema: ConfigurationSchema;
+  ports: PortDescriptor[];
+  childPolicy?: { allowed: Record<string, { minimum: number; maximum: number | null }> };
 }
 
 export type PointValue =

@@ -15,8 +15,8 @@ export interface CanFrame {
   rtr: boolean;
   /// 数据长度 (0-8)
   dlc: number;
-  /// 数据字节
-  data: number[];
+  /// 数据字节 (只读 wire 视图)
+  readonly data: readonly number[];
   /// 收/发方向
   direction: CanDirection;
 }
@@ -25,7 +25,20 @@ export interface CanFrame {
 export interface CanFrameBatch {
   /// 组级单调序号 — 分片并发推送时前端按 seq 重组
   seq: number;
-  frames: CanFrame[];
+  readonly frames: readonly CanFrame[];
+}
+
+/// CAN 显示订阅过滤条件 — 与 Rust `CanFrameFilter` 的 serde 契约逐字一致。
+/// 所有字段可省略；出现的字段按逻辑 AND 匹配。
+export interface CanFrameFilter {
+  id?: number;
+  id_mask?: number;
+  id_min?: number;
+  id_max?: number;
+  extended?: boolean;
+  rtr?: boolean;
+  direction?: CanDirection;
+  data_pattern?: readonly number[];
 }
 
 /// candleLight USB 设备信息 — 与 Rust CandleDeviceInfo 对应

@@ -5,11 +5,17 @@
 
 use backend_host::BackendHost;
 use can::{CanFrame, CanFrameBatch};
+use data_model::device_tree::NodeId;
 use data_model::{TestDataConfig, WidgetBinding};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde_json::Value;
 
 use crate::args::{RpcError, domain, encode, optional, required};
+
+fn node_identity(args: &Value, cmd: &str) -> Result<NodeId, RpcError> {
+    let value: String = required(args, cmd, "node_id")?;
+    NodeId::new(value).map_err(|error| RpcError::invalid_args(cmd, error.to_string()))
+}
 
 /// 关闭设备连接 (node_id = 图中设备节点 id)。
 pub async fn close_transport(
@@ -17,7 +23,7 @@ pub async fn close_transport(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let node_id: String = required(args, cmd, "node_id")?;
+    let node_id = node_identity(args, cmd)?;
     domain(
         host.state
             .close_transport(host.sink.as_ref(), &node_id)
@@ -27,14 +33,14 @@ pub async fn close_transport(
 
 /// 发送原始字节。
 pub async fn send_raw(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
-    let node_id: String = required(args, cmd, "node_id")?;
+    let node_id = node_identity(args, cmd)?;
     let data: Vec<u8> = required(args, cmd, "data")?;
     domain(host.state.send_raw(&node_id, data).await)
 }
 
 /// 发送 UTF-8 文本 (按字节原样发送)。
 pub async fn send_string(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
-    let node_id: String = required(args, cmd, "node_id")?;
+    let node_id = node_identity(args, cmd)?;
     let text: String = required(args, cmd, "text")?;
     domain(host.state.send_raw(&node_id, text.into_bytes()).await)
 }

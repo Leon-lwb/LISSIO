@@ -38,7 +38,7 @@ it('rejects cross-tab connections before history or graph mutation', () => {
 });
 
 it('deleting a node removes its edges, undo restores its configuration without connecting', async () => {
-  const open = vi.spyOn(api, 'openAcquisitionEndpoint');
+  const open = vi.spyOn(api, 'openAcquisitionNode');
   useAppStore.getState().removeNode('device');
   await syncTabGraphToBackend('default');
   expect(useAppStore.getState().rfEdges).toEqual([]);

@@ -5,7 +5,7 @@ use diagnostic::IsoTpConfig;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::oneshot;
-use tokio::time::{sleep, timeout};
+use tokio::time::{Instant, sleep, timeout};
 use transport::CanBackend;
 
 use crate::constants::{CF_DATA_LEN, FF_DATA_LEN, FF_DL_MAX, PCI_CF, PCI_FF, PCI_SF, SF_MAX_DATA};
@@ -50,6 +50,7 @@ pub async fn start_send_request(
                 tx_id,
                 response_tx: Some(response_tx),
                 state: PendingState::WaitingForResponse,
+                deadline: Instant::now() + Duration::from_millis(u64::from(config.timeout_ms)),
             },
         );
     } else {
@@ -72,6 +73,7 @@ pub async fn start_send_request(
                     offset: FF_DATA_LEN,
                     next_sn: 1,
                 },
+                deadline: Instant::now() + Duration::from_millis(u64::from(config.timeout_ms)),
             },
         );
     }

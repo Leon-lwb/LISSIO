@@ -101,6 +101,12 @@ export function validateConnection(ctx: ConnectionContext, conn: ConnectionCandi
   if (!target) {
     return { ok: false, message: `节点不存在: ${conn.target} (先 get_workspace 查询有效 id)` };
   }
+  if (target.data.treeRootId) {
+    return { ok: false, message: '协议输入由设备树父节点提供，请在设备树中修改装配关系。' };
+  }
+  if (source.data.treeRootId && source.data.enabled === false) {
+    return { ok: false, message: '请先在设备树中启用此协议节点及其父节点。' };
+  }
 
   // 所有节点都归属页签，连线不得越过页签边界。
   const srcTab = source.data?.tabId as string | undefined;

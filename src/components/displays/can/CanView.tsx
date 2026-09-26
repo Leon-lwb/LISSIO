@@ -8,10 +8,11 @@ import { CanLoadView } from './CanLoadView';
 import { PanelTabs } from '../../ui/PanelTabs';
 import { ContextualHint } from '../../onboarding/ContextualHint';
 import { usePrimaryProtocolConfig } from '../../../lib/hooks/usePrimaryNodes';
-import { List, Send, BarChart3, Gauge } from 'lucide-react';
+import { List, Send, BarChart3, Gauge, TableProperties } from 'lucide-react';
+import { CanIdLatestView } from './CanIdLatestView';
 import type { CanFrame } from '../../../types';
 
-type ViewMode = 'list' | 'send' | 'chart' | 'load';
+type ViewMode = 'list' | 'latest' | 'send' | 'chart' | 'load';
 
 /// CAN 综合视图 — 帧列表 / 发送器 / 总线活动 / 负载分析 四种视图模式切换
 export function CanView() {
@@ -22,6 +23,7 @@ export function CanView() {
 
   const tabs = [
     { value: 'list' as const, label: t(lang, 'frameList'), icon: <List /> },
+    { value: 'latest' as const, label: t(lang, 'canLatestById'), icon: <TableProperties /> },
     { value: 'send' as const, label: t(lang, 'canSender'), icon: <Send /> },
     { value: 'chart' as const, label: t(lang, 'busActivity'), icon: <BarChart3 /> },
     { value: 'load' as const, label: t(lang, 'canLoadAnalysis'), icon: <Gauge /> },
@@ -47,6 +49,7 @@ export function CanView() {
       </div>
       <div className="flex-1 overflow-hidden min-h-0">
         {mode === 'list' && <CanFrameList />}
+        {mode === 'latest' && <CanIdLatestView />}
         {mode === 'send' && <CanSender />}
         {mode === 'chart' && <CanBusChart />}
         {mode === 'load' && <CanLoadView />}

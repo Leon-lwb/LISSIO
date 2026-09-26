@@ -5,7 +5,7 @@
 //!
 //! 所有 Source 都接入现有 `sharded_stream_loop`, 自动获得分片并发能力。
 
-use can::{CanBuffer, CanFrameBatch, CanFrameFilter};
+use can::{CanBuffer, CanCursor, CanFrameBatch, CanFrameFilter};
 use logic::{
     DecodedBuffer, DecodedEventBatch, DecodedEventFilter, LogicBuffer, LogicSampleBatch,
     LogicSampleFilter,
@@ -85,19 +85,24 @@ impl StreamSource for FilteredRawDataSource {
 /// 带过滤条件的 CAN 帧流 — 游标增量读取
 pub struct FilteredCanStreamSource {
     buffer: Arc<Mutex<CanBuffer>>,
-    cursor: u64,
+    cursor: CanCursor,
     filter: CanFrameFilter,
 }
 
 impl FilteredCanStreamSource {
     /// 游标从 0 开始 — drain_from 自动对齐到缓冲区最旧可读位置,
     /// 即可先拉取全部历史匹配帧, 之后严格增量。
-    pub const fn new(buffer: Arc<Mutex<CanBuffer>>, filter: CanFrameFilter) -> Self {
-        Self {
+    pub fn try_new(
+        buffer: Arc<Mutex<CanBuffer>>,
+        filter: CanFrameFilter,
+    ) -> Result<Self, can::CanFilterError> {
+        filter.validate()?;
+        let cursor = buffer.lock().cursor();
+        Ok(Self {
             buffer,
-            cursor: 0,
+            cursor,
             filter,
-        }
+        })
     }
 }
 
@@ -106,14 +111,14 @@ impl StreamSource for FilteredCanStreamSource {
 
     fn backlog(&mut self) -> usize {
         let buf = self.buffer.lock();
-        usize::try_from(buf.version().saturating_sub(self.cursor)).unwrap_or(usize::MAX)
+        usize::try_from(buf.version().saturating_sub(self.cursor.value())).unwrap_or(usize::MAX)
     }
 
     fn drain(&mut self, max: usize) -> Option<Self::Batch> {
-        let buf = self.buffer.lock();
-        let (items, new_cursor, _dropped) = buf.drain_from(self.cursor, max);
-        self.cursor = new_cursor;
-        let frames: Vec<_> = items
+        let result = self.buffer.lock().read_from(self.cursor, max);
+        self.cursor = result.next_cursor;
+        let frames: Vec<_> = result
+            .frames
             .into_iter()
             .filter(|f| self.filter.matches(f))
             .collect();

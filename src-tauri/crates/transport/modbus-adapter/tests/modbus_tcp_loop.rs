@@ -1,7 +1,7 @@
-use acquisition::{
-    AcquisitionRuntime, DriverContext, SourceFactory, SourceRegistry, SubscriptionIntent,
-};
-use data_model::device::{DriverId, DriverPayload, EndpointId, EndpointSpec};
+use acquisition::{AcquisitionRuntime, DriverContext, SourceFactory, SubscriptionIntent};
+use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeDecl, NodeId};
+use device_tree::{DeviceTreeAcquisition, DriverRegistry};
 use flow::SourceId;
 use modbus_adapter::{
     ByteOrder, DRIVER_ID, ModbusArea, ModbusConfig, ModbusDataType, ModbusFactory, ModbusPoint,
@@ -17,6 +17,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{Mutex, mpsc};
+
+fn runtime_node(id: &str, label: &str, driver: &str, payload: DriverPayload) -> NodeDecl {
+    let mut node =
+        NodeDecl::leaf(id, label, driver, payload.schema_version, payload.payload).unwrap();
+    node.capability_endpoint_id = Some("client".into());
+    node
+}
 
 #[derive(Clone, Debug, PartialEq)]
 struct RequestRecord {
@@ -414,23 +421,29 @@ async fn polling_obeys_pause_resume_and_stop_epochs() {
 #[tokio::test]
 async fn acquisition_runtime_opens_reads_caches_and_closes_the_adapter() {
     let (port, _) = spawn_mock().await;
-    let registry = Arc::new(SourceRegistry::default());
-    registry.register(Arc::new(ModbusFactory::default()));
-    let runtime = AcquisitionRuntime::new(registry);
-    let endpoint_id = EndpointId("plc-runtime".into());
+    let registry = Arc::new(DriverRegistry::new());
+    let execution = acquisition::ExecutionGate::new(acquisition::AcquisitionRunState::Running);
+    registry
+        .register(Arc::new(modbus_adapter::ModbusTcpDriver::new(
+            execution.clone(),
+        )))
+        .unwrap();
+    let runtime = AcquisitionRuntime::new(Arc::new(DeviceTreeAcquisition::with_execution(
+        registry, execution,
+    )));
+    let endpoint_id = NodeId::new("plc-runtime").unwrap();
     let snapshot = runtime
-        .open_endpoint(EndpointSpec {
-            simulation: None,
-            id: endpoint_id.clone(),
-            label: "PLC runtime".into(),
-            enabled: true,
-            capability_endpoint_id: Some("client".into()),
-            driver: driver_payload(port),
-        })
+        .open_node(runtime_node(
+            "plc-runtime",
+            "PLC runtime",
+            "modbus-tcp",
+            driver_payload(port),
+        ))
         .await
         .unwrap();
-    assert_eq!(snapshot.points.len(), 6);
-    assert!(snapshot.capabilities.unwrap().available.read);
+    let payload = driver_payload(port);
+    assert_eq!(runtime.descriptors(&payload).unwrap().len(), 6);
+    assert!(snapshot.capabilities.read);
 
     let result = runtime
         .read(&endpoint_id, vec![PointId("holding_u16".into())])
@@ -443,24 +456,22 @@ async fn acquisition_runtime_opens_reads_caches_and_closes_the_adapter() {
     assert_eq!(runtime.latest_samples(&endpoint_id).unwrap().len(), 1);
 
     let duplicate = runtime
-        .open_endpoint(EndpointSpec {
-            simulation: None,
-            id: endpoint_id.clone(),
-            label: "duplicate".into(),
-            enabled: true,
-            capability_endpoint_id: Some("client".into()),
-            driver: driver_payload(port),
-        })
+        .open_node(runtime_node(
+            "plc-runtime",
+            "duplicate",
+            "modbus-tcp",
+            driver_payload(port),
+        ))
         .await;
     assert!(matches!(
         duplicate,
         Err(acquisition::AcquisitionError::Busy)
     ));
 
-    runtime.close_endpoint(&endpoint_id).await.unwrap();
+    runtime.close_node(&endpoint_id).await.unwrap();
     assert!(matches!(
         runtime.snapshot(&endpoint_id),
-        Err(acquisition::AcquisitionError::UnknownEndpoint(_))
+        Err(acquisition::AcquisitionError::UnknownNode(_))
     ));
 }
 

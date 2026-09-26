@@ -24,6 +24,7 @@ import { t } from './i18n';
 import { createWidget } from './lib/utils/widgetDefaults';
 import { openDataPanelAndReveal } from './lib/utils/revealDataTab';
 import { initAiToolHost } from './lib/ai/toolHost';
+import { useCanFrameSubscription } from './lib/buffers/useCanFrameSubscription';
 import { resolveStartupFlow, shouldShowGuideAfterUpdate } from './lib/startupFlow';
 
 // 重型弹窗 — 懒加载 (各模块仅含 named export, 经 *.lazy.tsx 包装为 default)
@@ -38,6 +39,7 @@ const KeychainPermissionDialog = lazy(
 );
 
 function App() {
+  useCanFrameSubscription();
   const initEventListeners = useAppStore((s) => s.initEventListeners);
   const refreshPorts = useAppStore((s) => s.refreshPorts);
   const sidebarView = useAppStore((s) => s.sidebarView);

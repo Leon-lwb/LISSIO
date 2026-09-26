@@ -167,7 +167,9 @@ reject)。帧级错误没有归属, 省略该字段。
 | `describe_acquisition_points` | ✅ 已接入 |  |
 | `discover_acquisition_endpoints` | ✅ 已接入 |  |
 | `validate_adapter_configuration` | ✅ 已接入 |  |
-| `list_acquisition_endpoints` | ✅ 已接入 |  |
+| `list_acquisition_endpoints` | ✅ 已接入 | 兼容端点视图 |
+| `list_device_tree_nodes` | ✅ 已接入 | 设备树节点身份、状态和能力快照 |
+| `list_driver_manifests` | ✅ 已接入 | 驱动 schema、能力、端口目录 |
 | `latest_acquisition_samples` | ✅ 已接入 |  |
 | `open_acquisition_endpoint` | ✅ 已接入 |  |
 | `close_acquisition_endpoint` | ✅ 已接入 |  |

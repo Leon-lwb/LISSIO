@@ -13,6 +13,7 @@ import { applySnapshot, type AppSnapshot } from '../tauri/appExport';
 import { rebaseHistory } from '../../store/historyStore';
 import { notify, formatError } from '../tauri/notifications';
 import { t } from '../../i18n';
+import type { DeviceTreeNodeDecl } from '../../types';
 
 export type TemplateApplyMode = 'replace' | 'merge';
 
@@ -29,15 +30,30 @@ function remapRawDataHandle(handle: string | undefined | null, idMap: Map<string
 function mergeTemplate(snap: AppSnapshot): void {
   const workspace = snap.workspace;
   if (!workspace) return;
-  const idMap = new Map(workspace.graphs.flatMap(g => g.documents).map(n => [n.id, nanoid(8)]));
+  const treeIds = (node: DeviceTreeNodeDecl): string[] => [node.id, ...node.children.flatMap(treeIds)];
+  const idMap = new Map(workspace.graphs.flatMap(g => g.documents.flatMap(n =>
+    n.kind === 'device' ? treeIds(n.config.node) : [n.id])).map(id => [id, nanoid(8)]));
   const tabMap = new Map(workspace.tabs.map(tab => [tab.id, `tpl-${nanoid(8)}`]));
-  const documents = workspace.graphs.flatMap(graph => graph.documents.map(doc => ({
-    ...doc, id: idMap.get(doc.id)!, tabId: tabMap.get(doc.tabId)!,
-    attributes: { ...doc.attributes, testData: doc.attributes.testData ? {
-      ...doc.attributes.testData,
-      referenceNodeId: doc.attributes.testData.referenceNodeId ? idMap.get(doc.attributes.testData.referenceNodeId) ?? null : null,
-    } : null },
-  })));
+  const documents = workspace.graphs.flatMap(graph => graph.documents.map(doc => {
+    const mapped = { ...doc, id: idMap.get(doc.id)!, tabId: tabMap.get(doc.tabId)! };
+    if (mapped.kind !== 'device') return mapped;
+    const remapTree = (node: DeviceTreeNodeDecl): DeviceTreeNodeDecl => ({
+      ...node,
+      id: idMap.get(node.id) ?? node.id,
+      config: node.driver === 'simulation' ? {
+        ...node.config,
+        referenceNodeId: typeof node.config.referenceNodeId === 'string'
+          ? idMap.get(node.config.referenceNodeId) ?? null : null,
+      } : node.config,
+      children: node.children.map(remapTree),
+    });
+    return {
+      ...mapped,
+      config: {
+        node: remapTree(mapped.config.node),
+      },
+    };
+  }));
   const rfNodes = documents.map(doc => canvasNode(doc));
   const rfEdges = workspace.graphs.flatMap(graph => graph.edges.map(edge => ({
     id: nanoid(8), source: idMap.get(edge.source)!, target: idMap.get(edge.target)!,

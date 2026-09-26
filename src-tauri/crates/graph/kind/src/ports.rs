@@ -219,10 +219,8 @@ pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data_model::device::{
-        DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-        EndpointSpec,
-    };
+    use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
+    use data_model::device_tree::{DriverId, NodeDecl, NodeId};
     use serde_json::json;
 
     use crate::kind::NodeKind;
@@ -231,17 +229,15 @@ mod tests {
 
     fn device() -> NodeKind {
         NodeKind::Acquisition {
-            spec: EndpointSpec {
-                id: EndpointId("device".into()),
-                label: "device".into(),
+            node: NodeDecl {
+                id: NodeId::new("device").unwrap(),
+                name: "device".into(),
+                driver: DriverId("serial".into()),
+                schema_version: 1,
+                config: json!({}),
                 enabled: true,
                 capability_endpoint_id: None,
-                driver: DriverPayload {
-                    driver_id: DriverId("serial".into()),
-                    schema_version: 1,
-                    payload: json!({}),
-                },
-                simulation: None,
+                children: Vec::new(),
             },
             ports: vec![
                 DevicePort {

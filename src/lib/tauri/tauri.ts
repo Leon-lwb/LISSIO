@@ -35,7 +35,8 @@ import type {
   AdapterCapability,
   DriverPayload,
   DiscoveredEndpoint,
-  EndpointSnapshot,
+  DeviceTreeNodeSnapshot,
+  DriverManifestProjection,
   AcquisitionIntent,
   EffectiveSubscription,
   PointReadResult,
@@ -261,32 +262,38 @@ export const api = {
   validateAdapterConfiguration: (payload: DriverPayload) =>
     transport.call<DriverPayload>('validate_adapter_configuration', { payload }),
 
-  openAcquisitionEndpoint: (nodeId: string) =>
-    transport.call<EndpointSnapshot>('open_acquisition_endpoint', { nodeId }),
+  openAcquisitionNode: (nodeId: string) =>
+    transport.call<DeviceTreeNodeSnapshot>('open_acquisition_endpoint', { nodeId }),
 
-  closeAcquisitionEndpoint: (endpointId: string) =>
-    transport.call<void>('close_acquisition_endpoint', { endpointId }),
+  closeAcquisitionNode: (nodeId: string) =>
+    transport.call<void>('close_acquisition_endpoint', { nodeId }),
 
-  listAcquisitionEndpoints: () =>
-    transport.call<EndpointSnapshot[]>('list_acquisition_endpoints'),
+  listAcquisitionNodes: () =>
+    transport.call<DeviceTreeNodeSnapshot[]>('list_acquisition_endpoints'),
 
-  readAcquisitionPoints: (endpointId: string, pointIds: string[]) =>
-    transport.call<PointReadResult>('read_acquisition_points', { endpointId, pointIds }),
+  listDeviceTreeNodes: () =>
+    transport.call<DeviceTreeNodeSnapshot[]>('list_device_tree_nodes'),
+
+  listDriverManifests: () =>
+    transport.call<DriverManifestProjection[]>('list_driver_manifests'),
+
+  readAcquisitionPoints: (nodeId: string, pointIds: string[]) =>
+    transport.call<PointReadResult>('read_acquisition_points', { nodeId, pointIds }),
 
   subscribeAcquisitionPoints: (
-    endpointId: string,
+    nodeId: string,
     pointIds: string[],
     acquisition: AcquisitionIntent,
   ) => transport.call<EffectiveSubscription>('subscribe_acquisition_points', {
-    endpointId,
+    nodeId,
     intent: { points: pointIds, acquisition },
   }),
 
-  writeAcquisitionPoints: (endpointId: string, request: PointWriteRequest) =>
-    transport.call<PointWriteResult>('write_acquisition_points', { endpointId, request }),
+  writeAcquisitionPoints: (nodeId: string, request: PointWriteRequest) =>
+    transport.call<PointWriteResult>('write_acquisition_points', { nodeId, request }),
 
-  latestAcquisitionSamples: (endpointId: string) =>
-    transport.call<PointSample[]>('latest_acquisition_samples', { endpointId }),
+  latestAcquisitionSamples: (nodeId: string) =>
+    transport.call<PointSample[]>('latest_acquisition_samples', { nodeId }),
 
   // ===== 设备传输 (nodeId = 图中设备节点 id) =====
   listPorts: () => transport.call<PortInfo[]>('list_ports'),

@@ -5,11 +5,18 @@
 
 use acquisition::SubscriptionIntent;
 use backend_host::BackendHost;
-use data_model::device::{DriverId, DriverPayload, EndpointId};
+use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeId};
 use points::{PointId, WriteRequest};
 use serde_json::Value;
 
 use crate::args::{RpcError, domain, encode, required, text};
+
+/// 解析采集节点身份。旧 `endpoint_id` 节点身份不再保留。
+fn node_identity(args: &Value, cmd: &str) -> Result<NodeId, RpcError> {
+    let value: String = required(args, cmd, "node_id")?;
+    NodeId::new(value).map_err(|error| RpcError::invalid_args(cmd, error.to_string()))
+}
 
 /// 列出全部已注册适配器的能力卡片。
 pub fn list_adapter_capabilities(host: &BackendHost) -> Result<Value, RpcError> {
@@ -19,6 +26,16 @@ pub fn list_adapter_capabilities(host: &BackendHost) -> Result<Value, RpcError> 
 /// 列出全部已打开端点快照。
 pub fn list_acquisition_endpoints(host: &BackendHost) -> Result<Value, RpcError> {
     encode(&host.state.transport.snapshots())
+}
+
+/// 列出生产设备树的节点身份和状态快照。
+pub fn list_device_tree_nodes(host: &BackendHost) -> Value {
+    host.state.transport.device_tree_nodes()
+}
+
+/// 列出生产设备树驱动的配置、能力和端口 manifest。
+pub fn list_driver_manifests(host: &BackendHost) -> Value {
+    host.state.transport.driver_manifests()
 }
 
 /// 描述指定适配器配置下的点位表。
@@ -72,11 +89,11 @@ pub fn latest_acquisition_samples(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let endpoint_id: String = required(args, cmd, "endpoint_id")?;
+    let node_id = node_identity(args, cmd)?;
     text(
         host.state
             .transport
-            .latest_samples(&EndpointId(endpoint_id))
+            .latest_samples(&node_id)
             .map_err(|error| error.to_string()),
     )
 }
@@ -88,18 +105,18 @@ pub async fn open_acquisition_endpoint(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let node_id: String = required(args, cmd, "node_id")?;
-    let spec = host
+    let node = host
         .state
         .data_plane
         .global_nodes
         .lock()
         .get(&node_id)
         .and_then(|node| match &node.kind {
-            kind::NodeKind::Acquisition { spec, .. } => Some(spec.clone()),
+            kind::NodeKind::Acquisition { node, .. } => Some(node.clone()),
             _ => None,
         })
         .ok_or_else(|| RpcError::text("device node does not exist"))?;
-    text(host.state.open_device(&host.sink, spec).await)
+    text(host.state.open_device(&host.sink, node).await)
 }
 
 /// 关闭采集端点。
@@ -108,10 +125,10 @@ pub async fn close_acquisition_endpoint(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let endpoint_id: String = required(args, cmd, "endpoint_id")?;
+    let node_id = node_identity(args, cmd)?;
     domain(
         host.state
-            .close_transport(host.sink.as_ref(), &endpoint_id)
+            .close_transport(host.sink.as_ref(), &node_id)
             .await,
     )
 }
@@ -122,12 +139,12 @@ pub async fn read_acquisition_points(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let endpoint_id: String = required(args, cmd, "endpoint_id")?;
+    let node_id = node_identity(args, cmd)?;
     let point_ids: Vec<PointId> = required(args, cmd, "point_ids")?;
     text(
         host.state
             .transport
-            .read(&EndpointId(endpoint_id), point_ids)
+            .read(&node_id, point_ids)
             .await
             .map_err(|error| error.to_string()),
     )
@@ -139,12 +156,12 @@ pub async fn subscribe_acquisition_points(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let endpoint_id: String = required(args, cmd, "endpoint_id")?;
+    let node_id = node_identity(args, cmd)?;
     let intent: SubscriptionIntent = required(args, cmd, "intent")?;
     text(
         host.state
             .transport
-            .subscribe(&EndpointId(endpoint_id), intent)
+            .subscribe(&node_id, intent)
             .await
             .map_err(|error| error.to_string()),
     )
@@ -156,12 +173,12 @@ pub async fn write_acquisition_points(
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let endpoint_id: String = required(args, cmd, "endpoint_id")?;
+    let node_id = node_identity(args, cmd)?;
     let request: WriteRequest = required(args, cmd, "request")?;
     text(
         host.state
             .transport
-            .write(&EndpointId(endpoint_id), request)
+            .write(&node_id, request)
             .await
             .map_err(|error| error.to_string()),
     )

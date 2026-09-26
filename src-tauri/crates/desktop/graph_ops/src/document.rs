@@ -40,12 +40,32 @@ pub async fn apply_document(
         if doc.tab_id != tab_id || !ids.insert(doc.id.clone()) {
             return Err(invalid("node tab ownership or identity is invalid".into()));
         }
+        if let NodeBusiness::Device { node } = &doc.business {
+            for id in crate::device_tree::declaration_ids(node)?
+                .into_iter()
+                .skip(1)
+            {
+                if !ids.insert(id) {
+                    return Err(invalid("device tree node IDs must be unique".into()));
+                }
+            }
+        }
     }
-    if sources
-        .lock()
-        .iter()
-        .any(|(tab, graph)| tab != &tab_id && graph.nodes.iter().any(|n| ids.contains(&n.id)))
-    {
+    if sources.lock().iter().any(|(tab, graph)| {
+        tab != &tab_id
+            && graph.nodes.iter().any(|node| {
+                ids.contains(&node.id)
+                    || match &node.kind {
+                        kind::NodeKind::Acquisition { node, .. } => {
+                            data_model::device_tree::DeviceTreeDocument::new(node.clone())
+                                .node_ids()
+                                .iter()
+                                .any(|id| ids.contains(id.as_str()))
+                        }
+                        _ => false,
+                    }
+            })
+    }) {
         return Err(invalid("node IDs must be unique across tabs".into()));
     }
     if edges
@@ -76,24 +96,21 @@ pub async fn apply_document(
     let mut widgets = Vec::new();
     let mut hints = HashMap::new();
     for doc in &documents {
-        let ports = if let NodeBusiness::Device {
-            driver,
-            capability_endpoint_id,
-            ..
-        } = &doc.business
-        {
+        let ports = if let NodeBusiness::Device { node } = &doc.business {
             let adapter = capabilities
                 .iter()
-                .find(|adapter| adapter.adapter_id == driver.driver_id)
-                .ok_or_else(|| invalid(format!("unknown device adapter {}", driver.driver_id.0)))?;
+                .find(|adapter| adapter.adapter_id.as_str() == node.driver.as_str())
+                .ok_or_else(|| {
+                    invalid(format!("unknown device adapter {}", node.driver.as_str()))
+                })?;
             let endpoint = adapter
                 .endpoints
                 .iter()
-                .find(|endpoint| Some(&endpoint.id) == capability_endpoint_id.as_ref())
+                .find(|endpoint| Some(&endpoint.id) == node.capability_endpoint_id.as_ref())
                 .ok_or_else(|| {
                     invalid(format!(
                         "unknown endpoint for adapter {}",
-                        driver.driver_id.0
+                        node.driver.as_str()
                     ))
                 })?;
             endpoint

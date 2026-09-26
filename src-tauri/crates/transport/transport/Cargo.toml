@@ -17,6 +17,8 @@ serde_json = { workspace = true }
 acquisition = { workspace = true }
 flow = { workspace = true }
 data_model = { workspace = true }
+device_tree = { workspace = true }
+points = { workspace = true }
 can = { workspace = true }
 schema_types = { workspace = true }
 tokio = { workspace = true }
@@ -27,6 +29,7 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 logic = { workspace = true }
+device_tree = { workspace = true }
 
 [package.metadata.lissio]
 domain = "transport"

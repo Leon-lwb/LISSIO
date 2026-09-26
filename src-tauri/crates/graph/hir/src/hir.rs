@@ -395,25 +395,21 @@ mod tests {
 
     #[test]
     fn acquisition_and_point_selector_use_declared_ports() {
-        use data_model::device::{
-            DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-            EndpointSpec,
-        };
+        use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
+        use data_model::device_tree::{DriverId, NodeDecl, NodeId};
         let device = kind::NodeDef {
             id: "device".into(),
             tab_id: "t1".into(),
             kind: NodeKind::Acquisition {
-                spec: EndpointSpec {
-                    id: EndpointId("device".into()),
-                    label: "Device".into(),
+                node: NodeDecl {
+                    id: NodeId::new("device").unwrap(),
+                    name: "Device".into(),
+                    driver: DriverId("modbus-tcp".into()),
+                    schema_version: 1,
+                    config: serde_json::json!({}),
                     enabled: true,
                     capability_endpoint_id: Some("device".into()),
-                    driver: DriverPayload {
-                        driver_id: DriverId("modbus-tcp".into()),
-                        schema_version: 1,
-                        payload: serde_json::json!({}),
-                    },
-                    simulation: None,
+                    children: Vec::new(),
                 },
                 ports: vec![DevicePort {
                     id: "points".into(),

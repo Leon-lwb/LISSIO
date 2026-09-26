@@ -1,4 +1,5 @@
 import { transport } from '../rpc';
+import type { SubscriptionHandle } from '../rpc/types';
 import { tickMetric, perfEvent } from '../utils/perfLog';
 
 export type DisplayKind =
@@ -23,14 +24,16 @@ export function subscribeDisplay<T>(
   request: Record<string, unknown>,
   expectedKind: DisplayKind,
   sink: (value: T) => void,
-  options?: { intervalMs?: number; maxItems?: number },
-): { cancel: () => void } {
+  options?: { intervalMs?: number; maxItems?: number; onError?: (error: unknown) => void },
+): SubscriptionHandle {
   // 调试: 统计该订阅的消息速率 (payload 字节由各订阅包装补充)
   const countedSink = (event: DisplayEvent<T>) => {
     if (event.kind !== expectedKind) {
-      console.error(
+      const error = new Error(
         `显示订阅类型不匹配: expected=${expectedKind}, actual=${event.kind}`,
       );
+      console.error(error);
+      options?.onError?.(error);
       return;
     }
     tickMetric(`display:${expectedKind}`);
@@ -40,6 +43,9 @@ export function subscribeDisplay<T>(
 
   return transport.subscribe<DisplayEvent<T>>(request, countedSink, {
     ...options,
-    onError: (e) => console.error(`显示订阅失败 (${expectedKind}):`, e),
+    onError: (error) => {
+      console.error(`显示订阅失败 (${expectedKind}):`, error);
+      options?.onError?.(error);
+    },
   });
 }

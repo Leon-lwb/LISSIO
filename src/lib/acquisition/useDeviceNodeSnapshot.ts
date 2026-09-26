@@ -1,16 +1,16 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import type { EndpointSnapshot } from '../../types';
+import type { DeviceTreeNodeSnapshot } from '../../types';
 import { api } from '../tauri/tauri';
 
-let snapshots = new Map<string, EndpointSnapshot>();
+let snapshots = new Map<string, DeviceTreeNodeSnapshot>();
 const listeners = new Set<() => void>();
 let timer: ReturnType<typeof setInterval> | undefined;
 let refreshing: Promise<void> | undefined;
 
-export function refreshEndpointSnapshots(): Promise<void> {
+export function refreshDeviceNodeSnapshots(): Promise<void> {
   if (refreshing) return refreshing;
-  refreshing = api.listAcquisitionEndpoints().then((items) => {
-    snapshots = new Map(items.map((item) => [item.id, item]));
+  refreshing = api.listDeviceTreeNodes().then((items) => {
+    snapshots = new Map(items.map((item) => [item.nodeId, item]));
     listeners.forEach((listener) => listener());
   }).catch(() => undefined).finally(() => { refreshing = undefined; });
   return refreshing;
@@ -18,7 +18,7 @@ export function refreshEndpointSnapshots(): Promise<void> {
 
 function subscribe(listener: () => void): () => void {
   listeners.add(listener);
-  timer ??= setInterval(() => { void refreshEndpointSnapshots(); }, 1000);
+  timer ??= setInterval(() => { void refreshDeviceNodeSnapshots(); }, 1000);
   return () => {
     listeners.delete(listener);
     if (!listeners.size) {
@@ -28,7 +28,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-export function useEndpointSnapshot(id: string): EndpointSnapshot | undefined {
-  useEffect(() => { void refreshEndpointSnapshots(); }, [id]);
+export function useDeviceNodeSnapshot(id: string): DeviceTreeNodeSnapshot | undefined {
+  useEffect(() => { void refreshDeviceNodeSnapshots(); }, [id]);
   return useSyncExternalStore(subscribe, () => snapshots.get(id));
 }

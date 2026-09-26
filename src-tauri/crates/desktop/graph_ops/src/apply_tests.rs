@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 use app::AppState;
 use buffer_graph::Edge;
-use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};
+use kind::document::{NodeBusiness, NodeDocument, NodeLayout};
 use pipeline::{NodeDef, NodeKind};
 use serde_json::json;
 
@@ -159,7 +159,6 @@ fn widget_document(
             params,
             custom_ports: None,
         },
-        attributes: NodeAttributes::default(),
     }
 }
 
@@ -185,7 +184,6 @@ fn protocol_document(id: &str, tab_id: &str) -> NodeDocument {
                 encode: None,
             },
         },
-        attributes: NodeAttributes::default(),
     }
 }
 

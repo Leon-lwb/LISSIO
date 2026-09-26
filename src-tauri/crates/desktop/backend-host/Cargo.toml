@@ -29,7 +29,11 @@ serial = { workspace = true }
 gpu = { workspace = true }
 network = { workspace = true }
 can_transport = { workspace = true }
+automotive = { workspace = true }
+automotive-isotp = { workspace = true }
+automotive-diag = { workspace = true }
 data_model = { workspace = true }
+device_tree = { workspace = true }
 control-api = { workspace = true }
 events = { workspace = true }
 graph_ops = { workspace = true }

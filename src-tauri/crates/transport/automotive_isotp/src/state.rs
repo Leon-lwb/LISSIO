@@ -1,6 +1,7 @@
 //! ISO-TP 状态机内部状态 — Receiver / Pending / PendingState / IsoTpCmd
 
 use tokio::sync::oneshot;
+use tokio::time::Instant;
 
 use crate::{AutomotiveError, AutomotiveResult};
 
@@ -65,6 +66,7 @@ pub struct Pending {
     pub(super) tx_id: u32,
     pub(super) response_tx: Option<oneshot::Sender<AutomotiveResult<Vec<u8>>>>,
     pub(super) state: PendingState,
+    pub(super) deadline: Instant,
 }
 
 pub enum PendingState {

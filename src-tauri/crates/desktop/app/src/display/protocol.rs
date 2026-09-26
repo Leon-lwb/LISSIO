@@ -101,3 +101,31 @@ pub enum DisplayEvent {
     DecodedEvents(DecodedEventBatch),
     CanLoad(CanLoadSnapshot),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn can_frames_request_accepts_frontend_filter_contract() {
+        let request: DisplayRequest = serde_json::from_str(
+            r#"{"kind":"can_frames","filter":{"id":291,"direction":"Rx","rtr":false}}"#,
+        )
+        .unwrap();
+        let DisplayRequest::CanFrames { filter } = request else {
+            panic!("expected can_frames request");
+        };
+        let filter = filter.unwrap();
+        filter.validate().unwrap();
+        assert_eq!(filter.id, Some(0x123));
+    }
+
+    #[test]
+    fn can_frames_request_preserves_unfiltered_shape() {
+        let request: DisplayRequest = serde_json::from_str(r#"{"kind":"can_frames"}"#).unwrap();
+        assert!(matches!(
+            request,
+            DisplayRequest::CanFrames { filter: None }
+        ));
+    }
+}

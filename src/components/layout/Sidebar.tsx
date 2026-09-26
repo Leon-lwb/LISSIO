@@ -13,6 +13,7 @@ import { PanelLeft, RefreshCw } from 'lucide-react';
 import { AnimatedSwitch } from '../ui/AnimatedSwitch';
 import { useLayoutStore } from '../../store/layoutStore';
 import { categoryLabel } from '../panels/widgetPalette/paletteSections';
+import { DeviceTreePanel } from '../acquisition/DeviceTreePanel';
 
 interface SidebarProps {
   view: SidebarView;
@@ -43,6 +44,7 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
   ]);
 
   const titleMap: Partial<Record<SidebarView, Parameters<typeof t>[1]>> = {
+    devices: 'deviceTreeTitle',
     quickstart: 'quickStart',
     panels: 'menuPanel',
     recording: 'recordingDatabaseTitle',
@@ -76,11 +78,12 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
       <div className="flex-1 min-h-0 overflow-hidden px-3 py-3">
         <AnimatedSwitch
           switchKey={view}
-          order={['quickstart', 'category', 'panels', 'recording']}
+          order={['devices', 'quickstart', 'category', 'panels', 'recording']}
           axis="y"
           className="h-full"
         >
           {view === 'quickstart' && <QuickStartPanel />}
+          {view === 'devices' && <DeviceTreePanel />}
           {view === 'category' && <CategoryPanel />}
           {view === 'panels' && <DataPanelsPanel />}
           {view === 'recording' && <RecordingDatabasePanel />}

@@ -6,7 +6,7 @@ import { Send, Clock, AlertCircle } from 'lucide-react';
 import type { CanFrame } from '../../../types';
 
 /// 格式化数据为 HEX 字符串
-function formatDataHex(data: number[]): string {
+function formatDataHex(data: readonly number[]): string {
   return data.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
 }
 
@@ -40,7 +40,7 @@ export function CanSender() {
         (n) =>
           n.type === 'acquisition' &&
           n.data.tabId === useAppStore.getState().activeControlTabId &&
-          ['slcan', 'candle-light'].includes((n.data as { spec: { driver: { driverId: string } } }).spec.driver.driverId)
+          ['slcan', 'candle-light'].includes((n.data as { node: { driver: string } }).node.driver)
       );
       const anyTransport = nodes.find((n) => n.type === 'acquisition' && n.data.tabId === useAppStore.getState().activeControlTabId);
       const targetId = canNode?.id ?? anyTransport?.id;

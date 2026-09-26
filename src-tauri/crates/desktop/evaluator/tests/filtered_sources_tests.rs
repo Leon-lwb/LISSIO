@@ -20,12 +20,10 @@ fn can_frame(id: u32, direction: CanDirection) -> CanFrame {
     }
 }
 
-const fn rx_only_filter() -> CanFrameFilter {
+fn rx_only_filter() -> CanFrameFilter {
     CanFrameFilter {
-        rx_only: true,
-        tx_only: false,
-        id_whitelist: vec![],
-        id_blacklist: vec![],
+        direction: Some(CanDirection::Rx),
+        ..CanFrameFilter::default()
     }
 }
 
@@ -41,7 +39,7 @@ fn filtered_can_source_pulls_matching_history_first() {
         };
         buffer.lock().push(can_frame(id, direction));
     }
-    let mut source = FilteredCanStreamSource::new(buffer.clone(), rx_only_filter());
+    let mut source = FilteredCanStreamSource::try_new(buffer.clone(), rx_only_filter()).unwrap();
 
     assert!(source.backlog() > 0, "游标 0 → backlog 按版本差计");
     let batch = source.drain(100).expect("历史匹配帧应产出");
@@ -68,12 +66,10 @@ fn filtered_can_source_returns_none_when_nothing_matches() {
     buffer.lock().push(can_frame(1, CanDirection::Rx));
     buffer.lock().push(can_frame(2, CanDirection::Rx));
     let filter = CanFrameFilter {
-        rx_only: false,
-        tx_only: false,
-        id_whitelist: vec![99],
-        id_blacklist: vec![],
+        id: Some(99),
+        ..CanFrameFilter::default()
     };
-    let mut source = FilteredCanStreamSource::new(buffer, filter);
+    let mut source = FilteredCanStreamSource::try_new(buffer, filter).unwrap();
     assert!(source.drain(100).is_none(), "白名单无命中应返回 None");
 }
 

@@ -1,10 +1,17 @@
 import type { CanFrame } from '../../types';
 
+export interface LatestCanId {
+  key: string;
+  frame: CanFrame;
+  count: number;
+}
+
 /// CAN 帧环形缓冲区 — 接收来自后端 subscribe_data 统一入口的 can_frames 通道
 /// RAF 节流: 同一帧内多次 push 只通知一次, 避免高频批次导致 React 过度渲染
 /// 引用稳定: 数据未变化时不创建新数组, 避免 zustand 浅比较失效
 export class CanFrameBuffer {
   private frames: CanFrame[] = [];
+  private latestById = new Map<string, LatestCanId>();
   private _capacity: number;
   private listeners = new Set<() => void>();
   private _version = 0;
@@ -18,8 +25,16 @@ export class CanFrameBuffer {
   }
 
   /// 批量推入帧
-  push(batch: CanFrame[]) {
+  push(batch: readonly CanFrame[]) {
     if (batch.length === 0) return;
+    for (const frame of batch) {
+      const key = `${frame.extended ? 'extended' : 'standard'}:${frame.id}`;
+      this.latestById.set(key, {
+        key,
+        frame,
+        count: (this.latestById.get(key)?.count ?? 0) + 1,
+      });
+    }
     this.frames.push(...batch);
     // 超容量时丢弃旧帧
     if (this.frames.length > this._capacity) {
@@ -49,7 +64,7 @@ export class CanFrameBuffer {
 
   /// 获取内部数组引用 (不拷贝) — 用于 filter/map 等只读遍历,
   /// 调用方必须在同一微任务内完成操作, 不持有引用跨 tick
-  getUnsafeRef(): CanFrame[] {
+  getUnsafeRef(): readonly CanFrame[] {
     return this.frames;
   }
 
@@ -57,8 +72,15 @@ export class CanFrameBuffer {
     return this.frames.filter((f) => f.id === id && f.extended === extended);
   }
 
+  /// 自上次清空以来每个格式与 ID 的最新帧和累计次数。
+  getLatestById(): LatestCanId[] {
+    return [...this.latestById.values()].sort((a, b) =>
+      a.frame.id - b.frame.id || Number(a.frame.extended) - Number(b.frame.extended));
+  }
+
   clear() {
     this.frames = [];
+    this.latestById.clear();
     this._version++;
     this.scheduleNotify();
   }

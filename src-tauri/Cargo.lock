@@ -3342,6 +3342,7 @@ dependencies = [
  "lissio-backend-host",
  "lissio-buffer-graph",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-error",
  "lissio-graph-ops",
  "lissio-graph-testkit",
@@ -3449,12 +3450,16 @@ dependencies = [
  "lissio-acquisition",
  "lissio-can",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-error",
+ "lissio-flow",
  "lissio-protocol",
  "lissio-protocol-can-bridge",
  "lissio-transport",
  "log",
  "parking_lot",
+ "serde",
+ "serde_json",
  "tokio",
 ]
 
@@ -3462,7 +3467,21 @@ dependencies = [
 name = "lissio-automotive-diag"
 version = "0.6.1"
 dependencies = [
+ "async-trait",
  "libautomotive",
+ "lissio-acquisition",
+ "lissio-automotive",
+ "lissio-automotive-isotp",
+ "lissio-data-model",
+ "lissio-device-tree",
+ "lissio-diagnostic",
+ "lissio-flow",
+ "lissio-schema-types",
+ "lissio-transport",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]
@@ -3473,10 +3492,15 @@ dependencies = [
  "lissio-acquisition",
  "lissio-can",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-diagnostic",
  "lissio-error",
+ "lissio-flow",
  "lissio-transport",
  "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
  "thiserror 1.0.69",
  "tokio",
 ]
@@ -3509,9 +3533,13 @@ dependencies = [
  "lissio-acquisition",
  "lissio-ai-host",
  "lissio-app",
+ "lissio-automotive",
+ "lissio-automotive-diag",
+ "lissio-automotive-isotp",
  "lissio-can-transport",
  "lissio-control-api",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-events",
  "lissio-gpu",
  "lissio-graph-ops",
@@ -3662,6 +3690,27 @@ dependencies = [
  "lissio-error",
  "serde",
  "serde_json",
+ "thiserror 1.0.69",
+]
+
+[[package]]
+name = "lissio-device-tree"
+version = "0.6.1"
+dependencies = [
+ "async-trait",
+ "lissio-acquisition",
+ "lissio-can",
+ "lissio-data-model",
+ "lissio-error",
+ "lissio-flow",
+ "lissio-points",
+ "lissio-schema-types",
+ "lissio-transport",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tokio",
 ]
 
 [[package]]
@@ -3959,6 +4008,7 @@ dependencies = [
  "libc",
  "lissio-acquisition",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-flow",
  "lissio-points",
  "lissio-serial",
@@ -3997,6 +4047,7 @@ dependencies = [
  "lissio-bus",
  "lissio-can",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-eval",
  "lissio-events",
  "lissio-filter",
@@ -4137,6 +4188,7 @@ dependencies = [
  "async-trait",
  "lissio-acquisition",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-flow",
  "lissio-points",
  "parking_lot",
@@ -4237,9 +4289,11 @@ dependencies = [
  "lissio-acquisition",
  "lissio-can",
  "lissio-data-model",
+ "lissio-device-tree",
  "lissio-error",
  "lissio-flow",
  "lissio-logic",
+ "lissio-points",
  "lissio-schema-types",
  "log",
  "parking_lot",

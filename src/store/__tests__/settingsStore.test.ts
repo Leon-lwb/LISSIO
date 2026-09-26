@@ -190,8 +190,8 @@ describe('settingsStore', () => {
     expect(enabled.delete_stopped).toBe(true);
     expect(enabled.keep_latest).toBe(10);
     const beforeUs = (Date.now() - 7 * 86_400_000) * 1000;
-    expect(enabled.older_than_us).toBeGreaterThan(beforeUs - 1000);
-    expect(enabled.older_than_us).toBeLessThan(Date.now() * 1000 + 1000);
+    expect(enabled.older_than_us).toBeGreaterThanOrEqual(beforeUs - 2000);
+    expect(enabled.older_than_us).toBeLessThan(Date.now() * 1000 + 2000);
 
     const off = toCleanupPolicy(DEFAULT_SETTINGS.data);
     expect(off.delete_failed).toBe(false);

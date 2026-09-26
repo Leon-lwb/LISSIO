@@ -21,14 +21,16 @@ import {
 } from '../appStoreHelpers';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards } from '../../lib/acquisition/deviceCardModel';
-import { createAcquisitionNode } from '../../lib/acquisition/acquisitionNodes';
+import { createAcquisitionNode, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
+import { deviceTreeCanvasNodes, walkDeviceTree } from '../../lib/acquisition/deviceTreeModel';
+import { createProtocolEngineNode } from '../../lib/acquisition/deviceTree';
 import { useDockStore } from '../dockStore';
 import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { rawDataPortId } from '../../lib/utils/nodeDef';
 import { withHistoryOp } from '../historyStore';
 import type { HistoryTarget, NodeOpRef } from '../historyStore';
 import { nodeLabelOf, nodeRefOf } from '../../lib/utils/nodeKindVisuals';
-import type { EndpointSpec, ProtocolConfig, WidgetConfig } from '../../types';
+import type { DeviceTreeNodeDecl, ProtocolConfig, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
 
 export interface GraphSlice {
@@ -71,9 +73,10 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
   const affectedTabsOf = (nodeIds: (string | null | undefined)[]): string[] => {
     const state = get();
     const tabs = new Set<string>();
+    const allNodes = [...state.rfNodes, ...deviceTreeCanvasNodes(state.rfNodes)];
     for (const id of nodeIds) {
       if (!id) continue;
-      const node = state.rfNodes.find((n: Node) => n.id === id);
+      const node = allNodes.find((n: Node) => n.id === id);
       if (!node) continue;
       if (node.data?.tabId) tabs.add(node.data.tabId as string);
     }
@@ -105,10 +108,10 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
         set((s) => ({ rfNodes: s.rfNodes.map((node) => {
           if (node.id !== nodeId) return node;
           const widget = node.data.widget as WidgetConfig | undefined;
-          const spec = node.data.spec as EndpointSpec | undefined;
+          const device = node.data.node as DeviceTreeNodeDecl | undefined;
           return { ...node, data: { ...node.data, label: label.trim(),
             ...(widget ? { widget: { ...widget, params: { ...widget.params, label: label.trim() } } } : {}),
-            ...(spec ? { spec: { ...spec, label: label.trim() } } : {}),
+            ...(device ? { node: { ...device, name: label.trim() } } : {}),
           } };
         }) }));
         get().syncAllTabGraphs();
@@ -171,13 +174,15 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
           if (!node || !isStructuralNode(node)) return;
           // 关闭仍打开的连接 (尽力而为)
           if (node.type === 'acquisition') void api.closeTransport(nodeId).catch(() => { return undefined; });
+          const removedIds = new Set(node.type === 'acquisition'
+            ? walkDeviceTree((node.data as AcquisitionNodeData).node).map(child => child.id) : [nodeId]);
           set((s) => ({
             rfNodes: s.rfNodes.filter((n: Node) => n.id !== nodeId),
-            rfEdges: s.rfEdges.filter((e: Edge) => e.source !== nodeId && e.target !== nodeId),
+            rfEdges: s.rfEdges.filter((e: Edge) => !removedIds.has(e.source) && !removedIds.has(e.target)),
           }));
           // 同步清理派生端口表 (后端 remove_tab_graph 也会发新的 GraphDerived,
           // 但单节点删除不会触发 remove_tab_graph, 需前端本地清理)
-          get().removeDerived([nodeId]);
+          get().removeDerived([...removedIds]);
           get().syncAllTabGraphs();
         }
       );
@@ -219,13 +224,12 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
         if (!card) return;
         const device = createAcquisitionNode(card, { x: 60, y: 100 }, tabId);
         device.selected = true;
-        const protocol = createProtocolNode(DEFAULT_PROTOCOL_CONFIG, { x: 320, y: 100 });
-        protocol.data.tabId = tabId;
+        const protocol = createProtocolEngineNode(device.data.node, DEFAULT_PROTOCOL_CONFIG);
+        device.data.node.children.push(protocol);
         set(s => ({
-          rfNodes: [...s.rfNodes.map(n => ({ ...n, selected: false })), device, protocol],
+          rfNodes: [...s.rfNodes.map(n => ({ ...n, selected: false })), device],
           activeControlTabId: tabId,
         }));
-        get().onConnect({ source: device.id, sourceHandle: 'rx', target: protocol.id, targetHandle: 'in' });
         get().onConnect({ source: protocol.id, sourceHandle: 'out', target: rawDataWidgetId, targetHandle: 'data' });
         get().addNodePropertiesTab();
         get().setActiveDataTab(rawDataWidgetId);
@@ -262,7 +266,8 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
           if (ch.type === 'remove') {
             const node = get().rfNodes.find((n: Node) => n.id === ch.id);
             if (node && isStructuralNode(node)) {
-              removedStructuralIds.push(ch.id);
+              removedStructuralIds.push(...(node.type === 'acquisition'
+                ? walkDeviceTree((node.data as AcquisitionNodeData).node).map(child => child.id) : [ch.id]));
               if (node.type === 'acquisition') removedTransportIds.push(ch.id);
             } else if (node?.data?.tabId) {
               removedWidgetTabIds.add(node.data.tabId as string);
@@ -383,9 +388,10 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
     },
 
     onConnect: (connection) => {
-      const source = nodeById(connection.source);
+      const graphNodes = [...get().rfNodes, ...deviceTreeCanvasNodes(get().rfNodes)];
+      const source = graphNodes.find(node => node.id === connection.source);
       const target = nodeById(connection.target);
-      if (!source || !target || source.data.tabId !== target.data.tabId) return;
+      if (!source || !target || target.data.treeRootId || source.data.tabId !== target.data.tabId) return;
       const fromRef = refOf(connection.source);
       const toRef = refOf(connection.target);
       const fromLabel = nodeLabelOf(get().rfNodes.find((n: Node) => n.id === connection.source));
@@ -405,7 +411,7 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
             ...connection,
             id: nanoid(8),
           };
-          const sourceNode = get().rfNodes.find((n: Node) => n.id === connection.source);
+          const sourceNode = [...get().rfNodes, ...deviceTreeCanvasNodes(get().rfNodes)].find((n: Node) => n.id === connection.source);
           const targetNode = get().rfNodes.find((n: Node) => n.id === connection.target);
           const tabId = sourceNode?.data.tabId as string;
           // RawData 输入端口是动态派生的 (`src:<source>:<handle>`), 连接时它显示的回退端口 'data'
@@ -431,7 +437,8 @@ export const createGraphSlice: AppSlice<GraphSlice> = (set, get) => {
     },
 
     getTabEdges: (tabId) => {
-      const tabNodeIds = new Set(get().getTabNodes(tabId).map((n: Node) => n.id));
+      const tabNodes = get().getTabNodes(tabId);
+      const tabNodeIds = new Set([...tabNodes, ...deviceTreeCanvasNodes(tabNodes)].map((n: Node) => n.id));
       return get().rfEdges.filter((e: Edge) => tabNodeIds.has(e.source) && tabNodeIds.has(e.target));
     },
   };

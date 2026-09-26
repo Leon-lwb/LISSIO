@@ -1,5 +1,5 @@
 import { useAppStore } from '../../store/appStore';
-import type { ProtocolConfig, EndpointSpec } from '../../types';
+import type { DeviceTreeNodeDecl, ProtocolConfig } from '../../types';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
 import type { AcquisitionNodeData } from '../acquisition/acquisitionNodes';
 
@@ -11,11 +11,11 @@ export function usePrimaryProtocolConfig(): ProtocolConfig | null {
   });
 }
 
-export function usePrimaryDeviceSpec(): EndpointSpec | null {
+export function usePrimaryDeviceNode(): DeviceTreeNodeDecl | null {
   return useAppStore(state => {
     const node = state.rfNodes.find(candidate =>
       candidate.type === 'acquisition' && candidate.data.tabId === state.activeControlTabId);
-    return node ? (node.data as AcquisitionNodeData).spec : null;
+    return node ? (node.data as AcquisitionNodeData).node : null;
   });
 }
 
@@ -24,7 +24,7 @@ export function usePrimaryCanTransportNodeId(): string | null {
     const devices = state.rfNodes.filter(candidate =>
       candidate.type === 'acquisition' && candidate.data.tabId === state.activeControlTabId);
     return (devices.find(candidate => {
-      const id = (candidate.data as AcquisitionNodeData).spec.driver.driverId;
+      const id = (candidate.data as AcquisitionNodeData).node.driver;
       return id === 'slcan' || id === 'candle-light';
     }) ?? devices[0])?.id ?? null;
   });

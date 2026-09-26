@@ -1,7 +1,7 @@
-use acquisition::{
-    AcquisitionRuntime, DriverContext, SourceFactory, SourceRegistry, SubscriptionIntent,
-};
-use data_model::device::{DriverId, DriverPayload, EndpointId, EndpointSpec};
+use acquisition::{AcquisitionRuntime, DriverContext, SourceFactory, SubscriptionIntent};
+use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeDecl, NodeId};
+use device_tree::{DeviceTreeAcquisition, DriverRegistry};
 use flow::SourceId;
 use points::{
     AcquisitionIntent, AcquisitionMode, DeliveryClass, PointId, PointValue, Priority, ReadRequest,
@@ -17,6 +17,13 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::mpsc;
 
 mod s7_mock;
+
+fn runtime_node(id: &str, label: &str, driver: &str, payload: DriverPayload) -> NodeDecl {
+    let mut node =
+        NodeDecl::leaf(id, label, driver, payload.schema_version, payload.payload).unwrap();
+    node.capability_endpoint_id = Some("client".into());
+    node
+}
 
 fn point(
     id: &str,
@@ -438,23 +445,27 @@ async fn disconnected_read_reconnects_before_returning_a_sample() {
 async fn acquisition_runtime_opens_reads_caches_and_closes_the_adapter() {
     let mock = MockServer::spawn().await;
     mock.poke(AREA_DB, 10, 0, &[0x12, 0x34]).await;
-    let registry = Arc::new(SourceRegistry::default());
-    registry.register(Arc::new(S7Factory::default()));
-    let runtime = AcquisitionRuntime::new(registry);
-    let endpoint_id = EndpointId("s7-runtime".into());
+    let registry = Arc::new(DriverRegistry::new());
+    let execution = acquisition::ExecutionGate::new(acquisition::AcquisitionRunState::Running);
+    registry
+        .register(Arc::new(s7_adapter::S7Driver::new(execution.clone())))
+        .unwrap();
+    let runtime = AcquisitionRuntime::new(Arc::new(DeviceTreeAcquisition::with_execution(
+        registry, execution,
+    )));
+    let endpoint_id = NodeId::new("s7-runtime").unwrap();
     let snapshot = runtime
-        .open_endpoint(EndpointSpec {
-            simulation: None,
-            id: endpoint_id.clone(),
-            label: "S7 runtime".into(),
-            enabled: true,
-            capability_endpoint_id: Some("client".into()),
-            driver: driver_payload(mock.port, standard_points().await),
-        })
+        .open_node(runtime_node(
+            "s7-runtime",
+            "S7 runtime",
+            "s7",
+            driver_payload(mock.port, standard_points().await),
+        ))
         .await
         .unwrap();
-    assert_eq!(snapshot.points.len(), 6);
-    assert!(snapshot.capabilities.unwrap().available.read);
+    let payload = driver_payload(mock.port, standard_points().await);
+    assert_eq!(runtime.descriptors(&payload).unwrap().len(), 6);
+    assert!(snapshot.capabilities.read);
 
     let result = runtime
         .read(&endpoint_id, vec![PointId("db_u16".into())])
@@ -467,24 +478,22 @@ async fn acquisition_runtime_opens_reads_caches_and_closes_the_adapter() {
     assert_eq!(runtime.latest_samples(&endpoint_id).unwrap().len(), 1);
 
     let duplicate = runtime
-        .open_endpoint(EndpointSpec {
-            simulation: None,
-            id: endpoint_id.clone(),
-            label: "duplicate".into(),
-            enabled: true,
-            capability_endpoint_id: Some("client".into()),
-            driver: driver_payload(mock.port, standard_points().await),
-        })
+        .open_node(runtime_node(
+            "s7-runtime",
+            "duplicate",
+            "s7",
+            driver_payload(mock.port, standard_points().await),
+        ))
         .await;
     assert!(matches!(
         duplicate,
         Err(acquisition::AcquisitionError::Busy)
     ));
 
-    runtime.close_endpoint(&endpoint_id).await.unwrap();
+    runtime.close_node(&endpoint_id).await.unwrap();
     assert!(matches!(
         runtime.snapshot(&endpoint_id),
-        Err(acquisition::AcquisitionError::UnknownEndpoint(_))
+        Err(acquisition::AcquisitionError::UnknownNode(_))
     ));
 }
 

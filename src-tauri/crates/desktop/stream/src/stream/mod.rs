@@ -12,7 +12,7 @@
 //! - **顺序**: 增量流前端按 seq 严格重组; 快照流 (波形) 按 "最新 seq 胜出"。
 
 use crate::dispatcher::{AdaptiveRate, StreamSink, adaptive_stream_loop};
-use can::{CanBuffer, CanFrameBatch};
+use can::{CanBuffer, CanCursor, CanFrameBatch};
 use data_model::{Error, Result};
 use error::ConfigError;
 use logic::{DecodedBuffer, DecodedEventBatch, LogicBuffer, LogicSampleBatch};
@@ -294,14 +294,14 @@ impl StreamSource for RawDataSource {
 /// CAN 帧流 — 组内游标增量读取 (游标起点回溯 max_items, 订阅即可见近期历史)
 pub struct CanStreamSource {
     buffer: Arc<Mutex<CanBuffer>>,
-    cursor: u64,
+    cursor: CanCursor,
 }
 
 impl CanStreamSource {
     pub fn new(buffer: Arc<Mutex<CanBuffer>>, max_items: usize) -> Self {
         let cursor = {
             let buf = buffer.lock();
-            buf.version().saturating_sub(max_items as u64)
+            CanCursor::new(buf.version().saturating_sub(max_items as u64))
         };
         Self { buffer, cursor }
     }
@@ -312,19 +312,18 @@ impl StreamSource for CanStreamSource {
 
     fn backlog(&mut self) -> usize {
         let buf = self.buffer.lock();
-        usize::try_from(buf.version().saturating_sub(self.cursor)).unwrap_or(usize::MAX)
+        usize::try_from(buf.version().saturating_sub(self.cursor.value())).unwrap_or(usize::MAX)
     }
 
     fn drain(&mut self, max: usize) -> Option<Self::Batch> {
-        let buf = self.buffer.lock();
-        let (items, new_cursor, _dropped) = buf.drain_from(self.cursor, max);
-        self.cursor = new_cursor;
-        if items.is_empty() {
+        let result = self.buffer.lock().read_from(self.cursor, max);
+        self.cursor = result.next_cursor;
+        if result.frames.is_empty() {
             None
         } else {
             Some(CanFrameBatch {
                 seq: 0,
-                frames: items,
+                frames: result.frames,
             })
         }
     }

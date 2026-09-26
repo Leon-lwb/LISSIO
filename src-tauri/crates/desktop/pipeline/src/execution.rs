@@ -6,7 +6,7 @@
 //! 运行状态切换持写锁 — 切换因此与在途求值批次/设备写入互斥, 旧 epoch 的
 //! 异步结果不可能在切换后发布或发送。
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 
@@ -40,12 +40,18 @@ pub enum RunAction {
 #[derive(Default)]
 pub struct ExecutionControl {
     word: AtomicU64,
+    resumed_at_unix_ns: AtomicI64,
     /// 互斥域: 读侧 (评估批次 / 发送 IO / 字节路由) 持读锁, 运行状态切换持写锁。
     /// 用 tokio 的异步感知实现 — 读 guard 需要跨越 await。
     pub boundary: tokio::sync::RwLock<()>,
 }
 
 impl ExecutionControl {
+    /// 最近一次启动/恢复的边界；源端收到更早的字节不能进入采集视图。
+    pub fn resumed_at_unix_ns(&self) -> i64 {
+        self.resumed_at_unix_ns.load(Ordering::Acquire)
+    }
+
     pub fn snapshot(&self) -> RunSnapshot {
         let word = self.word.load(Ordering::Acquire);
         RunSnapshot {
@@ -75,6 +81,14 @@ impl ExecutionControl {
     /// 重置 (评估队列 / 连续性状态 / 发送基线) — 保证切换原子地对在途批次生效。
     pub fn transition(&self, state: RunState) -> RunSnapshot {
         let epoch = self.snapshot().epoch.wrapping_add(1);
+        if state == RunState::Running {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0, |duration| {
+                    i64::try_from(duration.as_nanos()).unwrap_or(i64::MAX)
+                });
+            self.resumed_at_unix_ns.store(now, Ordering::Release);
+        }
         let tag = match state {
             RunState::Stopped => 0,
             RunState::Running => 1,

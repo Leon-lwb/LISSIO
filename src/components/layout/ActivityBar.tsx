@@ -8,6 +8,7 @@ import {
   HelpCircle,
   PanelLeft,
   Rocket,
+  Network,
 } from 'lucide-react';
 import clsx from 'clsx';
 import type { SidebarView } from '../../store/appStore';
@@ -74,6 +75,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
   ]);
 
   const items: { view: SidebarView; icon: React.ReactNode; key: Parameters<typeof t>[1] }[] = [
+    { view: 'devices', icon: <Network size={22} />, key: 'deviceTreeTitle' },
     { view: 'quickstart', icon: <Rocket size={22} />, key: 'quickStart' },
     { view: 'panels', icon: <Layers size={22} />, key: 'menuPanel' },
     { view: 'recording', icon: <Database size={22} />, key: 'recordingDatabaseTitle' },

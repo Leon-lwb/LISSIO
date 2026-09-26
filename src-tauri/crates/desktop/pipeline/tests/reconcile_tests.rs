@@ -5,39 +5,39 @@
 //! - 节点仍被其他 tab 引用 → 连接与收集器保留
 //! - Protocol 节点删除 → protocol_states / buffers 清理
 
-use acquisition::{AcquisitionRuntime, SourceRegistry};
 use app::AppState;
-use data_model::device::{
-    DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-    EndpointSpec, SimulationConfig,
-};
-use data_model::{SerialConfig, TransportConfig};
+use data_model::TransportConfig;
+use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain, SimulationConfig};
+use data_model::device_tree::{NodeDecl, NodeId};
 use graph::CompiledGraph;
 use kind::{NodeDef, NodeKind};
 use pipeline::DataPlaneState;
 use schema_types::ProtocolConfig;
 use trigger::TriggerState;
 
-fn test_device_spec(id: &str) -> EndpointSpec {
-    let defaults = serde_json::to_value(TransportConfig::Serial(SerialConfig::default())).unwrap();
-    EndpointSpec {
-        id: EndpointId(id.into()),
-        label: id.into(),
-        enabled: true,
-        capability_endpoint_id: Some("device".into()),
-        driver: DriverPayload {
-            driver_id: DriverId("serial".into()),
-            schema_version: 1,
-            payload: defaults["params"].clone(),
-        },
-        simulation: Some(SimulationConfig {
+mod common;
+
+fn test_device_node(id: &str) -> NodeDecl {
+    let defaults = serde_json::to_value(TransportConfig::TestData(
+        data_model::TestDataConfig::default(),
+    ))
+    .unwrap();
+    common::node(
+        id,
+        "test-data",
+        defaults["params"].clone(),
+        Some(SimulationConfig {
             encoding: Some(serde_json::json!({
                 "protocol": ProtocolConfig::RawData,
                 "schema": null,
             })),
             ..Default::default()
         }),
-    }
+    )
+}
+
+fn node_id(value: &str) -> NodeId {
+    NodeId::new(value).unwrap()
 }
 
 fn device_node(id: &str, tab: &str) -> NodeDef {
@@ -45,7 +45,7 @@ fn device_node(id: &str, tab: &str) -> NodeDef {
         id: id.into(),
         tab_id: tab.into(),
         kind: NodeKind::Acquisition {
-            spec: test_device_spec(id),
+            node: test_device_node(id),
             ports: vec![DevicePort {
                 id: "rx".into(),
                 direction: DevicePortDirection::Output,
@@ -70,23 +70,18 @@ fn protocol_node(id: &str, tab: &str) -> NodeDef {
 async fn open_test_data(state: &AppState, id: &str, plane: &DataPlaneState) {
     state
         .transport
-        .open_endpoint(test_device_spec(id))
+        .open_node(test_device_node(id))
         .await
         .unwrap();
     plane.raw_collector_for(id);
 }
 
 fn app_state() -> AppState {
-    let registry = std::sync::Arc::new(SourceRegistry::default());
-    registry.register(std::sync::Arc::new(
-        transport::device_factory::ByteDeviceFactory::new(
-            "serial",
-            "Serial",
-            TransportConfig::Serial(SerialConfig::default()),
-            std::sync::Arc::new(transport::test_data::TestDataBackend),
-        ),
-    ));
-    AppState::with_acquisition(AcquisitionRuntime::new(registry))
+    AppState::with_acquisition(common::runtime(
+        "test-data",
+        TransportConfig::TestData(data_model::TestDataConfig::default()),
+        std::sync::Arc::new(transport::test_data::TestDataBackend),
+    ))
 }
 
 /// 节点从全局表消失 (所有 tab 不再引用) → 连接关闭 + raw 收集器清理
@@ -99,14 +94,14 @@ async fn reconcile_closes_orphan_transport() {
         .lock()
         .insert("tp".into(), device_node("tp", "t1"));
     open_test_data(&state, "tp", &plane).await;
-    assert!(state.transport.state("tp").is_some());
+    assert!(state.transport.state(&node_id("tp")).is_some());
 
     // 模拟图重编译: tp 从工作区运行时节点索引移除
     plane.global_nodes.lock().remove("tp");
     plane.reconcile().await;
 
     assert!(
-        state.transport.state("tp").is_none(),
+        state.transport.state(&node_id("tp")).is_none(),
         "孤儿 Transport 连接应被关闭"
     );
     assert!(
@@ -129,7 +124,7 @@ async fn reconcile_keeps_node_referenced_by_other_tab() {
 
     plane.reconcile().await;
 
-    assert!(state.transport.state("tp").is_some());
+    assert!(state.transport.state(&node_id("tp")).is_some());
     assert!(plane.raw_collectors.lock().contains_key("tp"));
 }
 

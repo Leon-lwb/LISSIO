@@ -155,6 +155,32 @@ impl From<CanFrameDto> for CanFrame {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::{CloseEndpointParams, ReadPointsParams, WritePointsParams};
+    use serde_json::json;
+
+    #[test]
+    fn node_identity_payloads_deserialize() {
+        let close: CloseEndpointParams =
+            serde_json::from_value(json!({ "node_id": "node-a" })).unwrap();
+        let read: ReadPointsParams = serde_json::from_value(json!({
+            "node_id": "node-a",
+            "point_ids": ["p1"]
+        }))
+        .unwrap();
+        let write: WritePointsParams = serde_json::from_value(json!({
+            "node_id": "node-a",
+            "request": {}
+        }))
+        .unwrap();
+
+        assert_eq!(close.node_id, "node-a");
+        assert_eq!(read.node_id, "node-a");
+        assert_eq!(write.node_id, "node-a");
+    }
+}
+
 /// 逻辑分析数据读取入参。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct LogicParams {
@@ -181,15 +207,15 @@ pub(super) struct OpenEndpointParams {
 /// 关闭端点入参。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct CloseEndpointParams {
-    /// 端点 id (即图中设备节点 id)。
-    pub(super) endpoint_id: String,
+    /// 图中采集节点 id。
+    pub(super) node_id: String,
 }
 
 /// 点位读取入参。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct ReadPointsParams {
-    /// 端点 id。
-    pub(super) endpoint_id: String,
+    /// 图中采集节点 id。
+    pub(super) node_id: String,
     /// 点位 id 数组。
     pub(super) point_ids: Vec<String>,
 }
@@ -197,8 +223,8 @@ pub(super) struct ReadPointsParams {
 /// 点位写入入参 — `request` 为 `points::WriteRequest` JSON。
 #[derive(Debug, Deserialize, schemars::JsonSchema)]
 pub(super) struct WritePointsParams {
-    /// 端点 id。
-    pub(super) endpoint_id: String,
+    /// 图中采集节点 id。
+    pub(super) node_id: String,
     /// 写入请求: {correlationId, deadlineUnixNs, idempotencyKey?, items:[{pointId, value}]}。
     pub(super) request: Value,
 }

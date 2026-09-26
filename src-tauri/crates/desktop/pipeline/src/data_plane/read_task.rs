@@ -147,7 +147,7 @@ pub(super) async fn read_task(
     sink: EventSinkHandle,
     plane: DataPlaneState,
     node_id: String,
-    mut rx: acquisition::LegacyFlowReceiver,
+    mut rx: acquisition::FlowReceiver,
 ) {
     log::debug!("数据读任务已启动: {node_id}");
     let mut dec_cache = crate::decoder_feed::DecoderFeedCache::new();
@@ -160,8 +160,11 @@ pub(super) async fn read_task(
     let mut avg_bytes_per_frame = 16.0_f64;
     // 启动时取一次轻量句柄: 每批的运行态配置 (采样时钟) / rx 统计上报
     // 都免 manager 全局锁 (逐批锁会与 open/close/其他传输串行化)
-    let live = plane.transport.live_handle(&node_id);
+    let live = data_model::device_tree::NodeId::new(&node_id)
+        .ok()
+        .and_then(|node_id| plane.transport.live_handle(&node_id));
     let mut pending = None;
+    let mut last_connection_epoch = None;
 
     loop {
         let first = if let Some(envelope) = pending.take() {
@@ -172,6 +175,21 @@ pub(super) async fn read_task(
                 Err(acquisition::FlowRecvError::Closed) => break,
             }
         };
+
+        // 源端为字节标记到达时刻，恢复后仍排队的暂停期字节在这里丢弃。
+        // 不以消费时刻判断，否则恢复瞬间尚未排空的旧字节会被当成新帧。
+        if first.observed_time_unix_ns != 0
+            && first.observed_time_unix_ns < plane.eval.execution.resumed_at_unix_ns()
+        {
+            continue;
+        }
+
+        if last_connection_epoch
+            .replace(first.connection_epoch)
+            .is_some_and(|epoch| epoch != first.connection_epoch)
+        {
+            reset_downstream_parsers(&plane, &node_id);
+        }
 
         if let Some(gap) = &first.gap_before {
             record_lagged(&plane, &node_id, live.as_ref(), gap.missing_sequences());
@@ -201,6 +219,7 @@ pub(super) async fn read_task(
         // 回环发送与设备接收方向不同, 合并成一批会丢失方向语义 (raw 收集/统计
         // 按批方向归属), 因此合批只在同方向消息间进行
         let batch_direction = first.direction;
+        let batch_epoch = first.connection_epoch;
         let is_receive = batch_direction == Direction::Receive;
         let mut data = first.payload.bytes.to_vec();
         let mut coalesced = 1usize;
@@ -208,6 +227,7 @@ pub(super) async fn read_task(
             match rx.try_recv() {
                 Ok(next)
                     if next.gap_before.is_none()
+                        && next.connection_epoch == batch_epoch
                         && next.direction == batch_direction
                         && next.payload.framing == Framing::Stream
                         && matches!(
@@ -227,27 +247,6 @@ pub(super) async fn read_task(
                 ) => break,
             }
         }
-        plane.metrics.rx_msgs.fetch_add(
-            u64::try_from(coalesced).unwrap_or(u64::MAX),
-            Ordering::Relaxed,
-        );
-        plane
-            .metrics
-            .rx_bytes
-            .fetch_add(data.len() as u64, Ordering::Relaxed);
-
-        // 按源原始字节收集 (不随解析积压丢失 — 收集在路由之前完成)。
-        // 方向取信封: 设备接收为 Rx, 本地发送回环为 Tx — 发送只在此收集一次
-        plane.raw_collector_for(&node_id).lock().push_chunk(
-            data_model::now_us(),
-            if is_receive {
-                RawDataDirection::Rx
-            } else {
-                RawDataDirection::Tx
-            },
-            &data,
-        );
-
         // 沿全局 BytePlan 路由 (深度提示取广播积压, 供并行解析判定)
         let t_feed = Instant::now();
         let depth_hint = rx.len().max(
@@ -264,23 +263,46 @@ pub(super) async fn read_task(
         if plane.eval.execution.ticket().is_none() {
             continue;
         }
-        let summary = {
-            let _boundary = plane.eval.execution.boundary.read().await;
-            if plane.eval.execution.ticket().is_none() {
-                continue;
-            }
-            byte_router::route_bytes(
-                &plane,
-                Some(sink.as_ref()),
-                &node_id,
-                &data,
-                depth_hint,
-                &mut dec_cache,
-                live.as_ref(),
-            )
-            .await
-        };
-        if plane.stop_for_recording_fault().await {
+        let boundary = plane.eval.execution.boundary.read().await;
+        if plane.eval.execution.ticket().is_none() {
+            continue;
+        }
+        plane.metrics.rx_msgs.fetch_add(
+            u64::try_from(coalesced).unwrap_or(u64::MAX),
+            Ordering::Relaxed,
+        );
+        plane
+            .metrics
+            .rx_bytes
+            .fetch_add(data.len() as u64, Ordering::Relaxed);
+        // 原始数据、统计和协议帧共用运行边界；暂停仍排空设备输入。
+        plane.raw_collector_for(&node_id).lock().push_chunk(
+            data_model::now_us(),
+            if is_receive {
+                RawDataDirection::Rx
+            } else {
+                RawDataDirection::Tx
+            },
+            &data,
+        );
+        let summary = byte_router::route_bytes_with_direction(
+            &plane,
+            Some(sink.as_ref()),
+            &node_id,
+            &data,
+            depth_hint,
+            &mut dec_cache,
+            live.as_ref(),
+            if is_receive {
+                can::CanDirection::Rx
+            } else {
+                can::CanDirection::Tx
+            },
+        )
+        .await;
+        if plane.eval.recording.fault().is_some() {
+            drop(boundary);
+            plane.stop_for_recording_fault().await;
             continue;
         }
         let service_time = t_feed.elapsed();
@@ -359,6 +381,7 @@ pub(super) async fn read_task(
             plane.metrics.report();
             last_report = Instant::now();
         }
+        drop(boundary);
     }
 
     mark_downstream_disconnected(&plane, &node_id);

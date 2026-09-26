@@ -3,8 +3,6 @@ import { act } from '@testing-library/react';
 import { tauriMock } from '../../test/setup';
 import { useAppStore } from '../appStore';
 import type { SpectrumBatch } from '../../lib/buffers/graphSubscription';
-import type { CanFrameBatch } from '../../types';
-import { canFrameBuffer } from '../../lib/buffers/canBuffer';
 
 /// 手工 rAF ticker — 覆盖全局 requestAnimationFrame, 让 events.ts 的帧级节流确定
 function installManualRaf() {
@@ -34,24 +32,19 @@ function installManualRaf() {
   };
 }
 
-function getChannelFor<T>(command: string): { onmessage: ((msg: T) => void) | null } {
-  const kindByLegacyCommand: Record<string, string> = {
-    subscribe_spectrum: 'spectrum',
-    subscribe_can_frames: 'can_frames',
-  };
-  const kind = kindByLegacyCommand[command];
+function getSpectrumChannel(): { onmessage: ((msg: SpectrumBatch) => void) | null } {
   const calls = tauriMock.invoke.mock.calls as unknown as [
     string,
     { request?: { kind?: string }; onEvent?: { onmessage: ((msg: unknown) => void) | null } }
   ][];
-  const call = calls.find((c) => c[0] === 'subscribe_data' && c[1].request?.kind === kind);
+  const call = calls.find((c) => c[0] === 'subscribe_data' && c[1].request?.kind === 'spectrum');
   const channel = call?.[1]?.onEvent;
-  if (!channel) throw new Error(`channel not registered for ${command}`);
+  if (!channel) throw new Error('spectrum channel not registered');
   return {
     onmessage: (payload) =>
       channel.onmessage?.({
-        kind,
-        payload: kind === 'spectrum' ? (payload as SpectrumBatch).spectra : payload,
+        kind: 'spectrum',
+        payload: payload.spectra,
       }),
   };
 }
@@ -71,9 +64,8 @@ afterEach(() => {
 });
 
 describe('events.ts payload contract', () => {
-  it('spectrum and CAN payloads keep their documented shapes in the store', () => {
-    const spectrumChannel = getChannelFor<SpectrumBatch>('subscribe_spectrum');
-    const canChannel = getChannelFor<CanFrameBatch>('subscribe_can_frames');
+  it('spectrum payloads keep their documented shape in the store', () => {
+    const spectrumChannel = getSpectrumChannel();
 
     const spectrumBatch: SpectrumBatch = {
       spectra: {
@@ -84,14 +76,6 @@ describe('events.ts payload contract', () => {
     act(() => ticker.flush()); // spectrumResults 已改为 RAF 合批
     expect(useAppStore.getState().spectrumResults).toEqual(spectrumBatch.spectra);
 
-    // CAN 批次进入 canFrameBuffer (RAF 节流), 帧形状原样保留
-    const canBatch: CanFrameBatch = {
-      seq: 0,
-      frames: [{ timestamp: 5, id: 0x123, extended: false, rtr: false, dlc: 1, data: [0xaa], direction: 'Rx' }],
-    };
-    act(() => canChannel.onmessage!(canBatch));
-    act(() => ticker.flush());
-    expect(canFrameBuffer.getRecent(1)).toEqual(canBatch.frames);
   });
 
   it('store slice field types are assignable from the subscription payload types (compile-time contract)', () => {

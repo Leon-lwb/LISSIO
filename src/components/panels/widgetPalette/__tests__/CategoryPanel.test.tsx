@@ -166,8 +166,8 @@ describe('CategoryPanel', () => {
     fireEvent.click(device);
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(1);
-    expect(nodes[0]).toMatchObject({ position: { x: 410, y: 220 }, data: { spec: {
-      label: 'USB sensor', driver: { driverId: 'future', payload: { port: 'COM3' } },
+    expect(nodes[0]).toMatchObject({ position: { x: 410, y: 220 }, data: { node: {
+      name: 'USB sensor', driver: 'future', config: { port: 'COM3' },
     } } });
   });
 
@@ -209,8 +209,8 @@ describe('CategoryPanel', () => {
     fireEvent.click(device);
     const nodes = useAppStore.getState().rfNodes;
     expect(nodes).toHaveLength(1);
-    expect(nodes[0].data.spec).toMatchObject({ label: 'USB sensor',
-      driver: { driverId: 'future', payload: { port: '/dev/usb0', baud: 115200 } },
+    expect(nodes[0].data.node).toMatchObject({ name: 'USB sensor',
+      driver: 'future', config: { port: '/dev/usb0', baud: 115200 },
     });
     expect(useAppStore.getState().connectionStates[nodes[0].id]).not.toBe('Connected');
   });
@@ -248,8 +248,8 @@ describe('CategoryPanel', () => {
     expect(await screen.findAllByText('USB bridge')).toHaveLength(1);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'rtu:primary' } });
     fireEvent.click(screen.getByRole('button', { name: /USB bridge/ }));
-    expect(useAppStore.getState().rfNodes[0].data.spec).toMatchObject({
-      driver: { driverId: 'rtu', payload: { portName: 'COM3' } },
+    expect(useAppStore.getState().rfNodes[0].data.node).toMatchObject({
+      driver: 'rtu', config: { portName: 'COM3' },
     });
   });
 

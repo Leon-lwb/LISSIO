@@ -27,7 +27,7 @@ use crate::str_op::{StrNumParams, StrOp};
 pub enum NodeKind {
     /// Typed device source; the endpoint configuration owns its identity.
     Acquisition {
-        spec: data_model::device::EndpointSpec,
+        node: data_model::device_tree::NodeDecl,
         ports: Vec<data_model::device::DevicePort>,
     },
     /// Explicit typed point-to-numeric projection.

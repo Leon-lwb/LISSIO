@@ -19,16 +19,21 @@
 //! 3. **Single responsibility**: this crate does not depend on `tokio` / `serialport` or other I/O crates.
 
 pub mod can_buffer;
+pub mod can_filter;
 pub mod can_frame;
 pub mod can_load_stats;
 pub mod can_load_types;
+pub mod can_model;
 pub mod test_data;
 
-pub use can_buffer::CanBuffer;
-pub use can_frame::{
-    CanDirection, CanFilter, CanFrame, CanFrameBatch, CanFrameFilter, CandleDeviceInfo,
-};
+pub use can_buffer::{CanBuffer, CanCursor, CanReadResult};
+pub use can_filter::{CanFilterError, CanFrameFilter};
+pub use can_frame::{CanFilter, CanFrame, CanFrameBatch, CandleDeviceInfo};
 pub use can_load_stats::{CanLoadStats, frame_bits};
 pub use can_load_types::{CanIdLoadHistory, CanIdLoadStats, CanLoadHistoryPoint, CanLoadSnapshot};
+pub use can_model::{
+    CanDirection, CanDlc, CanFrameBody, CanFrameError, CanFrameParts, CanId, ExtendedCanId,
+    StandardCanId,
+};
 pub use data_model::CanBitrate;
 pub use test_data::CanFrameTestData;

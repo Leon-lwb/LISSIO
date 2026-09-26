@@ -26,6 +26,7 @@ pub mod checksum;
 pub mod decoder_block;
 pub mod hex;
 pub mod protocol_config;
+pub mod protocol_node;
 pub mod schema_frame;
 
 pub use checksum::ChecksumAlgorithm;
@@ -35,6 +36,7 @@ pub use decoder_block::{
 };
 pub use hex::parse_hex;
 pub use protocol_config::ProtocolConfig;
+pub use protocol_node::ProtocolNodeConfig;
 pub use schema_frame::{
     EncodeBlockDef, ProtocolSchema, SchemaPreset, TestDataLink, encode_by_blocks,
 };

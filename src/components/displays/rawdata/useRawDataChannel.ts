@@ -32,8 +32,8 @@ export function useRawDataChannel(widgetId?: string) {
     const globalLabel = (id: string): string | null => {
       const n = rfNodes.find((n) => n.id === id);
       const cfg = (n?.data as { config?: { kind?: string } } | undefined)?.config;
-      const spec = (n?.data as { spec?: { label?: string } } | undefined)?.spec;
-      if (n?.type === 'acquisition') return `${spec?.label ?? '?'} (${id.slice(-4)})`;
+      const device = (n?.data as { node?: { name?: string } } | undefined)?.node;
+      if (n?.type === 'acquisition') return `${device?.name ?? '?'} (${id.slice(-4)})`;
       if (n?.type === 'protocol') return cfg?.kind ?? 'Protocol';
       return null;
     };

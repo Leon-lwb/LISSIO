@@ -4,8 +4,6 @@ import {
   subscribeSpectrum,
   subscribeStringOutputs,
 } from '../../lib/buffers/graphSubscription';
-import { canFrameBuffer } from '../../lib/buffers/canBuffer';
-import { subscribeCanFrames } from '../../lib/buffers/canSubscription';
 import { logicSampleBuffer, decodedEventBuffer } from '../../lib/buffers/logicBuffer';
 import { subscribeLogicSamples, subscribeDecodedEvents } from '../../lib/buffers/logicSubscription';
 import {
@@ -35,7 +33,6 @@ import type { GraphCompileEvent } from './compileStatus';
 let unlistenFns: (() => void)[] = [];
 let textOutputSub: { cancel: () => void } | null = null;
 let spectrumSub: { cancel: () => void } | null = null;
-let canFramesSub: { cancel: () => void } | null = null;
 let logicSamplesSub: { cancel: () => void } | null = null;
 let decodedEventsSub: { cancel: () => void } | null = null;
 let storeUnsub: (() => void) | null = null;
@@ -276,11 +273,6 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
         spectrumCoalescer.push(batch.spectra);
       });
 
-      if (canFramesSub) canFramesSub.cancel();
-      canFramesSub = subscribeCanFrames((batch) => {
-        canFrameBuffer.push(batch.frames);
-      });
-
       if (logicSamplesSub) logicSamplesSub.cancel();
       logicSamplesSub = subscribeLogicSamples((batch) => {
         logicSampleBuffer.push(batch.samples);
@@ -391,10 +383,6 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
         if (spectrumSub) {
           spectrumSub.cancel();
           spectrumSub = null;
-        }
-        if (canFramesSub) {
-          canFramesSub.cancel();
-          canFramesSub = null;
         }
         if (logicSamplesSub) {
           logicSamplesSub.cancel();

@@ -326,9 +326,8 @@ fn can_source_cursor_backtracks_max_items_for_history() {
         "订阅即见最近 3 帧 (游标回溯 max_items)"
     );
     assert_eq!(source.backlog(), 0, "已追平");
-    // 追平后再 drain: 按契约返回当前缓冲快照 (cursor >= version 语义), 不再前进
-    let catch_up = source.drain(10).expect("追平语义: 返回当前缓冲");
-    assert_eq!(catch_up.frames.len(), 5);
+    // 追平后严格增量: 没有新版本就不再重复发送历史
+    assert!(source.drain(10).is_none());
 }
 
 #[test]

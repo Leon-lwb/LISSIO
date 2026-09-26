@@ -6,8 +6,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
+use tokio::time::Instant;
 use transport::CanBackend;
 
+use crate::AutomotiveError;
 use crate::constants::{DEFAULT_N_AR_MS, DEFAULT_N_AS_MS, DEFAULT_N_BS_MS, DEFAULT_N_CR_MS};
 use crate::rx::handle_received_frame;
 use crate::state::{IsoTpCmd, Pending};
@@ -37,6 +39,7 @@ pub async fn run_session(
     );
 
     loop {
+        let deadline = pending.values().map(|entry| entry.deadline).min();
         tokio::select! {
             cmd = cmd_rx.recv() => match cmd {
                 Some(IsoTpCmd::SendRequest { tx_id, rx_id, data, response_tx }) => {
@@ -47,6 +50,18 @@ pub async fn run_session(
                 }
                 Some(IsoTpCmd::Shutdown) | None => break,
             },
+            () = tokio::time::sleep_until(deadline.unwrap_or_else(Instant::now)), if deadline.is_some() => {
+                let now = Instant::now();
+                let expired: Vec<u32> = pending
+                    .iter()
+                    .filter_map(|(rx_id, entry)| (entry.deadline <= now).then_some(*rx_id))
+                    .collect();
+                for rx_id in expired {
+                    if let Some(mut entry) = pending.remove(&rx_id) {
+                        entry.complete(Err(AutomotiveError::IsoTpTimeout { tx_id: entry.tx_id }));
+                    }
+                }
+            }
             frame_result = frame_rx.recv() => {
                 match frame_result {
                     Ok(frame) => {

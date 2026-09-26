@@ -24,8 +24,8 @@ vi.mock('../../../lib/acquisition/capabilityCatalog', () => ({
   loadAdapterCapabilities: mocks.loadAdapterCapabilities,
 }));
 
-vi.mock('../../../lib/acquisition/useEndpointSnapshot', () => ({
-  useEndpointSnapshot: () => undefined,
+vi.mock('../../../lib/acquisition/useDeviceNodeSnapshot', () => ({
+  useDeviceNodeSnapshot: () => undefined,
 }));
 
 import { AcquisitionNode } from '../AcquisitionNode';
@@ -72,12 +72,15 @@ function data(withCard = true) {
   return {
     tabId: 'default',
     label: 'Modbus RTU',
-    spec: {
+    node: {
       id: 'acquisition-1',
-      label: 'Modbus RTU',
+      name: 'Modbus RTU',
+      driver: 'modbus-rtu',
+      schemaVersion: 1,
+      config: {},
       enabled: true,
       capabilityEndpointId: 'serial-client',
-      driver: { driverId: 'modbus-rtu', schemaVersion: 1, payload: {} },
+      children: [],
     },
     card: withCard ? buildDeviceCards([adapter()])[0] : undefined,
   };

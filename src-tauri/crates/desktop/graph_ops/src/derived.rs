@@ -250,10 +250,8 @@ fn port(name: &str, domain: DerivedPortDomain) -> NodeDerivedPort {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use data_model::device::{
-        DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-        EndpointSpec,
-    };
+    use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
+    use data_model::device_tree::{DriverId, NodeDecl, NodeId};
     use schema_types::{DecoderBlockDef, FieldType, SchemaPreset};
     use serde_json::json;
 
@@ -397,17 +395,15 @@ mod tests {
             id: "device-1".into(),
             tab_id: "tab1".into(),
             kind: NodeKind::Acquisition {
-                spec: EndpointSpec {
-                    id: EndpointId("device-1".into()),
-                    label: "serial".into(),
+                node: NodeDecl {
+                    id: NodeId::new("device-1").unwrap(),
+                    name: "serial".into(),
+                    driver: DriverId("serial".into()),
+                    schema_version: 1,
+                    config: json!({}),
                     enabled: true,
                     capability_endpoint_id: None,
-                    driver: DriverPayload {
-                        driver_id: DriverId("serial".into()),
-                        schema_version: 1,
-                        payload: json!({}),
-                    },
-                    simulation: None,
+                    children: Vec::new(),
                 },
                 ports: vec![
                     DevicePort {

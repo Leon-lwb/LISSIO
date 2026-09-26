@@ -19,6 +19,7 @@ import { dockDrag, type WidgetDragSpec } from '../../lib/dockDrag';
 import type { MathOp, StrOp } from '../../types';
 import { isUnaryMathOp } from '../../types';
 import { applyTestAttribute } from '../../lib/acquisition/simulation';
+import { deviceTreeCanvasNodes, deviceTreeCanvasEdges } from '../../lib/acquisition/deviceTreeModel';
 import { addPaletteNode } from '../../lib/utils/paletteCreation';
 import { REACT_FLOW_NODE_TYPES } from '../nodes/registry';
 import { validateConnection } from '../../lib/utils/connectionRules';
@@ -102,7 +103,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   // 所有节点均归属创建页签，画布只显示当前页签节点。
   const tabNodes = useMemo(
     () =>
-      rfNodes
+      [...rfNodes, ...deviceTreeCanvasNodes(rfNodes)]
         .filter((n) => n.data.tabId === tabId)
         .map((n) => ({ ...n, dragHandle: '.node-drag-handle' })),
     [rfNodes, tabId]
@@ -119,7 +120,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
 
   const tabEdges = useMemo(() => {
     const erroredSet = tabState === 'error' ? new Set(tabErrorEdges) : new Set<string>();
-    return rfEdges
+    return [...rfEdges, ...deviceTreeCanvasEdges(rfNodes)]
       .filter((e) => tabNodeIds.has(e.source) && tabNodeIds.has(e.target))
       .map((e) => {
         if (!erroredSet.has(e.id)) return e;
@@ -130,7 +131,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
           className: 'compile-error-edge',
         };
       });
-  }, [rfEdges, tabNodeIds, tabErrorEdges, tabState]);
+  }, [rfEdges, rfNodes, tabNodeIds, tabErrorEdges, tabState]);
 
   // 选中的节点 → 停靠属性面板
   const selectedStructuralNode = useMemo(
@@ -217,7 +218,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       const state = useAppStore.getState();
       const check = validateConnection(
         {
-          nodes: state.rfNodes,
+          nodes: [...state.rfNodes, ...deviceTreeCanvasNodes(state.rfNodes)],
           derivedPorts: state.derivedPorts,
           detectedChannels: state.detectedChannels,
         },
@@ -253,8 +254,8 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       <ReactFlow
         nodes={tabNodes}
         edges={tabEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={changes => onNodesChange(changes.filter(change => 'id' in change && rfNodes.some(node => node.id === change.id)))}
+        onEdgesChange={changes => onEdgesChange(changes.filter(change => 'id' in change && rfEdges.some(edge => edge.id === change.id)))}
         onConnect={onConnect}
         isValidConnection={isValidConnection}
         nodeTypes={REACT_FLOW_NODE_TYPES}

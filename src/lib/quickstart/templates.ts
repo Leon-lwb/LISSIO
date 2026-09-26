@@ -16,7 +16,7 @@ import { ALL_BACKUP_SECTIONS, type AppSnapshot } from '../tauri/appExport';
 import { schemaFromProtocolConfig } from '../utils/protocolSchema';
 import { rawDataPortId } from '../utils/nodeDef';
 import type { DockNode, DockCard } from '../../store/dockStore';
-import type { WidgetConfig, DataTab, ControlTab, EndpointSpec, ProtocolConfig, ProtocolSchema, SimulationConfig, SlcanConfig } from '../../types';
+import type { WidgetConfig, DataTab, ControlTab, DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, SimulationConfig, SlcanConfig } from '../../types';
 
 const TAB = 'default';
 /// 模板内结构节点 id (应用时由 applySnapshot/mergeTemplate 处理)
@@ -56,43 +56,51 @@ function edge(
   return { id, source, sourceHandle, target, targetHandle };
 }
 
-type TemplateDevice = Pick<EndpointSpec, 'label' | 'driver'> & { simulation?: SimulationConfig };
+type TemplateDevice = Pick<DeviceTreeNodeDecl, 'name' | 'driver' | 'schemaVersion' | 'config'> & { simulation?: SimulationConfig };
 
 function simulatedSerial(channels: number, sampleRate: number): TemplateDevice {
   return {
-    label: 'Serial',
-    driver: { driverId: 'serial', schemaVersion: 1, payload: {
+    name: 'Serial',
+    driver: 'serial',
+    schemaVersion: 1,
+    config: {
       port_name: '', baud_rate: 115200, data_bits: 8, parity: 'none', stop_bits: 'one', flow_control: 'none',
-    } },
+    },
     simulation: { ...defaultSimulation(), channels, sampleRate },
   };
 }
 
-function deviceNode(device: TemplateDevice): Node {
+function deviceNode(device: TemplateDevice, protocol: ProtocolConfig, schema?: ProtocolSchema): Node {
   return {
     id: TRANSPORT_ID, type: 'acquisition', position: { x: 40, y: 40 }, width: 200,
-    data: { tabId: TAB, label: device.label,
-      spec: { id: TRANSPORT_ID, label: device.label, enabled: true, capabilityEndpointId: 'device', simulation: device.simulation ?? null,
-        driver: device.driver },
+    data: { tabId: TAB, label: device.name,
+      node: {
+        id: TRANSPORT_ID,
+        name: device.name,
+        driver: device.driver,
+        schemaVersion: device.schemaVersion,
+        config: device.config,
+        enabled: true,
+        capabilityEndpointId: 'device',
+        children: [...(device.simulation ? [{
+          id: `${TRANSPORT_ID}::simulation`,
+          name: 'simulation',
+          driver: 'simulation',
+          schemaVersion: 1,
+          config: device.simulation as unknown as Record<string, unknown>,
+          enabled: true,
+          children: [],
+        }] : []), {
+          id: PROTOCOL_ID,
+          name: schema?.preset === 'custom' ? 'Custom' : protocol.kind,
+          driver: 'protocol-engine',
+          schemaVersion: 1,
+          config: { protocol, convertTo: null, schema: schema ?? schemaFromProtocolConfig(protocol) },
+          enabled: true,
+          children: [],
+        }],
+      },
       ports: [{ id: 'tx', direction: 'input', domain: 'bytes' }, { id: 'rx', direction: 'output', domain: 'bytes' }],
-    },
-  };
-}
-
-/// Protocol 节点 — schema 模型: 预设经 schemaFromProtocolConfig 生成,
-/// 自定义模板可经 schema 参数传 preset='custom' 的帧定义
-function protocolNode(config: ProtocolConfig, channels = 4, schema?: ProtocolSchema): Node {
-  return {
-    id: PROTOCOL_ID,
-    type: 'protocol',
-    position: { x: 260, y: 40 },
-    data: {
-      tabId: TAB,
-      config,
-      convertTo: null,
-      channels,
-      schema: schema ?? schemaFromProtocolConfig(config),
-      label: schema?.preset === 'custom' ? 'Custom' : config.kind,
     },
   };
 }
@@ -190,7 +198,6 @@ function buildSnapshot(opts: {
   widgetNodes: Node[];
   edges: Edge[];
   extraDataTabs?: DataTab[];
-  sourceChannels?: number;
   /// 自定义协议 schema (preset='custom'); 缺省由 protocol 配置工厂生成预设 schema
   protocolSchema?: ProtocolSchema;
 }): AppSnapshot {
@@ -224,21 +231,10 @@ function buildSnapshot(opts: {
     activeDataTabId,
     activeControlTabId: TAB,
     graphs: [{ tab_id: TAB, documents: [
-      deviceNode(opts.device),
-      protocolNode(opts.protocol, opts.sourceChannels ?? 4, opts.protocolSchema),
+      deviceNode(opts.device, opts.protocol, opts.protocolSchema),
       ...opts.widgetNodes,
     ].map(nodeDocument),
-    edges: [
-      // Transport.rx → Protocol.in 字节边
-      {
-        id: 'edge-transport-protocol',
-        source: TRANSPORT_ID,
-        sourceHandle: 'rx',
-        target: PROTOCOL_ID,
-        targetHandle: 'in',
-      },
-      ...opts.edges,
-    ].map(edgeToGraphEdge) }],
+    edges: opts.edges.map(edgeToGraphEdge) }],
     rawDataViewPrefs: {},
     },
     dockRoot,
@@ -307,8 +303,8 @@ function canTemplate(): AppSnapshot {
   return buildSnapshot({
     name: 'CAN',
     protocol: { kind: 'Slcan' },
-    device: { label: 'Slcan', driver: { driverId: 'slcan', schemaVersion: 1,
-      payload: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } satisfies SlcanConfig } },
+    device: { name: 'Slcan', driver: 'slcan', schemaVersion: 1,
+      config: { port_name: '', baud_rate: 115200, can_bitrate: 'Bps500k' } satisfies SlcanConfig },
     widgetNodes: [],
     edges: [],
     extraDataTabs: [{ id: 'can-main', type: 'can', name: 'CAN', closable: true }],
@@ -447,7 +443,6 @@ function customProtocolTemplate(): AppSnapshot {
     // 测试属性按自定义 schema 的编码块生成字节流，custom decode 负责解析。
     protocol: { kind: 'JustFloat', channels: 2 },
     protocolSchema: customSchema,
-    sourceChannels: 2,
     device: simulatedSerial(2, 1000),
     widgetNodes: [
       wnode('wf-custom', wf, 560, 60),

@@ -5,6 +5,7 @@
 //! [`app::apply_workspace_run`], 本模块只做参数包装与 JSON 映射。
 
 use app::RunAction;
+use data_model::device_tree::NodeId;
 use events::{BackendEventSink, EventSinkHandle};
 use serde_json::{Value, json};
 
@@ -12,10 +13,20 @@ use crate::toolbox::Toolbox;
 
 /// 列出全部已打开端点快照。
 pub fn list_endpoints(tb: &Toolbox) -> Value {
-    json!({ "endpoints": tb.transport.snapshots() })
+    json!({ "nodes": tb.transport.snapshots() })
 }
 
-/// 按图中设备节点 id 打开端点 (读取节点内 EndpointSpec)。
+/// 列出生产设备树节点快照。
+pub fn list_device_tree_nodes(tb: &Toolbox) -> Value {
+    tb.transport.device_tree_nodes()
+}
+
+/// 列出生产设备树驱动 manifest。
+pub fn list_driver_manifests(tb: &Toolbox) -> Value {
+    tb.transport.driver_manifests()
+}
+
+/// 按图中设备树节点 id 打开采集子树。
 pub async fn open_endpoint(
     tb: &Toolbox,
     sink: &EventSinkHandle,
@@ -27,7 +38,7 @@ pub async fn open_endpoint(
         .lock()
         .get(node_id)
         .and_then(|n| match &n.kind {
-            kind::NodeKind::Acquisition { spec, .. } => Some(spec.clone()),
+            kind::NodeKind::Acquisition { node, .. } => Some(node.clone()),
             _ => None,
         })
         .ok_or_else(|| format!("设备节点不存在: {node_id}"))?;
@@ -35,16 +46,17 @@ pub async fn open_endpoint(
     serde_json::to_value(snapshot).map_err(|e| e.to_string())
 }
 
-/// 关闭端点 (endpoint_id = 图中设备节点 id)。
+/// 关闭采集节点子树。
 pub async fn close_endpoint(
     tb: &Toolbox,
     sink: &dyn BackendEventSink,
-    endpoint_id: &str,
+    node_id: &str,
 ) -> Result<Value, String> {
-    app::close_device_session(&tb.transport, &tb.data_plane, sink, endpoint_id)
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
+    app::close_device_session(&tb.transport, &tb.data_plane, sink, &node_id)
         .await
         .map_err(|e| e.to_string())?;
-    Ok(json!({ "ok": true, "endpoint_id": endpoint_id }))
+    Ok(json!({ "ok": true, "nodeId": node_id.to_string() }))
 }
 
 /// 工作区运行控制 (start / pause / stop) — 返回 `{state, epoch}` 并广播事件。
@@ -59,16 +71,16 @@ pub async fn run_workspace(
     serde_json::to_value(snapshot).map_err(|e| e.to_string())
 }
 
-/// 读取端点点位值。
+/// 读取采集节点点位值。
 pub async fn read_points(
     tb: &Toolbox,
-    endpoint_id: &str,
+    node_id: &str,
     point_ids: Vec<points::PointId>,
 ) -> Result<Value, String> {
     let result = tb
         .transport
         .read(
-            &data_model::device::EndpointId(endpoint_id.to_string()),
+            &NodeId::new(node_id).map_err(|error| error.to_string())?,
             point_ids,
         )
         .await
@@ -76,16 +88,16 @@ pub async fn read_points(
     serde_json::to_value(result).map_err(|e| e.to_string())
 }
 
-/// 写入端点点位值。
+/// 写入采集节点点位值。
 pub async fn write_points(
     tb: &Toolbox,
-    endpoint_id: &str,
+    node_id: &str,
     request: points::WriteRequest,
 ) -> Result<Value, String> {
     let result = tb
         .transport
         .write(
-            &data_model::device::EndpointId(endpoint_id.to_string()),
+            &NodeId::new(node_id).map_err(|error| error.to_string())?,
             request,
         )
         .await

@@ -1126,9 +1126,12 @@ helpAiSteps: |-
 
 # CAN
 canFrames: CAN 帧
+canInvalidFilterId: CAN ID 过滤值无效，请输入 0x000–0x1FFFFFFF 范围内的 HEX ID
 canFilterById: 按 ID 过滤 (HEX)
 canSender: CAN 发送器
 frameList: 帧列表
+canLatestById: ID 最新值
+canFrameCount: 帧数
 busActivity: 总线活动
 idDistribution: ID 分布统计
 extendedFrame: 扩展帧
@@ -1625,3 +1628,44 @@ paletteJumpTo: 跳转到分类
 addDefaultCanvas: 添加默认画布
 defaultCanvas: 默认画布
 defaultCanvasUnavailable: 无法添加默认画布，请检查串口设备目录后重试。
+
+deviceTreeTitle: 设备树
+deviceTreeHint: 将连接、协议引擎和测试数据装配成设备树。协议输出可在画布连接到显示控件。
+deviceTreeEmpty: 尚无设备。添加连接或测试数据源开始设计。
+deviceTreeSearch: 搜索设备、协议或节点 ID
+deviceTreeAddRoot: 添加设备
+deviceTreeAddProtocol: 添加协议引擎
+deviceTreeAddSimulation: 添加测试数据
+deviceTreeEnabled: 启用节点
+deviceTreeRemove: 删除子树
+deviceTreeConfigure: 节点配置
+deviceTreeSelect: 选择节点以编辑配置
+deviceTreeReconnect: 修改配置或拓扑会关闭所属设备，请重新连接以应用更改。
+deviceTreeCanvasNode: 此节点由画布连线归属设备，点击下方按钮编辑。
+deviceTreeEditCanvas: 打开画布节点属性
+deviceTreeUnavailable: 无法读取设备目录
+deviceTreePath: 节点路径
+deviceTreeDisabled: 已禁用
+deviceTreeClosed: 未连接
+deviceTreeOnline: 已连接
+deviceTreeBusy: 正在连接
+deviceTreeFailed: 连接异常
+deviceTreeCollapse: 折叠
+deviceTreeExpand: 展开
+deviceTreeInvalidName: 名称不能为空、不能包含 /，且不能与兄弟节点重名。
+deviceTreeSimulationHint: 启用后用测试数据替代父设备输入，不访问真实硬件。
+deviceTreeSignal: 波形
+deviceTreeFrequency: 频率 (Hz)
+deviceTreeAmplitude: 幅值
+deviceTreeOffset: 偏移
+deviceTreeSampleRate: 采样率 (Hz)
+deviceTreeSeed: 随机种子
+deviceTreeEncoding: 生成格式
+deviceTreeAutoEncoding: 自动匹配协议引擎
+deviceTreeJsonConfig: 驱动配置 (JSON)
+deviceTreeApply: 应用配置
+deviceTreeDriver: 驱动
+deviceTreeCatalog: 发现硬件设备
+deviceTreeSubtreeHint: 删除节点及其子节点，并移除相关数据连线。
+deviceTreeAddChild: 添加子节点
+deviceTreeCanvasBadge: 画布

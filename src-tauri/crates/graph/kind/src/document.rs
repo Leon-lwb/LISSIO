@@ -1,6 +1,7 @@
 //! The editable node document. Runtime ports and state are derived, never persisted here.
 use crate::{NodeDef, NodeKind};
-use data_model::device::{DevicePort, DriverPayload, EndpointId, EndpointSpec, SimulationConfig};
+use data_model::device::DevicePort;
+use data_model::device_tree::NodeDecl;
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -14,20 +15,11 @@ pub struct NodeLayout {
     pub height: Option<f64>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NodeAttributes {
-    pub test_data: Option<SimulationConfig>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "config", rename_all = "camelCase")]
 pub enum NodeBusiness {
     Device {
-        enabled: bool,
-        #[serde(rename = "capabilityEndpointId")]
-        capability_endpoint_id: Option<String>,
-        driver: DriverPayload,
+        node: NodeDecl,
     },
     Protocol {
         protocol: ProtocolConfig,
@@ -62,7 +54,6 @@ pub struct NodeDocument {
     pub layout: NodeLayout,
     #[serde(flatten)]
     pub business: NodeBusiness,
-    pub attributes: NodeAttributes,
 }
 
 impl NodeDocument {
@@ -79,27 +70,16 @@ impl NodeDocument {
         {
             return Err("invalid node layout".into());
         }
-        if self.attributes.test_data.is_some()
-            && !matches!(self.business, NodeBusiness::Device { .. })
-        {
-            return Err("test data attributes require a device".into());
-        }
         let kind = match &self.business {
-            NodeBusiness::Device {
-                enabled,
-                capability_endpoint_id,
-                driver,
-            } => NodeKind::Acquisition {
-                spec: EndpointSpec {
-                    id: EndpointId(self.id.clone()),
-                    label: self.label.clone(),
-                    enabled: *enabled,
-                    capability_endpoint_id: capability_endpoint_id.clone(),
-                    driver: driver.clone(),
-                    simulation: self.attributes.test_data.clone(),
-                },
-                ports,
-            },
+            NodeBusiness::Device { node } => {
+                if node.id.as_str() != self.id || node.name != self.label {
+                    return Err("device node identity must match its document identity".into());
+                }
+                NodeKind::Acquisition {
+                    node: node.clone(),
+                    ports,
+                }
+            }
             NodeBusiness::Protocol {
                 protocol,
                 convert_to,

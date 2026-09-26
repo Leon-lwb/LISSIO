@@ -8,7 +8,9 @@
 //! - CanFrameBatch 构造与状态
 //! - CandleDeviceInfo 序列化
 
-use can::{CanBitrate, CanDirection, CanFilter, CanFrame, CanFrameBatch, CanFrameFilter};
+use can::{
+    CanBitrate, CanDirection, CanDlc, CanFilter, CanFrame, CanFrameBatch, CanFrameFilter, CanId,
+};
 
 #[test]
 fn direction_default_is_rx() {
@@ -56,7 +58,7 @@ fn frame_serde_roundtrip() {
         extended: false,
         rtr: true,
         dlc: 3,
-        data: vec![0xDE, 0xAD, 0xBE],
+        data: Vec::new(),
         direction: CanDirection::Tx,
     };
     let json = serde_json::to_string(&f).unwrap();
@@ -202,10 +204,8 @@ fn filter_enabled_always_matches_with_full_mask() {
 #[test]
 fn frame_filter_direction_only_rx() {
     let f = CanFrameFilter {
-        rx_only: true,
-        tx_only: false,
-        id_whitelist: vec![],
-        id_blacklist: vec![],
+        direction: Some(CanDirection::Rx),
+        ..CanFrameFilter::default()
     };
     let rx = CanFrame::new(0, 1, vec![], CanDirection::Rx);
     let tx = CanFrame::new(0, 1, vec![], CanDirection::Tx);
@@ -216,53 +216,67 @@ fn frame_filter_direction_only_rx() {
 #[test]
 fn frame_filter_direction_only_tx() {
     let f = CanFrameFilter {
-        rx_only: false,
-        tx_only: true,
-        id_whitelist: vec![],
-        id_blacklist: vec![],
+        direction: Some(CanDirection::Tx),
+        ..CanFrameFilter::default()
     };
     assert!(!f.matches(&CanFrame::new(0, 1, vec![], CanDirection::Rx)));
     assert!(f.matches(&CanFrame::new(0, 1, vec![], CanDirection::Tx)));
 }
 
 #[test]
-fn frame_filter_id_whitelist_strict() {
+fn frame_filter_id_and_mask_match_together() {
     let f = CanFrameFilter {
-        rx_only: false,
-        tx_only: false,
-        id_whitelist: vec![0x100, 0x200],
-        id_blacklist: vec![],
+        id: Some(0x123),
+        id_mask: Some(0xff0),
+        ..CanFrameFilter::default()
     };
-    assert!(f.matches(&CanFrame::new(0, 0x100, vec![], CanDirection::Rx)));
-    assert!(!f.matches(&CanFrame::new(0, 0x300, vec![], CanDirection::Rx)));
+    assert!(f.matches(&CanFrame::new(0, 0x123, vec![], CanDirection::Rx)));
+    assert!(!f.matches(&CanFrame::new(0, 0x133, vec![], CanDirection::Rx)));
 }
 
 #[test]
-fn frame_filter_id_blacklist_strict() {
+fn frame_filter_range_and_payload_match() {
     let f = CanFrameFilter {
-        rx_only: false,
-        tx_only: false,
-        id_whitelist: vec![],
-        id_blacklist: vec![0x100],
+        id_min: Some(0x100),
+        id_max: Some(0x1ff),
+        rtr: Some(false),
+        data_pattern: Some(vec![0xaa, 0xbb]),
+        ..CanFrameFilter::default()
     };
-    assert!(!f.matches(&CanFrame::new(0, 0x100, vec![], CanDirection::Rx)));
-    assert!(f.matches(&CanFrame::new(0, 0x200, vec![], CanDirection::Rx)));
+    assert!(f.matches(&CanFrame::new(
+        0,
+        0x123,
+        vec![0, 0xaa, 0xbb],
+        CanDirection::Rx
+    )));
+    assert!(!f.matches(&CanFrame::new(
+        0,
+        0x223,
+        vec![0, 0xaa, 0xbb],
+        CanDirection::Rx
+    )));
+    assert!(!f.matches(&CanFrame::new(0, 0x123, vec![0, 0xaa], CanDirection::Rx)));
 }
 
 #[test]
-fn frame_filter_combined_rules() {
-    let f = CanFrameFilter {
-        rx_only: true,
-        tx_only: false,
-        id_whitelist: vec![1, 2, 3],
-        id_blacklist: vec![3],
-    };
-    // Rx, id=1, 不在黑名单 → 通过
-    assert!(f.matches(&CanFrame::new(0, 1, vec![], CanDirection::Rx)));
-    // Rx, id=3, 在黑名单 → 拦截
-    assert!(!f.matches(&CanFrame::new(0, 3, vec![], CanDirection::Rx)));
-    // Tx 即使 id 正确 → 方向拦截
-    assert!(!f.matches(&CanFrame::new(0, 1, vec![], CanDirection::Tx)));
+fn frame_filter_validation_rejects_impossible_queries() {
+    assert!(
+        CanFrameFilter {
+            id_min: Some(2),
+            id_max: Some(1),
+            ..CanFrameFilter::default()
+        }
+        .validate()
+        .is_err()
+    );
+    assert!(
+        CanFrameFilter {
+            data_pattern: Some(Vec::new()),
+            ..CanFrameFilter::default()
+        }
+        .validate()
+        .is_err()
+    );
 }
 
 #[test]
@@ -289,4 +303,71 @@ fn frame_batch_serde_roundtrip() {
     let restored: CanFrameBatch = serde_json::from_str(&json).unwrap();
     assert_eq!(restored.seq, 42);
     assert_eq!(restored.frames.len(), 1);
+}
+
+#[test]
+fn frame_json_shape_remains_backward_compatible() {
+    let frame = CanFrame::new(123, 0x123, vec![0xaa], CanDirection::Rx);
+    let json = serde_json::to_value(&frame).unwrap();
+    assert_eq!(
+        serde_json::from_value::<serde_json::Value>(json).unwrap(),
+        serde_json::json!({
+            "timestamp": 123,
+            "id": 0x123,
+            "extended": false,
+            "rtr": false,
+            "dlc": 1,
+            "data": [0xaa],
+            "direction": "Rx",
+        })
+    );
+}
+
+#[test]
+fn frame_deserialization_normalizes_legacy_remote_payload() {
+    let frame: CanFrame = serde_json::from_str(
+        r#"{"timestamp":1,"id":2,"extended":false,"rtr":true,"dlc":3,"data":[1,2,3],"direction":"Tx"}"#,
+    )
+    .unwrap();
+    assert!(frame.rtr);
+    assert!(frame.data.is_empty());
+    assert_eq!(frame.dlc, 3);
+    assert!(frame.validate().is_ok());
+}
+
+#[test]
+fn frame_deserialization_rejects_invalid_id_dlc_and_data_length() {
+    assert!(serde_json::from_str::<CanFrame>(
+        r#"{"timestamp":0,"id":0x800,"extended":false,"rtr":false,"dlc":0,"data":[],"direction":"Rx"}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<CanFrame>(
+        r#"{"timestamp":0,"id":1,"extended":false,"rtr":false,"dlc":9,"data":[],"direction":"Rx"}"#
+    )
+    .is_err());
+    assert!(serde_json::from_str::<CanFrame>(
+        r#"{"timestamp":0,"id":1,"extended":false,"rtr":false,"dlc":2,"data":[1],"direction":"Rx"}"#
+    )
+    .is_err());
+}
+
+#[test]
+fn frame_filter_deserializes_frontend_contract_and_rejects_unknown_fields() {
+    let filter: CanFrameFilter = serde_json::from_str(
+        r#"{"id":291,"id_mask":4095,"id_min":1,"id_max":4095,"extended":false,"rtr":false,"direction":"Rx","data_pattern":[170]}"#,
+    )
+    .unwrap();
+    assert_eq!(filter.id, Some(0x123));
+    assert_eq!(filter.direction, Some(CanDirection::Rx));
+    assert!(serde_json::from_str::<CanFrameFilter>(r#"{"rx_only":true}"#).is_err());
+}
+
+#[test]
+fn can_id_and_dlc_types_enforce_classic_bounds() {
+    assert_eq!(CanId::standard(0x7ff).unwrap().raw(), 0x7ff);
+    assert!(CanId::standard(0x800).is_err());
+    assert_eq!(CanId::extended(0x1fff_ffff).unwrap().raw(), 0x1fff_ffff);
+    assert!(CanId::extended(0x2000_0000).is_err());
+    assert_eq!(CanDlc::new(8).unwrap().as_usize(), 8);
+    assert!(CanDlc::new(9).is_none());
 }

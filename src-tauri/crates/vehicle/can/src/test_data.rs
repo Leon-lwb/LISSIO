@@ -1,6 +1,7 @@
 //! CAN frame test data generator — for constructing CAN frame streams in unit/integration tests
 
-use crate::can_frame::{CanDirection, CanFrame};
+use crate::can_frame::CanFrame;
+use crate::can_model::CanDirection;
 
 /// CAN frame test data generator
 ///

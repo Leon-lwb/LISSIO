@@ -2,14 +2,14 @@ import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/appStore';
 import { canFrameBuffer, CanFrameBuffer } from '../../../lib/buffers/canBuffer';
-import { clearCanBuffer, subscribeCanFramesFiltered, type CanFrameFilterOptions } from '../../../lib/buffers/canSubscription';
+import { clearCanBuffer, subscribeCanFramesFiltered } from '../../../lib/buffers/canSubscription';
 import { useSelection } from '../../../lib/hooks/useSelection';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { SearchInput } from '../../ui/SearchInput';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
-import type { CanFrame } from '../../../types';
+import type { CanFrame, CanFrameFilter } from '../../../types';
 
 const ROW_HEIGHT = 24;
 
@@ -33,12 +33,12 @@ function formatCanId(id: number, extended: boolean): string {
 }
 
 /// 格式化数据为 HEX 字符串
-function formatDataHex(data: number[]): string {
+function formatDataHex(data: readonly number[]): string {
   return data.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
 }
 
 /// 将帧列表转换为 CSV 文本
-function framesToCsv(frames: CanFrame[]): string {
+function framesToCsv(frames: readonly CanFrame[]): string {
   const rows = [
     ['Time', 'Dir', 'ID', 'Extended', 'RTR', 'DLC', 'Data'].join(','),
     ...frames.map((f) =>
@@ -57,7 +57,7 @@ function framesToCsv(frames: CanFrame[]): string {
 }
 
 /// 导出帧列表为 CSV 文件
-function exportFramesToCsv(frames: CanFrame[]): void {
+function exportFramesToCsv(frames: readonly CanFrame[]): void {
   const blob = new Blob([framesToCsv(frames)], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -133,23 +133,23 @@ export function CanFrameList() {
   const userScrolledRef = useRef(false);
   const isAutoScrollingRef = useRef(false);
 
-  // 过滤条件 (后端过滤): 方向 + ID (HEX, 解析失败则忽略 ID 条件)
+  // 过滤条件 (后端过滤): 方向 + ID (HEX); 非法 ID 显式报错，不发送空过滤请求
   const isFiltered = filterDir !== 'all' || filterId.trim() !== '';
-  const filterOptions = useMemo<CanFrameFilterOptions | null>(() => {
-    if (!isFiltered) return null;
-    const opts: CanFrameFilterOptions = {};
+  const parsedFilterId = useMemo(() => parseCanFilterId(filterId), [filterId]);
+  const filterOptions = useMemo<CanFrameFilter | null>(() => {
+    if (!isFiltered || parsedFilterId.kind === 'error') return null;
+    const opts: CanFrameFilter = {};
     if (filterDir !== 'all') opts.direction = filterDir;
-    const idText = filterId.trim().toLowerCase().replace(/^0x/, '');
-    if (idText) {
-      const idNum = parseInt(idText, 16);
-      if (!isNaN(idNum)) opts.id = idNum;
-    }
+    if (parsedFilterId.kind === 'id') opts.id = parsedFilterId.value;
     return opts;
-  }, [isFiltered, filterDir, filterId]);
+  }, [isFiltered, parsedFilterId, filterDir]);
 
   // 过滤模式: 本地 buffer + 后端过滤订阅 (切换条件时重建, 后端重推匹配历史)
   const [filteredBuffer, setFilteredBuffer] = useState<CanFrameBuffer | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<unknown>(null);
+  const hasSubscriptionError = parsedFilterId.kind === 'error' || subscriptionError !== null;
   useEffect(() => {
+    setSubscriptionError(null);
     if (!filterOptions) {
       setFilteredBuffer(null);
       return;
@@ -159,7 +159,11 @@ export function CanFrameList() {
     const sub = subscribeCanFramesFiltered(
       filterOptions,
       (batch) => buf.push(batch.frames),
-      { intervalMs: 100, maxFrames: 500 }
+      {
+        intervalMs: 100,
+        maxFrames: 500,
+        onError: (error) => setSubscriptionError(error),
+      },
     );
     return () => sub.cancel();
   }, [filterOptions]);
@@ -232,7 +236,9 @@ export function CanFrameList() {
   const copySelected = useCallback(async () => {
     const indices = selection.selectedSorted;
     if (indices.length === 0) return;
-    const selected = indices.map((i) => frames[i]).filter(Boolean);
+    const selected = indices
+      .map((index) => frames[index])
+      .filter((frame): frame is CanFrame => frame !== undefined);
     const text = framesToCsv(selected);
     const ok = await writeTextToClipboard(text);
     if (ok) {
@@ -295,6 +301,14 @@ export function CanFrameList() {
             </button>
           ))}
         </div>
+
+        {hasSubscriptionError && (
+          <div className="w-full text-[11px] text-red" role="alert">
+            {parsedFilterId.kind === 'error'
+              ? t(lang, 'canInvalidFilterId')
+              : formatSubscriptionError(subscriptionError)}
+          </div>
+        )}
 
         <div className="flex-1 min-w-2" />
 
@@ -404,4 +418,25 @@ export function CanFrameList() {
       </div>
     </div>
   );
+}
+
+
+type ParsedCanFilterId =
+  | { kind: 'empty' }
+  | { kind: 'id'; value: number }
+  | { kind: 'error' };
+
+function parseCanFilterId(input: string): ParsedCanFilterId {
+  const text = input.trim().toLowerCase().replace(/^0x/, '');
+  if (text === '') return { kind: 'empty' };
+  if (!/^[0-9a-f]+$/.test(text)) return { kind: 'error' };
+  const value = Number.parseInt(text, 16);
+  if (!Number.isSafeInteger(value) || value < 0 || value > 0x1fff_ffff) {
+    return { kind: 'error' };
+  }
+  return { kind: 'id', value };
+}
+
+function formatSubscriptionError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

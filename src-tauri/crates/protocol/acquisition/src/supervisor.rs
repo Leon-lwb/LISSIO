@@ -1,4 +1,6 @@
-use crate::{AcquisitionError, DriverContext, DriverPayload, SourceFactory};
+use crate::{
+    AcquisitionError, DriverContext, DriverPayload, SourceFactory, SourceSession, ValidatedConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
@@ -35,8 +37,10 @@ impl Default for SourceSupervisor {
     }
 }
 
+/// 监督器句柄。`current_session` 让节点运行时始终投影当前重连会话。
 pub struct SupervisorHandle {
     state: watch::Receiver<SourceState>,
+    session: watch::Receiver<Option<Arc<dyn SourceSession>>>,
     cancel: watch::Sender<bool>,
     task: Mutex<Option<JoinHandle<()>>>,
 }
@@ -48,30 +52,51 @@ impl SourceSupervisor {
         payload: DriverPayload,
         context: DriverContext,
     ) -> SupervisorHandle {
+        self.spawn_with_validated(factory, None, payload, context)
+    }
+
+    /// 使用已经通过语义校验的首个配置句柄启动监督器；重连仍按 payload 重新校验。
+    pub fn spawn_with_validated(
+        self,
+        factory: Arc<dyn SourceFactory>,
+        validated: Option<ValidatedConfig>,
+        payload: DriverPayload,
+        context: DriverContext,
+    ) -> SupervisorHandle {
         let (state_tx, state) = watch::channel(SourceState::Disabled);
+        let (session_tx, session) = watch::channel(None);
         let (cancel, mut cancel_rx) = watch::channel(false);
         let task = tokio::spawn(async move {
             let mut attempt = 0_u32;
-            let mut epoch = 0_u64;
+            let mut epoch = context.connection_epoch;
+            let mut initial_validated = validated;
             loop {
                 if *cancel_rx.borrow() {
                     break;
                 }
                 let _ = state_tx.send(SourceState::Validating);
-                let validated = match factory.validate(&payload) {
-                    Ok(value) => value,
-                    Err(error) => {
-                        let _ = state_tx.send(SourceState::Degraded {
-                            detail: error.to_string(),
-                        });
-                        break;
+                let validated = if let Some(value) = initial_validated.take() {
+                    value
+                } else {
+                    match factory.validate(&payload) {
+                        Ok(value) => value,
+                        Err(error) => {
+                            let _ = state_tx.send(SourceState::Degraded {
+                                detail: error.to_string(),
+                            });
+                            break;
+                        }
                     }
                 };
                 let _ = state_tx.send(SourceState::Connecting);
-                match factory.open(validated, context.clone()).await {
+                let mut open_context = context.clone();
+                open_context.connection_epoch = epoch;
+                match factory.open(validated, open_context).await {
                     Ok(session) => {
-                        epoch = epoch.saturating_add(1).max(session.epoch());
+                        let session: Arc<dyn SourceSession> = session.into();
+                        epoch = epoch.max(session.epoch());
                         attempt = 0;
+                        session_tx.send_replace(Some(session.clone()));
                         let _ = state_tx.send(SourceState::Online {
                             connection_epoch: epoch,
                         });
@@ -85,6 +110,7 @@ impl SourceSupervisor {
                                 let _ = changed;
                             }
                         }
+                        session_tx.send_replace(None);
                         let _ = session.close().await;
                         if *cancel_rx.borrow() {
                             break;
@@ -108,16 +134,19 @@ impl SourceSupervisor {
                     .initial_backoff
                     .saturating_mul(factor)
                     .min(self.max_backoff);
+                epoch = epoch.saturating_add(1);
                 tokio::select! {
                     () = tokio::time::sleep(delay) => {}
                     changed = cancel_rx.changed() => { let _ = changed; }
                 }
             }
+            session_tx.send_replace(None);
             let _ = state_tx.send(SourceState::Closing);
             let _ = state_tx.send(SourceState::Closed);
         });
         SupervisorHandle {
             state,
+            session,
             cancel,
             task: Mutex::new(Some(task)),
         }
@@ -125,8 +154,37 @@ impl SourceSupervisor {
 }
 
 impl SupervisorHandle {
+    /// Observe session replacement without coupling consumers to reconnect policy.
+    pub fn sessions(&self) -> watch::Receiver<Option<Arc<dyn SourceSession>>> {
+        self.session.clone()
+    }
+
     pub fn state(&self) -> watch::Receiver<SourceState> {
         self.state.clone()
+    }
+
+    /// 返回当前可用会话；重连空窗期为 `None`。
+    pub fn current_session(&self) -> Option<Arc<dyn SourceSession>> {
+        self.session.borrow().clone()
+    }
+
+    /// 等待首次打开进入可观测的稳定状态（在线、失败或退避）。
+    pub async fn wait_for_settled(&self) {
+        let mut state = self.state();
+        loop {
+            if matches!(
+                *state.borrow(),
+                SourceState::Online { .. }
+                    | SourceState::Degraded { .. }
+                    | SourceState::Backoff { .. }
+                    | SourceState::Closed
+            ) {
+                return;
+            }
+            if state.changed().await.is_err() {
+                return;
+            }
+        }
     }
 
     pub async fn close(&self) -> Result<(), AcquisitionError> {

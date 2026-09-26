@@ -2,10 +2,8 @@
 
 use buffer_graph::Edge;
 use data_model::DataFrame;
-use data_model::device::{
-    DevicePort, DevicePortDirection, DevicePortDomain, DriverId, DriverPayload, EndpointId,
-    EndpointSpec,
-};
+use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
+use data_model::device_tree::{DriverId, NodeDecl, NodeId};
 use filter::FilterConfig;
 use schema_types::ProtocolConfig;
 use spectrum::SpectrumOutput;
@@ -56,17 +54,15 @@ pub fn make_device_in(id: &str, tab_id: &str) -> NodeDef {
         id: id.to_string(),
         tab_id: tab_id.to_string(),
         kind: NodeKind::Acquisition {
-            spec: EndpointSpec {
-                id: EndpointId(id.into()),
-                label: "device".into(),
+            node: NodeDecl {
+                id: NodeId::new(id).expect("test node id"),
+                name: "device".into(),
+                driver: DriverId("test-bytes".into()),
+                schema_version: 1,
+                config: Default::default(),
                 enabled: true,
                 capability_endpoint_id: None,
-                driver: DriverPayload {
-                    driver_id: DriverId("test-bytes".into()),
-                    schema_version: 1,
-                    payload: Default::default(),
-                },
-                simulation: None,
+                children: Vec::new(),
             },
             ports: vec![
                 DevicePort {

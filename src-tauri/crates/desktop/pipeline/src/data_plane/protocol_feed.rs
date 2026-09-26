@@ -38,6 +38,7 @@ pub(super) async fn feed_protocol(
     summary: &mut RouteSummary,
     depth: usize,
     live: Option<&acquisition::LiveNodeHandle>,
+    can_direction: can::CanDirection,
 ) {
     let Some(st) = plane.protocol_states.lock().get(proto_id).cloned() else {
         log::debug!("协议节点无运行时状态, 跳过喂入: {proto_id}");
@@ -99,7 +100,11 @@ pub(super) async fn feed_protocol(
     // 实际字节/帧数估算线速。网络等无时钟信息的来源仍保留到达时间语义。
     // 读任务热路径经轻量句柄免全局锁; 命令注入路径 (loopback/mcp) 无句柄, 回退全局锁
     let live_transport_config = live.map_or_else(
-        || plane.transport.config(source_id),
+        || {
+            data_model::device_tree::NodeId::new(source_id)
+                .ok()
+                .and_then(|node_id| plane.transport.config(&node_id))
+        },
         |handle| handle.config_of(source_id),
     );
     let clock_config = live_transport_config;
@@ -180,6 +185,9 @@ pub(super) async fn feed_protocol(
     }
 
     // CAN 帧旁路 (slcan/candleLight) — 全局缓冲 + 负载统计 (仅 Rx 计入)
+    for frame in &mut out.can_frames {
+        frame.direction = can_direction;
+    }
     if !out.can_frames.is_empty() {
         let mut buf = plane.can_buffer.lock();
         let mut stats = plane.can_load_stats.lock();
@@ -262,6 +270,7 @@ pub(super) async fn feed_protocol(
             summary,
             depth + 1,
             live,
+            can_direction,
         ))
         .await;
     } else if is_raw_data && !data.is_empty() {
@@ -278,6 +287,7 @@ pub(super) async fn feed_protocol(
             summary,
             depth + 1,
             live,
+            can_direction,
         ))
         .await;
     }

@@ -321,9 +321,21 @@ impl VofaMcpServer {
         tool_result(control::list_endpoints(&self.toolbox))
     }
 
+    /// 列出设备树节点快照。
+    #[rmcp::tool(description = "列出生产设备树节点身份、路径、驱动、状态和运行时能力投影")]
+    async fn list_device_tree_nodes(&self) -> Result<CallToolResult, rmcp::ErrorData> {
+        tool_result(control::list_device_tree_nodes(&self.toolbox))
+    }
+
+    /// 列出设备树驱动 manifest。
+    #[rmcp::tool(description = "列出 NodeDriver 的角色、配置 schema、能力与 typed 端口目录")]
+    async fn list_driver_manifests(&self) -> Result<CallToolResult, rmcp::ErrorData> {
+        tool_result(control::list_driver_manifests(&self.toolbox))
+    }
+
     /// 打开采集端点。
     #[rmcp::tool(
-        description = "按图中设备节点 id 打开采集端点 (读取节点内 EndpointSpec 并挂载数据平面读任务)。成功返回端点快照"
+        description = "按图中设备树节点 id 打开采集子树并挂载数据平面读任务。成功返回节点快照"
     )]
     async fn open_endpoint(
         &self,
@@ -336,12 +348,12 @@ impl VofaMcpServer {
     }
 
     /// 关闭采集端点。
-    #[rmcp::tool(description = "关闭采集端点 (endpoint_id 为图中设备节点 id)")]
+    #[rmcp::tool(description = "关闭采集节点 (node_id 为图中 Acquisition 节点 id)")]
     async fn close_endpoint(
         &self,
         Parameters(params): Parameters<CloseEndpointParams>,
     ) -> Result<CallToolResult, rmcp::ErrorData> {
-        control::close_endpoint(&self.toolbox, self.sink.as_ref(), &params.endpoint_id)
+        control::close_endpoint(&self.toolbox, self.sink.as_ref(), &params.node_id)
             .await
             .map_err(internal)
             .and_then(tool_result)
@@ -349,7 +361,7 @@ impl VofaMcpServer {
 
     /// 读取端点点位值。
     #[rmcp::tool(
-        description = "读取指定端点的点位值 (point_ids 为点位 id 数组)。返回 {batch: {samples: [...]}}"
+        description = "读取指定采集节点的点位值 (point_ids 为点位 id 数组)。返回 {batch: {samples: [...]}}"
     )]
     async fn read_points(
         &self,
@@ -360,7 +372,7 @@ impl VofaMcpServer {
             .into_iter()
             .map(points::PointId)
             .collect::<Vec<_>>();
-        control::read_points(&self.toolbox, &params.endpoint_id, point_ids)
+        control::read_points(&self.toolbox, &params.node_id, point_ids)
             .await
             .map_err(internal)
             .and_then(tool_result)
@@ -368,7 +380,7 @@ impl VofaMcpServer {
 
     /// 写入端点点位值。
     #[rmcp::tool(
-        description = "写入指定端点的点位值。request 为 WriteRequest JSON: {correlationId, deadlineUnixNs, idempotencyKey?, items:[{pointId, value}]}"
+        description = "写入指定采集节点的点位值。request 为 WriteRequest JSON: {correlationId, deadlineUnixNs, idempotencyKey?, items:[{pointId, value}]}"
     )]
     async fn write_points(
         &self,
@@ -376,7 +388,7 @@ impl VofaMcpServer {
     ) -> Result<CallToolResult, rmcp::ErrorData> {
         let request: points::WriteRequest =
             serde_json::from_value(params.request).map_err(internal)?;
-        control::write_points(&self.toolbox, &params.endpoint_id, request)
+        control::write_points(&self.toolbox, &params.node_id, request)
             .await
             .map_err(internal)
             .and_then(tool_result)

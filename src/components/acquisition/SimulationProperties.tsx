@@ -1,18 +1,17 @@
 import type { Node } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import type { SimulationConfig, SignalParameters } from '../../types';
-import type { AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
-import { updateAcquisitionNode } from '../../lib/acquisition/acquisitionNodes';
+import { simulationConfig, updateAcquisitionNode, withSimulation, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { DraftNumberInput } from '../ui/fields';
 import { downstreamParsers, resolveSimulation, applyTestAttribute } from '../../lib/acquisition/simulation';
 
 export function SimulationProperties({ node }: { node: Node }) {
   const nodes = useAppStore(s => s.rfNodes);
   const edges = useAppStore(s => s.rfEdges);
-  const { spec, ports } = node.data as AcquisitionNodeData;
-  const config = spec.simulation;
+  const { node: device, ports } = node.data as AcquisitionNodeData;
+  const config = simulationConfig(device);
   if (!config) return <button className="form-input" onClick={() => applyTestAttribute(node.id)}>添加测试数据属性</button>;
-  const update = (patch: Partial<SimulationConfig>) => updateAcquisitionNode(node.id, { ...spec, simulation: { ...config, ...patch } });
+  const update = (patch: Partial<SimulationConfig>) => updateAcquisitionNode(node.id, withSimulation(device, { ...config, ...patch }));
   const parsers = downstreamParsers(node, nodes, edges);
   const pointSource = ports?.some(p => p.domain === 'points');
   let error = '';
@@ -23,7 +22,7 @@ export function SimulationProperties({ node }: { node: Node }) {
     {(['frequency', 'amplitude', 'offset'] as const).map(key => <label key={key} htmlFor={`${idPrefix}-${key}`}>{({ frequency: '频率 Hz', amplitude: '幅值', offset: '偏移' })[key]}<DraftNumberInput id={`${idPrefix}-${key}`} className="form-input" step="any" value={signal[key]} onCommit={v => onChange({ ...signal, [key]: v })} /></label>)}
   </div>;
   return <div className="flex flex-col gap-3 text-xs">
-    <div className="flex justify-between"><span>测试数据 · 不访问真实硬件</span><button className="text-red" onClick={() => updateAcquisitionNode(node.id, { ...spec, simulation: null })}>移除</button></div>
+    <div className="flex justify-between"><span>测试数据 · 不访问真实硬件</span><button className="text-red" onClick={() => updateAcquisitionNode(node.id, withSimulation(device, null))}>移除</button></div>
     {signalFields(config.signal, signal => update({ signal }), 'sim-signal')}
     <div className="grid grid-cols-2 gap-2">
       <label htmlFor="sim-sampleRate">生成速率 / 秒<DraftNumberInput id="sim-sampleRate" className="form-input" min={1} max={5000000} value={config.sampleRate} onCommit={sampleRate => update({ sampleRate })} /></label>

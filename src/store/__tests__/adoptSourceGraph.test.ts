@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../appStore';
 import { adoptSourceGraph, syncTabGraphToBackend } from '../appStoreHelpers';
 import { canvasNode, nodeDocument } from '../../lib/nodes/document';
+import type { NodeDocument } from '../../lib/nodes/document';
 import { documentNodes, deviceDocument, protocolDocument, widgetDocument } from '../../test/nodeDocuments';
 import { api } from '../../lib/tauri/tauri';
 
@@ -10,6 +11,14 @@ beforeEach(() => {
 });
 
 describe('authoritative tab documents', () => {
+  const renamed = <T extends NodeDocument>(doc: T, label: string): T => ({
+    ...doc,
+    label,
+    ...(doc.kind === 'device'
+      ? { config: { node: { ...doc.config.node, name: label } } }
+      : {}),
+  });
+
   it('replaces all node kinds and edges only in their owning tab', () => {
     const other = canvasNode(deviceDocument('other', 'second'));
     useAppStore.setState(s => ({ rfNodes: [...s.rfNodes, other] }));
@@ -20,7 +29,7 @@ describe('authoritative tab documents', () => {
   });
 
   it.each([deviceDocument(), protocolDocument(), widgetDocument()])('restores labels and explicit/auto dimensions for $kind', doc => {
-    const changed = { ...doc, label: 'Renamed', layout: { x: 100, y: 200, width: 350, height: 240 } };
+    const changed = { ...renamed(doc, 'Renamed'), layout: { x: 100, y: 200, width: 350, height: 240 } };
     adoptSourceGraph({ tab_id: 'default', version: 2, documents: [changed], edges: [] });
     expect(nodeDocument(useAppStore.getState().rfNodes[0])).toEqual(changed);
     const auto = { ...changed, layout: { ...changed.layout, width: null, height: null } };

@@ -4,11 +4,39 @@ use std::collections::VecDeque;
 
 use crate::can_frame::CanFrame;
 
+/// Absolute read cursor into the monotonically versioned CAN buffer.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
+pub struct CanCursor(u64);
+
+impl CanCursor {
+    pub const fn new(value: u64) -> Self {
+        Self(value)
+    }
+
+    pub const fn value(self) -> u64 {
+        self.0
+    }
+}
+
+/// One incremental read from a [`CanBuffer`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CanReadResult {
+    pub frames: Vec<CanFrame>,
+    pub next_cursor: CanCursor,
+    pub dropped: u64,
+}
+
+impl CanReadResult {
+    pub const fn is_empty(&self) -> bool {
+        self.frames.is_empty()
+    }
+}
+
 /// CAN frame ring buffer
 ///
 /// - Capacity limit: drops oldest frame when exceeding `max_size`
 /// - Version number: monotonically increases on each `push`, used for cross-shard sync
-/// - Incremental cursor: `drain_from` supports subscription streams pulling incrementally by `version`
+/// - Incremental cursor: `read_from` supports subscription streams pulling incrementally by `version`
 #[derive(Debug)]
 pub struct CanBuffer {
     frames: VecDeque<CanFrame>,
@@ -17,9 +45,6 @@ pub struct CanBuffer {
 }
 
 impl CanBuffer {
-    /// Create a CAN buffer with the specified capacity (pre-allocates at least 8192 frames).
-    ///
-    /// `max_size` is clamped to a minimum of 1 to avoid degenerate zero-capacity state.
     pub fn new(max_size: usize) -> Self {
         let max_size = max_size.max(1);
         Self {
@@ -29,7 +54,6 @@ impl CanBuffer {
         }
     }
 
-    /// Push a frame (drops oldest frame when at capacity)
     pub fn push(&mut self, frame: CanFrame) {
         if self.frames.len() >= self.max_size {
             self.frames.pop_front();
@@ -38,52 +62,52 @@ impl CanBuffer {
         self.version = self.version.wrapping_add(1);
     }
 
-    /// Current version number (monotonically increases on push)
     pub const fn version(&self) -> u64 {
         self.version
     }
 
-    /// Get the most recent n frames (returned in time order, oldest first)
+    pub fn cursor(&self) -> CanCursor {
+        CanCursor::new(self.oldest_sequence())
+    }
+
     pub fn get_recent(&self, count: usize) -> Vec<CanFrame> {
         let n = count.min(self.frames.len());
         self.frames.iter().rev().take(n).rev().cloned().collect()
     }
 
-    /// Incremental cursor read — for unified sharded streams
+    /// Read at most `max` frames beginning at `cursor`.
     ///
-    /// cursor is an absolute sequence number (`version` = cumulative push count). Readable range = `[max(cursor, version-len), version)`.
-    /// If cursor has been evicted past, it is shifted forward and counted in `dropped`.
-    /// Returns `(items, new_cursor, dropped)`.
-    ///
-    /// Behavior contract:
-    /// - `cursor >= version`: returns all current frames; `new_cursor = cursor` (no backward seek);
-    ///   `dropped = cursor - version` (represents logical frames skipped between cursor and current).
-    /// - `cursor < version`: reads at most `max` frames from `max(cursor, oldest)`;
-    ///   `dropped = start - cursor` (portion of cursor that has been evicted).
-    pub fn drain_from(&self, cursor: u64, max: usize) -> (Vec<CanFrame>, u64, u64) {
-        let version = self.version;
-        // Fully ahead: return current buffer, cursor does not seek backward
-        if cursor >= version {
-            let items: Vec<CanFrame> = self.frames.iter().cloned().collect();
-            return (items, cursor, cursor - version);
+    /// The cursor is clamped to the oldest retained sequence and never moves
+    /// backwards. After reaching `version`, later reads return no frames until a
+    /// new push or clear advances the version.
+    pub fn read_from(&self, cursor: CanCursor, max: usize) -> CanReadResult {
+        let oldest = self.oldest_sequence();
+        let mut start = cursor.0.max(oldest);
+        let dropped = start.saturating_sub(cursor.0);
+        if start >= self.version || max == 0 {
+            return CanReadResult {
+                frames: Vec::new(),
+                next_cursor: CanCursor::new(start),
+                dropped,
+            };
         }
-        let len = self.frames.len() as u64;
-        let oldest = version.saturating_sub(len);
-        let start = cursor.max(oldest);
-        let dropped = start.saturating_sub(cursor);
-        let n = usize::try_from(version - start).unwrap_or(0).min(max);
+        let available = usize::try_from(self.version - start).unwrap_or(usize::MAX);
+        let count = available.min(max);
         let skip = usize::try_from(start.saturating_sub(oldest)).unwrap_or(0);
-        let items = self.frames.iter().skip(skip).take(n).cloned().collect();
-        (items, start + n as u64, dropped)
+        let frames = self.frames.iter().skip(skip).take(count).cloned().collect();
+        start += count as u64;
+        CanReadResult {
+            frames,
+            next_cursor: CanCursor::new(start),
+            dropped,
+        }
     }
 
-    /// Clear the buffer (version number does not reset, continues incrementing to stay in sync with external subscribers)
     pub fn clear(&mut self) {
         self.frames.clear();
         self.version = self.version.wrapping_add(1);
     }
 
-    /// Set maximum capacity (retains most recent frames)
     pub fn set_max_size(&mut self, max_size: usize) {
         self.max_size = max_size.max(1);
         while self.frames.len() > self.max_size {
@@ -91,18 +115,19 @@ impl CanBuffer {
         }
     }
 
-    /// Number of frames currently in the buffer
     pub fn len(&self) -> usize {
         self.frames.len()
     }
 
-    /// Whether the buffer is empty
     pub fn is_empty(&self) -> bool {
         self.frames.is_empty()
     }
 
-    /// Maximum capacity
     pub const fn capacity(&self) -> usize {
         self.max_size
+    }
+
+    fn oldest_sequence(&self) -> u64 {
+        self.version.saturating_sub(self.frames.len() as u64)
     }
 }

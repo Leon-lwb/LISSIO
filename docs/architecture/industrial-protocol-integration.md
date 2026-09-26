@@ -8,6 +8,10 @@
 >
 > 范围：Tauri 桌面端的工业协议客户端与数据采集。协议服务端、设备模拟、硬实时控制和合规认证不是默认桌面构建的一部分。
 
+设备树、父子装配、能力闭环和生命周期模型见
+[device-tree.md](device-tree.md)。本文中的 `SourceFactory` / `SourceSession`
+描述驱动内部的会话契约，设备拓扑统一模型以该文档为准。
+
 ## 核心决策
 
 不把工业协议扩充为 `TransportConfig` 或 `ProtocolConfig` 的新变体，也不让工业 SDK 伪装成无状态字节解码器。把现有字节平面演进为统一的**流数据平面**：字节块、点位批、事件批和数值批都是带同一投递信封的强类型流；字节是其中一种 payload，而不是平面外的特殊通道。
@@ -169,13 +173,15 @@ struct DriverPayload {
 }
 
 #[derive(Serialize, Deserialize)]
-struct EndpointSpec {
-    id: EndpointId,
-    label: String,
+struct NodeDecl {
+    id: NodeId,
+    name: String,
+    driver: DriverId,
+    schema_version: u32,
+    config: serde_json::Value,
     enabled: bool,
-    reconnect: ReconnectPolicy,
-    credential_refs: Vec<CredentialRef>,
-    driver: DriverPayload,
+    capability_endpoint_id: Option<String>,
+    children: Vec<NodeDecl>,
 }
 
 #[derive(Serialize, Deserialize)]

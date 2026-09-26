@@ -4,7 +4,7 @@ use app::{AppState, collect_workspace_file, save_workspace};
 use backend_host::restore_workspace;
 use buffer_graph::Edge;
 use graph_ops::{apply_connect_edge, apply_document, apply_remove_tab_graph};
-use kind::document::{NodeAttributes, NodeBusiness, NodeDocument, NodeLayout};
+use kind::document::{NodeBusiness, NodeDocument, NodeLayout};
 use serde_json::json;
 
 fn widget_document(
@@ -24,7 +24,6 @@ fn widget_document(
             params,
             custom_ports: None,
         },
-        attributes: NodeAttributes::default(),
     }
 }
 

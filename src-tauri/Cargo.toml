@@ -62,6 +62,7 @@ members = [
   "crates/protocol/logic_decoder",
   "crates/protocol/schema",
   # L1 transport — 通道收发（串口/网络/CAN 桥接/汽车诊断）
+  "crates/transport/device-tree",
   "crates/transport/serial",
   "crates/transport/network",
   "crates/transport/can-transport",
@@ -290,12 +291,16 @@ protocol_can_bridge = { version = "0.6.1", package = "lissio-protocol-can-bridge
 logic_decoder = { version = "0.6.1", package = "lissio-logic-decoder", path = "crates/protocol/logic_decoder" }
 schema = { version = "0.6.1", package = "lissio-schema", path = "crates/protocol/schema" }
 # L1 transport
+device_tree = { version = "0.6.1", package = "lissio-device-tree", path = "crates/transport/device-tree" }
 can_transport = { version = "0.6.1", package = "lissio-can-transport", path = "crates/transport/can-transport" }
 transport = { version = "0.6.1", package = "lissio-transport", path = "crates/transport/transport" }
 network = { version = "0.6.1", package = "lissio-network", path = "crates/transport/network" }
 serial = { version = "0.6.1", package = "lissio-serial", path = "crates/transport/serial" }
 modbus-adapter = { version = "0.6.1", package = "lissio-modbus-adapter", path = "crates/transport/modbus-adapter" }
 s7-adapter = { version = "0.6.1", package = "lissio-s7-adapter", path = "crates/transport/s7-adapter" }
+automotive = { version = "0.6.1", package = "lissio-automotive", path = "crates/transport/automotive" }
+automotive-isotp = { version = "0.6.1", package = "lissio-automotive-isotp", path = "crates/transport/automotive_isotp" }
+automotive-diag = { version = "0.6.1", package = "lissio-automotive-diag", path = "crates/transport/automotive_diag" }
 # L1 node
 graph = { version = "0.6.1", package = "lissio-graph", path = "crates/graph/graph" }
 eval = { version = "0.6.1", package = "lissio-eval", path = "crates/graph/eval" }
@@ -360,6 +365,7 @@ data_model = { workspace = true }
 error = { workspace = true }
 graph_ops = { workspace = true }
 graph_testkit = { workspace = true }
+device_tree = { workspace = true }
 kind = { workspace = true }
 schema_types = { workspace = true }
 serde_json = { workspace = true }

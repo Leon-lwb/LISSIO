@@ -3,7 +3,7 @@ use error::TransportError;
 use flow::{Framing, SourceId};
 use schema_types::TestDataLink;
 use std::sync::Arc;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::{broadcast, mpsc, watch};
 
 use crate::backend::ByteMessage;
 use crate::{ConnectionControl, TransportConnection};
@@ -17,6 +17,7 @@ pub struct TransportHandle {
     data_tx: broadcast::Sender<ByteMessage>,
     control: Arc<dyn ConnectionControl>,
     state: parking_lot::Mutex<ConnectionState>,
+    closed: watch::Sender<bool>,
     stats: Arc<parking_lot::Mutex<TransportStats>>,
     /// 本连接当前实际使用的配置。TestData 热更新采样率时同步更新，供数据平面
     /// 恢复逐样本时间戳，不能只保留打开连接时的旧值。
@@ -66,18 +67,34 @@ impl TransportHandle {
     }
     pub fn close(&self) {
         self.control.close();
+        self.closed.send_replace(true);
         *self.state.lock() = ConnectionState::Disconnected;
+    }
+
+    /// 等待连接被关闭，供监督器观察会话终止。
+    pub async fn wait_closed(&self) {
+        let mut closed = self.closed.subscribe();
+        if *closed.borrow() {
+            return;
+        }
+        while closed.changed().await.is_ok() {
+            if *closed.borrow() {
+                return;
+            }
+        }
     }
     pub fn new(
         connection: TransportConnection,
         config: TransportConfig,
         connection_epoch: u64,
     ) -> Self {
+        let (closed, _) = watch::channel(false);
         Self {
             write_tx: connection.write_tx,
             data_tx: connection.data_tx,
             control: connection.control,
             state: parking_lot::Mutex::new(ConnectionState::Connected),
+            closed,
             stats: Arc::new(parking_lot::Mutex::new(TransportStats::default())),
             config: Arc::new(parking_lot::RwLock::new(config)),
             connection_epoch,
@@ -162,5 +179,6 @@ impl Drop for TransportHandle {
     fn drop(&mut self) {
         // 句柄被移除 (close / 重复 open 替换) 时确保后台任务收到取消信号
         self.control.close();
+        self.closed.send_replace(true);
     }
 }

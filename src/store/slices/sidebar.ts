@@ -2,7 +2,7 @@ import type { Lang } from '../../i18n';
 import type { PaletteCategoryId } from '../../types';
 import type { AppSlice } from './types';
 
-export type SidebarView = 'category' | 'quickstart' | 'panels' | 'recording';
+export type SidebarView = 'category' | 'quickstart' | 'panels' | 'recording' | 'devices';
 
 export interface SidebarSlice {
   lang: Lang;
@@ -10,6 +10,8 @@ export interface SidebarSlice {
   sidebarView: SidebarView;
   sidebarVisible: boolean;
   activeCategory: PaletteCategoryId;
+  selectedDeviceTreeNodeId: string | null;
+  revealDeviceTreeNode: (nodeId: string) => void;
   setSidebarView: (view: SidebarView) => void;
   openCategory: (category: PaletteCategoryId) => void;
   selectCategory: (category: PaletteCategoryId) => void;
@@ -24,6 +26,8 @@ export const createSidebarSlice: AppSlice<SidebarSlice> = (set, get) => {
     sidebarView: 'category',
     sidebarVisible: true,
     activeCategory: 'transport',
+    selectedDeviceTreeNodeId: null,
+    revealDeviceTreeNode: (nodeId) => set({ selectedDeviceTreeNodeId: nodeId, sidebarView: 'devices', sidebarVisible: true }),
     setSidebarView: (view) => set({ sidebarView: view, sidebarVisible: true }),
     openCategory: (category) =>
       set({ sidebarView: 'category', activeCategory: category, sidebarVisible: true }),

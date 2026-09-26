@@ -7,7 +7,7 @@ import { nodeError } from '../../lib/tauri/errorGuidance';
 import { t } from '../../i18n';
 import { downstreamProtocolOf } from '../appStoreHelpers';
 import { resolveSimulation } from '../../lib/acquisition/simulation';
-import { refreshEndpointSnapshots } from '../../lib/acquisition/useEndpointSnapshot';
+import { refreshDeviceNodeSnapshots } from '../../lib/acquisition/useDeviceNodeSnapshot';
 import { useSettingsStore } from '../settingsStore';
 import type { ConnectionState, PortInfo, TransportStats, WidgetBinding, WidgetConfig } from '../../types';
 import type { AppSlice } from './types';
@@ -85,9 +85,9 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         const error = await get().syncTabGraph(node.data.tabId as string);
         if (error) throw new Error(error);
         resolveSimulation(node, get().rfNodes, get().rfEdges);
-        await api.openAcquisitionEndpoint(nodeId);
-        if (!get().rfNodes.some(n => n.id === nodeId)) { await api.closeAcquisitionEndpoint(nodeId); return; }
-        await refreshEndpointSnapshots();
+        await api.openAcquisitionNode(nodeId);
+        if (!get().rfNodes.some(n => n.id === nodeId)) { await api.closeAcquisitionNode(nodeId); return; }
+        await refreshDeviceNodeSnapshots();
         set((s) => ({
           connectionStates: { ...s.connectionStates, [nodeId]: 'Connected' as ConnectionState },
           nodeStats: { ...s.nodeStats, [nodeId]: { ...EMPTY_NODE_STATS } },

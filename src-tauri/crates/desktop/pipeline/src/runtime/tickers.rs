@@ -372,7 +372,14 @@ pub async fn textout_sender_ticker(
             {
                 continue; // 未到窗口: 保持 dirty 待补发
             }
-            let send_result = transport.send(&target, value.as_bytes());
+            let send_result = data_model::device_tree::NodeId::new(&target)
+                .map_err(|_| {
+                    data_model::Error::Io(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        format!("invalid device node id: {target}"),
+                    ))
+                })
+                .and_then(|node_id| transport.send(&node_id, value.as_bytes()));
             match send_result {
                 Ok(()) => {
                     entry.sent_value = value;

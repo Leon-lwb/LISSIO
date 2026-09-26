@@ -1,4 +1,5 @@
 import { nodeDocument, canvasNode } from '../lib/nodes/document';
+import { deviceTreeCanvasNodes, walkDeviceTree } from '../lib/acquisition/deviceTreeModel';
 import { type Node, type Edge } from '@xyflow/react';
 import { nanoid } from 'nanoid';
 import type { AcquisitionNodeData } from '../lib/acquisition/acquisitionNodes';
@@ -129,7 +130,7 @@ async function doSyncTabGraphOnce(
 ): Promise<string | undefined> {
   const state = useAppStore.getState();
   const tabNodes = state.rfNodes.filter(n => n.data.tabId === tabId);
-  const ids = new Set(tabNodes.map(n => n.id));
+  const ids = new Set([...tabNodes, ...deviceTreeCanvasNodes(tabNodes)].map(n => n.id));
   const documents = tabNodes.map(nodeDocument);
   const edges = state.rfEdges.filter(e => ids.has(e.source) && ids.has(e.target)).map(edgeToGraphEdge);
 
@@ -229,12 +230,13 @@ function jsonDeepEqual(a: unknown, b: unknown): boolean {
 export function adoptSourceGraph(event: GraphSourceEventPayload): void {
   const state = useAppStore.getState();
   state.setGraphVersion(event.version);
-  const oldIds = new Set(state.rfNodes.filter(n => n.data.tabId === event.tab_id).map(n => n.id));
+  const oldIds = new Set(state.rfNodes.filter(n => n.data.tabId === event.tab_id).flatMap(n => n.type === 'acquisition'
+    ? walkDeviceTree((n.data as AcquisitionNodeData).node).map(child => child.id) : [n.id]));
   const adoptedNodes = event.documents.map(doc => {
     const previous = state.rfNodes.find(n => n.id === doc.id);
     return previous && jsonDeepEqual(nodeDocument(previous), doc) ? previous : canvasNode(doc, previous);
   });
-  const rfNodes = [...state.rfNodes.filter(n => !oldIds.has(n.id)), ...adoptedNodes];
+  const rfNodes = [...state.rfNodes.filter(n => !(n.data.tabId === event.tab_id)), ...adoptedNodes];
   const adoptedEdges: Edge[] = event.edges.map(e => ({ id: e.id, source: e.source, sourceHandle: e.source_handle, target: e.target, targetHandle: e.target_handle }));
   const rfEdges = [...state.rfEdges.filter(e => !oldIds.has(e.source) && !oldIds.has(e.target)), ...adoptedEdges];
   if (jsonDeepEqual(state.rfNodes, rfNodes) && jsonDeepEqual(state.rfEdges, rfEdges)) return;
@@ -342,7 +344,7 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
   for (const node of rfNodes) {
     if (node.type !== 'acquisition') continue;
     const data = node.data as AcquisitionNodeData;
-    const card = cards.find(c => c.adapter.adapterId === data.spec.driver.driverId && c.endpoint.id === data.spec.capabilityEndpointId);
+    const card = cards.find(c => c.adapter.adapterId === data.node.driver && c.endpoint.id === data.node.capabilityEndpointId);
     if (card) {
       data.card = card;
       data.ports = card.endpoint.ports.map(p => ({ id: p.id, direction: p.direction, domain: p.dataDomain }));

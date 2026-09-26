@@ -1,6 +1,6 @@
 //! `can::can_buffer` 单元测试
 
-use can::{CanBuffer, CanDirection, CanFrame};
+use can::{CanBuffer, CanCursor, CanDirection, CanFrame};
 
 const fn mk_frame(ts: u64, id: u32) -> CanFrame {
     CanFrame {
@@ -61,34 +61,33 @@ fn get_recent_returns_in_time_order() {
 }
 
 #[test]
-fn drain_from_advances_cursor() {
+fn read_from_advances_cursor() {
     let mut buf = CanBuffer::new(10);
     for i in 0..5u32 {
         buf.push(mk_frame(u64::from(i), i));
     }
-    let (items, new_cursor, dropped) = buf.drain_from(0, 3);
-    assert_eq!(items.len(), 3);
-    assert_eq!(items[0].id, 0);
-    assert_eq!(new_cursor, 3);
-    assert_eq!(dropped, 0);
+    let first = buf.read_from(CanCursor::new(0), 3);
+    assert_eq!(first.frames.len(), 3);
+    assert_eq!(first.frames[0].id, 0);
+    assert_eq!(first.next_cursor.value(), 3);
+    assert_eq!(first.dropped, 0);
 
-    let (items2, new_cursor2, dropped2) = buf.drain_from(new_cursor, 3);
-    assert_eq!(items2.len(), 2);
-    assert_eq!(new_cursor2, 5);
-    assert_eq!(dropped2, 0);
+    let second = buf.read_from(first.next_cursor, 3);
+    assert_eq!(second.frames.len(), 2);
+    assert_eq!(second.next_cursor.value(), 5);
+    assert_eq!(second.dropped, 0);
 }
 
 #[test]
-fn drain_from_skips_already_consumed_cursor() {
+fn read_from_never_replays_caught_up_cursor() {
     let mut buf = CanBuffer::new(10);
     for i in 0..3u32 {
         buf.push(mk_frame(u64::from(i), i));
     }
-    // cursor=10,远超 version=3 → dropped=7
-    let (items, new_cursor, dropped) = buf.drain_from(10, 5);
-    assert_eq!(items.len(), 3);
-    assert_eq!(dropped, 7);
-    assert_eq!(new_cursor, 10);
+    let result = buf.read_from(CanCursor::new(10), 5);
+    assert!(result.frames.is_empty(), "追平后的游标不能重复返回快照");
+    assert_eq!(result.next_cursor.value(), 10);
+    assert_eq!(result.dropped, 0);
 }
 
 #[test]
@@ -124,4 +123,20 @@ fn set_max_size_minimum_one() {
 fn capacity_at_least_one_when_constructed_with_zero() {
     let buf = CanBuffer::new(0);
     assert_eq!(buf.capacity(), 1, "capacity 必须至少为 1");
+}
+
+#[test]
+fn read_from_reports_evicted_history_without_replaying_it() {
+    let mut buf = CanBuffer::new(2);
+    for id in 0..4u32 {
+        buf.push(mk_frame(u64::from(id), id));
+    }
+    let result = buf.read_from(CanCursor::new(0), 10);
+    assert_eq!(
+        result.frames.iter().map(|f| f.id).collect::<Vec<_>>(),
+        vec![2, 3]
+    );
+    assert_eq!(result.dropped, 2);
+    assert_eq!(result.next_cursor.value(), 4);
+    assert!(buf.read_from(result.next_cursor, 10).frames.is_empty());
 }

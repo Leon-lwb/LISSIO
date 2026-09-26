@@ -153,3 +153,18 @@ fn automotive_error_formats_all_variants() {
     let r: AutomotiveResult<()> = Err(AutomotiveError::IsoTpTimeout { tx_id: 1 });
     assert!(r.is_err());
 }
+
+#[tokio::test]
+async fn pending_request_times_out_instead_of_waiting_forever() {
+    let (rx, _) = broadcast::channel::<CanFrame>(16);
+    let backend: Arc<dyn transport::CanBackend> = Arc::new(DummyBackend { rx });
+    let session = IsoTpSession::new(backend, dummy_cfg());
+    let result = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        session.handle().send_request(0x600, 0x658, vec![0x3e]),
+    )
+    .await
+    .expect("ISO-TP response timeout must fire");
+    assert!(result.is_err());
+    session.shutdown().await;
+}

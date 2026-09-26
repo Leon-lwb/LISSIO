@@ -20,15 +20,15 @@ export function PointSelectorProperties({ node }: { node: Node }) {
   const edges = useAppStore(s => s.rfEdges);
   const sourceId = edges.find(e => e.target === node.id && e.targetHandle === 'points')?.source;
   const source = useAppStore(s => s.rfNodes.find(n => n.id === sourceId));
-  const spec = (source?.data as AcquisitionNodeData | undefined)?.spec;
+  const device = (source?.data as AcquisitionNodeData | undefined)?.node;
   const [descriptors, setDescriptors] = useState<PointDescriptor[]>([]);
   const [error, setError] = useState('');
   useEffect(() => {
     let active = true;
     setDescriptors([]); setError('');
-    if (spec) void api.describeAcquisitionPoints(spec.driver).then(points => { if (active) setDescriptors(points); }).catch(cause => { if (active) setError(String(cause)); });
+    if (device) void api.describeAcquisitionPoints({ driverId: device.driver, schemaVersion: device.schemaVersion, payload: device.config }).then(points => { if (active) setDescriptors(points); }).catch(cause => { if (active) setError(String(cause)); });
     return () => { active = false; };
-  }, [spec]);
+  }, [device]);
   const points = node.data.points as string[];
   const update = (points: string[]) => withHistoryOp({ opKey: 'opUpdateWidget' }, () => {
     const state = useAppStore.getState();

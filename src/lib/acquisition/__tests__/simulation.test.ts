@@ -4,20 +4,22 @@ import { api } from '../../tauri/tauri';
 import { useAppStore } from '../../../store/appStore';
 import { useHistoryStore } from '../../../store/historyStore';
 import { createWidget } from '../../utils/widgetDefaults';
-import { acquisitionNodeFromSpec, type AcquisitionNodeData } from '../acquisitionNodes';
+import { acquisitionNodeFromDecl, simulationConfig, type AcquisitionNodeData } from '../acquisitionNodes';
 import { applyTestAttribute } from '../simulation';
 import { tauriMock } from '../../../test/setup';
 
 vi.mock('../../utils/revealDataTab', () => ({ openNodePropertiesPanel: vi.fn() }));
 
 const device = (): Node<AcquisitionNodeData> => {
-  const node = acquisitionNodeFromSpec({
+  const node = acquisitionNodeFromDecl({
     id: 'serial-1',
-    label: 'Serial',
+    name: 'Serial',
+    driver: 'serial',
+    schemaVersion: 1,
+    config: { port_name: '/dev/test' },
     enabled: true,
     capabilityEndpointId: 'device',
-    driver: { driverId: 'serial', schemaVersion: 1, payload: { port_name: '/dev/test' } },
-    simulation: null,
+    children: [],
   });
   node.selected = true;
   node.data.ports = [
@@ -53,6 +55,22 @@ beforeEach(() => {
 });
 
 describe('test-data device attribute', () => {
+  it('ignores disabled simulation children when projecting the active source', () => {
+    const node = device().data.node;
+    node.children.push({
+      id: 'serial-1::simulation',
+      name: 'simulation',
+      driver: 'simulation',
+      schemaVersion: 1,
+      config: { channels: 2 },
+      enabled: false,
+      children: [],
+    });
+    expect(simulationConfig(node)).toBeNull();
+    node.children[0].enabled = true;
+    expect(simulationConfig(node)).toEqual({ channels: 2 });
+  });
+
   it('attaches once, closes the active session, and preserves device identity and topology', async () => {
     const source = device();
     const edge: Edge = {
@@ -63,17 +81,22 @@ describe('test-data device attribute', () => {
       targetHandle: 'value',
     };
     useAppStore.setState({ rfNodes: [source, display()], rfEdges: [edge] });
-    const close = vi.spyOn(api, 'closeAcquisitionEndpoint').mockResolvedValue(undefined);
+    const close = vi.spyOn(api, 'closeAcquisitionNode').mockResolvedValue(undefined);
 
     expect(applyTestAttribute()).toBe(true);
     await Promise.resolve();
 
     const after = useAppStore.getState();
     const attached = after.rfNodes.find(node => node.id === source.id) as Node<AcquisitionNodeData>;
-    expect(attached.data.spec).toMatchObject({
+    expect(attached.data.node).toMatchObject({
       id: 'serial-1',
-      driver: source.data.spec.driver,
-      simulation: { sampleRate: 100, seed: 1, channels: 4 },
+      driver: source.data.node.driver,
+      config: source.data.node.config,
+    });
+    expect(simulationConfig(attached.data.node)).toMatchObject({
+      sampleRate: 100,
+      seed: 1,
+      channels: 4,
     });
     expect(attached.data.ports).toEqual(source.data.ports);
     expect(after.rfEdges).toEqual([edge]);

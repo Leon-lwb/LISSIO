@@ -2,10 +2,11 @@
 
 use acquisition::{
     AcquisitionRuntime, AdapterCapability, DiscoveredEndpoint, EffectiveSubscription,
-    EndpointSnapshot, SubscriptionIntent,
+    SubscriptionIntent,
 };
 use app::AppState;
-use data_model::device::{DriverId, DriverPayload, EndpointId};
+use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeId, NodeSnapshot};
 use points::{PointId, PointSample, ReadResult, WriteRequest, WriteResult};
 use tauri::State;
 
@@ -49,14 +50,14 @@ pub async fn open_acquisition_endpoint(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
     node_id: String,
-) -> CommandResult<EndpointSnapshot> {
+) -> CommandResult<NodeSnapshot> {
     let spec = state
         .data_plane
         .global_nodes
         .lock()
         .get(&node_id)
         .and_then(|n| match &n.kind {
-            kind::NodeKind::Acquisition { spec, .. } => Some(spec.clone()),
+            kind::NodeKind::Acquisition { node, .. } => Some(node.clone()),
             _ => None,
         })
         .ok_or("device node does not exist")?;
@@ -68,11 +69,12 @@ pub async fn open_acquisition_endpoint(
 pub async fn close_acquisition_endpoint(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
-    endpoint_id: String,
+    node_id: String,
 ) -> CommandResult<()> {
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
     let sink = crate::event_sink::TauriEventSink::new(app);
     state
-        .close_transport(&sink, &endpoint_id)
+        .close_transport(&sink, &node_id)
         .await
         .map_err(|e| e.to_string())
 }
@@ -80,18 +82,19 @@ pub async fn close_acquisition_endpoint(
 #[tauri::command]
 pub fn list_acquisition_endpoints(
     runtime: State<'_, std::sync::Arc<AcquisitionRuntime>>,
-) -> Vec<EndpointSnapshot> {
+) -> Vec<NodeSnapshot> {
     runtime.snapshots()
 }
 
 #[tauri::command]
 pub async fn read_acquisition_points(
     runtime: State<'_, std::sync::Arc<AcquisitionRuntime>>,
-    endpoint_id: String,
+    node_id: String,
     point_ids: Vec<PointId>,
 ) -> CommandResult<ReadResult> {
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
     runtime
-        .read(&EndpointId(endpoint_id), point_ids)
+        .read(&node_id, point_ids)
         .await
         .map_err(|error| error.to_string())
 }
@@ -99,11 +102,12 @@ pub async fn read_acquisition_points(
 #[tauri::command]
 pub async fn subscribe_acquisition_points(
     runtime: State<'_, std::sync::Arc<AcquisitionRuntime>>,
-    endpoint_id: String,
+    node_id: String,
     intent: SubscriptionIntent,
 ) -> CommandResult<EffectiveSubscription> {
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
     runtime
-        .subscribe(&EndpointId(endpoint_id), intent)
+        .subscribe(&node_id, intent)
         .await
         .map_err(|error| error.to_string())
 }
@@ -111,11 +115,12 @@ pub async fn subscribe_acquisition_points(
 #[tauri::command]
 pub async fn write_acquisition_points(
     runtime: State<'_, std::sync::Arc<AcquisitionRuntime>>,
-    endpoint_id: String,
+    node_id: String,
     request: WriteRequest,
 ) -> CommandResult<WriteResult> {
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
     runtime
-        .write(&EndpointId(endpoint_id), request)
+        .write(&node_id, request)
         .await
         .map_err(|error| error.to_string())
 }
@@ -123,9 +128,10 @@ pub async fn write_acquisition_points(
 #[tauri::command]
 pub fn latest_acquisition_samples(
     runtime: State<'_, std::sync::Arc<AcquisitionRuntime>>,
-    endpoint_id: String,
+    node_id: String,
 ) -> CommandResult<Vec<PointSample>> {
+    let node_id = NodeId::new(node_id).map_err(|error| error.to_string())?;
     runtime
-        .latest_samples(&EndpointId(endpoint_id))
+        .latest_samples(&node_id)
         .map_err(|error| error.to_string())
 }
