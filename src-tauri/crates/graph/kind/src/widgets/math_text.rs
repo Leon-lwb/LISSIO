@@ -121,6 +121,7 @@ pub(super) const MATH_DEF: WidgetDefinition = WidgetDefinition {
         };
         Ok(crate::kind::NodeKind::Math { op, input_count })
     },
+    panel: None,
 };
 
 pub(super) const STR_DEF: WidgetDefinition = WidgetDefinition {
@@ -160,6 +161,7 @@ pub(super) const STR_DEF: WidgetDefinition = WidgetDefinition {
                 .to_owned(),
         })
     },
+    panel: None,
 };
 
 pub(super) const TEXT_INPUT_DEF: WidgetDefinition = WidgetDefinition {
@@ -186,6 +188,7 @@ pub(super) const TEXT_INPUT_DEF: WidgetDefinition = WidgetDefinition {
                 .to_owned(),
         })
     },
+    panel: None,
 };
 
 pub(super) const TEXT_DISPLAY_DEF: WidgetDefinition = WidgetDefinition {
@@ -199,6 +202,7 @@ pub(super) const TEXT_DISPLAY_DEF: WidgetDefinition = WidgetDefinition {
     },
     ports: text_out_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::TextDisplay),
+    panel: None,
 };
 
 pub(super) const TEXT_OUT_DEF: WidgetDefinition = WidgetDefinition {
@@ -236,6 +240,7 @@ pub(super) const TEXT_OUT_DEF: WidgetDefinition = WidgetDefinition {
                 .unwrap_or(50) as u32,
         })
     },
+    panel: None,
 };
 
 pub(super) static MATH: WidgetDefinition = MATH_DEF;

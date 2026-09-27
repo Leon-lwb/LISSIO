@@ -38,15 +38,18 @@ pub fn inject_protocol_sources(nodes: &[NodeDef], edges: &[Edge]) -> Vec<NodeDef
             continue;
         }
         let (channels, port_names) = protocol_output_spec(proto, edges);
-        sources.push(NodeDef {
-            id: proto.id.clone(),
-            tab_id: proto.tab_id.clone(),
-            kind: NodeKind::ProtocolSource {
+        // 双角色说明: 同一 id 的 Protocol 定义携带设备树来源 (byte_def 侧),
+        // 这里注入的 ProtocolSource 只是它在数值平面的派生视图, 故标记 Derived。
+        sources.push(NodeDef::derived(
+            proto.id.clone(),
+            proto.id.clone(),
+            proto.tab_id.clone(),
+            NodeKind::ProtocolSource {
                 node_id: proto.id.clone(),
                 channels,
-                port_names: Some(port_names),
+                port_names,
             },
-        });
+        ));
     }
     sources
 }
@@ -61,12 +64,12 @@ fn protocol_output_spec(node: &NodeDef, edges: &[Edge]) -> (usize, Vec<String>) 
         return (0, Vec::new());
     };
     match schema {
-        Some(s) if s.preset == schema_types::SchemaPreset::Custom => {
+        s if s.preset == schema_types::SchemaPreset::Custom => {
             let names = s.port_names();
             (names.len(), names)
         }
-        Some(_) | None => {
-            // preset (有 schema 但非 Custom) 或 无 schema (前端已省略) — 均走 preset 路径
+        _ => {
+            // preset (非 Custom) — 走 preset 路径
             if matches!(config, ProtocolConfig::RawData) {
                 return (1, vec!["str".to_string()]);
             }
@@ -82,7 +85,7 @@ fn protocol_output_spec(node: &NodeDef, edges: &[Edge]) -> (usize, Vec<String>) 
                 .max()
                 .map_or(0, |index| index.saturating_add(1));
             let n = configured.max(referenced);
-            let names = protocol_source_port_names(None, n);
+            let names = protocol_source_port_names(&[], n);
             (n, names)
         }
     }
@@ -110,15 +113,17 @@ mod tests {
         config: ProtocolConfig,
         schema: Option<schema_types::ProtocolSchema>,
     ) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Protocol {
+        // 未显式给 schema 的用例按 config 构造预设 schema
+        let schema = schema.unwrap_or_else(|| schema_types::schema_from_protocol_config(&config));
+        NodeDef::new(
+            id.into(),
+            "tab1".into(),
+            NodeKind::Protocol {
+                schema,
                 config,
                 convert_to: None,
-                schema,
             },
-        }
+        )
     }
 
     fn edge(source: &str, source_handle: &str, target: &str, target_handle: &str) -> Edge {
@@ -140,11 +145,7 @@ mod tests {
     #[test]
     fn edge_from_protocol_emits_single_protocol_source() {
         let proto = protocol_node("p1", ProtocolConfig::JustFloat { channels: Some(4) }, None);
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("p1", "ch0", "w1", "in0")];
         let sources = inject_protocol_sources(&[proto, widget], &edges);
         assert_eq!(sources.len(), 1);
@@ -160,7 +161,7 @@ mod tests {
         assert_eq!(node_id, "p1");
         assert_eq!(*channels, 4);
         assert_eq!(
-            port_names.as_ref().unwrap().as_slice(),
+            port_names.as_slice(),
             &[
                 "ch0".to_string(),
                 "ch1".to_string(),
@@ -173,16 +174,8 @@ mod tests {
     #[test]
     fn multiple_edges_to_same_protocol_emit_once() {
         let proto = protocol_node("p1", ProtocolConfig::JustFloat { channels: Some(2) }, None);
-        let widget_a = NodeDef {
-            id: "wa".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
-        let widget_b = NodeDef {
-            id: "wb".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget_a = NodeDef::new("wa".into(), "tab1".into(), NodeKind::Sink);
+        let widget_b = NodeDef::new("wb".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![
             edge("p1", "ch0", "wa", "in0"),
             edge("p1", "ch1", "wb", "in0"),
@@ -194,11 +187,7 @@ mod tests {
     #[test]
     fn edge_from_device_does_not_emit_protocol_source() {
         let device = make_device_in("t1", "tab1");
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("t1", "rx", "w1", "data")];
         let sources = inject_protocol_sources(&[device, widget], &edges);
         assert!(sources.is_empty());
@@ -208,7 +197,7 @@ mod tests {
     fn custom_schema_emits_named_ports() {
         let schema = schema_types::ProtocolSchema {
             preset: SchemaPreset::Custom,
-            legacy_config: None,
+            preset_config: None,
             decode: vec![DecoderBlockDef::Field {
                 id: "f1".into(),
                 port_name: "rpm".into(),
@@ -223,11 +212,7 @@ mod tests {
             ProtocolConfig::JustFloat { channels: None },
             Some(schema),
         );
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("p1", "rpm", "w1", "in0")];
         let sources = inject_protocol_sources(&[proto, widget], &edges);
         assert_eq!(sources.len(), 1);
@@ -240,20 +225,13 @@ mod tests {
             panic!();
         };
         assert_eq!(*channels, 1);
-        assert_eq!(
-            port_names.as_ref().unwrap().as_slice(),
-            &["rpm".to_string()]
-        );
+        assert_eq!(port_names.as_slice(), &["rpm".to_string()]);
     }
 
     #[test]
     fn rawdata_protocol_emits_str_only() {
         let proto = protocol_node("p1", ProtocolConfig::RawData, None);
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("p1", "str", "w1", "in0")];
         let sources = inject_protocol_sources(&[proto, widget], &edges);
         assert_eq!(sources.len(), 1);
@@ -266,10 +244,7 @@ mod tests {
             panic!();
         };
         assert_eq!(*channels, 1);
-        assert_eq!(
-            port_names.as_ref().unwrap().as_slice(),
-            &["str".to_string()]
-        );
+        assert_eq!(port_names.as_slice(), &["str".to_string()]);
     }
 
     /// 与 derived 端 `preset_justfloat_auto_falls_back_to_default` 对齐:
@@ -277,11 +252,7 @@ mod tests {
     #[test]
     fn preset_justfloat_auto_channels_uses_default_four() {
         let proto = protocol_node("p1", ProtocolConfig::JustFloat { channels: None }, None);
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("p1", "ch0", "w1", "in0")];
         let sources = inject_protocol_sources(&[proto, widget], &edges);
         assert_eq!(sources.len(), 1);
@@ -295,7 +266,7 @@ mod tests {
         };
         assert_eq!(*channels, 4);
         assert_eq!(
-            port_names.as_ref().unwrap().as_slice(),
+            port_names.as_slice(),
             &[
                 "ch0".to_string(),
                 "ch1".to_string(),
@@ -308,11 +279,7 @@ mod tests {
     #[test]
     fn preset_auto_channels_expand_to_highest_referenced_handle() {
         let proto = protocol_node("p1", ProtocolConfig::JustFloat { channels: None }, None);
-        let widget = NodeDef {
-            id: "w1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Sink,
-        };
+        let widget = NodeDef::new("w1".into(), "tab1".into(), NodeKind::Sink);
         let edges = vec![edge("p1", "ch7", "w1", "value")];
         let sources = inject_protocol_sources(&[proto, widget], &edges);
         let NodeKind::ProtocolSource {
@@ -324,6 +291,6 @@ mod tests {
             panic!("expected ProtocolSource");
         };
         assert_eq!(*channels, 8);
-        assert_eq!(port_names.as_ref().unwrap().last().unwrap(), "ch7");
+        assert_eq!(port_names.last().unwrap(), "ch7");
     }
 }

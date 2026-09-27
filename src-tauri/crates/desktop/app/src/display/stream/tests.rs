@@ -59,7 +59,7 @@ async fn firewater_ch3_reaches_sample_topic_within_preview_budget() {
             channels: vec![2.0, 3.0, 4.0, 5.0],
         },
     ];
-    pipeline::data_plane::frame_dispatch::on_frames(&state.data_plane, "firewater", &frames);
+    pipeline::data_plane::frame_dispatch::record_and_eval(&state.data_plane, "firewater", &frames);
     let batch = tokio::time::timeout(Duration::from_millis(250), receiver.recv())
         .await
         .unwrap()
@@ -80,7 +80,7 @@ async fn out_of_range_topic_reports_status_without_zero_sample() {
     let state = AppState::new();
     let key = TopicKey::new("firewater", "ch9");
     let mut receiver = state.data_plane.eval.bus.subscribe(key, 500).await.unwrap();
-    pipeline::data_plane::frame_dispatch::on_frames(
+    pipeline::data_plane::frame_dispatch::record_and_eval(
         &state.data_plane,
         "firewater",
         &[DataFrame {

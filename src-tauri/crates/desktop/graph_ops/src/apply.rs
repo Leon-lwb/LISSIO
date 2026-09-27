@@ -5,8 +5,9 @@
 
 use app::{AppState, SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord, WorkspaceState};
 use buffer_graph::Edge;
-use data_model::{Error, Result};
-use error::ConfigError;
+
+use error::Result;
+use error::{AppError as Error, ConfigError};
 use events::{BackendEventSink, emit_graph_derived, emit_payload};
 use pipeline::BytePlan;
 use pipeline::DataPlaneState;

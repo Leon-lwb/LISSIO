@@ -39,13 +39,13 @@ describe('input widget value semantics (widgetValue)', () => {
     expect(widgetInputValue(widget)).toBe(20);
   });
 
-  it('legacy checkbox empty value is preserved; selected options are summed', () => {
+  it('unchecked checkbox yields 0; selected options are summed', () => {
     const disabled = fixture('Checkbox', {
       id: 'check-1', label: 'Enable',
       options: [{ id: 'check-1-option-1', label: 'Option 1', value: 7 }],
-      selectedIds: [], emptyValue: -1,
+      selectedIds: [],
     });
-    expect(widgetInputValue(disabled)).toBe(-1);
+    expect(widgetInputValue(disabled)).toBe(0);
 
     const flags = fixture('Checkbox', {
       id: 'check-2', label: 'Flags',

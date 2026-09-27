@@ -43,7 +43,7 @@ impl RpcError {
     }
 
     /// 域错误 — 保留 `kind` 与文案原文。
-    pub fn domain(error: &data_model::Error) -> Self {
+    pub fn domain(error: &error::AppError) -> Self {
         use error::Error as _;
         Self {
             kind: error.kind().to_string(),
@@ -132,8 +132,8 @@ pub const fn ok() -> Result<Value, RpcError> {
     Ok(empty())
 }
 
-/// 域结果 (`data_model::Result<T>`) → RPC 响应。
-pub fn domain<T: Serialize>(result: data_model::Result<T>) -> Result<Value, RpcError> {
+/// 域结果 (`error::Result<T>`) → RPC 响应。
+pub fn domain<T: Serialize>(result: error::Result<T>) -> Result<Value, RpcError> {
     match result {
         Ok(value) => encode(&value),
         Err(error) => Err(RpcError::domain(&error)),

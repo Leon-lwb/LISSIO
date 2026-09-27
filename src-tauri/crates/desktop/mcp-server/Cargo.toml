@@ -17,18 +17,16 @@ control-api = { workspace = true }
 rmcp = { workspace = true }
 axum = { workspace = true }
 events = { workspace = true }
-can = { workspace = true }
-points = { workspace = true }
-pipeline = { workspace = true }
-waveform = { workspace = true }
-serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 log = { workspace = true }
 error = { workspace = true }
-data_model = { workspace = true }
+
+[dev-dependencies]
+# router 测试从 AppState 构造 Toolbox (dev-only, 架构门禁要求非生产依赖)
+app = { workspace = true }
 
 [package.metadata.lissio]
 domain = "desktop"
 layer = 4
-responsibility = "Lissio MCP 服务器适配器 — rmcp 工具路由/HTTP 生命周期与监听端口配置, 能力实现全部来自 control-api"
+responsibility = "Lissio MCP 服务器适配器 — 从 control-api 能力注册表运行期构建 rmcp 工具路由 + HTTP 生命周期与监听端口配置, 不定义任何工具"

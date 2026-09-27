@@ -16,8 +16,8 @@ pub use graph::{
     ValuesMap,
 };
 pub use kind::{
-    DecoderBlockDef, FieldType, MathOp, NodeDef, NodeKind, PortDomain, PortSpec, PortTable,
-    port_domain, port_table, protocol_source_port_names,
+    DecoderBlockDef, FieldType, MathOp, NodeDef, NodeKind, NodeOrigin, PortDomain, PortSpec,
+    PortTable, port_domain, port_table, protocol_source_port_names,
 };
 pub use protocol::{InputFormat, ProtocolEngine, detect_format, parse_ascii, parse_hex};
 pub use schema::command_frame::{CommandFrameDto, compute_frame_bytes};

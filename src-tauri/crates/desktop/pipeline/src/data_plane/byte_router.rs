@@ -259,7 +259,7 @@ async fn dispatch_non_protocol(
             // 协议转换回注 / 命令发送落地 — try_lock 避免与 open 的长持锁互等
             let send_result = data_model::device_tree::NodeId::new(target)
                 .map_err(|_| {
-                    data_model::Error::Io(std::io::Error::new(
+                    error::AppError::Io(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         format!("invalid device node id: {target}"),
                     ))

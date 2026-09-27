@@ -1,9 +1,8 @@
 //! 控件共享参数结构 — 默认工厂 / 归一化 / 端口解析 / lowering 共用。
 //!
-//! serde 形状与前端 `src/types/widgets.ts` 的 params 逐字一致 (camelCase);
-//! 历史拼写 (如 `press_value`) 通过 `#[serde(alias)]` 读入并在归一化时改写为
-//! 当前拼写。所有字段 `#[serde(default)]` — 缺省字段落默认值, 这是归一化的
-//! "补齐" 一半; "迁移" 一半在各控件定义的 normalize 函数里 (Value 层)。
+//! serde 形状与前端 `src/types/widgets.ts` 的 params 逐字一致 (camelCase)。
+//! 所有字段 `#[serde(default)]` — 缺省字段落默认值, 这是归一化的
+//! "补齐" 一半; 校验部分在各控件定义的 normalize 函数里 (Value 层)。
 
 // 数值转换均为有界索引/精度语义 (JSON number <-> 定宽整数), 与前端 JS 数值
 // 行为对齐; 此处统一豁免逐个标注的噪音。
@@ -307,7 +306,7 @@ mod tests {
         let manual = serde_json::json!({"mode": "Manual", "params": {"transportId": "t"}});
         let binding = normalize_binding(&manual);
         assert_eq!(binding.params.unwrap().template, "{value}");
-        let legacy = serde_json::json!({"mode": "Legacy"});
-        assert_eq!(normalize_binding(&legacy).mode, BindingMode::None);
+        let unknown = serde_json::json!({"mode": "Unknown"});
+        assert_eq!(normalize_binding(&unknown).mode, BindingMode::None);
     }
 }

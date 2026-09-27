@@ -18,7 +18,6 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 futures = { workspace = true }
 error = { workspace = true }
-data_model = { workspace = true }
 
 [package.metadata.lissio]
 domain = "ai"

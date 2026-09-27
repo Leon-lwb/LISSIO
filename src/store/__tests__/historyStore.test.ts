@@ -224,7 +224,7 @@ describe('historyStore 撤销/重做核心', () => {
     useAppStore.getState().addCanvasNodes([{
       id: 'protocol-1', type: 'protocol', position: { x: 0, y: 0 },
       data: { tabId: 'default', label: 'JustFloat', config: { kind: 'JustFloat', channels: null },
-        convertTo: null, schema: { preset: 'justFloat', legacyConfig: { kind: 'JustFloat', channels: null }, decode: [] }, channels: 0 },
+        convertTo: null, schema: { preset: 'justFloat', presetConfig: { kind: 'JustFloat', channels: null }, decode: [] }, channels: 0 },
     }]);
     expect(useHistoryStore.getState().entries.length).toBeGreaterThanOrEqual(3);
 

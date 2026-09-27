@@ -5,7 +5,6 @@ use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use can::CanFrame;
 use data_model::ConfigurationSchema;
-use data_model::Result as DataResult;
 use device_tree::{
     CAN_FRAMES_PORT_ID, Capability, CapabilityMask, ChildPolicy, ConfigError, DriverId,
     ISOTP_REQUEST_PORT_ID, IsoTpRequestCapability, NodeContext, NodeDriver, NodeId, NodePath,
@@ -13,6 +12,7 @@ use device_tree::{
     ValidatedNodeConfig,
 };
 use diagnostic::{IsoTpAddressMode, IsoTpConfig};
+use error::Result as DataResult;
 use flow::PayloadKind;
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
@@ -247,14 +247,14 @@ impl transport::CanBackend for ParentCanBackend {
         self.parent
             .as_can_frame_sink()
             .ok_or_else(|| {
-                data_model::Error::Io(std::io::Error::new(
+                error::AppError::Io(std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
                     "父节点不提供 CAN frame sink",
                 ))
             })?
             .send_frame(frame)
             .await
-            .map_err(|error| data_model::Error::Io(std::io::Error::other(error.to_string())))
+            .map_err(|error| error::AppError::Io(std::io::Error::other(error.to_string())))
     }
 
     fn subscribe_frames(&self) -> broadcast::Receiver<CanFrame> {

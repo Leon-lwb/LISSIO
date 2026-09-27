@@ -29,7 +29,10 @@ fn catalog() -> ModelCatalog {
 #[test]
 fn catalog_contains_all_families() {
     let catalog = catalog();
-    assert_eq!(catalog.contract_version, 1);
+    assert_eq!(
+        catalog.contract_version,
+        data_model::model_descriptor::MODEL_CATALOG_CONTRACT_VERSION
+    );
     assert!(catalog.revision.starts_with("rev-"));
     let families: std::collections::BTreeSet<_> = catalog.models.iter().map(|m| m.family).collect();
     for family in [
@@ -41,6 +44,133 @@ fn catalog_contains_all_families() {
     ] {
         assert!(families.contains(&family), "missing family {family:?}");
     }
+}
+
+#[test]
+fn panel_catalog_covers_every_declared_panel_exactly_once() {
+    let catalog = catalog();
+
+    // 12 类面板: 10 个宿主控件派生 + 2 个无宿主的整库面板
+    assert_eq!(catalog.panels.len(), 12, "面板目录条目数");
+    let ids = catalog
+        .panels
+        .iter()
+        .map(|p| p.id.clone())
+        .collect::<Vec<_>>();
+    let unique = ids.iter().collect::<std::collections::BTreeSet<_>>();
+    assert_eq!(unique.len(), ids.len(), "面板 id 唯一");
+
+    // 与控件注册表一一对应 (无第二张手写表)
+    let declared = kind::widgets::definitions()
+        .filter_map(|def| def.panel.map(|spec| (def.kind, spec.panel)))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    assert_eq!(declared.len(), 10);
+    for (host, panel_kind) in &declared {
+        let found = catalog
+            .panels
+            .iter()
+            .find(|p| p.kind == *panel_kind)
+            .unwrap_or_else(|| panic!("{host}: 面板未进入目录"));
+        assert_eq!(
+            found.host_widget_kind.as_deref(),
+            Some(*host),
+            "{host}: 宿主控件回填"
+        );
+        assert_eq!(
+            found.display.category.as_deref(),
+            Some("derived"),
+            "{host}: 分组"
+        );
+    }
+
+    // 整库面板: 无宿主, Singleton 绑定, 空端口
+    for kind in [PanelKind::Can, PanelKind::Logic] {
+        let panel = catalog
+            .panels
+            .iter()
+            .find(|p| p.kind == kind)
+            .unwrap_or_else(|| panic!("{kind:?} 面板未进入目录"));
+        assert!(panel.host_widget_kind.is_none(), "{kind:?}: 无宿主");
+        assert_eq!(panel.binding, PanelBinding::Singleton);
+        assert!(panel.inputs.is_empty() && panel.outputs.is_empty());
+        assert_eq!(panel.display.category.as_deref(), Some("standalone"));
+        assert!(panel.data_plane.push_request.is_some());
+        assert!(panel.data_plane.fetch_op.is_some());
+        assert!(panel.default_params.is_null());
+    }
+}
+
+#[test]
+fn panel_catalog_publishes_binding_and_ports_for_host_widgets() {
+    let catalog = catalog();
+
+    // Waveform: EdgeBound 展开为宿主的真实通道口 (CH0..N), 而不是参数无关形式
+    let waveform = catalog
+        .panels
+        .iter()
+        .find(|p| p.kind == PanelKind::Waveform)
+        .expect("waveform panel");
+    assert_eq!(waveform.tab_type, "waveform-extra");
+    assert_eq!(
+        waveform.display.label_key.as_deref(),
+        Some("dataTabWaveform")
+    );
+    assert_eq!(waveform.data_plane.delivery, PanelDelivery::Both);
+    assert_eq!(
+        waveform.binding,
+        PanelBinding::EdgeBound {
+            input_handles: vec![
+                "CH0".to_owned(),
+                "CH1".to_owned(),
+                "CH2".to_owned(),
+                "CH3".to_owned(),
+            ],
+        }
+    );
+
+    // RawData: 由参数持有端口引用, 静态回退口是 "data"
+    let raw = catalog
+        .panels
+        .iter()
+        .find(|p| p.kind == PanelKind::Raw)
+        .expect("raw panel");
+    assert_eq!(
+        raw.binding,
+        PanelBinding::ConfigBound {
+            config_key: "selectedInput".to_owned(),
+            port_template: "src:{source}:{handle}".to_owned(),
+        }
+    );
+    assert_eq!(raw.inputs.len(), 1);
+
+    // Image: 面板已声明但数据面尚未实现 — 两个操作都不下发
+    let image = catalog
+        .panels
+        .iter()
+        .find(|p| p.kind == PanelKind::Image)
+        .expect("image panel");
+    assert_eq!(image.data_plane.delivery, PanelDelivery::Unavailable);
+    assert!(image.data_plane.push_request.is_none());
+    assert!(image.data_plane.fetch_op.is_none());
+
+    // 排序值 = 投影顺序, 稳定且从 0 起
+    for (index, panel) in catalog.panels.iter().enumerate() {
+        assert_eq!(panel.display.sort_value as usize, index, "排序值稳定");
+    }
+}
+
+#[test]
+fn revision_changes_when_panels_change() {
+    let mut catalog = catalog();
+    let before = revision(&catalog);
+    catalog
+        .panels
+        .retain(|panel| panel.kind != PanelKind::Logic);
+    assert_ne!(
+        revision(&catalog),
+        before,
+        "面板是目录的一部分, 变化必须换 revision"
+    );
 }
 
 #[test]

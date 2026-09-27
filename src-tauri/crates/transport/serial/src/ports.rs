@@ -1,5 +1,6 @@
 //! Shared enumeration pipeline: platform evidence → normalization → unique ports.
-use data_model::{PortInfo, Result};
+use data_model::PortInfo;
+use error::Result;
 use error::TransportError;
 use serialport::SerialPortType;
 

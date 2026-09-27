@@ -16,6 +16,7 @@
 mod decoder_block;
 mod kind;
 mod math_op;
+mod origin;
 mod ports;
 mod spec;
 mod str_op;
@@ -27,6 +28,7 @@ pub use decoder_block::{
 };
 pub use kind::{NewlineMode, NodeKind, is_protocol_source, is_raw_data_handle};
 pub use math_op::MathOp;
+pub use origin::NodeOrigin;
 pub use ports::{
     FRAME_DECODER_IN_HANDLE, LOOPBACK_OUT_HANDLE, PROTOCOL_IN_HANDLE, PROTOCOL_OUT_HANDLE,
     PortDomain, PortSpec, PortTable, RAW_DATA_PORT_PREFIX, TRANSPORT_RX_HANDLE,

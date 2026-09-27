@@ -3,7 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { tauriMock } from '../../test/setup';
 import { CatalogGate } from '../BackendConnectionGate';
-import { resetModelCatalogForTests, useModelCatalogStore } from '../../store/modelCatalogStore';
+import {
+  MODEL_CATALOG_CONTRACT_VERSION,
+  resetModelCatalogForTests,
+  useModelCatalogStore,
+} from '../../store/modelCatalogStore';
 import { resetDescribeForTests } from '../../lib/models/describeStore';
 
 describe('CatalogGate (启动屏障)', () => {
@@ -36,7 +40,7 @@ describe('CatalogGate (启动屏障)', () => {
     tauriMock.invoke.mockImplementation((cmd: string) => {
       if (cmd === 'get_model_catalog') {
         return Promise.resolve({
-          contractVersion: 1,
+          contractVersion: MODEL_CATALOG_CONTRACT_VERSION,
           revision: 'rev-mock',
           models: [{
             id: 'widget:Knob', family: 'widget', schemaVersion: 1,

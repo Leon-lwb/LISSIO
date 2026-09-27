@@ -35,7 +35,14 @@ Web 出口的完整设计 (线协议 / 鉴权 / 命令能力矩阵 / 落地阶�
 - `data` — 波形停止快照 / CSV 导出 / 缓冲容量 / 命令帧编码与发送内核
 - `recording` — 录制会话生命周期 / 历史与 SQL 查询 / 导出 (含暂停态门控)
 
-消费方(三个出口 + 内置 AI 原生工具执行器)只做参数解包与错误映射。
+其上的 `capabilities` 模块是**软件能力节点注册表** — 每个能力域 (传输/图编辑/
+波形/CAN/逻辑分析/采集控制/命令帧/录制/知识库) 注册一个节点,声明自己的工具
+(名称/描述/schemars JSON schema/异步处理器,经 `tool()` 构造器从入参类型派生
+schema)与自带技能文档 (`docs/{zh,en}` 编译期嵌入)。MCP 工具路由、内置 AI
+工具规格与执行分发、skill 清单与系统提示词索引**全部运行期从同一注册表动态
+派生**——新增能力域只需实现一个节点构造函数,不改任何出口代码。
+
+消费方(三个出口 + 内置 AI 原生工具执行器)只做协议/参数映射与错误转换。
 
 ### 1b. 命令派发 — `rpc-api`
 
@@ -89,15 +96,18 @@ Desktop 专有逻辑仅保留在 Tauri 平台壳；业务 flush 由 supervised s
 
 ## 约定
 
-- **出口参数 schema 各自拥有**:MCP 用 schemars(schemars 独立于 rmcp,不
-  违反"control-api 不依赖 rmcp"),CLI 用 clap,IPC 用命令内联参数。语义参数
-  结构若逐字段重复,优先上移 control-api(如 CAN 帧构建 `build_can_frame`);
-  不强扭字段不一致的 DTO。
-- **兼容性红线**:IPC 命令名/参数、事件名与 payload JSON 形状、持久化文件
-  格式对前端保持不变;命令层是薄壳,业务文案在 control-api 维护。Web 出口的
-  命令名与参数名与 IPC 逐字一致 (顶层 camelCase), 差异只在传输。
+- **出口参数 schema 单一来源**:工具入参 DTO 与 schemars JSON schema 定义在
+  `control-api` 能力节点 (schemars 独立于 rmcp,不违反"control-api 不依赖
+  rmcp"),MCP 工具路由与内置 AI 工具规格从同一注册表派生;CLI 用 clap,IPC
+  用命令内联参数。语义参数结构若逐字段重复,优先上移 control-api(如 CAN 帧
+  构建 `build_can_frame`);不强扭字段不一致的 DTO。
+- **契约稳定性**:IPC 命令名/参数、事件名与 payload JSON 形状、持久化文件
+  格式由契约检查与生成脚本机器校验;命令层是薄壳,业务文案在 control-api
+  维护。Web 出口的命令名与参数名与 IPC 逐字一致 (顶层 camelCase), 差异只在
+  传输。旧版本数据不做兼容读取——格式变更即要求重新导出。
 - **能力清单是机器可校验的**:新增 IPC 命令必须同时登记进 `rpc-api::catalog`
-  四类之一, 否则 `pnpm check:web-contract` 失败。
-- **错误映射**:control-api 统一 `Result<_, String>`;IPC 侧转
-  `data_model::Error`(文案透传),MCP 侧转 internal error,CLI 侧转
-  stderr + 非零退出码。
+  四类之一, 否则 `pnpm check:web-contract` 失败;注册表侧工具名/skill id
+  全局唯一由 `CapabilityRegistry::new` 校验并有测试兜底。
+- **错误映射**:能力节点统一 `Result<ToolOutput, ToolError>`;IPC 侧转
+  `data_model::Error`(文案透传),MCP 侧执行失败转 `CallToolResult::error`
+  (AI 客户端可见)、参数错误转 invalid params,CLI 侧转 stderr + 非零退出码。

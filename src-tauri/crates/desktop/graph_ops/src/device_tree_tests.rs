@@ -1,11 +1,10 @@
 use app::AppState;
-use data_model::device_tree::NodeDecl;
+use data_model::device_tree::{NodeDecl, NodeId, NodePath, NodeRole};
 use graph_testkit::{edge, make_device_in, make_sink};
-use kind::{NodeDef, NodeKind};
+use kind::{NodeDef, NodeKind, NodeOrigin};
 use pipeline::byte_router::route_bytes;
 use pipeline::decoder_feed::DecoderFeedCache;
 use schema_types::ProtocolConfig;
-use serde_json::json;
 use std::collections::HashMap;
 
 fn protocol(id: &str) -> NodeDecl {
@@ -14,11 +13,14 @@ fn protocol(id: &str) -> NodeDecl {
         id,
         "protocol-engine",
         1,
-        json!({
-            "protocol": ProtocolConfig::FireWater { channels: Some(2) },
-            "convertTo": null,
-            "schema": null
-        }),
+        serde_json::to_value(schema_types::ProtocolNodeConfig {
+            protocol: ProtocolConfig::FireWater { channels: Some(2) },
+            convert_to: None,
+            schema: schema_types::schema_from_protocol_config(&ProtocolConfig::FireWater {
+                channels: Some(2),
+            }),
+        })
+        .unwrap(),
     )
     .unwrap()
 }
@@ -31,7 +33,7 @@ fn device(children: Vec<NodeDecl>) -> NodeDef {
     device
 }
 
-async fn apply(state: &AppState, root: NodeDef) -> data_model::Result<crate::GraphDerived> {
+async fn apply(state: &AppState, root: NodeDef) -> error::Result<crate::GraphDerived> {
     crate::apply_tab_graph(
         state,
         None,
@@ -105,11 +107,22 @@ async fn disabled_protocol_subtree_keeps_identity_without_receiving_bytes() {
 #[tokio::test]
 async fn protocol_children_are_compiled_in_parent_order() {
     let state = AppState::new();
+    let just_float = ProtocolConfig::JustFloat { channels: Some(2) };
     let mut parser = protocol("parser");
-    parser.config["convertTo"] =
-        serde_json::to_value(ProtocolConfig::JustFloat { channels: Some(2) }).unwrap();
-    let mut child = protocol("nested");
-    child.config["protocol"] = parser.config["convertTo"].clone();
+    parser.config["convertTo"] = serde_json::to_value(just_float.clone()).unwrap();
+    let child = NodeDecl::leaf(
+        "nested",
+        "nested",
+        "protocol-engine",
+        1,
+        serde_json::to_value(schema_types::ProtocolNodeConfig {
+            protocol: just_float.clone(),
+            convert_to: None,
+            schema: schema_types::schema_from_protocol_config(&just_float),
+        })
+        .unwrap(),
+    )
+    .unwrap();
     parser.children.push(child);
     apply(&state, device(vec![parser])).await.unwrap();
     let mut cache = DecoderFeedCache::new();
@@ -165,4 +178,64 @@ fn explicit_edges_cannot_bypass_parent_or_enable_disabled_parsers() {
             .to_string()
             .contains("supplied by its device tree parent")
     );
+}
+
+fn root_id() -> NodeId {
+    NodeId::new("source").unwrap()
+}
+
+#[test]
+fn projection_marks_every_derived_node_with_its_device_tree_origin() {
+    let mut nodes = vec![device(vec![protocol("parser")])];
+    let mut edges = Vec::new();
+    super::device_tree::project(&mut nodes, &mut edges).unwrap();
+
+    let root = nodes.iter().find(|node| node.id == "source").unwrap();
+    assert_eq!(
+        root.origin,
+        NodeOrigin::DeviceTree {
+            node_id: root_id(),
+            path: NodePath::root("device").unwrap(),
+            role: None,
+            root: root_id(),
+            parent: None,
+        }
+    );
+
+    let parser = nodes.iter().find(|node| node.id == "parser").unwrap();
+    assert_eq!(
+        parser.origin,
+        NodeOrigin::DeviceTree {
+            node_id: NodeId::new("parser").unwrap(),
+            path: NodePath::root("device").unwrap().child("parser").unwrap(),
+            role: Some(NodeRole::Protocol),
+            root: root_id(),
+            parent: Some(root_id()),
+        }
+    );
+}
+
+#[test]
+fn disabled_chain_keeps_origin_without_emitting_attachment_edges() {
+    let mut parser = protocol("parser");
+    parser.enabled = false;
+    let mut nodes = vec![device(vec![parser])];
+    let mut edges = Vec::new();
+    super::device_tree::project(&mut nodes, &mut edges).unwrap();
+
+    assert!(edges.is_empty(), "disabled children must not be attached");
+    let parser = nodes.iter().find(|node| node.id == "parser").unwrap();
+    assert_eq!(
+        parser.origin.root_device_node().map(NodeId::as_str),
+        Some("source")
+    );
+}
+
+#[test]
+fn canvas_nodes_keep_their_canvas_origin_after_projection() {
+    let mut nodes = vec![device(vec![]), make_sink("display", "tab")];
+    let mut edges = Vec::new();
+    super::device_tree::project(&mut nodes, &mut edges).unwrap();
+    let sink = nodes.iter().find(|node| node.id == "display").unwrap();
+    assert!(sink.origin.is_canvas());
 }

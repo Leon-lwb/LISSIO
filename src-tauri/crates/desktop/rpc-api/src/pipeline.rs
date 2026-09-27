@@ -6,7 +6,8 @@
 
 use app::{CommandFrameDto, RunAction, SendMode, SendStatus, SendTask, apply_workspace_run};
 use backend_host::BackendHost;
-use data_model::{Error, PipelineConfig};
+use data_model::PipelineConfig;
+use error::AppError as Error;
 use error::ConfigError;
 use events::emit_workspace_run;
 use serde::Deserialize;

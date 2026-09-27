@@ -1,8 +1,8 @@
 //! ISO-TP 集成测试 — PCI 常量验证 + Session API smoke + Handle clone
 
 use can::{CanDirection, CanFrame};
-use data_model::Result;
 use diagnostic::{IsoTpAddressMode, IsoTpConfig};
+use error::Result;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use transport::CanBackend;

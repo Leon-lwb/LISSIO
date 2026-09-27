@@ -1,6 +1,6 @@
 {
   "preset": "justFloat",
-  "legacyConfig": { "kind": "JustFloat", "channels": 4 },
+  "presetConfig": { "kind": "JustFloat", "channels": 4 },
   "decode": [
     { "id": "jf-f0", "type": "field", "fieldType": "float32LE", "portName": "ch0" },
     { "id": "jf-f1", "type": "field", "fieldType": "float32LE", "portName": "ch1" },

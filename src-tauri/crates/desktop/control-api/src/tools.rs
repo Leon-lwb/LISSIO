@@ -318,17 +318,49 @@ pub fn build_can_frame(id: u32, data: Vec<u8>, extended: bool) -> CanFrame {
     }
 }
 
+/// 读取最近逻辑采样 (逻辑分析仪采样点)。
+///
+/// 与 [`get_decoded_events`] 分别读取逻辑平面的两个缓冲 (互不重叠),
+/// [`get_logic_data`] 是二者的合并视图; 三个入口共用同一裁剪上限与裁剪口径,
+/// 因此面板拉取与工具读取看到的是同一批数据。
+pub fn get_logic_samples(tb: &Toolbox, count: u32) -> Value {
+    let samples = recent_logic_samples(tb, count);
+    let sample_count = samples.len();
+    json!({ "samples": samples, "sample_count": sample_count })
+}
+
+/// 读取最近解码事件 (UART/I2C/SPI 等协议解码结果)。
+pub fn get_decoded_events(tb: &Toolbox, count: u32) -> Value {
+    let events = recent_decoded_events(tb, count);
+    let event_count = events.len();
+    json!({ "decoded_events": events, "event_count": event_count })
+}
+
 /// 读取最近逻辑采样与解码事件 (UART/I2C/SPI 等)。
 pub fn get_logic_data(tb: &Toolbox, count: u32) -> Value {
-    let n = count.clamp(1, MAX_LOGIC_ITEMS) as usize;
-    let samples = tb.logic_buffer.lock().get_recent(n);
-    let events = tb.decoded_buffer.lock().get_recent(n);
+    let samples = recent_logic_samples(tb, count);
+    let events = recent_decoded_events(tb, count);
+    let (sample_count, event_count) = (samples.len(), events.len());
     json!({
         "samples": samples,
-        "sample_count": samples.len(),
+        "sample_count": sample_count,
         "decoded_events": events,
-        "event_count": events.len(),
+        "event_count": event_count,
     })
+}
+
+/// 最近 `count` 个逻辑采样, 裁剪到 [`MAX_LOGIC_ITEMS`]。
+fn recent_logic_samples(tb: &Toolbox, count: u32) -> Vec<logic::LogicSample> {
+    tb.logic_buffer
+        .lock()
+        .get_recent(count.clamp(1, MAX_LOGIC_ITEMS) as usize)
+}
+
+/// 最近 `count` 个解码事件, 裁剪到 [`MAX_LOGIC_ITEMS`]。
+fn recent_decoded_events(tb: &Toolbox, count: u32) -> Vec<logic::DecodedEvent> {
+    tb.decoded_buffer
+        .lock()
+        .get_recent(count.clamp(1, MAX_LOGIC_ITEMS) as usize)
 }
 
 /// 读取指定源的最近原始字节 (TX/RX 分方向, hex 编码)。

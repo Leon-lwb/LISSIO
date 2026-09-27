@@ -75,7 +75,8 @@ pub fn open(
     }
     let live_config = TransportConfig::TestData(TestDataConfig {
         channels: config.channels as usize,
-        sample_rate: legacy_sample_rate(config.sample_rate),
+        #[allow(clippy::cast_precision_loss)] // Simulation rates are validated to at most 5 MHz.
+        sample_rate: config.sample_rate as f32,
         signal: TestSignal::Sine,
     });
     let (updates, mut update_rx) = watch::channel(config);
@@ -132,11 +133,6 @@ pub fn open(
             idempotent_writes: false,
         },
     }))
-}
-
-#[allow(clippy::cast_precision_loss)] // Simulation rates are validated to at most 5 MHz.
-const fn legacy_sample_rate(sample_rate: u32) -> f32 {
-    sample_rate as f32
 }
 
 #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]

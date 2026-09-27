@@ -24,6 +24,7 @@
 
 mod compile;
 mod prelude;
+mod provenance;
 mod traits;
 
 pub mod evaluate;

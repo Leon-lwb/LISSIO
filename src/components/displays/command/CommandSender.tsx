@@ -6,7 +6,6 @@ import { useNumericInputs } from '../../../lib/hooks/useNumericPort';
 import { downstreamProtocolOf } from '../../../store/appStoreHelpers';
 import { bytesToHex } from '../../../lib/utils/commandParser';
 import {
-  normalizeCommandConfig,
   commandInputPortNames,
   makeEmptyFrame,
   type ComputedFrame,
@@ -147,9 +146,8 @@ export function CommandSender({ widget }: CommandSenderProps) {
   const runState = useAppStore((s) => s.runState);
   const canSend = runState === 'running';
 
-  // 归一化后的配置 (旧版单帧配置现场包装, updateWidget 落盘时已归一化)
-  const config = useMemo<CommandConfig>(() => normalizeCommandConfig(params), [params]);
-  const frames = config.frames;
+  const config = params;
+  const frames = config.frames.length > 0 ? config.frames : [makeEmptyFrame(config.id)];
 
   // 当前选中帧 (activeFrameId 失效时回退第一帧)
   const [activeFrameId, setActiveFrameId] = useState<string | null>(null);

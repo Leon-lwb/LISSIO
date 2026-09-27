@@ -15,7 +15,7 @@ use buffer_graph::Edge;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 
-use kind::{DecoderBlockDef, NodeDef, NodeKind};
+use kind::{DecoderBlockDef, NodeDef, NodeKind, NodeOrigin};
 use spectrum::SpectrumOutput;
 use spectrum::WindowType;
 
@@ -23,6 +23,8 @@ use eval::CompiledEval;
 use hir::{CompileError, EdgeClass, HirEdge, TypedGraph};
 use lower::lower_value_plane;
 use plane::{BytePlan, value_plane};
+
+use crate::provenance::Provenance;
 
 /// 编译后的图 — 包含拓扑序的评估计划
 pub struct CompiledGraph {
@@ -44,6 +46,8 @@ pub struct CompiledGraph {
     pub(crate) compiled: CompiledEval,
     /// 字节平面处理计划 (拓扑序 + 源→下游路由)
     pub(crate) byte_plan: BytePlan,
+    /// 编译期 provenance 索引 (设备树派生来源; 只读元数据, 热路径不引用)
+    provenance: Provenance,
     /// 预计算节点 id 表 (访问器零分配; 各类节点在编译期一次收集)
     custom_nodes: Vec<String>,
     spectrum_sinks: Vec<String>,
@@ -74,6 +78,9 @@ impl CompiledGraph {
             .iter()
             .map(|&ix| hir.id_of(ix).to_string())
             .collect();
+
+        // 编译期 provenance 索引 (设备树派生来源; 一次遍历, 热路径不引用)
+        let provenance = Provenance::build(&hir);
 
         // 预计算节点 id 表 (访问器返回切片, 零逐次分配)
         let mut custom_nodes = Vec::new();
@@ -118,6 +125,7 @@ impl CompiledGraph {
             in_names: mir.in_names,
             compiled,
             byte_plan,
+            provenance,
             custom_nodes,
             spectrum_sinks,
             filters,
@@ -288,6 +296,40 @@ impl CompiledGraph {
         } else {
             None
         }
+    }
+}
+
+// ============ provenance 查询 (编译结果即设备树派生的数据流图) ============
+
+impl CompiledGraph {
+    /// 单节点来源 — 设备树派生 / 画布手写 / 由其它节点派生。
+    ///
+    /// 双角色节点（同一 id 既是全局协议字节定义又是本 tab 数值视图）以字节定义为权威。
+    pub fn origin_of(&self, node_id: &str) -> Option<&NodeOrigin> {
+        self.provenance.origin_of(node_id)
+    }
+
+    /// 全部来源标记（按节点 id 升序, 稳定顺序）。
+    pub fn provenance(&self) -> impl Iterator<Item = (&str, &NodeOrigin)> + '_ {
+        self.provenance.entries()
+    }
+
+    /// 「按设备树节点取其派生子图」— 返回该树投影起点派生的全部图节点 id（升序）。
+    ///
+    /// 入参为设备树节点 id（与图节点 id 同值, 见 `graph_ops::device_tree::project`）；
+    /// 非设备树起点返回空切片。
+    pub fn derived_from_device_node(&self, device_node_id: &str) -> &[String] {
+        self.provenance.derived_from_device_node(device_node_id)
+    }
+
+    /// 反向查询：图节点归属的设备树投影起点 id；画布节点返回 `None`。
+    pub fn device_node_of(&self, graph_node_id: &str) -> Option<&str> {
+        self.provenance.device_node_of(graph_node_id)
+    }
+
+    /// 全部「设备树起点 → 派生子图」分组（按起点 id 升序）。
+    pub fn device_subgraphs(&self) -> impl Iterator<Item = (&str, &[String])> + '_ {
+        self.provenance.device_subgraphs()
     }
 }
 

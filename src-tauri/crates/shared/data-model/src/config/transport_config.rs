@@ -121,8 +121,7 @@ impl Default for TestDataConfig {
     }
 }
 
-/// slcan 配置 — 基于 USB-CDC 串口
-// 容器级 serde(default): 旧版 payload 缺字段时按 Default 兜底, 序列化输出不变
+/// slcan 配置 — 基于 USB-CDC 串口 (缺省字段按 Default 补齐)
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(default)]
 pub struct SlcanConfig {

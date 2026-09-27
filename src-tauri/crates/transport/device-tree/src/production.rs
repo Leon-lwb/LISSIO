@@ -14,7 +14,8 @@ use acquisition::{
 use async_trait::async_trait;
 use data_model::device::DriverPayload;
 use data_model::device_tree::DriverId;
-use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
+use data_model::{ConnectionState, TestDataConfig, TransportConfig, TransportStats};
+use error::Result;
 use flow::{BytesChunk, FlowEnvelope, Framing, SourceId};
 use parking_lot::{Mutex, RwLock};
 use points::{
@@ -373,23 +374,23 @@ impl AcquisitionBackend for DeviceTreeAcquisition {
     fn send(&self, node_id: &NodeId, bytes: &[u8]) -> Result<()> {
         let entry = self
             .entry_for_node(node_id)
-            .map_err(|error| data_model::Error::Io(std::io::Error::other(error.to_string())))?;
+            .map_err(|error| error::AppError::Io(std::io::Error::other(error.to_string())))?;
         let runtime_id = Self::operation_node_id(&entry, node_id);
         let runtime = entry.runtime(&runtime_id).ok_or_else(|| {
-            data_model::Error::Io(std::io::Error::other("node runtime unavailable"))
+            error::AppError::Io(std::io::Error::other("node runtime unavailable"))
         })?;
         let sink = runtime.as_byte_sink().ok_or_else(|| {
-            data_model::Error::Io(std::io::Error::new(
+            error::AppError::Io(std::io::Error::new(
                 std::io::ErrorKind::Unsupported,
                 "node does not accept byte writes",
             ))
         })?;
         let source_id = SourceId::new(runtime_id.to_string())
-            .map_err(|error| data_model::Error::Io(std::io::Error::other(error.to_string())))?;
+            .map_err(|error| error::AppError::Io(std::io::Error::other(error.to_string())))?;
         let connection_epoch = runtime
             .state()
             .connection_epoch()
-            .ok_or_else(|| data_model::Error::Io(std::io::Error::other("node is not online")))?;
+            .ok_or_else(|| error::AppError::Io(std::io::Error::other("node is not online")))?;
         let envelope = FlowEnvelope {
             source_id,
             connection_epoch,
@@ -401,7 +402,7 @@ impl AcquisitionBackend for DeviceTreeAcquisition {
             payload: BytesChunk::complete(bytes.to_vec(), Framing::Stream),
         };
         sink.try_send_bytes(&envelope)
-            .map_err(|error| data_model::Error::Io(std::io::Error::other(error.to_string())))
+            .map_err(|error| error::AppError::Io(std::io::Error::other(error.to_string())))
     }
 
     fn subscribe_bytes(
@@ -483,7 +484,7 @@ impl AcquisitionBackend for DeviceTreeAcquisition {
     ) -> Result<()> {
         let entry = self
             .entry_for_node(node_id)
-            .map_err(|error| data_model::Error::Io(std::io::Error::other(error.to_string())))?;
+            .map_err(|error| error::AppError::Io(std::io::Error::other(error.to_string())))?;
         let runtime_id = Self::operation_node_id(&entry, node_id);
         byte_session(&entry, &runtime_id)?
             .byte_stream()

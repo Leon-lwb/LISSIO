@@ -57,13 +57,13 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
     onChange({ kind: value.kind, channels: Math.max(1, Math.floor(channels) || 1) });
   };
 
-  /// 当前预设 → custom: 保留当前 schema 的块供编辑, legacyConfig 置 null
+  /// 当前预设 → custom: 保留当前 schema 的块供编辑, presetConfig 置 null
   /// (schema 由文档提供; 缺失说明数据不完整, 不做本地工厂回退)
   const convertToCustom = () => {
     if (!onSchemaChange || !schema) return;
     onSchemaChange({
       preset: 'custom',
-      legacyConfig: null,
+      presetConfig: null,
       decode: schema.decode,
       encode: schema.encode ?? null,
     });

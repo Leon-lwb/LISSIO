@@ -65,7 +65,7 @@ impl TransportBackend for CountingBackend {
         &self,
         config: TransportConfig,
         link: schema_types::TestDataLink,
-    ) -> data_model::Result<TransportConnection> {
+    ) -> error::Result<TransportConnection> {
         self.opens.fetch_add(1, Ordering::AcqRel);
         TestDataBackend.open(config, link).await
     }
@@ -97,11 +97,14 @@ async fn test_data_uses_its_protocol_child_as_the_wire_encoding() {
             "parser",
             "protocol-engine",
             1,
-            serde_json::json!({
-                "protocol": {"kind": "FireWater", "channels": 2},
-                "convertTo": null,
-                "schema": null
-            }),
+            serde_json::to_value(schema_types::ProtocolNodeConfig {
+                protocol: schema_types::ProtocolConfig::FireWater { channels: Some(2) },
+                convert_to: None,
+                schema: schema_types::schema_from_protocol_config(
+                    &schema_types::ProtocolConfig::FireWater { channels: Some(2) },
+                ),
+            })
+            .unwrap(),
         )
         .unwrap(),
     );
@@ -134,7 +137,14 @@ async fn disabled_protocol_child_remains_addressable_in_tree_snapshots() {
         "disabled",
         "protocol-engine",
         1,
-        serde_json::json!({"protocol": {"kind": "RawData"}}),
+        serde_json::to_value(schema_types::ProtocolNodeConfig {
+            protocol: schema_types::ProtocolConfig::RawData,
+            convert_to: None,
+            schema: schema_types::schema_from_protocol_config(
+                &schema_types::ProtocolConfig::RawData,
+            ),
+        })
+        .unwrap(),
     )
     .unwrap();
     parser.enabled = false;

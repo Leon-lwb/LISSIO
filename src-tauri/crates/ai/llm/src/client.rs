@@ -7,8 +7,8 @@
 //! [`chat_turn_stream`] 执行单轮流式对话,把 genai 流事件归一化为
 //! [`ProviderEvent`];文本与工具调用以 `End` 事件的捕获值为准 (完整、按序)。
 
-use data_model::Result;
 use error::AiError;
+use error::Result;
 use futures::{Stream, StreamExt};
 use genai::chat::{
     ChatMessage as GenaiChatMessage, ChatOptions, ChatRequest, ContentPart, MessageContent,

@@ -44,7 +44,7 @@ export function deviceDocument(id = 'device', tabId = 'default'): NodeDocument {
 
 export function protocolDocument(id = 'parser', tabId = 'default'): NodeDocument {
   const schema = structuredClone(justfloatSchemaFixture) as unknown as ProtocolSchema;
-  const protocol = schema.legacyConfig ?? { kind: 'JustFloat', channels: null };
+  const protocol = schema.presetConfig ?? { kind: 'JustFloat', channels: null };
   return {
     id,
     tabId,

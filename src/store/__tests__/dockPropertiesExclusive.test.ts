@@ -339,26 +339,3 @@ describe('ensurePropertiesExclusiveCard (属性卡净化)', () => {
     expect(out.cards).toBe(layout.cards);
   });
 });
-
-describe('persist v2 → v3 迁移', () => {
-  it('v2 布局恢复时净化属性专属卡并写回 v3', async () => {
-    const layout = defaultLayout();
-    layout.cards['properties-main'] = propsCard([PROP, 'can-1']);
-    localStorage.setItem(
-      'vofa-dock',
-      JSON.stringify({
-        state: { root: layout.root, cards: layout.cards, focusedCardId: null },
-        version: 2,
-      })
-    );
-
-    await useDockStore.persist.rehydrate();
-    useDockStore.setState({}); // 触发一次 persist 写回以确认版本号
-
-    const dock = useDockStore.getState();
-    expect(dock.cards['properties-main'].tabIds).toEqual([PROP]);
-    expect(dock.cards['data-main'].tabIds).toEqual([...COMPILE_TABS, 'can-1']);
-    const persisted = JSON.parse(localStorage.getItem('vofa-dock')!) as { version: number };
-    expect(persisted.version).toBe(3);
-  });
-});

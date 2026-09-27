@@ -1,4 +1,4 @@
-//! 协议配置 — schema 的 legacy_config / TestDataLink.protocol 用。
+//! 协议配置 — schema 的 preset_config / TestDataLink.protocol 用。
 //!
 //! 仅保留 schema 所需的最小集 (ProtocolConfig);
 //! 传输 / 控件 / 流水线配置由 `data_model::config` 承担。

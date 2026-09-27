@@ -17,7 +17,7 @@ export function widgetInputValue(widget: WidgetConfig): number | null {
       return widget.params.options.find((option) => option.id === widget.params.selectedId)?.value ?? 0;
     case 'Checkbox': {
       const selected = new Set(widget.params.selectedIds);
-      if (selected.size === 0) return widget.params.emptyValue ?? 0;
+      if (selected.size === 0) return 0;
       return widget.params.options.reduce(
         (sum, option) => sum + (selected.has(option.id) ? option.value : 0),
         0,

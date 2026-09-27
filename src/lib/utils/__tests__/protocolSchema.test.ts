@@ -33,11 +33,11 @@ describe('schemaPortNames (custom 端口派生, 与 Rust port_names 对齐)', ()
 
 describe('isRawDataPreset (持久化数据判读)', () => {
   it('RawData 预设 → true; custom 块编辑后 → false', () => {
-    expect(isRawDataPreset({ config: { kind: 'RawData' }, schema: { preset: 'rawData', legacyConfig: { kind: 'RawData' }, decode: [] } })).toBe(true);
+    expect(isRawDataPreset({ config: { kind: 'RawData' }, schema: { preset: 'rawData', presetConfig: { kind: 'RawData' }, decode: [] } })).toBe(true);
     expect(isRawDataPreset({
       config: { kind: 'RawData' },
       schema: {
-        preset: 'custom', legacyConfig: null,
+        preset: 'custom', presetConfig: null,
         decode: [{ id: 'f0', type: 'field', fieldType: 'uint8', portName: 'v0' }],
       },
     })).toBe(false);

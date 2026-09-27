@@ -8,10 +8,10 @@ interface NumberDisplayProps {
 }
 
 /// 大数字显示 — 大字号展示单通道数值, 含单位与小数位
-/// 数据源: edge 连线 (后端图输出) 优先, 否则回退到 channel 参数
+/// 数据源: value 输入边 (后端图输出)
 export const NumberDisplay = memo(function NumberDisplay({ widget }: NumberDisplayProps) {
-  const { unit, precision, channel } = widget.params;
-  const input = useNumericInput(widget.params.id, 'value', channel);
+  const { unit, precision } = widget.params;
+  const input = useNumericInput(widget.params.id, 'value');
 
   // 自适应字号: 值越长字号越小
   const text = formatNumericValue(input, precision);
@@ -26,9 +26,6 @@ export const NumberDisplay = memo(function NumberDisplay({ widget }: NumberDispl
         {unit && <span className="text-sm text-text-secondary font-normal">{unit}</span>}
       </div>
       <div className="text-center"><NumericPortStatus state={input} /></div>
-      {channel === null && (
-        <div className="text-[10px] text-text-secondary text-center opacity-60">未绑定通道</div>
-      )}
     </div>
   );
 });

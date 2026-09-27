@@ -3,12 +3,13 @@
 use std::sync::Arc;
 
 use control_api::Toolbox;
-use data_model::Result as VofaResult;
+use control_api::capabilities::registry::CapabilityRegistry;
 use error::McpError;
+use error::Result as VofaResult;
 use events::EventSinkHandle;
 
 use super::MCP_ENDPOINT_PATH;
-use super::handlers::VofaMcpServer;
+use super::VofaMcpServer;
 
 /// 默认 MCP 监听端口 — 端口配置的后端权威默认值 (前端设置 / CLI flag 为显式覆盖)。
 pub const DEFAULT_MCP_PORT: u16 = 8765;
@@ -64,17 +65,25 @@ impl McpServerHandle {
 
 /// 在 `127.0.0.1:{port}` 启动 MCP streamable-http server。
 ///
-/// `sink` 是事件/通知端口 — Tauri 组合根注入前端事件实现, 无界面宿主注入
-/// 静默或日志实现, 本适配器不感知宿主差异。
+/// `registry` 是软件能力注册表 (工具清单单一事实来源); `sink` 是事件/通知端口 —
+/// Tauri 组合根注入前端事件实现, 无界面宿主注入静默或日志实现, 本适配器不感知
+/// 宿主差异。
 ///
 /// # Errors
 /// 端口占用等 bind 失败返回 [`McpError::ServerStart`]。
 pub async fn start(
+    registry: Arc<CapabilityRegistry>,
     toolbox: Toolbox,
     sink: EventSinkHandle,
     port: u16,
 ) -> VofaResult<McpServerHandle> {
-    let service_factory = move || Ok(VofaMcpServer::new(toolbox.clone(), sink.clone()));
+    let service_factory = move || {
+        Ok(VofaMcpServer::new(
+            Arc::clone(&registry),
+            toolbox.clone(),
+            sink.clone(),
+        ))
+    };
     let session_manager = Arc::new(
         rmcp::transport::streamable_http_server::session::local::LocalSessionManager::default(),
     );

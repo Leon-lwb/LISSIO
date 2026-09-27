@@ -19,10 +19,16 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::panel_descriptor::PanelDescriptor;
+
 /// Wire contract version of [`ModelCatalog`]. Bump when the descriptor
 /// structure itself changes; consumers that do not support a version show a
 /// compatibility error instead of guessing.
-pub const MODEL_CATALOG_CONTRACT_VERSION: u32 = 1;
+///
+/// The panel section ([`ModelCatalog::panels`]) ships inside the same payload
+/// and is versioned by this single constant — there is deliberately no second
+/// version to keep in sync.
+pub const MODEL_CATALOG_CONTRACT_VERSION: u32 = 2;
 
 /// Shared configuration schema carrier for drivers, adapters, and models.
 ///
@@ -250,6 +256,14 @@ pub struct ModelCatalog {
     /// descriptions; changes whenever any descriptor changes.
     pub revision: String,
     pub models: Vec<ModelDescriptor>,
+    /// Data-driven panel contracts, projected from the widget registry.
+    ///
+    /// A panel is the window/dock-facing side of a display widget, so it is a
+    /// sibling of `models` rather than a model family of its own: it addresses
+    /// the same host node (`hostWidgetKind`) and adds the tab identity, the
+    /// data-plane delivery contract, and the node binding.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub panels: Vec<PanelDescriptor>,
 }
 
 #[cfg(test)]

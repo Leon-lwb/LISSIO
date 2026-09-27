@@ -9,8 +9,8 @@ use crate::can_model::{CanDirection, CanDlc, CanFrameBody, CanFrameError, CanFra
 /// CAN frame — normalized CAN data model.
 ///
 /// The public field shape is the stable IPC JSON contract. Prefer the validated
-/// constructors and [`Self::parts`] in new code; custom serde normalizes legacy
-/// remote frames while preserving the existing wire shape.
+/// constructors and [`Self::parts`] in new code; custom serde normalizes remote
+/// frames (rtr = true carries no payload) while preserving the wire shape.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CanFrame {
     pub timestamp: u64,
@@ -48,7 +48,7 @@ struct CanFrameWire {
 }
 
 impl CanFrame {
-    /// Construct a standard data frame, truncating legacy overlong payloads.
+    /// Construct a standard data frame, truncating overlong payloads.
     pub fn new(timestamp: u64, id: u32, data: Vec<u8>, direction: CanDirection) -> Self {
         let data = data
             .into_iter()

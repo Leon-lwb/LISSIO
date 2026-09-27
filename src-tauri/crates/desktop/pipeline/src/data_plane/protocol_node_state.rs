@@ -36,8 +36,8 @@ pub struct ProtocolNodeState {
     pub config: ProtocolConfig,
     /// convert_to 目标配置
     pub convert_config: Option<ProtocolConfig>,
-    /// 帧 schema (协议引擎统一为 schema 模型; None = 旧前端, 引擎按 config 构造)
-    pub schema: Option<ProtocolSchema>,
+    /// 帧 schema (协议引擎统一由 schema 编译)
+    pub schema: ProtocolSchema,
     /// 并行解析编排器 (feed 内含 spawn_blocking await, 用 tokio mutex 跨 await 持有)
     pub parallel: Arc<tokio::sync::Mutex<ParallelFeeder>>,
     /// 当前是否处于并行解析模式 (顺序↔并行切换时做 pending 交接)
@@ -89,17 +89,16 @@ impl ProtocolNodeState {
     pub fn new(
         config: &ProtocolConfig,
         convert_to: Option<&ProtocolConfig>,
-        schema: Option<&ProtocolSchema>,
+        schema: &ProtocolSchema,
     ) -> Self {
-        // 有 schema 时由 compile_schema 构造引擎 (预设走 legacy 引擎, Custom 走 SchemaEngine);
-        // 无 schema (旧前端) 保持原有 create_engine 路径
-        let engine = schema.map_or_else(|| create_protocol_engine(config), schema::compile_schema);
+        // 引擎统一由 schema 编译 (预设走预设引擎, Custom 走 SchemaEngine)
+        let engine = schema::compile_schema(schema);
         Self {
             engine: Arc::new(Mutex::new(engine)),
             convert_engine: convert_to.map(|c| Arc::new(Mutex::new(create_protocol_engine(c)))),
             config: config.clone(),
             convert_config: convert_to.cloned(),
-            schema: schema.cloned(),
+            schema: schema.clone(),
             parallel: Arc::new(tokio::sync::Mutex::new(ParallelFeeder::new())),
             in_parallel: false,
             parallel_supported: None,
@@ -264,7 +263,7 @@ impl ProtocolNodeState {
         &self,
         config: &ProtocolConfig,
         convert_to: Option<&ProtocolConfig>,
-        schema: Option<&ProtocolSchema>,
+        schema: &ProtocolSchema,
     ) -> bool {
         serde_json::to_value(&self.config).ok() == serde_json::to_value(config).ok()
             && serde_json::to_value(&self.convert_config).ok()
@@ -276,6 +275,12 @@ impl ProtocolNodeState {
 #[cfg(test)]
 mod sample_clock_tests {
     use super::{ProtocolNodeState, SampleClockBasis};
+
+    fn just_float_schema() -> schema_types::ProtocolSchema {
+        let config = ProtocolConfig::JustFloat { channels: Some(1) };
+        schema_types::schema_from_protocol_config(&config)
+    }
+
     use data_model::DataFrame;
     use schema_types::ProtocolConfig;
 
@@ -287,8 +292,11 @@ mod sample_clock_tests {
 
     #[test]
     fn exact_clock_preserves_an_explicit_lagged_gap() {
-        let mut state =
-            ProtocolNodeState::new(&ProtocolConfig::JustFloat { channels: Some(1) }, None, None);
+        let mut state = ProtocolNodeState::new(
+            &ProtocolConfig::JustFloat { channels: Some(1) },
+            None,
+            &just_float_schema(),
+        );
         let hint = Some((SampleClockBasis::ExactRate, 1_000.0, 0));
         let mut first = frames(2);
         state.restamp_frames(hint, 10_000, &mut first);
@@ -315,8 +323,11 @@ mod sample_clock_tests {
 
     #[test]
     fn gap_before_first_visible_batch_is_absorbed_by_arrival_anchor() {
-        let mut state =
-            ProtocolNodeState::new(&ProtocolConfig::JustFloat { channels: Some(1) }, None, None);
+        let mut state = ProtocolNodeState::new(
+            &ProtocolConfig::JustFloat { channels: Some(1) },
+            None,
+            &just_float_schema(),
+        );
         state.note_exact_frame_gap(500, 1_000.0);
         let mut first = frames(2);
         state.restamp_frames(

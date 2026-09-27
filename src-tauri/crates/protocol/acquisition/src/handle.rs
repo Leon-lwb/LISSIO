@@ -1,4 +1,5 @@
-use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
+use data_model::{ConnectionState, TestDataConfig, TransportConfig, TransportStats};
+use error::Result;
 use error::TransportError;
 use flow::{Framing, SourceId};
 use schema_types::TestDataLink;
@@ -134,12 +135,12 @@ impl TransportHandle {
         self.data_tx.subscribe()
     }
 
-    pub fn subscribe_flow(&self, source_id: SourceId) -> crate::LegacyFlowReceiver {
+    pub fn subscribe_flow(&self, source_id: SourceId) -> crate::BroadcastFlowReceiver {
         let framing = match &*self.config.read() {
             TransportConfig::Udp(_) => Framing::Datagram,
             _ => Framing::Stream,
         };
-        crate::LegacyFlowReceiver::new(
+        crate::BroadcastFlowReceiver::new(
             source_id,
             self.connection_epoch,
             framing,

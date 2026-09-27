@@ -88,7 +88,7 @@ impl DerivedStore {
         for &ts in timestamps {
             if ptr < len && entry.timestamps.get(ptr).is_some_and(|t| *t < ts) {
                 // 先指数扩展再二分；最近小窗口不扫描整个历史，密集窗口也不
-                // 为每个相邻点付出 log(容量) 次比较。逻辑索引兼容环形回绕。
+                // 为每个相邻点付出 log(容量) 次比较。逻辑索引按环形回绕解释。
                 let mut step = 1_usize;
                 let mut hi = ptr.saturating_add(step).min(len);
                 while hi < len && entry.timestamps.get(hi).is_some_and(|t| *t < ts) {
@@ -222,7 +222,7 @@ impl DerivedWriter {
         self.version.store(store.version(), Ordering::Relaxed);
     }
 
-    /// 追加一个派生样本（低频命令/测试兼容入口）。
+    /// 追加一个派生样本（低频命令/测试入口）。
     pub fn push(&self, index: usize, timestamp: u64, value: f32) {
         self.append(std::iter::once((index, timestamp, value)));
     }

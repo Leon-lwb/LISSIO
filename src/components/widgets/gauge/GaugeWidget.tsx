@@ -10,11 +10,11 @@ interface GaugeProps {
 }
 
 /// 仪表盘控件 — 半圆指针 + 弧形进度 + 主刻度, 显示单通道实时值
-/// 数据源: edge 连线 (后端图输出) 优先, 否则回退到 channel 参数;
+/// 数据源: value 输入边 (后端图输出);
 /// 量程: 手动 (params.range.min/max) 或滑动窗口自适应 (useAutoRange)。
 export const Gauge = memo(function Gauge({ widget }: GaugeProps) {
-  const { id, range: rangeConfig, unit, channel } = widget.params;
-  const input = useNumericInput(id, 'value', channel);
+  const { id, range: rangeConfig, unit } = widget.params;
+  const input = useNumericInput(id, 'value');
   const range = useAutoRange(id, input, rangeConfig);
   const value = input.latest?.value ?? range.min;
   const canvasRef = useRef<HTMLCanvasElement>(null);

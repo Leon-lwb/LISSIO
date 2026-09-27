@@ -10,12 +10,14 @@
     clippy::suboptimal_flops
 )]
 
+use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::WidgetDefinition;
 use super::WidgetPortTable;
 use super::params::{f32_port, string_port};
+use super::{PanelBindingSpec, PanelSpec};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
@@ -35,15 +37,15 @@ pub struct TriggerRule {
     pub id: String,
     #[serde(default)]
     pub pattern: String,
-    #[serde(alias = "match_type", default)]
+    #[serde(default)]
     pub match_type: TriggerMatchType,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flags: Option<String>,
-    #[serde(alias = "output_type", default)]
+    #[serde(default)]
     pub output_type: TriggerOutputType,
-    #[serde(alias = "output_value", default)]
+    #[serde(default)]
     pub output_value: f64,
-    #[serde(alias = "output_text", default)]
+    #[serde(default)]
     pub output_text: String,
     #[serde(default = "default_true")]
     pub enabled: bool,
@@ -145,7 +147,7 @@ pub(super) const TRIGGER_DEF: WidgetDefinition = WidgetDefinition {
         })
     },
     normalize: |params| {
-        super::round_trip_params::<TriggerParams>(params, &[]);
+        super::round_trip_params::<TriggerParams>(params);
     },
     ports: trigger_ports,
     lower: |params, _| {
@@ -175,6 +177,19 @@ pub(super) const TRIGGER_DEF: WidgetDefinition = WidgetDefinition {
                 .collect(),
         })
     },
+    // 触发器面板: 结果读自后端图输出 (value/matched 数值平面, text 字符串平面),
+    // 实时值走 port_samples, 一次性读取走 graphOutputs 快照。
+    panel: Some(PanelSpec {
+        panel: PanelKind::Trigger,
+        tab_type: "trigger",
+        label_key: "dataTabTrigger",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_PORT_SAMPLES),
+        fetch_op: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: None,
+    }),
 };
 
 pub(super) static TRIGGER: WidgetDefinition = TRIGGER_DEF;

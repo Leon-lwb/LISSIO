@@ -297,12 +297,12 @@ mod tests {
     /// 修复前 schema 里的非法字面量: 不允许重新出现在候选列表;
     /// 反序列化兜底仍接受旧值, 保证旧工作区可加载。
     #[test]
-    fn can_bitrate_schema_enum_rejects_legacy_mistyped_names() {
+    fn can_bitrate_schema_enum_rejects_mistyped_names() {
         let field = field_schema("can_bitrate", &json!("Bps500k"));
         for candidate in field["enum"].as_array().unwrap() {
             assert_ne!(candidate, &json!("Bps1M"));
         }
-        assert!(serde_json::from_value::<CanBitrate>(json!("Bps1M")).is_ok());
+        assert!(serde_json::from_value::<CanBitrate>(json!("Bps1M")).is_err());
         assert!(serde_json::from_value::<CanBitrate>(json!("Bps10k")).is_ok());
     }
 

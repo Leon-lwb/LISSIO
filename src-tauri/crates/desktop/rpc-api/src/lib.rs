@@ -26,6 +26,7 @@ mod export;
 mod frame_decoder;
 mod graph;
 pub mod models;
+mod panel;
 mod pipeline;
 mod recording;
 mod transport;
@@ -184,6 +185,8 @@ pub async fn dispatch_with_context(
         // ===== 显示订阅控制 / 四域读取 =====
         "ack_data" => data::ack_data(host, cmd, &args),
         "get_data_health" => data::get_data_health(host),
+        // 数据面板拉取面 (面板身份的推送面走出口通道, 见 `app::display::subscribe_data`)
+        "fetch_panel_data" => panel::fetch_panel_data(host, cmd, &args),
         "get_recent_logic_samples" => data::get_recent_logic_samples(host, cmd, &args),
         "clear_logic_buffer" => data::clear_logic_buffer(host),
         "get_logic_buffer_info" => data::get_logic_buffer_info(host),

@@ -17,15 +17,15 @@ use pipeline::{DataPlaneState, evaluate_snapshot_now, frame_dispatch};
 fn str_node_graph(tab_id: &str) -> CompiledGraph {
     CompiledGraph::compile(
         tab_id.into(),
-        vec![NodeDef {
-            id: "up1".into(),
-            tab_id: tab_id.into(),
-            kind: NodeKind::Str {
+        vec![NodeDef::new(
+            "up1".into(),
+            tab_id.into(),
+            NodeKind::Str {
                 op: StrOp::Upper,
                 num: StrNumParams::default(),
                 tmpl: String::new(),
             },
-        }],
+        )],
         vec![],
     )
     .unwrap()
@@ -49,19 +49,15 @@ async fn event_driven_evaluation_publishes_active_numeric_topics() {
     let graph = CompiledGraph::compile(
         "numeric-event".into(),
         vec![
-            NodeDef {
-                id: "input".into(),
-                tab_id: "numeric-event".into(),
-                kind: NodeKind::Input,
-            },
-            NodeDef {
-                id: "math".into(),
-                tab_id: "numeric-event".into(),
-                kind: NodeKind::Math {
+            NodeDef::new("input".into(), "numeric-event".into(), NodeKind::Input),
+            NodeDef::new(
+                "math".into(),
+                "numeric-event".into(),
+                NodeKind::Math {
                     op: MathOp::Add,
                     input_count: 1,
                 },
-            },
+            ),
         ],
         vec![Edge {
             id: "edge".into(),
@@ -93,7 +89,7 @@ async fn event_driven_evaluation_publishes_active_numeric_topics() {
 #[test]
 fn on_frames_publishes_str_outputs() {
     let (_state, plane) = test_plane();
-    frame_dispatch::on_frames(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
+    frame_dispatch::record_and_eval(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
 
     let str_out = plane.eval.graph_string_outputs.lock();
     // Str 字符串域输出端口恒 written (无字符串源时输入缺省 "" → Upper("") = "")
@@ -110,22 +106,22 @@ fn textout_publishes_to_string_outputs_with_specs() {
     let graph = CompiledGraph::compile(
         "t1".into(),
         vec![
-            NodeDef {
-                id: "textin".into(),
-                tab_id: "t1".into(),
-                kind: kind::NodeKind::TextInput {
+            NodeDef::new(
+                "textin".into(),
+                "t1".into(),
+                kind::NodeKind::TextInput {
                     text: "hello".into(),
                 },
-            },
-            NodeDef {
-                id: "tout".into(),
-                tab_id: "t1".into(),
-                kind: kind::NodeKind::TextOut {
+            ),
+            NodeDef::new(
+                "tout".into(),
+                "t1".into(),
+                kind::NodeKind::TextOut {
                     target_transport: "tp1".into(),
                     newline: kind::NewlineMode::Lf,
                     min_interval_ms: 20,
                 },
-            },
+            ),
         ],
         vec![buffer_graph::Edge {
             id: "e1".into(),
@@ -147,7 +143,7 @@ fn textout_publishes_to_string_outputs_with_specs() {
     }
     plane.eval.graphs.lock().insert("t1".into(), graph);
 
-    frame_dispatch::on_frames(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
+    frame_dispatch::record_and_eval(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
     let str_out = plane.eval.graph_string_outputs.lock();
     assert_eq!(
         str_out.get("tout").and_then(|p| p.get("text")),
@@ -160,7 +156,7 @@ fn textout_publishes_to_string_outputs_with_specs() {
 #[test]
 fn version_change_clears_stale_str_outputs() {
     let (_state, plane) = test_plane();
-    frame_dispatch::on_frames(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
+    frame_dispatch::record_and_eval(&plane, "pt", &[DataFrame::with_timestamp(1, vec![1.0])]);
     assert!(plane.eval.graph_string_outputs.lock().contains_key("up1"));
 
     // 模拟图重编译: 注入过期节点条目 + 版本号 +1 (对齐 update_tab_graph/remove_tab_graph)
@@ -170,7 +166,7 @@ fn version_change_clears_stale_str_outputs() {
     );
     plane.eval.graphs_version.fetch_add(1, Ordering::Relaxed);
 
-    frame_dispatch::on_frames(&plane, "pt", &[DataFrame::with_timestamp(2, vec![2.0])]);
+    frame_dispatch::record_and_eval(&plane, "pt", &[DataFrame::with_timestamp(2, vec![2.0])]);
     let str_out = plane.eval.graph_string_outputs.lock();
     assert!(
         !str_out.contains_key("stale_node"),

@@ -121,7 +121,7 @@ fn frame_decoder_encoding(blocks: &[DecoderBlockDef]) -> Option<serde_json::Valu
     }
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: blocks.to_vec(),
         encode: Some(encode),
     };

@@ -164,7 +164,7 @@ fn bench_eval(c: &mut Criterion) {
                         }
                         epoch += batch.len() as u64 * 100;
                         let start = std::time::Instant::now();
-                        black_box(frame_dispatch::on_frames(
+                        black_box(frame_dispatch::record_and_eval(
                             &state.data_plane,
                             "pt",
                             black_box(&batch),

@@ -1,7 +1,6 @@
 //! 输入控件 (Knob/Slider/Button/Radio/Checkbox) — 默认、归一化、端口与 lowering。
 //!
-//! 归一化移植自前端 `widgetNormalize.ts`: 旧形态 (snake_case 值字段、选项数组
-//! 元组、legacy default 索引) 迁移为当前模型; 幂等。
+//! 归一化补齐缺省并按当前模型重建 wire 形状; 幂等。
 
 // 数值转换均为有界索引/精度语义 (JSON number <-> 定宽整数), 与前端 JS 数值
 // 行为对齐; 此处统一豁免逐个标注的噪音。
@@ -56,9 +55,7 @@ pub type SliderParams = KnobParams;
 pub struct ButtonParams {
     pub id: String,
     pub label: String,
-    #[serde(alias = "press_value")]
     pub press_value: f64,
-    #[serde(alias = "release_value")]
     pub release_value: f64,
     pub binding: InputBinding,
 }
@@ -130,13 +127,13 @@ impl Default for CheckboxParams {
 
 // ============ 归一化 ============
 
-/// Knob/Slider 共用: 量程吸附 + 绑定。旧值字段无别名 (min/max/step/value 拼写未变)。
+/// Knob/Slider 共用: 量程吸附 + 绑定。
 fn normalize_range_like<T: RangeLikeParams + DeserializeOwned + Serialize>(params: &mut Value) {
     if let Ok(mut parsed) = serde_json::from_value::<T>(params.clone()) {
         let (min, max, step) = (parsed.min(), parsed.max(), parsed.step());
         parsed.set_value(snap_control_value(parsed.value(), min, max, step));
         if let Ok(mut wire) = serde_json::to_value(&parsed) {
-            merge_unknown(params, &mut wire, &[]);
+            merge_unknown(params, &mut wire);
             *params = wire;
         }
     }
@@ -177,12 +174,12 @@ fn normalize_button(params: &mut Value) {
     if let Ok(mut wire) = serde_json::from_value::<ButtonParams>(params.clone())
         .and_then(|parsed| serde_json::to_value(&parsed))
     {
-        merge_unknown(params, &mut wire, &["press_value", "release_value"]);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
 
-/// 选项数组迁移: 元组 `[label, value]` / 缺 id 的对象 → 当前形态。
+/// 选项数组校验: 非对象项跳过, 缺 id/label 的对象按索引补缺省。
 fn normalize_options(value: &Value, widget_id: &str) -> Vec<ChoiceOption> {
     let Some(items) = value.as_array() else {
         return Vec::new();
@@ -191,18 +188,6 @@ fn normalize_options(value: &Value, widget_id: &str) -> Vec<ChoiceOption> {
         .iter()
         .enumerate()
         .filter_map(|(index, item)| {
-            if let Some(pair) = item.as_array() {
-                let label = pair
-                    .first()
-                    .and_then(Value::as_str)
-                    .map_or_else(|| format!("Option {}", index + 1), str::to_owned);
-                let option_value = finite_or(pair.get(1).and_then(Value::as_f64), index as f64);
-                return Some(ChoiceOption {
-                    id: format!("{widget_id}-option-{}", index + 1),
-                    label,
-                    value: option_value,
-                });
-            }
             let option = item.as_object()?;
             if option.is_empty() {
                 return None;
@@ -240,9 +225,6 @@ fn normalize_radio(params: &mut Value) {
     } else {
         options
     };
-    let legacy_index = finite_or(params.get("default").and_then(Value::as_f64), 0.0)
-        .max(0.0)
-        .trunc() as usize;
     let requested_id = params
         .get("selectedId")
         .and_then(Value::as_str)
@@ -251,8 +233,7 @@ fn normalize_radio(params: &mut Value) {
         requested_id.to_owned()
     } else {
         safe_options
-            .get(legacy_index)
-            .or_else(|| safe_options.first())
+            .first()
             .map(|o| o.id.clone())
             .unwrap_or_default()
     };
@@ -264,7 +245,7 @@ fn normalize_radio(params: &mut Value) {
         selected_id,
         binding,
     }) {
-        merge_unknown(params, &mut wire, &["default"]);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
@@ -275,18 +256,7 @@ fn normalize_checkbox(params: &mut Value) {
         .and_then(Value::as_str)
         .unwrap_or_default()
         .to_owned();
-    let is_legacy = params.get("checked_value").is_some()
-        || params.get("unchecked_value").is_some()
-        || params.get("default").is_some();
-    let options = if is_legacy {
-        vec![ChoiceOption {
-            id: format!("{id}-option-1"),
-            label: "Option 1".into(),
-            value: finite_or(params.get("checked_value").and_then(Value::as_f64), 1.0),
-        }]
-    } else {
-        normalize_options(params.get("options").unwrap_or(&Value::Null), &id)
-    };
+    let options = normalize_options(params.get("options").unwrap_or(&Value::Null), &id);
     let safe_options: Vec<ChoiceOption> = if options.is_empty() {
         vec![ChoiceOption {
             id: format!("{id}-option-1"),
@@ -298,31 +268,19 @@ fn normalize_checkbox(params: &mut Value) {
     };
     let valid_ids: std::collections::BTreeSet<&str> =
         safe_options.iter().map(|o| o.id.as_str()).collect();
-    let selected_ids: Vec<String> = if is_legacy {
-        if params.get("default") == Some(&Value::Bool(true)) {
-            vec![safe_options[0].id.clone()]
-        } else {
-            Vec::new()
-        }
-    } else {
-        params
-            .get("selectedIds")
-            .and_then(Value::as_array)
-            .map(|items| {
-                items
-                    .iter()
-                    .filter_map(Value::as_str)
-                    .filter(|id| valid_ids.contains(*id))
-                    .map(str::to_owned)
-                    .collect()
-            })
-            .unwrap_or_default()
-    };
-    let empty_value = if is_legacy {
-        finite_or(params.get("unchecked_value").and_then(Value::as_f64), 0.0)
-    } else {
-        finite_or(params.get("emptyValue").and_then(Value::as_f64), 0.0)
-    };
+    let selected_ids: Vec<String> = params
+        .get("selectedIds")
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(Value::as_str)
+                .filter(|id| valid_ids.contains(*id))
+                .map(str::to_owned)
+                .collect()
+        })
+        .unwrap_or_default();
+    let empty_value = finite_or(params.get("emptyValue").and_then(Value::as_f64), 0.0);
     let binding = normalize_binding(params.get("binding").unwrap_or(&Value::Null));
     if let Ok(mut wire) = serde_json::to_value(&CheckboxParams {
         id,
@@ -332,11 +290,7 @@ fn normalize_checkbox(params: &mut Value) {
         empty_value,
         binding,
     }) {
-        merge_unknown(
-            params,
-            &mut wire,
-            &["checked_value", "unchecked_value", "default"],
-        );
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
@@ -367,6 +321,7 @@ const KNOB_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_knob,
     ports: input_control_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Input),
+    panel: None,
 };
 
 const SLIDER_DEF: WidgetDefinition = WidgetDefinition {
@@ -384,6 +339,7 @@ const SLIDER_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_knob,
     ports: input_control_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Input),
+    panel: None,
 };
 
 const BUTTON_DEF: WidgetDefinition = WidgetDefinition {
@@ -401,6 +357,7 @@ const BUTTON_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_button,
     ports: input_control_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Input),
+    panel: None,
 };
 
 const RADIO_DEF: WidgetDefinition = WidgetDefinition {
@@ -422,6 +379,7 @@ const RADIO_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_radio,
     ports: input_control_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Input),
+    panel: None,
 };
 
 const CHECKBOX_DEF: WidgetDefinition = WidgetDefinition {
@@ -443,6 +401,7 @@ const CHECKBOX_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_checkbox,
     ports: input_control_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Input),
+    panel: None,
 };
 
 pub(super) static KNOB: WidgetDefinition = KNOB_DEF;

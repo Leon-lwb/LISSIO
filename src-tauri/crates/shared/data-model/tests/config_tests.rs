@@ -207,23 +207,20 @@ fn candle_config_default_and_roundtrip() {
     }
 }
 
-/// 修复前 schema 曾以 `Bps1M` (大写 M) 写入工作区 — 旧数据必须能加载。
+/// 非 contract 拼写 (如 `Bps1M`) 反序列化失败 — 只接受精确契约名。
 #[test]
-fn slcan_config_accepts_legacy_uppercase_bitrate() {
-    let restored: TransportConfig = serde_json::from_str(
+fn slcan_config_rejects_mistyped_bitrate() {
+    let restored: Result<TransportConfig, _> = serde_json::from_str(
         r#"{"kind":"Slcan","params":{"port_name":"COM3","baud_rate":115200,"can_bitrate":"Bps1M"}}"#,
-    )
-    .unwrap();
-    match restored {
-        TransportConfig::Slcan(s) => assert_eq!(s.can_bitrate, CanBitrate::Bps1m),
-        _ => panic!("expected Slcan variant"),
-    }
+    );
+    assert!(restored.is_err(), "mistyped bitrate must be rejected");
 }
 
-/// 容器级 `#[serde(default)]`: payload 缺字段时按 Default 兜底, 不再反序列化失败。
+/// Slcan/CandleLight payload 缺可选字段时按 Default 补齐。
 #[test]
-fn slcan_and_candle_configs_fill_missing_fields_from_default() {
-    let slcan: TransportConfig = serde_json::from_str(r#"{"kind":"Slcan","params":{}}"#).unwrap();
+fn slcan_and_candle_configs_fill_missing_fields() {
+    let slcan: TransportConfig = serde_json::from_str(r#"{"kind":"Slcan","params":{}}"#)
+        .expect("Slcan payload fills defaults per-field");
     match slcan {
         TransportConfig::Slcan(s) => {
             let d = SlcanConfig::default();

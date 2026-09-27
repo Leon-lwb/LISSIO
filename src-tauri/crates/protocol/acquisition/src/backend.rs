@@ -5,7 +5,8 @@
 //! same byte-oriented connection regardless of the concrete device.
 
 use async_trait::async_trait;
-use data_model::{Result, TransportConfig};
+use data_model::TransportConfig;
+use error::Result;
 use flow::{Boundary, BytesChunk, Direction, FlowEnvelope, FlowGap, Framing, LostUnit, SourceId};
 use schema_types::TestDataLink;
 use std::sync::Arc;
@@ -92,10 +93,9 @@ impl TransportConnection {
     }
 }
 
-/// Compatibility adapter from the legacy broadcast byte channel to the typed
-/// flow plane. Sequence gaps represent lost broadcast messages, never invented
-/// byte counts.
-pub struct LegacyFlowReceiver {
+/// Broadcast byte channel → typed flow plane adapter. Sequence gaps represent
+/// lost broadcast messages, never invented byte counts.
+pub struct BroadcastFlowReceiver {
     source_id: SourceId,
     connection_epoch: u64,
     framing: Framing,
@@ -147,7 +147,7 @@ pub struct FlowReceiver {
 }
 
 enum FlowReceiverInner {
-    Legacy(LegacyFlowReceiver),
+    Broadcast(BroadcastFlowReceiver),
     Typed(TypedFlowReceiver),
 }
 
@@ -157,10 +157,10 @@ struct TypedFlowReceiver {
 }
 
 impl FlowReceiver {
-    /// 包装旧广播适配接收器。
-    pub const fn from_legacy(receiver: LegacyFlowReceiver) -> Self {
+    /// 包装广播字节通道接收器。
+    pub const fn from_broadcast(receiver: BroadcastFlowReceiver) -> Self {
         Self {
-            inner: FlowReceiverInner::Legacy(receiver),
+            inner: FlowReceiverInner::Broadcast(receiver),
         }
     }
 
@@ -177,7 +177,7 @@ impl FlowReceiver {
     /// 接收下一条 typed payload。
     pub async fn recv(&mut self) -> std::result::Result<FlowEnvelope<BytesChunk>, FlowRecvError> {
         match &mut self.inner {
-            FlowReceiverInner::Legacy(receiver) => receiver.recv().await,
+            FlowReceiverInner::Broadcast(receiver) => receiver.recv().await,
             FlowReceiverInner::Typed(receiver) => receiver.recv().await,
         }
     }
@@ -185,7 +185,7 @@ impl FlowReceiver {
     /// 非阻塞接收下一条 typed payload。
     pub fn try_recv(&mut self) -> std::result::Result<FlowEnvelope<BytesChunk>, FlowTryRecvError> {
         match &mut self.inner {
-            FlowReceiverInner::Legacy(receiver) => receiver.try_recv(),
+            FlowReceiverInner::Broadcast(receiver) => receiver.try_recv(),
             FlowReceiverInner::Typed(receiver) => receiver.try_recv(),
         }
     }
@@ -193,7 +193,7 @@ impl FlowReceiver {
     /// 当前排队消息数。
     pub fn len(&self) -> usize {
         match &self.inner {
-            FlowReceiverInner::Legacy(receiver) => receiver.len(),
+            FlowReceiverInner::Broadcast(receiver) => receiver.len(),
             FlowReceiverInner::Typed(receiver) => receiver.rx.len(),
         }
     }
@@ -201,7 +201,7 @@ impl FlowReceiver {
     /// 当前是否无排队消息。
     pub fn is_empty(&self) -> bool {
         match &self.inner {
-            FlowReceiverInner::Legacy(receiver) => receiver.is_empty(),
+            FlowReceiverInner::Broadcast(receiver) => receiver.is_empty(),
             FlowReceiverInner::Typed(receiver) => receiver.rx.is_empty(),
         }
     }
@@ -262,7 +262,7 @@ pub enum FlowTryRecvError {
     Closed,
 }
 
-impl LegacyFlowReceiver {
+impl BroadcastFlowReceiver {
     pub const fn new(
         source_id: SourceId,
         connection_epoch: u64,
@@ -390,8 +390,12 @@ mod flow_tests {
     #[tokio::test]
     async fn compatibility_receiver_preserves_boundary_and_reports_message_gap() {
         let (tx, rx) = broadcast::channel(2);
-        let mut flow =
-            LegacyFlowReceiver::new(SourceId::new("udp:test").unwrap(), 4, Framing::Datagram, rx);
+        let mut flow = BroadcastFlowReceiver::new(
+            SourceId::new("udp:test").unwrap(),
+            4,
+            Framing::Datagram,
+            rx,
+        );
         tx.send(ByteMessage::from_device(vec![0])).unwrap();
         tx.send(ByteMessage::from_device(vec![1])).unwrap();
         tx.send(ByteMessage::from_device(vec![2])).unwrap();
@@ -411,7 +415,7 @@ mod flow_tests {
     #[tokio::test]
     async fn receiver_maps_message_direction_into_envelope() {
         let (tx, rx) = broadcast::channel(4);
-        let mut flow = LegacyFlowReceiver::new(
+        let mut flow = BroadcastFlowReceiver::new(
             SourceId::new("serial:test").unwrap(),
             1,
             Framing::Stream,

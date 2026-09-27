@@ -13,6 +13,10 @@ describe('widgetTab 控件 ↔ 窗口映射', () => {
       ['Command', 'command'],
       ['FrameDecoder', 'frame-decoder'],
       ['RawData', 'raw'],
+      ['Trigger', 'trigger'],
+      // TableView 由后端面板契约 (PanelKind::TableView / tabType "table-view") 声明为
+      // 数据面板, 此前前端映射表漏登记导致其数据窗口无法打开 —— 现已由注册表覆盖。
+      ['TableView', 'table-view'],
     ];
     for (const [kind, type] of cases) {
       expect(widgetTabType(kind)).toBe(type);
@@ -24,7 +28,9 @@ describe('widgetTab 控件 ↔ 窗口映射', () => {
     expect(widgetTabType('Gauge')).toBeNull();
     expect(widgetTabType('Custom')).toBeNull();
     expect(widgetTabType('Math')).toBeNull();
-    expect(widgetTabType('TableView')).toBeNull();
+    expect(widgetTabType('Str')).toBeNull();
+    expect(widgetTabType('FFT')).toBeNull();
+    expect(widgetTabType('TextOut')).toBeNull();
   });
 
   it('widgetToTab 构造可关闭窗口 Tab, 名称取 params.label (Waveform 固定名)', () => {
@@ -42,5 +48,11 @@ describe('widgetTab 控件 ↔ 窗口映射', () => {
       params: { id: 'wave-1', label: 'Waveform', channels: 4, max_points: 10000, visible_channels: [true, true, true, true] },
     };
     expect(widgetToTab(wave)?.name).toBe('Waveform');
+  });
+
+  it('无窗口控件不产生窗口 Tab', () => {
+    // 负数用例 — 映射只看 kind 与 id/label, 其余参数与结论无关
+    const knob = { kind: 'Knob', params: { id: 'k-1', label: 'Knob' } } as unknown as WidgetConfig;
+    expect(widgetToTab(knob)).toBeNull();
   });
 });

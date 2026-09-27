@@ -14,13 +14,13 @@
 //!
 //! `timestamp` 字段一律为**微秒 (µs)**,单调时钟 (`SystemTime::now()` since UNIX_EPOCH)。
 
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 
 /// CAN wire bitrate shared by transport configuration and CAN adapters.
 ///
 /// Serde 契约名见 [`Self::NAMES`], 与前端 `CanBitrate` 联合类型逐字一致;
 /// 配置 schema 的候选列表一律由 [`Self::ALL`] 生成, 禁止手写字面量。
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq, ts_rs::TS)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, ts_rs::TS)]
 pub enum CanBitrate {
     Bps10k,
     Bps20k,
@@ -82,24 +82,12 @@ impl CanBitrate {
         }
     }
 
-    /// 解析契约名 — 精确匹配优先, 再按 ASCII 大小写不敏感兜底
-    /// (兼容修复前经 schema 写入的 `Bps1M` 等旧数据)。
+    /// 解析契约名 — 精确匹配。
     pub fn parse(name: &str) -> Option<Self> {
-        if let Some(index) = Self::NAMES.iter().position(|candidate| *candidate == name) {
-            return Some(Self::ALL[index]);
-        }
-        let lowered = name.to_ascii_lowercase();
-        let index = Self::NAMES
+        Self::NAMES
             .iter()
-            .position(|candidate| candidate.to_ascii_lowercase() == lowered)?;
-        Some(Self::ALL[index])
-    }
-}
-
-impl<'de> Deserialize<'de> for CanBitrate {
-    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let name = String::deserialize(deserializer)?;
-        Self::parse(&name).ok_or_else(|| serde::de::Error::unknown_variant(&name, Self::NAMES))
+            .position(|candidate| *candidate == name)
+            .map(|index| Self::ALL[index])
     }
 }
 

@@ -39,9 +39,10 @@ fn catalog() -> data_model::model_descriptor::ModelCatalog {
     };
     let models = vec![math_with_variants, widget_model("Knob", Vec::new())];
     ModelCatalog {
-        contract_version: 1,
+        contract_version: data_model::model_descriptor::MODEL_CATALOG_CONTRACT_VERSION,
         revision: "rev-test".into(),
         models,
+        panels: Vec::new(),
     }
 }
 
@@ -115,31 +116,6 @@ fn unknown_model_returns_structured_error() {
     match result.items.into_iter().next().unwrap() {
         Err(failed) => assert_eq!(failed.code, "model/unknown"),
         Ok(_) => panic!("unknown model must fail"),
-    }
-}
-
-#[test]
-fn normalize_migrates_legacy_button() {
-    let document: NodeDocument = serde_json::from_value(json!({
-        "id": "b1", "tabId": "t1", "label": "B",
-        "layout": { "x": 0, "y": 0, "width": null, "height": null },
-        "kind": "widget",
-        "config": { "widgetKind": "Button", "params": { "id": "b1", "label": "B", "press_value": 3 } }
-    }))
-    .unwrap();
-    let result = prepare_documents(&catalog(), vec![PrepareOperation::Normalize { document }]);
-    let prepared = result
-        .items
-        .into_iter()
-        .next()
-        .unwrap()
-        .expect("normalized");
-    match &prepared.document.business {
-        kind::document::NodeBusiness::Widget { params, .. } => {
-            assert_eq!(params["pressValue"], 3.0);
-            assert!(params.get("press_value").is_none());
-        }
-        other => panic!("unexpected: {other:?}"),
     }
 }
 

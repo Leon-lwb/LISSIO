@@ -32,7 +32,7 @@ impl TransportBackend for MemoryBackend {
         &self,
         _: TransportConfig,
         _: TestDataLink,
-    ) -> data_model::Result<TransportConnection> {
+    ) -> error::Result<TransportConnection> {
         self.0.fetch_add(1, Ordering::SeqCst);
         let (tx, mut rx) = mpsc::channel(16);
         let (data, _) = broadcast::channel(16);
@@ -61,7 +61,7 @@ impl TransportBackend for SlowBackend {
         &self,
         _: TransportConfig,
         _: TestDataLink,
-    ) -> data_model::Result<TransportConnection> {
+    ) -> error::Result<TransportConnection> {
         tokio::time::sleep(Duration::from_millis(40)).await;
         let (tx, _rx) = mpsc::channel(1);
         let (data, _) = broadcast::channel(1);

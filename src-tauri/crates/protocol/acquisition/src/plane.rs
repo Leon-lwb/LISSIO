@@ -7,7 +7,8 @@ use crate::{
 use async_trait::async_trait;
 use data_model::device::DriverPayload;
 use data_model::device_tree::{DriverId, NodeDecl, NodeId, NodeSnapshot};
-use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
+use data_model::{ConnectionState, TestDataConfig, TransportConfig, TransportStats};
+use error::Result;
 use points::{PointDescriptor, PointId, PointSample, ReadResult, WriteRequest, WriteResult};
 use schema_types::TestDataLink;
 use serde_json::Value;

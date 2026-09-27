@@ -11,7 +11,7 @@ use schema_types::{
 fn justfloat_like_schema() -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Field {
                 id: "f0".into(),
@@ -98,7 +98,7 @@ fn test_custom_schema_encode_roundtrip() {
 fn test_custom_schema_csv_decode() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![DecoderBlockDef::Csv {
             separator: ",".into(),
             ports: vec!["x".into(), "y".into()],
@@ -122,7 +122,7 @@ fn test_custom_schema_header_length_field_checksum() {
     // header + length(uint8) + bytes 字段(length_ref) + sum8 校验 + tail
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Header {
                 id: "h".into(),
@@ -178,7 +178,7 @@ fn test_custom_schema_ascii_field() {
     // Slcan 类: header 'T' + 3 位 hex id + tail '\r'
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Header {
                 id: "h".into(),
@@ -209,7 +209,7 @@ fn test_custom_schema_resync_after_garbage() {
     // 垃圾前缀 + 假 header 后能重新同步到真帧
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Header {
                 id: "h".into(),
@@ -240,51 +240,26 @@ fn test_custom_schema_resync_after_garbage() {
 }
 
 #[test]
-fn test_custom_schema_preset_returns_legacy_engine() {
-    // 预设路径: legacy_config 存在 → 对应 legacy 引擎
+fn test_custom_schema_preset_returns_preset_engine() {
+    // 预设路径: preset_config 存在 → 对应预设引擎
     let schema = ProtocolSchema {
         preset: SchemaPreset::JustFloat,
-        legacy_config: Some(ProtocolConfig::JustFloat { channels: Some(2) }),
+        preset_config: Some(ProtocolConfig::JustFloat { channels: Some(2) }),
         decode: vec![],
         encode: None,
     };
     let engine = compile_schema(&schema);
     assert_eq!(engine.name(), "JustFloat");
 
-    // legacy_config 缺失 → 按预设兜底 (FireWater 自动模式)
+    // preset_config 缺失 → SchemaEngine
     let schema = ProtocolSchema {
         preset: SchemaPreset::FireWater,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![],
         encode: None,
     };
     let engine = compile_schema(&schema);
-    assert_eq!(engine.name(), "FireWater");
-    assert!(engine.is_auto_mode());
-
-    let schema = ProtocolSchema {
-        preset: SchemaPreset::Slcan,
-        legacy_config: None,
-        decode: vec![],
-        encode: None,
-    };
-    assert_eq!(compile_schema(&schema).name(), "Slcan");
-
-    let schema = ProtocolSchema {
-        preset: SchemaPreset::CandleLight,
-        legacy_config: None,
-        decode: vec![],
-        encode: None,
-    };
-    assert_eq!(compile_schema(&schema).name(), "CandleLight");
-
-    let schema = ProtocolSchema {
-        preset: SchemaPreset::RawData,
-        legacy_config: None,
-        decode: vec![],
-        encode: None,
-    };
-    assert_eq!(compile_schema(&schema).name(), "RawData");
+    assert_eq!(engine.name(), "CustomSchema");
 }
 
 #[test]
@@ -299,7 +274,7 @@ fn test_encode_channels_no_encode_blocks_returns_empty() {
     // Custom schema 未定义 encode 块: encode_channels 返回空
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![],
         encode: None,
     };
@@ -355,7 +330,7 @@ fn test_bitfield_block_decode() {
     // header + 2 字节 (含 bitfield) + tail
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Header {
                 id: "h".into(),

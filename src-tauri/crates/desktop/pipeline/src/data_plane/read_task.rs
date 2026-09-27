@@ -75,7 +75,7 @@ fn reset_downstream_parsers(plane: &DataPlaneState, transport_id: &str) {
                 let state = plane.protocol_states.lock().get(&target).cloned();
                 if let Some(state) = state {
                     *state.lock() =
-                        super::ProtocolNodeState::new(config, convert_to.as_ref(), schema.as_ref());
+                        super::ProtocolNodeState::new(config, convert_to.as_ref(), schema);
                 }
             }
             Some(NodeKind::FrameDecoder { .. }) => {

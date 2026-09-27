@@ -33,7 +33,6 @@ pub struct KnobConfig {
     pub min: f32,
     pub max: f32,
     pub step: f32,
-    #[serde(alias = "default")]
     pub value: f32,
     /// 绑定模式
     pub binding: WidgetBinding,
@@ -44,9 +43,9 @@ pub struct KnobConfig {
 pub struct ButtonConfig {
     pub id: String,
     pub label: String,
-    #[serde(rename = "pressValue", alias = "press_value")]
+    #[serde(rename = "pressValue")]
     pub press_value: f32,
-    #[serde(rename = "releaseValue", alias = "release_value")]
+    #[serde(rename = "releaseValue")]
     pub release_value: f32,
     pub binding: WidgetBinding,
 }
@@ -95,7 +94,6 @@ pub struct SliderConfig {
     pub min: f32,
     pub max: f32,
     pub step: f32,
-    #[serde(alias = "default")]
     pub value: f32,
     pub binding: WidgetBinding,
 }

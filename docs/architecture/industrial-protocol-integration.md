@@ -195,7 +195,7 @@ struct PointRef {
 
 `serde_json::Value` 只允许存在于持久化/IPC 边界。适配器内部立即反序列化成私有 `ModbusConfig`、`OpcUaNodeId` 等类型，并完成范围、组合和跨字段校验；未经验证的 JSON 不能进入 `SourceSession`。
 
-每个 `SourceFactory` 提供 manifest、配置/地址 JSON Schema 与 UI hints、逐版本迁移、语义校验及打开会话所需的私有已验证配置句柄。前端、AI/MCP 和导入器共用同一 schema 来源。
+每个 `SourceFactory` 提供 manifest、配置/地址 JSON Schema 与 UI hints、语义校验及打开会话所需的私有已验证配置句柄。前端、AI/MCP 和导入器共用同一 schema 来源。
 
 未知或未安装驱动的 payload 必须原样保留和再次保存，UI 标记“驱动不可用”；不能因当前构建缺少 feature 就删除用户配置。凭据仅保存 `CredentialRef`，实际秘密继续由系统凭据设施拥有。
 
@@ -417,7 +417,7 @@ IPC 命令保持薄：注册/打开/关闭端点、读取 manifest/schema、浏�
 
 前端从同一驱动注册表生成已启用驱动/许可证/平台/能力显示、JSON Schema 表单、点位浏览/导入、值/质量/时间表格、AI/MCP 工具 schema。只有 descriptor 和 session capability 同时允许时才显示操作控件；连接状态和数据质量分开呈现。
 
-持久化快照包含工作区 schema 版本、每个 driver payload 版本和迁移记录。迁移必须纯函数、逐版本、幂等并有 fixture；失败不得覆盖原文件。旧 Transport/Protocol 节点必须继续反序列化，未知驱动数据往返无损。
+持久化快照包含工作区 schema 版本和每个 driver payload 版本；版本与当前不符时拒绝加载，不做历史版本迁移。解析失败不得覆盖原文件。未知驱动数据往返无损。
 
 ## 具体协议的功能切面
 

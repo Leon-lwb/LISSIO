@@ -67,7 +67,7 @@ function makeRafCoalescer<T>(apply: (value: T) => void): RafCoalescer<T> {
   };
 }
 
-/// protocol:channels-detected payload 兼容解析 — 契约为 { node_id, channels };
+/// protocol:channels-detected payload 解析 — 契约为 { node_id, channels };
 /// 后端由 feed_protocol 在检测值变化时 (None→Some(n) 或 Some(a)→Some(b)) 主动推送
 function parseChannelsDetectedEvent(
   payload: unknown

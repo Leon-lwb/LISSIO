@@ -2,7 +2,7 @@
 //!
 //! 协议 = 一份帧 schema (块列表): 解析是帧解码 (decode 块), 发送是帧编码
 //! (encode 块), 共用同一份定义。本引擎处理 `SchemaPreset::Custom` 的
-//! schema; 预设 schema 由 [`compile_schema`] 分发到 legacy 引擎。
+//! schema; 预设 schema 由 [`compile_schema`] 分发到预设引擎。
 //!
 //! 帧定界 / 缓冲策略:
 //! - 字节流入内部缓冲 `buf`, 每趟解析循环: 先在缓冲中定位 Header (无 Header

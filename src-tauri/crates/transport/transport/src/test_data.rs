@@ -48,7 +48,7 @@ impl ConnectionControl for TestDataControl {
         &self,
         link: TestDataLink,
         config: Option<TestDataConfig>,
-    ) -> data_model::Result<Option<data_model::TransportConfig>> {
+    ) -> error::Result<Option<data_model::TransportConfig>> {
         let config = config.unwrap_or_else(|| self.runtime.borrow().config.clone());
         self.runtime
             .send(TestDataRuntime {
@@ -80,7 +80,7 @@ impl TransportBackend for TestDataBackend {
         &self,
         config: data_model::TransportConfig,
         link: TestDataLink,
-    ) -> data_model::Result<TransportConnection> {
+    ) -> error::Result<TransportConnection> {
         let data_model::TransportConfig::TestData(config) = config else {
             unreachable!("backend selection must call accepts before open")
         };
@@ -100,9 +100,9 @@ impl TransportBackend for TestDataBackend {
 /// 对外仅暴露与串口同构的收发面: 数据经 `broadcast` 字节流广播, 写入经
 /// `write_tx` 回环; 运行状态纯为内部实现细节。
 ///
-/// `link` 决定生成数据的线缆格式 (protocol 为 legacy 配置, schema 为帧 schema):
+/// `link` 决定生成数据的线缆格式 (protocol 为预设配置, schema 为帧 schema):
 /// - schema = Custom 且带 encode 块 → 按 schema 编码块生成
-/// - 否则按 link.protocol 走 legacy 编码:
+/// - 否则按 link.protocol 走预设编码:
 /// - JustFloat → 4 字节 LE float + 帧尾 [0x00,0x00,0x80,0x7f]
 /// - FireWater → ASCII CSV `v1,v2,...,vn\n`
 /// - RawData   → 递增字节流 (无解析)
@@ -116,7 +116,7 @@ impl TransportBackend for TestDataBackend {
 pub fn spawn(
     config: TestDataConfig,
     link: TestDataLink,
-) -> data_model::Result<(
+) -> error::Result<(
     mpsc::Sender<Vec<u8>>,
     broadcast::Sender<ByteMessage>,
     Arc<AtomicBool>,
@@ -201,7 +201,7 @@ pub fn spawn(
 /// 编码路径选择:
 /// - schema = Some(Custom) 且 encode = Some → 按 schema 编码块编码 values
 ///   (values 与 decode 块派生的端口列表对齐)
-/// - schema = Some(预设) 或 None → 现有 generate_bytes legacy 路径
+/// - schema = Some(预设) 或 None → generate_bytes 预设编码路径
 fn generate_link_bytes(
     channels: usize,
     signal: TestSignal,
@@ -219,7 +219,7 @@ fn generate_link_bytes(
     generate_bytes(channels, signal, t, &link.protocol, sample_idx)
 }
 
-/// 按协议类型生成线缆格式的字节流 (legacy 路径)
+/// 按协议类型生成线缆格式的字节流 (预设编码路径)
 ///
 /// `pub` 供 data_plane 基准测试构造合成线缆格式字节块 (crate 内测试直接走
 /// 本模块单元测试); 协议层不应直接调用。

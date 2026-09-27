@@ -13,6 +13,7 @@ name = "pipeline"
 workspace = true
 
 [dependencies]
+error = { workspace = true }
 points = { workspace = true }
 acquisition = { workspace = true }
 data_model = { workspace = true }

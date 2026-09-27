@@ -7,33 +7,32 @@ use serde::{Deserialize, Serialize};
 
 /// 字段类型 — 与前端 `FieldType` (src/types/frameDecoder.ts) 一一对应。
 ///
-/// 序列化采用前端的字面拼写 (`uint16LE` 等大小写混合形式);
-/// 全小写形式作为兼容别名同时接受。
+/// 序列化采用前端的字面拼写 (`uint16LE` 等大小写混合形式)。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FieldType {
     #[serde(rename = "uint8")]
     Uint8,
     #[serde(rename = "int8")]
     Int8,
-    #[serde(rename = "uint16LE", alias = "uint16le")]
+    #[serde(rename = "uint16LE")]
     Uint16Le,
-    #[serde(rename = "uint16BE", alias = "uint16be")]
+    #[serde(rename = "uint16BE")]
     Uint16Be,
-    #[serde(rename = "int16LE", alias = "int16le")]
+    #[serde(rename = "int16LE")]
     Int16Le,
-    #[serde(rename = "int16BE", alias = "int16be")]
+    #[serde(rename = "int16BE")]
     Int16Be,
-    #[serde(rename = "uint32LE", alias = "uint32le")]
+    #[serde(rename = "uint32LE")]
     Uint32Le,
-    #[serde(rename = "uint32BE", alias = "uint32be")]
+    #[serde(rename = "uint32BE")]
     Uint32Be,
-    #[serde(rename = "int32LE", alias = "int32le")]
+    #[serde(rename = "int32LE")]
     Int32Le,
-    #[serde(rename = "int32BE", alias = "int32be")]
+    #[serde(rename = "int32BE")]
     Int32Be,
-    #[serde(rename = "float32LE", alias = "float32le")]
+    #[serde(rename = "float32LE")]
     Float32Le,
-    #[serde(rename = "float32BE", alias = "float32be")]
+    #[serde(rename = "float32BE")]
     Float32Be,
     /// HEX 字节流: `value` 解析为字节序列 (走 parse_hex)
     #[serde(rename = "bytes")]

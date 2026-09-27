@@ -15,7 +15,8 @@ use app::AppState;
 use async_trait::async_trait;
 use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain, SimulationConfig};
 use data_model::device_tree::NodeId;
-use data_model::{Result, SerialConfig, TransportConfig};
+use data_model::{SerialConfig, TransportConfig};
+use error::Result;
 use events::NullEventSink;
 use graph::BytePlan;
 use kind::{NodeDef, NodeKind};
@@ -212,10 +213,10 @@ async fn pause_drains_real_device_bytes_without_collecting_or_counting_them() {
 
 fn slcan_graph(state: &AppState, source: data_model::device_tree::NodeDecl) {
     let nodes = vec![
-        NodeDef {
-            id: "tp".into(),
-            tab_id: "tab".into(),
-            kind: NodeKind::Acquisition {
+        NodeDef::new(
+            "tp".into(),
+            "tab".into(),
+            NodeKind::Acquisition {
                 node: source,
                 ports: vec![DevicePort {
                     id: "rx".into(),
@@ -223,21 +224,21 @@ fn slcan_graph(state: &AppState, source: data_model::device_tree::NodeDecl) {
                     domain: DevicePortDomain::Bytes,
                 }],
             },
-        },
-        NodeDef {
-            id: "slcan".into(),
-            tab_id: "tab".into(),
-            kind: NodeKind::Protocol {
-                config: ProtocolConfig::Slcan,
-                convert_to: None,
-                schema: Some(schema_types::ProtocolSchema {
+        ),
+        NodeDef::new(
+            "slcan".into(),
+            "tab".into(),
+            NodeKind::Protocol {
+                schema: schema_types::ProtocolSchema {
                     preset: schema_types::SchemaPreset::Slcan,
-                    legacy_config: Some(ProtocolConfig::Slcan),
+                    preset_config: Some(ProtocolConfig::Slcan),
                     decode: Vec::new(),
                     encode: None,
-                }),
+                },
+                config: ProtocolConfig::Slcan,
+                convert_to: None,
             },
-        },
+        ),
     ];
     let edges = vec![buffer_graph::Edge {
         id: "wire".into(),

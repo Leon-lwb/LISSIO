@@ -77,7 +77,7 @@ function parserEncoding(parser: Node): { protocol: ProtocolConfig; schema: Proto
   }
   return {
     protocol: { kind: 'RawData' },
-    schema: { preset: 'custom', legacyConfig: null, decode: config.blocks, encode },
+    schema: { preset: 'custom', presetConfig: null, decode: config.blocks, encode },
   };
 }
 

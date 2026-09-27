@@ -81,6 +81,34 @@ pub enum ConfigError {
 
     #[error("Mutex 中毒: {0}")]
     MutexPoisoned(String),
+
+    /// 数据面板推送请求无法解析为具体显示请求 — 面板身份未知、投递形态不支持,
+    /// 或缺少寻址 (端口/节点)。
+    #[error("面板 [{panel}] 请求无法解析: {reason}")]
+    PanelRequestUnresolved {
+        /// 面板身份的稳定拼写 (`PanelKind::as_str`) — 结构化字段, 供前端定位。
+        panel: String,
+        reason: PanelResolveReason,
+    },
+}
+
+/// 面板请求无法解析的原因。
+///
+/// 与 [`ConfigError::PanelRequestUnresolved`] 配对; 独立枚举使前端能按原因
+/// 本地化 (例如「请先连接输入」)。
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub enum PanelResolveReason {
+    /// 面板已声明但数据面尚未实现 (`PanelDelivery::Unavailable`)。
+    #[error("该面板的数据面尚未实现")]
+    Unavailable,
+
+    /// 该面板按端口寻址, 但请求未提供端口。
+    #[error("该面板需要端口寻址, 但请求未提供端口")]
+    MissingPort,
+
+    /// 该面板按节点寻址, 但请求未提供节点。
+    #[error("该面板需要节点寻址, 但请求未提供节点")]
+    MissingNode,
 }
 
 impl Error for ConfigError {

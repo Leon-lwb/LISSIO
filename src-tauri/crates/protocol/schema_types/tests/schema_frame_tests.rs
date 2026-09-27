@@ -86,10 +86,10 @@ fn protocol_config_logic_decode() {
 // ============ ProtocolSchema serde ============
 
 #[test]
-fn schema_with_legacy_config_roundtrip() {
+fn schema_with_preset_config_roundtrip() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::JustFloat,
-        legacy_config: Some(ProtocolConfig::JustFloat { channels: Some(4) }),
+        preset_config: Some(ProtocolConfig::JustFloat { channels: Some(4) }),
         decode: vec![],
         encode: None,
     };
@@ -102,14 +102,14 @@ fn schema_with_legacy_config_roundtrip() {
 fn schema_camel_case_field_names() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![],
         encode: None,
     };
     let j = serde_json::to_value(&schema).unwrap();
     assert_eq!(j["preset"], "custom");
     // None → skip_serializing_if
-    assert!(j.get("legacyConfig").is_none());
+    assert!(j.get("presetConfig").is_none());
     assert!(j.get("encode").is_none());
     assert_eq!(j["decode"], serde_json::json!([]));
 }
@@ -118,7 +118,7 @@ fn schema_camel_case_field_names() {
 fn schema_decode_blocks_serde_with_tag() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Csv {
                 separator: ",".into(),
@@ -152,7 +152,7 @@ fn schema_decode_blocks_serde_with_tag() {
 fn schema_encode_blocks_serde_with_tag_content() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![],
         encode: Some(vec![
             EncodeBlockDef::VarRef {
@@ -176,7 +176,7 @@ fn schema_encode_blocks_serde_with_tag_content() {
 fn port_names_derivation_with_dedup() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Header {
                 id: "h".into(),
@@ -295,7 +295,7 @@ fn encode_by_blocks_checksum() {
 fn encode_by_blocks_full_pipeline() {
     let schema = ProtocolSchema {
         preset: SchemaPreset::Custom,
-        legacy_config: None,
+        preset_config: None,
         decode: vec![
             DecoderBlockDef::Field {
                 id: "f0".into(),
@@ -346,7 +346,7 @@ fn encode_by_blocks_full_pipeline() {
 fn partial_eq_respects_decode_and_legacy() {
     let a = ProtocolSchema {
         preset: SchemaPreset::JustFloat,
-        legacy_config: Some(ProtocolConfig::JustFloat { channels: Some(4) }),
+        preset_config: Some(ProtocolConfig::JustFloat { channels: Some(4) }),
         decode: vec![DecoderBlockDef::Field {
             id: "f".into(),
             field_type: FieldType::UInt8,
@@ -356,9 +356,9 @@ fn partial_eq_respects_decode_and_legacy() {
         }],
         encode: None,
     };
-    // 不同 legacy_config → 不等
+    // 不同 preset_config → 不等
     let b = ProtocolSchema {
-        legacy_config: Some(ProtocolConfig::JustFloat { channels: Some(8) }),
+        preset_config: Some(ProtocolConfig::JustFloat { channels: Some(8) }),
         ..a.clone()
     };
     assert_ne!(a, b);

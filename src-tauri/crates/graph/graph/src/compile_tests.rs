@@ -121,11 +121,7 @@ fn test_ifft_node_in_eval_order_and_source() {
             SpectrumOutput::Magnitude,
             1000.0,
         ),
-        NodeDef {
-            id: "ifft1".to_string(),
-            tab_id: "t1".to_string(),
-            kind: NodeKind::Ifft,
-        },
+        NodeDef::new("ifft1".to_string(), "t1".to_string(), NodeKind::Ifft),
     ];
     let edges = vec![
         edge("e1", "ps1", "ch0", "fft1", "in0"),
@@ -138,11 +134,11 @@ fn test_ifft_node_in_eval_order_and_source() {
     // 无上游边时返回 None
     let g2 = CompiledGraph::compile(
         "t1".into(),
-        vec![NodeDef {
-            id: "ifft2".to_string(),
-            tab_id: "t1".to_string(),
-            kind: NodeKind::Ifft,
-        }],
+        vec![NodeDef::new(
+            "ifft2".to_string(),
+            "t1".to_string(),
+            NodeKind::Ifft,
+        )],
         vec![],
     )
     .unwrap();
@@ -363,4 +359,94 @@ fn test_text_display_accepts_string_domain_edge() {
     assert_eq!(g.string_edges().next().unwrap().id, "e1");
     // 纯展示节点无求值臂, 不进 eval_order (同 Sink)
     assert!(!g.eval_order.iter().any(|n| n == "td"));
+}
+
+// ============ provenance: 编译结果即设备树派生的数据流图 ============
+
+use data_model::device_tree::{NodeId, NodePath, NodeRole};
+use kind::NodeOrigin;
+
+fn tree_root_origin(root: &str) -> NodeOrigin {
+    NodeOrigin::DeviceTree {
+        node_id: NodeId::new(root).unwrap(),
+        path: NodePath::root(root).unwrap(),
+        role: None,
+        root: NodeId::new(root).unwrap(),
+        parent: None,
+    }
+}
+
+fn tree_child_origin(child: &str, root: &str, role: NodeRole) -> NodeOrigin {
+    NodeOrigin::DeviceTree {
+        node_id: NodeId::new(child).unwrap(),
+        path: NodePath::root(root).unwrap().child(child).unwrap(),
+        role: Some(role),
+        root: NodeId::new(root).unwrap(),
+        parent: Some(NodeId::new(root).unwrap()),
+    }
+}
+
+#[test]
+fn compiled_graph_answers_device_tree_provenance() {
+    let mut device = make_device_in("source", "t1");
+    device.origin = tree_root_origin("source");
+    let mut parser = make_protocol("parser");
+    parser.origin = tree_child_origin("parser", "source", NodeRole::Protocol);
+    // 双角色: 同一 id 的 ProtocolSource 是派生视图, 设备树权威在 Protocol 字节定义上。
+    let mut view = make_protocol_source("parser", "t1", "parser", 2);
+    view.origin = NodeOrigin::Derived {
+        from: "parser".into(),
+    };
+    let canvas = make_math("m1", "t1", MathOp::Add, 1);
+
+    let graph = CompiledGraph::compile(
+        "t1".into(),
+        vec![device, parser, view, canvas],
+        vec![edge("attach", "source", "rx", "parser", "in")],
+    )
+    .unwrap();
+
+    // 双角色节点取字节定义 (设备树语义优先)。
+    assert_eq!(
+        graph
+            .origin_of("parser")
+            .and_then(NodeOrigin::root_device_node),
+        Some(&NodeId::new("source").unwrap())
+    );
+    // 派生节点沿 Derived 链回溯到同一设备树起点。
+    assert_eq!(graph.device_node_of("parser"), Some("source"));
+    // 画布节点无设备树归属。
+    assert_eq!(graph.device_node_of("m1"), None);
+    assert!(graph.origin_of("m1").is_some_and(NodeOrigin::is_canvas));
+
+    // 按设备树起点取派生子图 (含起点自身, 升序)。
+    let derived: Vec<&str> = graph
+        .derived_from_device_node("source")
+        .iter()
+        .map(String::as_str)
+        .collect();
+    assert_eq!(derived, ["parser", "source"]);
+    assert!(graph.derived_from_device_node("ghost").is_empty());
+
+    // 遍历面稳定有序。
+    let ids: Vec<&str> = graph.provenance().map(|(id, _)| id).collect();
+    assert_eq!(ids, ["m1", "parser", "source"]);
+    let groups: Vec<(&str, usize)> = graph
+        .device_subgraphs()
+        .map(|(root, nodes)| (root, nodes.len()))
+        .collect();
+    assert_eq!(groups, [("source", 2)]);
+}
+
+#[test]
+fn compiled_graph_without_device_tree_reports_no_subgraphs() {
+    let graph = CompiledGraph::compile(
+        "t1".into(),
+        vec![make_math("m1", "t1", MathOp::Add, 1)],
+        vec![],
+    )
+    .unwrap();
+    assert_eq!(graph.device_subgraphs().count(), 0);
+    assert_eq!(graph.device_node_of("m1"), None);
+    assert_eq!(graph.provenance().count(), 1);
 }

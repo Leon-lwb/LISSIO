@@ -329,7 +329,7 @@ Math/Str、协议自动通道、Command var_ref、FrameDecoder blocks、Model3D�
 执行：
 
 1. 工作区恢复、导入、图提交、MCP/AI 修改一律进入同一后端迁移/校验。已有 source docs 是持久化事实，NodeDescription、目录副本及 React 节点不落盘。
-2. widget 配置缺少版本时按已知历史形态迁移；本次不强制改变 NodeDocument wire 外形。若确需新版本字段，单独加可选字段及旧读写兼容 fixture，不与 catalog contractVersion 混用。
+2. widget 配置只按当前形态读写，不做历史形态迁移；若确需新版本字段，单独加可选字段并以缺省值补齐，不与 catalog contractVersion 混用。
 3. 严格区分“文件不存在”与“未知模型/不兼容/解析失败”。当前 load_workspace 存在失败按不存在处理的路径，不能让新模型加载失败导致后续空白保存覆盖文件。
 4. 对未知 widgetKind/driver 保留完整原始参数和边，标记 unavailable；不自动执行、替换或丢弃。保留已知 document family 的未知模型是首要范围；更高版本整个文件无法读取时保留文件并报告不兼容。
 5. 迁移后的配置写入遵循现有持久化事务；迁移或校验失败保持原文件。增加真实文件往返和失败不覆盖测试。
@@ -371,7 +371,7 @@ Math/Str、协议自动通道、Command var_ref、FrameDecoder blocks、Model3D�
 | feature 差异 | 注册列表与可执行能力一致；禁用 Modbus/S7 时不出现可创建假条目 |
 | 启动及重连 | catalog 失败不创建空图；重试不重复节点；后端切换不复用旧描述 |
 | 未知模型 | 缺 renderer/未知 kind/driver 不崩溃、不替换、不丢参数和边 |
-| 历史工作区 | Button/Radio/Checkbox/Gauge/Command/Model3D 及旧协议 fixture 无损迁移；迁移幂等 |
+| 当前工作区 | Button/Radio/Checkbox/Gauge/Command/Model3D 及协议 fixture 按当前形态加载；未知/未来版本拒绝或保留为 unavailable |
 | 文件保护 | 解析、版本或未知模型错误不会走首次启动覆盖原文件 |
 | JSON 合同 | serde 名称、null/省略、枚举、数值字符串表示及请求响应保持一致 |
 | 二进制合同 | 波形与显示流 golden bytes 在 Rust/TS 两端解码一致 |
@@ -408,5 +408,5 @@ cargo test --manifest-path src-tauri/Cargo.toml --workspace
 - 全部创建入口和工作区恢复采用相同规则，无遗漏入口继续使用旧工厂。
 - wire 类型由 Rust 生成，生成和覆盖检查能阻止新的手写镜像漂移。
 - 前端仅保留展示、交互和显式用户配置草稿，未知模型及连接失败不会造成数据丢失。
-- Desktop、Web、CLI、MCP 与 AI 路径一致，旧工作区及现有协议保持兼容。
+- Desktop、Web、CLI、MCP 与 AI 路径一致；只支持当前格式的持久化数据。
 - 验证矩阵及整体检查实际执行通过，所有限制和未验证项明确记录。

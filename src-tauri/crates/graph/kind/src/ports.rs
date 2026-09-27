@@ -249,10 +249,11 @@ mod tests {
     }
 
     fn protocol_default() -> NodeKind {
+        let config = schema_types::ProtocolConfig::default();
         NodeKind::Protocol {
-            config: schema_types::ProtocolConfig::default(),
+            schema: schema_types::schema_from_protocol_config(&config),
+            config,
             convert_to: None,
-            schema: None,
         }
     }
 
@@ -274,7 +275,7 @@ mod tests {
         NodeKind::ProtocolSource {
             node_id: "p1".into(),
             channels: 2,
-            port_names: None,
+            port_names: Vec::new(),
         }
     }
 

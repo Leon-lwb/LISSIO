@@ -323,7 +323,7 @@ fn read_bitfield(bytes: &[u8], bit_offset: u8, bit_length: u8, is_signed: bool) 
     }
 }
 
-/// 获取校验算法输出的字节长度 (实现已迁移至 core::schema)
+/// 获取校验算法输出的字节长度
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) const fn checksum_byte_len(algo: ChecksumAlgorithm) -> usize {
     algo.byte_len()
@@ -331,7 +331,7 @@ pub(crate) const fn checksum_byte_len(algo: ChecksumAlgorithm) -> usize {
 
 // ============ HEX 解析工具 ============
 
-/// 解析 HEX 字符串为字节切片 (实现已迁移至 core::schema, 供两 crate 共用)
+/// 解析 HEX 字符串为字节切片 (实现与 schema_types 共用)
 ///
 /// 输入格式: "AA BB" / "AABB" / "aa bb" / "0xAA 0xBB" 均可,
 /// 空格/逗号/0x 前缀均会被忽略。

@@ -1,62 +1,16 @@
 // ============ 数据 Tab 图标 ============
-import {
-  Activity as ActivityIcon,
-  AlertTriangle as AlertTriangleIcon,
-  BarChart3 as BarChart3Icon,
-  Box as BoxIcon,
-  CircuitBoard as CircuitBoardIcon,
-  Database as DatabaseIcon,
-  Cpu as CpuIcon,
-  History as HistoryIcon,
-  Image as ImageIcon,
-  LineChart as LineChartIcon,
-  ListTree as ListTreeIcon,
-  PieChart as PieIcon,
-  ScanText as ScanTextIcon,
-  Send as SendIcon,
-  Settings2 as SettingsIcon,
-  Zap as ZapIcon,
-} from 'lucide-react';
+//
+// 图标来源 = 数据面板注册表 (`components/panels/registry/panelDefs`), 含 12 个数据
+// 面板与 5 个应用外壳; 本模块不再维护自己的 switch, 也不与侧边栏图标表分家。
+//
+// tab 类型经 DockCardFrame 传入时已被擦除为 string, 未知类型不渲染图标 (注册表
+// 查询本身对未知输入返回 null)。
+
+import { panelIconForTabType } from '../panels/registry/panelDefs';
+import type { DataTabType } from '../../types';
 
 /// 数据 Tab 图标 (按类型)
 export function DataTabIcon({ type, size = 12 }: { type: string; size?: number }) {
-  switch (type) {
-    case 'waveform':
-    case 'waveform-extra':
-      return <LineChartIcon size={size} />;
-    case 'raw':
-      return <ActivityIcon size={size} />;
-    case 'pie':
-      return <PieIcon size={size} />;
-    case 'image':
-      return <ImageIcon size={size} />;
-    case 'model3d':
-      return <BoxIcon size={size} />;
-    case 'spectrum':
-      return <BarChart3Icon size={size} />;
-    case 'command':
-      return <SendIcon size={size} />;
-    case 'can':
-      return <CpuIcon size={size} />;
-    case 'logic':
-      return <CircuitBoardIcon size={size} />;
-    case 'frame-decoder':
-      return <ScanTextIcon size={size} />;
-    case 'trigger':
-      return <ZapIcon size={size} />;
-    case 'table-view':
-      return <BarChart3Icon size={size} />;
-    case 'compile-errors':
-      return <AlertTriangleIcon size={size} />;
-    case 'compile-results':
-      return <ListTreeIcon size={size} />;
-    case 'operation-history':
-      return <HistoryIcon size={size} />;
-    case 'node-properties':
-      return <SettingsIcon size={size} />;
-    case 'recording-database':
-      return <DatabaseIcon size={size} />;
-    default:
-      return null;
-  }
+  const Icon = panelIconForTabType(type as DataTabType);
+  return Icon ? <Icon size={size} /> : null;
 }

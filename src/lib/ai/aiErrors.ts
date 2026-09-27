@@ -4,7 +4,7 @@
 //! 1. 命令级失败 (invoke reject):后端 `AppError` 序列化为 `{ kind, message, source?, data }`
 //! 2. 流式 Error 事件 / 会话错误条目:`{ message, kind?, data? }` (kind 为 `AppError::kind()`)
 //!
-//! 无 kind 时回退显示后端原始描述 (历史数据兼容)。
+//! 无 kind 时回退显示后端原始描述。
 
 import { t, type Lang } from '../../i18n';
 

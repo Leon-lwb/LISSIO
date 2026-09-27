@@ -13,15 +13,17 @@ fn device_node(id: &str, tab_id: &str) -> NodeDef {
 }
 
 fn protocol_node(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab_id.into(),
-        kind: NodeKind::Protocol {
+    NodeDef::new(
+        id.into(),
+        tab_id.into(),
+        NodeKind::Protocol {
+            schema: schema_types::schema_from_protocol_config(&ProtocolConfig::JustFloat {
+                channels: Some(2),
+            }),
             config: ProtocolConfig::JustFloat { channels: Some(2) },
             convert_to: None,
-            schema: None,
         },
-    }
+    )
 }
 
 /// 被删页签的节点从运行时索引与协议状态同时消失。
@@ -139,7 +141,7 @@ async fn duplicate_node_id_across_tabs_is_rejected() {
     .await;
     assert!(matches!(
         result,
-        Err(data_model::Error::Config(
+        Err(error::AppError::Config(
             error::ConfigError::DuplicateNode { .. }
         ))
     ));

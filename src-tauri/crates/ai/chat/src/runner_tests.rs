@@ -16,7 +16,7 @@ use serde_json::Value;
 
 use crate::events::{AiChatEvent, EventSink};
 use crate::runner::{ChatPayload, ChatTaskRegistry, ToolExecutor, TurnProvider, run_chat};
-use data_model::Result;
+use error::Result;
 
 /// 脚本化回合: 每轮弹出预置产物;额外记录每轮收到的历史快照。
 struct MockTurn {
@@ -265,7 +265,7 @@ async fn cancel_flag_aborts_turn() {
     .await;
     assert!(matches!(
         result,
-        Err(data_model::Error::Ai(error::AiError::Cancelled))
+        Err(error::AppError::Ai(error::AiError::Cancelled))
     ));
     let events = events.lock();
     assert!(events.iter().any(|e| matches!(e, AiChatEvent::Cancelled)));

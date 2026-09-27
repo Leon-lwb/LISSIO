@@ -83,7 +83,7 @@ impl ProtocolEngine for SchemaEngine {
     }
 
     fn encode_channel(&mut self, channel: usize, value: f32) -> Vec<u8> {
-        // 单通道发送: 该通道写值, 其余通道 0 (与 legacy 引擎语义一致)
+        // 单通道发送: 该通道写值, 其余通道 0 (与预设引擎语义一致)
         let mut values = vec![0.0f32; self.ports.len().max(channel + 1)];
         if channel < values.len() {
             values[channel] = value;

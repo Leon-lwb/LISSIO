@@ -3,8 +3,8 @@
 
 use async_trait::async_trait;
 use can::{CanDirection, CanFrame};
-use data_model::{Error, Result};
-use error::TransportError;
+
+use error::{AppError as Error, Result, TransportError};
 use parking_lot::Mutex;
 use protocol::ProtocolEngine;
 use protocol_can_bridge::{CandleEngine, SlcanEngine};

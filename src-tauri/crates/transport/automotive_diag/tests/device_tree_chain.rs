@@ -6,8 +6,9 @@ use acquisition::{
 };
 use async_trait::async_trait;
 use data_model::device_tree::{DeviceTreeDocument, NodeDecl, NodeId, NodeState};
-use data_model::{Error, Result, SlcanConfig, TransportConfig};
+use data_model::{SlcanConfig, TransportConfig};
 use device_tree::{DeviceTree, DeviceTreeRuntime, DriverRegistry, NodeRole};
+use error::{AppError as Error, Result};
 use schema_types::TestDataLink;
 use serde_json::{Value, json};
 use std::sync::Arc;

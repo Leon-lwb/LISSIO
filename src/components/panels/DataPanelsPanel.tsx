@@ -10,54 +10,18 @@
 //!   点开时如果已有同类型 Tab 则轮转, 没有则用画布首个同类 widget 创建
 //! - 点击后同步激活目标 Tab 所在的 Dock 卡片, 视觉上立即跳到该面板
 
-import {
-  Activity,
-  Layers,
-  Cpu,
-  Database,
-  Waves,
-  PieChart as PieChartIcon,
-  Image as ImageIcon,
-  Box as BoxIcon,
-  Send as SendIcon,
-  ScanText as ScanTextIcon,
-  Zap as ZapIcon,
-  AlertTriangle as AlertTriangleIcon,
-  BarChart3 as BarChart3Icon,
-  History as HistoryIcon,
-  type LucideIcon,
-  Settings2 as SettingsIcon,
-} from 'lucide-react';
+import { AlertTriangle, Layers } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import {
   getAvailableDataPanelEntries,
   cycleDataPanelTab,
   type DataPanelEntry,
 } from '../../store/slices/dataTabs';
+import { panelIconForTabType } from './registry/panelDefs';
+import { panelContractIssues, unsupportedPanels, useReconciledPanels } from './registry/reconcile';
 import { openDataPanelAndReveal, openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
 import { t } from '../../i18n';
-
-/// 数据面板条目图标 — 唯一对应表, 与 MenuBar 同源
-const PANEL_ICONS: Record<DataPanelEntry['type'], LucideIcon> = {
-  waveform: Waves,
-  'waveform-extra': Waves,
-  spectrum: Activity,
-  raw: Activity,
-  pie: PieChartIcon,
-  image: ImageIcon,
-  model3d: BoxIcon,
-  command: SendIcon,
-  'frame-decoder': ScanTextIcon,
-  trigger: ZapIcon,
-  can: Cpu,
-  logic: Activity,
-  'compile-errors': AlertTriangleIcon,
-  'compile-results': Layers,
-  'table-view': BarChart3Icon,
-  'operation-history': HistoryIcon,
-  'node-properties': SettingsIcon,
-  'recording-database': Database,
-};
+import { useEffect } from 'react';
 
 export function DataPanelsPanel() {
   const lang = useAppStore((s) => s.lang);
@@ -70,6 +34,13 @@ export function DataPanelsPanel() {
   const addOperationHistoryTab = useAppStore((s) => s.addOperationHistoryTab);
   const addNodePropertiesTab = useAppStore((s) => s.addNodePropertiesTab);
   const addWidgetTab = useAppStore((s) => s.addWidgetTab);
+
+  /// 后端目录 × 前端注册表 — 不一致的面板显式占位 + 开发期报错, 不静默
+  const reconciled = useReconciledPanels();
+  const unsupported = unsupportedPanels(reconciled);
+  useEffect(() => {
+    for (const issue of panelContractIssues(reconciled)) console.error(issue);
+  }, [reconciled]);
 
   const panelEntries = getAvailableDataPanelEntries(
     { dataTabs, rfNodes, lang },
@@ -95,7 +66,6 @@ export function DataPanelsPanel() {
       <Section
         title={t(lang, 'dataPanelsStandaloneTitle')}
         entries={standalone}
-        iconForType={PANEL_ICONS}
         onClick={(entry) => {
           // 属性面板: 创建时同步在画布右侧拆分专属小卡 (非并入数据卡)
           if (entry.type === 'node-properties') {
@@ -110,7 +80,6 @@ export function DataPanelsPanel() {
       <Section
         title={t(lang, 'dataPanelsDerivedTitle')}
         entries={derived}
-        iconForType={PANEL_ICONS}
         onClick={(entry) => {
           // 派生面板: 已有同类 Tab 轮转 (多个 Waveform 时),
           // 没有时用首个同类 widget 创建
@@ -124,6 +93,37 @@ export function DataPanelsPanel() {
           });
         }}
       />
+
+      <UnsupportedSection panels={unsupported} />
+    </div>
+  );
+}
+
+/// 后端声明但前端无法渲染的面板 — 显式占位, 不静默空白。
+/// 契约一致时该段为空, 不产生任何 DOM。
+function UnsupportedSection({ panels }: { panels: ReturnType<typeof unsupportedPanels> }) {
+  const lang = useAppStore((s) => s.lang);
+  if (panels.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-text-secondary px-1">
+        {t(lang, 'dataPanelsUnsupportedTitle')}
+      </div>
+      <div className="flex flex-col gap-1">
+        {panels.map((panel) => (
+          <button
+            key={panel.panelKind}
+            disabled
+            title={panel.reason ?? panel.panelKind}
+            className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary opacity-40 cursor-not-allowed text-left"
+          >
+            <AlertTriangle size={14} />
+            <span className="truncate">
+              {panel.labelKey === null ? panel.panelKind : t(lang, panel.labelKey)}
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -131,11 +131,10 @@ export function DataPanelsPanel() {
 interface SectionProps {
   title: string;
   entries: DataPanelEntry[];
-  iconForType: Record<DataPanelEntry['type'], LucideIcon>;
   onClick: (entry: DataPanelEntry) => void;
 }
 
-function Section({ title, entries, iconForType, onClick }: SectionProps) {
+function Section({ title, entries, onClick }: SectionProps) {
   const lang = useAppStore((s) => s.lang);
   if (entries.length === 0) return null;
   return (
@@ -145,7 +144,8 @@ function Section({ title, entries, iconForType, onClick }: SectionProps) {
       </div>
       <div className="flex flex-col gap-1">
         {entries.map((e) => {
-          const Icon = iconForType[e.type] ?? Layers;
+          // 图标与 tab 条同源 (注册表); 未知类型回落通用图标
+          const Icon = panelIconForTabType(e.type) ?? Layers;
           return (
             <button
               key={e.type}

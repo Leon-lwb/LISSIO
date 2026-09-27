@@ -374,7 +374,7 @@ pub async fn textout_sender_ticker(
             }
             let send_result = data_model::device_tree::NodeId::new(&target)
                 .map_err(|_| {
-                    data_model::Error::Io(std::io::Error::new(
+                    error::AppError::Io(std::io::Error::new(
                         std::io::ErrorKind::InvalidInput,
                         format!("invalid device node id: {target}"),
                     ))

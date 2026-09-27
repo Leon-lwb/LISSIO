@@ -7,12 +7,13 @@ import { vi, type MockInstance } from 'vitest';
 import type { ModelCatalog } from '../types/generated/ModelCatalog';
 import type { ModelDescriptor } from '../types/generated/ModelDescriptor';
 import type { ModelVariant } from '../types/generated/ModelVariant';
+import type { PanelDescriptor } from '../types/generated/PanelDescriptor';
 import type { JsonValue } from '../types/generated/serde_json/JsonValue';
 import type { CatalogIssue, PrepareOutcome } from '../lib/models/createFromCatalog';
 import type { NodeDocument } from '../lib/nodes/document';
 import type { WidgetConfig } from '../types';
 import { api } from '../lib/tauri/tauri';
-import { useModelCatalogStore } from '../store/modelCatalogStore';
+import { MODEL_CATALOG_CONTRACT_VERSION, useModelCatalogStore } from '../store/modelCatalogStore';
 
 export const TEST_CATALOG_REVISION = 'rev-test';
 
@@ -48,8 +49,18 @@ export function variant(id: string, label: string, configPatch: Record<string, u
   };
 }
 
-export function makeCatalog(models: ModelDescriptor[]): ModelCatalog {
-  return { contractVersion: 1, revision: TEST_CATALOG_REVISION, models };
+/// 目录 fixture — 契约版本永远跟随前端常量 (曾经硬编码 1 而在 v2 后静默失效)。
+/// `panels` 缺省不下发: 与「老后端 / 精简目录」同形, 面板比对因此不启动。
+export function makeCatalog(
+  models: ModelDescriptor[],
+  panels?: PanelDescriptor[]
+): ModelCatalog {
+  return {
+    contractVersion: MODEL_CATALOG_CONTRACT_VERSION,
+    revision: TEST_CATALOG_REVISION,
+    models,
+    panels,
+  };
 }
 
 /** 默认目录: 29 类 widget + 常用 protocol/driver/pointSelector 条目。 */
@@ -133,13 +144,15 @@ export function defaultTestCatalog(): ModelCatalog {
 }
 
 /** 把目录注入 store (ready 状态; 不 bump generation — 能力目录缓存不受影响)。 */
-export function seedModelCatalogForTests(models: ModelCatalog = defaultTestCatalog()): void {
+export function seedModelCatalogForTests(catalog: ModelCatalog = defaultTestCatalog()): void {
   useModelCatalogStore.setState({
     status: 'ready',
-    revision: models.revision,
-    contractVersion: models.contractVersion,
-    byId: Object.fromEntries(models.models.map((m) => [m.id, m])),
-    models: models.models,
+    revision: catalog.revision,
+    contractVersion: catalog.contractVersion,
+    byId: Object.fromEntries(catalog.models.map((m) => [m.id, m])),
+    models: catalog.models,
+    panels: catalog.panels,
+    panelsByKind: Object.fromEntries((catalog.panels ?? []).map((panel) => [panel.kind, panel])),
     error: null,
   });
 }
@@ -194,7 +207,7 @@ export function mockPrepareEcho(): MockInstance<typeof api.prepareNodeDocuments>
           status: 'ok',
           document: {
             id: nodeId, tabId, label: op.label ?? (typeof base.kind === 'string' ? base.kind : 'Protocol'), layout, kind: 'protocol',
-            config: { protocol, convertTo: null, schema: { preset: 'custom', legacyConfig: null, decode: [] } },
+            config: { protocol, convertTo: null, schema: { preset: 'custom', presetConfig: null, decode: [] } },
           },
           issues: [],
         };

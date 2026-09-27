@@ -13,7 +13,7 @@ interface SpectrumChartProps {
 ///
 /// 数据流:
 ///   1. 节点图中把某个 FFT 求解器的 spectrum 输出连到本控件的 spectrum 输入端口
-///      (连线即数据源; 旧布局无连线时回退到 params.sourceId 兼容)
+///      (连线即数据源)
 ///   2. 后端 FFT 求解器把结果推入专用频谱数据通道 (spectrumResults[sourceId])
 ///   3. 本组件仅从 store.spectrumResults[sourceId] 读取最新结果并绘制
 ///
@@ -26,8 +26,9 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
   const fftWidgets = widgets.filter((w): w is Extract<WidgetConfig, { kind: 'FFT' }> => w.kind === 'FFT');
   const rfEdges = useAppStore((s) => s.rfEdges);
   // 数据源 = 连到本控件 spectrum 输入端口的 FFT 求解器 (节点 id 即 widget id)
-  const connectedSourceId =
-    rfEdges.find((e) => e.target === id && e.targetHandle === 'spectrum')?.source ?? widget.params.sourceId;
+  const connectedSourceId = rfEdges.find(
+    (e) => e.target === id && e.targetHandle === 'spectrum',
+  )?.source;
   const sourceWidget = fftWidgets.find((w) => w.params.id === connectedSourceId) ?? null;
   const sourceId = sourceWidget ? connectedSourceId : null;
   // 只订阅本控件数据源 (sourceId) 的频谱结果, 避免全局 spectrumResults 更新时所有 SpectrumChart 重渲染

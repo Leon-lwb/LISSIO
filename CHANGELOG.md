@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### 变更
+
+- **MCP 能力与 skill 改为软件能力节点动态派发**:`control-api` 新增 `capabilities` 能力节点注册表,每个能力域 (传输/图编辑/波形/CAN/逻辑分析/采集控制/命令帧/录制/知识库) 注册一个节点,声明自己的工具 (schemars JSON schema 从入参类型派生) 与技能文档;MCP 工具路由、内置 AI 工具规格与执行分发、skill 清单与系统提示词索引全部运行期从同一注册表动态派生,消除三处硬编码重复 (mcp-server 宏路由 43 工具 + params.rs DTO、ai-host specs.rs 手写 schema、skills.rs 静态数组,共删约 1900 行)
+  - `mcp-server` 改为 `ToolRoute::new_dyn` 运行期构建路由,instructions 由注册表组装;工具执行失败返回 `CallToolResult::error` (AI 客户端可见原因),参数错误映射 invalid params
+  - 内置 AI 与 MCP 共用同一份工具定义;`read_skill`/新增 `list_skills` 两个出口同源;技能文档随能力节点挂载 (`protocols`→transport、`nodes-reference`→graph、其余→knowledge)
+  - 工具名统一:内置 AI `connect_nodes` 并入 `connect_edge`;工具参数缺省值统一 (如 `get_recent_waveform.count` 缺省 100);CAN 帧 `extended` 缺省按 id 位数推断
+  - 技能文档迁至 `control-api/src/capabilities/docs/{zh,en}` (原 `src-tauri/src/commands/skills`,cleanup-plan T1 以此方案完成);删除 `ai-host/src/skills.rs` 与 `AiError::SkillNotFound`
+- **移除全部旧数据兼容层**:持久化文件、IPC payload 与配置只按当前格式读写,不再迁移或接受旧版本数据
+  - 后端:删除 widget 参数旧形态迁移管线 (`press_value` 等 serde alias、Radio/Checkbox 旧模型、Gauge/Progress 顶层 min/max、Command 单帧包装);`NodeKind::Protocol.schema` 与 `ProtocolSource.port_names` 收紧为必填;删除 `CanBitrate` 大小写兜底、钥匙串/配置目录旧标识迁移;删除零调用的 `migrate_legacy_config` 与 no-op cargo features
+  - 命名修正:`legacy_config` → `preset_config` (wire 同步)、`compile_legacy` → `compile_preset`、`LegacyFlowReceiver` → `BroadcastFlowReceiver`、`on_frames` → `record_and_eval`;删除 `data_model::Error/Result` 兼容重导出 (调用点直连 `error` crate)
+  - 前端:删除 dock persist v1→v3 迁移、settings 明文 key/字体/主题迁移、旧通道 (channel) 回退链与 6 个 `@deprecated` 字段、`LegacyCommandConfig` 单帧包装、死别名 `CanFrameFilterOptions` / `DecoderBlockWire`
+  - 文档:AGENTS.md 兼容条款改为「不维护旧格式兼容」,exits.md 兼容性红线改为契约稳定性,各架构文档的迁移承诺同步收紧
+
 ### 新增
 
 - **全量能力与平台 shim(P3, 进行中)**:把 Web 出口的待接入命令逐条补齐,并把宿主专有能力收口到平台 shim

@@ -8,10 +8,10 @@ interface LEDProps {
 }
 
 /// LED 指示灯 — 输入值 >= threshold 显示 ON 颜色, 否则 OFF
-/// 数据源: edge 连线 (后端图输出) 优先, 否则回退到 channel 参数
+/// 数据源: value 输入边 (后端图输出)
 export const LED = memo(function LED({ widget }: LEDProps) {
-  const { threshold, on_color, off_color, channel } = widget.params;
-  const input = useNumericInput(widget.params.id, 'value', channel);
+  const { threshold, on_color, off_color } = widget.params;
+  const input = useNumericInput(widget.params.id, 'value');
   const value = input.latest?.value ?? 0;
 
   const isOn = value >= threshold;

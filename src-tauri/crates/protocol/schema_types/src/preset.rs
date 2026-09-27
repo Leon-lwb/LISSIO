@@ -2,15 +2,13 @@
 //!
 //! 单一事实源: 预设 (JustFloat/FireWater/RawData/Slcan/CandleLight/LogicDecode)
 //! 的 schema 组装规则只在这里定义; 前端不再手写第二份工厂。
-//! 与前端 `protocolSchema.ts` 历史输出逐字一致 (fixture 验证), 保证旧
-//! preset 名称与 JustFloat/FireWater 自动通道、RawData 字符串口、CAN/逻辑
-//! 解码行为不变。
+//! 与前端 `protocolSchema.ts` 输出逐字一致 (fixture 验证)。
 
 use crate::decoder_block::{DecoderBlockDef, FieldType};
 use crate::protocol_config::ProtocolConfig;
 use crate::schema_frame::{ProtocolSchema, SchemaPreset};
 
-/// 预设默认端口数 (自动检测生效前的占位, 端口语义仍走 legacy 自动检测)
+/// 预设默认端口数 (自动检测生效前的占位, 端口语义仍走引擎自动检测)
 pub const DEFAULT_PRESET_CHANNELS: usize = 4;
 
 /// JustFloat 帧尾 (0x00 0x00 0x80 0x7F)
@@ -18,7 +16,7 @@ pub const JUSTFLOAT_TAIL_HEX: &str = "00 00 80 7F";
 
 /// JustFloat 预设: n×field{float32LE, portName ch{i}} + tail{00 00 80 7F}
 ///
-/// `channels = None` (自动) 也生成默认 4 端口, 端口语义仍走 legacy 自动检测。
+/// `channels = None` (自动) 也生成默认 4 端口, 端口语义仍走引擎自动检测。
 pub fn justfloat_schema(channels: Option<usize>) -> ProtocolSchema {
     build_float_schema(SchemaPreset::JustFloat, channels)
 }
@@ -27,7 +25,7 @@ pub fn justfloat_schema(channels: Option<usize>) -> ProtocolSchema {
 pub fn firewater_schema(channels: Option<usize>) -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::FireWater,
-        legacy_config: Some(ProtocolConfig::FireWater { channels }),
+        preset_config: Some(ProtocolConfig::FireWater { channels }),
         decode: vec![DecoderBlockDef::Csv {
             separator: ",".to_owned(),
             ports: channel_port_names(channels),
@@ -40,27 +38,27 @@ pub fn firewater_schema(channels: Option<usize>) -> ProtocolSchema {
 pub const fn raw_data_schema() -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::RawData,
-        legacy_config: Some(ProtocolConfig::RawData),
+        preset_config: Some(ProtocolConfig::RawData),
         decode: Vec::new(),
         encode: None,
     }
 }
 
-/// Slcan 预设: CAN 帧走 legacy 引擎, 无 decode 块
+/// Slcan 预设: CAN 帧走预设引擎, 无 decode 块
 pub const fn slcan_schema() -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::Slcan,
-        legacy_config: Some(ProtocolConfig::Slcan),
+        preset_config: Some(ProtocolConfig::Slcan),
         decode: Vec::new(),
         encode: None,
     }
 }
 
-/// CandleLight 预设: CAN 帧走 legacy 引擎, 无 decode 块
+/// CandleLight 预设: CAN 帧走预设引擎, 无 decode 块
 pub const fn candle_light_schema() -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::CandleLight,
-        legacy_config: Some(ProtocolConfig::CandleLight),
+        preset_config: Some(ProtocolConfig::CandleLight),
         decode: Vec::new(),
         encode: None,
     }
@@ -70,7 +68,7 @@ pub const fn candle_light_schema() -> ProtocolSchema {
 pub fn logic_decode_schema(decoder: logic::LogicDecoderConfig) -> ProtocolSchema {
     ProtocolSchema {
         preset: SchemaPreset::LogicDecode,
-        legacy_config: Some(ProtocolConfig::LogicDecode {
+        preset_config: Some(ProtocolConfig::LogicDecode {
             decoder: decoder.clone(),
         }),
         decode: vec![DecoderBlockDef::Samples { decoder }],
@@ -78,7 +76,7 @@ pub fn logic_decode_schema(decoder: logic::LogicDecoderConfig) -> ProtocolSchema
     }
 }
 
-/// 旧 ProtocolConfig → 预设 schema (节点创建 / 快照迁移用)。
+/// ProtocolConfig → 预设 schema (节点创建用)。
 /// Diagnostic 无 schema 预设: custom + 空 decode (诊断 I/O 走独立管线)。
 pub fn schema_from_protocol_config(config: &ProtocolConfig) -> ProtocolSchema {
     match config {
@@ -90,7 +88,7 @@ pub fn schema_from_protocol_config(config: &ProtocolConfig) -> ProtocolSchema {
         ProtocolConfig::LogicDecode { decoder } => logic_decode_schema(decoder.clone()),
         ProtocolConfig::Diagnostic { .. } => ProtocolSchema {
             preset: SchemaPreset::Custom,
-            legacy_config: Some(config.clone()),
+            preset_config: Some(config.clone()),
             decode: Vec::new(),
             encode: None,
         },
@@ -147,7 +145,7 @@ fn build_float_schema(preset: SchemaPreset, channels: Option<usize>) -> Protocol
     });
     ProtocolSchema {
         preset,
-        legacy_config: Some(ProtocolConfig::JustFloat { channels }),
+        preset_config: Some(ProtocolConfig::JustFloat { channels }),
         decode,
         encode: None,
     }
@@ -161,18 +159,17 @@ fn channel_port_names(channels: Option<usize>) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ProtocolSchema;
 
-    /// 与前端 justfloatSchema(2) 的历史输出逐字一致
+    /// 与前端 justfloatSchema(2) 的输出逐字一致
     #[test]
-    fn justfloat_matches_historical_frontend_output() {
+    fn justfloat_matches_frontend_output() {
         let schema = justfloat_schema(Some(2));
         let wire = serde_json::to_value(&schema).unwrap();
         assert_eq!(
             wire,
             serde_json::json!({
                 "preset": "justFloat",
-                "legacyConfig": { "kind": "JustFloat", "channels": 2 },
+                "presetConfig": { "kind": "JustFloat", "channels": 2 },
                 "decode": [
                     { "id": "jf-f0", "type": "field", "fieldType": "float32LE", "portName": "ch0" },
                     { "id": "jf-f1", "type": "field", "fieldType": "float32LE", "portName": "ch1" },
@@ -183,7 +180,7 @@ mod tests {
     }
 
     #[test]
-    fn firewater_matches_historical_frontend_output() {
+    fn firewater_matches_frontend_output() {
         let schema = firewater_schema(None);
         let wire = serde_json::to_value(&schema).unwrap();
         assert_eq!(
@@ -191,7 +188,7 @@ mod tests {
             serde_json::json!({ "type": "csv", "separator": ",", "ports": ["ch0", "ch1", "ch2", "ch3"] })
         );
         assert_eq!(
-            wire["legacyConfig"],
+            wire["presetConfig"],
             serde_json::json!({ "kind": "FireWater", "channels": null })
         );
     }

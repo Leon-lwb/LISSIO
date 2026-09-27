@@ -12,9 +12,11 @@ pub mod protocol;
 pub mod snapshot;
 pub mod stream;
 pub mod stream_sink;
+pub mod target;
 pub mod waveform_binary;
 
 pub use protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
 pub use stream::{ack_data, get_data_health, subscribe_data, unsubscribe_data};
 pub use stream_sink::{StreamPayload, StreamSink};
+pub use target::{NodePortTarget, push_request};
 pub use waveform_binary::encode_waveform_window;

@@ -1184,6 +1184,7 @@ menuPanelOpenLogic: 打开逻辑分析仪
 panelOpenNoWidget: "画布无对应控件"
 dataPanelsStandaloneTitle: 独立面板
 dataPanelsDerivedTitle: 派生面板
+dataPanelsUnsupportedTitle: 不可用面板
 dataTabWaveform: 波形
 dataTabSpectrum: 频谱
 dataTabRawData: 原始数据

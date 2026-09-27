@@ -3391,7 +3391,7 @@ version = "0.6.1"
 dependencies = [
  "async-trait",
  "keyring",
- "lissio-can",
+ "lissio-app",
  "lissio-chat",
  "lissio-chat-session",
  "lissio-control-api",
@@ -3479,6 +3479,7 @@ dependencies = [
  "lissio-data-model",
  "lissio-device-tree",
  "lissio-diagnostic",
+ "lissio-error",
  "lissio-flow",
  "lissio-schema-types",
  "lissio-transport",
@@ -3652,7 +3653,6 @@ dependencies = [
 name = "lissio-chat-session"
 version = "0.6.1"
 dependencies = [
- "lissio-data-model",
  "lissio-error",
  "lissio-llm",
  "log",
@@ -3670,6 +3670,7 @@ dependencies = [
  "lissio-buffer-graph",
  "lissio-can",
  "lissio-data-model",
+ "lissio-error",
  "lissio-events",
  "lissio-graph-ops",
  "lissio-graph-testkit",
@@ -3683,6 +3684,7 @@ dependencies = [
  "lissio-waveform",
  "parking_lot",
  "petgraph",
+ "schemars 1.2.2",
  "serde",
  "serde_json",
  "tokio",
@@ -3835,6 +3837,7 @@ version = "0.6.1"
 dependencies = [
  "criterion",
  "lissio-buffer-graph",
+ "lissio-data-model",
  "lissio-eval",
  "lissio-filter",
  "lissio-frame-decoder",
@@ -3921,7 +3924,6 @@ version = "0.6.1"
 dependencies = [
  "futures",
  "genai",
- "lissio-data-model",
  "lissio-error",
  "serde",
  "serde_json",
@@ -3964,7 +3966,6 @@ name = "lissio-mcp-client"
 version = "0.6.1"
 dependencies = [
  "futures",
- "lissio-data-model",
  "lissio-error",
  "log",
  "parking_lot",
@@ -3979,17 +3980,12 @@ name = "lissio-mcp-server"
 version = "0.6.1"
 dependencies = [
  "axum",
- "lissio-can",
+ "lissio-app",
  "lissio-control-api",
- "lissio-data-model",
  "lissio-error",
  "lissio-events",
- "lissio-pipeline",
- "lissio-points",
- "lissio-waveform",
  "log",
  "rmcp",
- "serde",
  "serde_json",
  "tokio",
 ]
@@ -4061,6 +4057,7 @@ dependencies = [
  "lissio-can",
  "lissio-data-model",
  "lissio-device-tree",
+ "lissio-error",
  "lissio-eval",
  "lissio-events",
  "lissio-filter",

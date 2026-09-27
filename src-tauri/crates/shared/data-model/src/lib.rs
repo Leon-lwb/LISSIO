@@ -8,8 +8,6 @@
 // - [`config`]: 传输层 (`TransportConfig` + 7 种 backend)、控件 (`WidgetConfig` + 9 种控件)
 //!   与流水线 (`PipelineConfig`) 三组可调配置。
 //!
-//! 错误类型由独立 `error` crate 提供,本 crate 通过 `pub use` 兼容
-//! `data_model::Error` / `data_model::Result` 调用路径。
 //!
 //! ## 设计原则
 //!
@@ -24,6 +22,7 @@ pub mod device;
 pub mod device_tree;
 pub mod frame;
 pub mod model_descriptor;
+pub mod panel_descriptor;
 pub mod serial_params;
 
 /// Transport → 数据平面 ingest 广播通道容量。
@@ -40,7 +39,6 @@ pub use config::{
     SlcanConfig, SliderConfig, TcpClientConfig, TcpServerConfig, TestDataConfig, TestSignal,
     TransportConfig, UdpConfig, WaveformConfig, WidgetBinding, WidgetConfig,
 };
-pub use error::{AppError as Error, Result};
 pub use frame::{
     CanBitrate, ConnectionState, DataFrame, PortInfo, RawData, TransportStats, now_us,
 };

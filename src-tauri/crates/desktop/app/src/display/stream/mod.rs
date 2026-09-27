@@ -4,7 +4,7 @@ use std::time::Duration;
 
 use crate::AppState;
 use bus::{RuntimeHealth, TopicKey};
-use data_model::Result;
+use error::Result;
 use evaluator::filtered_sources::{
     FilteredCanStreamSource, FilteredDecodedStreamSource, FilteredLogicStreamSource,
     FilteredRawDataSource,
@@ -18,6 +18,7 @@ use stream::{
 use super::protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
 use super::snapshot::spawn_snapshot;
 use super::stream_sink::{StreamPayload, StreamSink};
+use super::target;
 
 mod binary;
 mod envelope_stream;
@@ -161,6 +162,10 @@ async fn spawn_can_load(
 }
 
 /// 统一显示订阅。每个逻辑订阅只使用一个 [`StreamSink`] 实例。
+///
+/// 面板形态 (`DisplayRequest::Panel`) 在此**前置展开**: 面板身份 + 寻址经
+/// [`target::push_request`] 转成具体投递请求后递归重派发, 展开后的请求不可能
+/// 再是 `Panel`, 因此递归深度恒为 1。
 pub async fn subscribe_data(
     state: &AppState,
     request: DisplayRequest,
@@ -169,10 +174,30 @@ pub async fn subscribe_data(
     max_items: Option<usize>,
 ) -> Result<SubscriptionInfo> {
     let interval = Duration::from_millis(interval_ms.unwrap_or(33));
+    // 面板展开后的递归重派发要沿原样参数下沉; 下面的 max_items 是归一化批上限
+    let raw_max_items = max_items;
     let max_items = max_items.unwrap_or(1_000);
     let channel_id = on_event.id();
     let mut mode = "json";
     match request {
+        // 面板 → 投递细节的唯一解析点 (前端只说「哪个面板 / 寻址到哪」);
+        // 展开后递归重派发 — 递归调用需装箱, 否则本 future 类型无限大。
+        DisplayRequest::Panel {
+            node_id,
+            port,
+            panel_kind,
+        } => {
+            let resolved =
+                target::push_request(panel_kind, &target::NodePortTarget::new(node_id, port))?;
+            return Box::pin(subscribe_data(
+                state,
+                resolved,
+                on_event,
+                interval_ms,
+                raw_max_items,
+            ))
+            .await;
+        }
         snapshot @ (DisplayRequest::GraphOutputs
         | DisplayRequest::CustomInputs
         | DisplayRequest::StringOutputs
@@ -291,7 +316,7 @@ pub async fn subscribe_data(
             Some(filter) => {
                 let source = FilteredCanStreamSource::try_new(state.can_buffer.clone(), filter)
                     .map_err(|error| {
-                        data_model::Error::Protocol(error::ProtocolError::Parse(error.to_string()))
+                        error::AppError::Protocol(error::ProtocolError::Parse(error.to_string()))
                     })?;
                 spawn_stream(
                     state,

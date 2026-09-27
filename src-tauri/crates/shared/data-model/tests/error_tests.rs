@@ -7,7 +7,7 @@
 //! - `Io` / `Serde` 自动 `From` 转换
 //! - 业务错误构造的 `Display` 含结构化字段透传
 
-use data_model::{Error, Result};
+use error::{AppError as Error, Result};
 use error::{
     ConfigError, Error as ErrorTrait, PortAlreadyOpenError, PortNotFoundError, PortNotOpenError,
     ProtocolError, TransportError,

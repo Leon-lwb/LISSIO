@@ -1,7 +1,7 @@
 //! 波形缓冲与停止快照 — 清空 / 容量 / 通道数 / 自动设置 / 快照与原始区间读取。
 //!
 //! 快照与原始区间的实现对全部出口共享 ([`control_api::data`]); 本模块只做参数
-//! 解包。IPC 路径的 `String` 错误被映射为 `data_model::Error` 文案透传, 此处
+//! 解包。IPC 路径的 `String` 错误被映射为 `error::AppError` 文案透传, 此处
 //! 保持同样的文案与 `kind` 约定。
 
 use backend_host::BackendHost;

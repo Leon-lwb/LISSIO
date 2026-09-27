@@ -93,11 +93,11 @@ fn test_spectrum_sink_no_output_in_evaluate() {
 fn test_ifft_node_consumes_reconstructed_samples_once() {
     // Ifft 节点按序消费重建样本: 每个频谱块恰好产出 hop 个样本,
     // 耗尽后输出 0 — 不再循环播放最新幅度谱 (循环路径已移除)
-    let nodes = vec![NodeDef {
-        id: "ifft1".to_string(),
-        tab_id: "t1".to_string(),
-        kind: NodeKind::Ifft,
-    }];
+    let nodes = vec![NodeDef::new(
+        "ifft1".to_string(),
+        "t1".to_string(),
+        NodeKind::Ifft,
+    )];
     let g = CompiledGraph::compile("t1".into(), nodes, vec![]).unwrap();
 
     let mut ifft_states: HashMap<String, IfftState> = HashMap::new();
@@ -193,10 +193,10 @@ fn test_compiled_eval_equivalence() {
         ),
         make_input("knob1", "t1"),
         // FrameDecoder 无 parser (decoder_states 为空) — 覆盖 written 语义
-        NodeDef {
-            id: "d1".to_string(),
-            tab_id: "t1".to_string(),
-            kind: NodeKind::FrameDecoder {
+        NodeDef::new(
+            "d1".to_string(),
+            "t1".to_string(),
+            NodeKind::FrameDecoder {
                 blocks: vec![DecoderBlockDef::Field {
                     id: "f".to_string(),
                     field_type: kind::FieldType::UInt8,
@@ -209,7 +209,7 @@ fn test_compiled_eval_equivalence() {
                 enable_last_timestamp: false,
                 enable_fps: false,
             },
-        },
+        ),
     ];
     let edges = vec![
         edge("e1", "ps1", "ch0", "m1", "in0"),
@@ -497,15 +497,15 @@ fn test_compiled_eval_convert_ops_equivalence() {
     let nodes = vec![
         make_input("knob1", "t1"),
         // fmt1: tmpl 为内联回退 (fmt 端口未连接), in0 ← knob1
-        NodeDef {
-            id: "fmt1".into(),
-            tab_id: "t1".into(),
-            kind: kind::NodeKind::Str {
+        NodeDef::new(
+            "fmt1".into(),
+            "t1".into(),
+            kind::NodeKind::Str {
                 op: kind::StrOp::Format,
                 num: kind::StrNumParams::default(),
                 tmpl: "T={0:.2}V".to_string(),
             },
-        },
+        ),
         // p1: Parse 从文本提取数值; pos 未连接走 StrNumParams.pos 默认 1
         make_str_num(
             "p1",

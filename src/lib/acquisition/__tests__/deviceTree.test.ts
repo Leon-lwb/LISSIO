@@ -60,7 +60,7 @@ describe('device-tree declaration operations', () => {
     const config = {
       protocol: { kind: 'JustFloat' as const, channels: null },
       convertTo: null,
-      schema: { preset: 'justFloat' as const, legacyConfig: { kind: 'JustFloat' as const, channels: null }, decode: [] },
+      schema: { preset: 'justFloat' as const, presetConfig: { kind: 'JustFloat' as const, channels: null }, decode: [] },
     };
     const first = createProtocolEngineNode(decl('root'), config);
     const parent = decl('root', [first]);

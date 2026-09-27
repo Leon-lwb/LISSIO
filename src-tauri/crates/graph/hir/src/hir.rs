@@ -397,10 +397,10 @@ mod tests {
     fn acquisition_and_point_selector_use_declared_ports() {
         use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
         use data_model::device_tree::{DriverId, NodeDecl, NodeId};
-        let device = kind::NodeDef {
-            id: "device".into(),
-            tab_id: "t1".into(),
-            kind: NodeKind::Acquisition {
+        let device = kind::NodeDef::new(
+            "device".into(),
+            "t1".into(),
+            NodeKind::Acquisition {
                 node: NodeDecl {
                     id: NodeId::new("device").unwrap(),
                     name: "Device".into(),
@@ -417,14 +417,14 @@ mod tests {
                     domain: DevicePortDomain::Points,
                 }],
             },
-        };
-        let selector = kind::NodeDef {
-            id: "selector".into(),
-            tab_id: "t1".into(),
-            kind: NodeKind::PointSelector {
+        );
+        let selector = kind::NodeDef::new(
+            "selector".into(),
+            "t1".into(),
+            NodeKind::PointSelector {
                 points: vec!["temperature".into()],
             },
-        };
+        );
         let graph = TypedGraph::build(
             vec![device.clone(), selector.clone()],
             vec![edge("points", "device", "points", "selector", "points")],

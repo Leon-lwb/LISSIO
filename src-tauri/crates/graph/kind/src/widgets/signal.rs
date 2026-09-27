@@ -73,6 +73,7 @@ pub(super) const FILTER_DEF: WidgetDefinition = WidgetDefinition {
             .map_err(|e| e.to_string())?,
         })
     },
+    panel: None,
 };
 
 pub(super) const FFT_DEF: WidgetDefinition = WidgetDefinition {
@@ -118,6 +119,7 @@ pub(super) const FFT_DEF: WidgetDefinition = WidgetDefinition {
                 .unwrap_or(1000.0) as f32,
         })
     },
+    panel: None,
 };
 
 pub(super) const IFFT_DEF: WidgetDefinition = WidgetDefinition {
@@ -131,6 +133,7 @@ pub(super) const IFFT_DEF: WidgetDefinition = WidgetDefinition {
     },
     ports: ifft_ports,
     lower: |_, _| Ok(crate::kind::NodeKind::Ifft),
+    panel: None,
 };
 
 pub(super) static FILTER: WidgetDefinition = FILTER_DEF;

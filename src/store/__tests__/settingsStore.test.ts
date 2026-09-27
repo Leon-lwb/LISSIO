@@ -96,29 +96,6 @@ describe('settingsStore', () => {
     expect(useSettingsStore.getState().settings.performance.maxWorkers).toBe(12);
   });
 
-  it('migrates legacy manual pipeline knobs to automatic safety limits', async () => {
-    tauriMock.seedFile(STORE_FILE, STORE_KEY, {
-      performance: {
-        maxFeedWorkers: 2,
-        feedParallelUnit: 4,
-        minWorkerBytesKb: 16,
-        coalesceMaxMsgs: 8,
-        coalesceMaxBytesKb: 32,
-        maxStreamShards: 4,
-        parseChannelCap: 64,
-      },
-    });
-
-    await useSettingsStore.getState().load();
-
-    expect(useSettingsStore.getState().settings.performance).toEqual(DEFAULT_SETTINGS.performance);
-    const saved = tauriMock.fileStore.get(STORE_FILE)?.get(STORE_KEY) as {
-      performance: Record<string, unknown>;
-    };
-    expect(saved.performance).toEqual(DEFAULT_SETTINGS.performance);
-    expect(saved.performance).not.toHaveProperty('maxStreamShards');
-  });
-
   it('does not push pipeline config when a non-performance setting is updated', () => {
     useSettingsStore.getState().update('notifications', 'duration', 3000);
 
@@ -231,16 +208,6 @@ describe('settingsStore API key 钥匙串集成', () => {
 
     expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
     expect(keychainCalls('ai_secret_status')).toContainEqual(['orcarouter', '']);
-  });
-
-  it('旧版明文 key 自动迁入 SecretStore 后立即从设置中清除', async () => {
-    tauriMock.seedFile(STORE_FILE, STORE_KEY, { ai: { apiKey: 'sk-legacy' } });
-    await useSettingsStore.getState().load();
-
-    expect(keychainCalls('ai_secret_set')).toContainEqual(['orcarouter', 'sk-legacy']);
-    expect(useSettingsStore.getState().settings.ai.apiKey).toBe('');
-    const saved = tauriMock.fileStore.get(STORE_FILE)?.get(STORE_KEY) as AppSettings;
-    expect(saved.ai.apiKey).toBe('');
   });
 
   it('持久化剥离 API key — settings.json 恒为空串', async () => {

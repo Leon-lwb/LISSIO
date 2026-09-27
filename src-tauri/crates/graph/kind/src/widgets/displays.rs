@@ -12,23 +12,18 @@
     clippy::suboptimal_flops
 )]
 
-use serde::Serialize;
-use serde::de::DeserializeOwned;
+use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
 use serde_json::{Value, json};
 
 use super::display_normalize::{
-    is_hex_color, normalize_display_range, normalize_gauge, normalize_model3d, normalize_progress,
-    normalize_via,
+    normalize_gauge, normalize_model3d, normalize_progress, normalize_via,
 };
 use super::display_params::{
-    GaugeParams, ImageFormat, ImageParams, LabelParams, LedParams, Model3DAttitudeInputMode,
-    Model3DMode, Model3DParams, NumberDisplayParams, PieChartParams, ProgressOrientation,
-    ProgressParams, RawDataParams, SpectrumParams, TableViewColumn, TableViewParams,
-    WaveformParams,
+    ImageParams, LabelParams, LedParams, NumberDisplayParams, PieChartParams, RawDataParams,
+    SpectrumParams, TableViewParams, WaveformParams,
 };
-use super::params::{DisplayRange, f32_port, finite_or};
-use super::params::{Model3DSource, Model3DSourceKind};
-use super::{WidgetDefinition, WidgetPortTable};
+use super::params::{DisplayRange, f32_port};
+use super::{PanelBindingSpec, PanelSpec, WidgetDefinition, WidgetPortTable};
 
 // ============ 端口 ============
 
@@ -132,6 +127,7 @@ const LABEL_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<LabelParams>,
     ports: no_ports,
     lower: sink_lower(),
+    panel: None,
 };
 
 const GAUGE_DEF: WidgetDefinition = WidgetDefinition {
@@ -149,6 +145,7 @@ const GAUGE_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_gauge,
     ports: value_input_ports,
     lower: sink_lower(),
+    panel: None,
 };
 
 const PROGRESS_DEF: WidgetDefinition = WidgetDefinition {
@@ -167,6 +164,7 @@ const PROGRESS_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_progress,
     ports: value_input_ports,
     lower: sink_lower(),
+    panel: None,
 };
 
 const LED_DEF: WidgetDefinition = WidgetDefinition {
@@ -183,6 +181,7 @@ const LED_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<LedParams>,
     ports: value_input_ports,
     lower: sink_lower(),
+    panel: None,
 };
 
 const NUMBER_DISPLAY_DEF: WidgetDefinition = WidgetDefinition {
@@ -194,6 +193,7 @@ const NUMBER_DISPLAY_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<NumberDisplayParams>,
     ports: value_input_ports,
     lower: sink_lower(),
+    panel: None,
 };
 
 const PIE_CHART_DEF: WidgetDefinition = WidgetDefinition {
@@ -205,6 +205,17 @@ const PIE_CHART_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<PieChartParams>,
     ports: pie_chart_ports,
     lower: sink_lower(),
+    panel: Some(PanelSpec {
+        panel: PanelKind::Pie,
+        tab_type: "pie",
+        label_key: "dataTabPie",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_PORT_SAMPLES),
+        fetch_op: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: None,
+    }),
 };
 
 const IMAGE_DEF: WidgetDefinition = WidgetDefinition {
@@ -217,6 +228,19 @@ const IMAGE_DEF: WidgetDefinition = WidgetDefinition {
     // 图像帧尚无字节/像素协议; 不把单个 f32 伪装成图像输入
     ports: no_ports,
     lower: sink_lower(),
+    // 面板已声明 (有独立 tab), 但数据面尚未实现 — 显式声明 Unavailable,
+    // 不预支一个后端无法服务的获取能力名。
+    panel: Some(PanelSpec {
+        panel: PanelKind::Image,
+        tab_type: "image",
+        label_key: "dataTabImage",
+        delivery: PanelDelivery::Unavailable,
+        push_request: None,
+        fetch_op: None,
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: None,
+        default_max_items: None,
+    }),
 };
 
 const WAVEFORM_DEF: WidgetDefinition = WidgetDefinition {
@@ -233,6 +257,17 @@ const WAVEFORM_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<WaveformParams>,
     ports: waveform_ports,
     lower: sink_lower(),
+    panel: Some(PanelSpec {
+        panel: PanelKind::Waveform,
+        tab_type: "waveform-extra",
+        label_key: "dataTabWaveform",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_WAVEFORM),
+        fetch_op: Some(panel_ops::FETCH_WAVEFORM_WINDOW),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: Some(4096),
+    }),
 };
 
 const SPECTRUM_DEF: WidgetDefinition = WidgetDefinition {
@@ -244,6 +279,17 @@ const SPECTRUM_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<SpectrumParams>,
     ports: spectrum_ports,
     lower: sink_lower(),
+    panel: Some(PanelSpec {
+        panel: PanelKind::Spectrum,
+        tab_type: "spectrum",
+        label_key: "dataTabSpectrum",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_SPECTRUM),
+        fetch_op: Some(panel_ops::FETCH_SPECTRUM),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: None,
+    }),
 };
 
 const MODEL3D_DEF: WidgetDefinition = WidgetDefinition {
@@ -262,6 +308,17 @@ const MODEL3D_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_model3d,
     ports: model3d_ports,
     lower: sink_lower(),
+    panel: Some(PanelSpec {
+        panel: PanelKind::Model3d,
+        tab_type: "model3d",
+        label_key: "dataTabModel3d",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_PORT_SAMPLES),
+        fetch_op: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(17),
+        default_max_items: None,
+    }),
 };
 
 const TABLE_VIEW_DEF: WidgetDefinition = WidgetDefinition {
@@ -282,6 +339,17 @@ const TABLE_VIEW_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<TableViewParams>,
     ports: single_in_ports,
     lower: sink_lower(),
+    panel: Some(PanelSpec {
+        panel: PanelKind::TableView,
+        tab_type: "table-view",
+        label_key: "tableViewLabel",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_PORT_SAMPLES),
+        fetch_op: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(100),
+        default_max_items: Some(100),
+    }),
 };
 
 const RAW_DATA_DEF: WidgetDefinition = WidgetDefinition {
@@ -293,6 +361,23 @@ const RAW_DATA_DEF: WidgetDefinition = WidgetDefinition {
     normalize: normalize_via::<RawDataParams>,
     ports: raw_data_ports,
     lower: sink_lower(),
+    // 原始数据面板的端口由参数 `selectedInput` 持有 (静态回退口是 "data",
+    // 动态口形如 `src:<sourceId>:<sourceHandle>`) — 与 describe 层的
+    // derive_raw_data_ports 同源。
+    panel: Some(PanelSpec {
+        panel: PanelKind::Raw,
+        tab_type: "raw",
+        label_key: "dataTabRawData",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_RAW_DATA),
+        fetch_op: Some(panel_ops::FETCH_RAW_DATA),
+        binding: PanelBindingSpec::ConfigBound {
+            config_key: "selectedInput",
+            port_template: "src:{source}:{handle}",
+        },
+        default_interval_ms: Some(100),
+        default_max_items: Some(65536),
+    }),
 };
 
 pub(super) static LABEL: WidgetDefinition = LABEL_DEF;

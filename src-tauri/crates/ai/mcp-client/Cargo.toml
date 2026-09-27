@@ -21,7 +21,6 @@ log = { workspace = true }
 futures = { workspace = true }
 parking_lot = { workspace = true }
 error = { workspace = true }
-data_model = { workspace = true }
 
 [dev-dependencies]
 

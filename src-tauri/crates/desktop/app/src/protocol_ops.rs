@@ -3,8 +3,9 @@
 //! 层级: L3 app (app_state)。引擎重建与 TestData 断连编排属于应用核心;
 //! 引擎工厂在 [`pipeline::protocol_factory`] (L2), L1 协议 crate 不被本 crate 直连。
 
-use data_model::{ConnectionState, Error, Result, TransportConfig};
+use data_model::{ConnectionState, TransportConfig};
 use error::ConfigError;
+use error::{AppError as Error, Result};
 use events::{BackendEventSink, emit_transport_state};
 use schema_types::ProtocolConfig;
 

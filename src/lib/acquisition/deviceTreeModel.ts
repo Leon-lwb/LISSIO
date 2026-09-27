@@ -141,7 +141,7 @@ function declarationItem(node: DeviceTreeNodeDecl, rootId: string, parentId?: st
     children: node.children.map(child => declarationItem(child, rootId, node.id)) };
 }
 
-/** Only data-plane connections establish legacy ownership, never numeric output or feedback. */
+/** Only data-plane connections establish tree ownership, never numeric output or feedback. */
 function ownershipEdge(source: Node, target: Node, edge: Edge): boolean {
   if (source.id === target.id || source.data.tabId !== target.data.tabId) return false;
   const domain = target.type === 'point-selector' ? 'points' : 'bytes';
@@ -155,7 +155,7 @@ function ownershipEdge(source: Node, target: Node, edge: Edge): boolean {
     || (canvasDriver(source) === 'frame-decoder' && edge.sourceHandle === 'raw'));
 }
 
-/** Unambiguous legacy graph nodes are shown under their source without rewriting saved documents. */
+/** Unambiguous canvas-level graph nodes (not declared inside a device tree) are shown under their source without rewriting saved documents. **/
 export function buildDeviceTree(nodes: Node[], edges: Edge[], tabId?: string): DeviceTreeItem[] {
   const scoped = nodes.filter(node => tabId === undefined || node.data.tabId === tabId);
   const projections = deviceTreeCanvasNodes(scoped);
@@ -168,7 +168,7 @@ export function buildDeviceTree(nodes: Node[], edges: Edge[], tabId?: string): D
     roots.push(item);
     index(item);
   }
-  const legacy: DeviceTreeItem[] = [];
+  const canvasItems: DeviceTreeItem[] = [];
   for (const node of scoped) {
     const driver = canvasDriver(node);
     if (!driver || items.has(node.id)) continue;
@@ -176,11 +176,11 @@ export function buildDeviceTree(nodes: Node[], edges: Edge[], tabId?: string): D
     const label = typeof node.data.label === 'string' ? node.data.label : widget?.params.label;
     const item: DeviceTreeItem = { id: node.id, name: typeof label === 'string' ? label : node.id,
       driver, enabled: true, canvasNodeId: node.id, rootId: node.id, source: 'canvas', children: [] };
-    legacy.push(item);
+    canvasItems.push(item);
     items.set(item.id, item);
   }
   const parents = new Map<string, string>();
-  for (const item of legacy) {
+  for (const item of canvasItems) {
     const target = canvas.get(item.id)!;
     const candidates = new Set(edges.filter(edge => edge.target === item.id).flatMap(edge => {
       const source = canvas.get(edge.source);
@@ -190,7 +190,7 @@ export function buildDeviceTree(nodes: Node[], edges: Edge[], tabId?: string): D
   }
   // Malformed imported cycles remain visible as independent roots.
   const cyclic = new Set<string>();
-  for (const item of legacy) {
+  for (const item of canvasItems) {
     const visited = new Set([item.id]);
     let ancestor = parents.get(item.id);
     while (ancestor) {
@@ -200,7 +200,7 @@ export function buildDeviceTree(nodes: Node[], edges: Edge[], tabId?: string): D
     }
   }
   cyclic.forEach(id => parents.delete(id));
-  for (const item of legacy) {
+  for (const item of canvasItems) {
     const parentId = parents.get(item.id);
     const parent = parentId && items.get(parentId);
     if (parent) { item.parentId = parent.id; parent.children.push(item); }

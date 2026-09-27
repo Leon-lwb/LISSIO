@@ -2,7 +2,7 @@
 
 use async_trait::async_trait;
 use can::{CanDirection, CanFrame};
-use data_model::Result;
+use error::Result;
 use tokio::sync::broadcast;
 use transport::CanBackend;
 

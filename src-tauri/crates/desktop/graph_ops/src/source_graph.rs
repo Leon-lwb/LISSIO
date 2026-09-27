@@ -12,13 +12,13 @@
 use app::{SourceGraphs, SourceNodeHint, TabSourceGraph, WorkspaceState};
 use buffer_graph::Edge;
 use error::ConfigError;
+use error::{AppError as Error, Result};
 use pipeline::NodeKind;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use data_model::{Error, Result};
 use events::BackendEventSink;
 use pipeline::DataPlaneState;
 

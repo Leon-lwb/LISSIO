@@ -28,7 +28,7 @@ impl DataBuffer {
         }
     }
 
-    /// 兼容查询：获取相对时间窗口内的全部原始点。
+    /// 查询相对时间窗口内的全部原始点。
     pub fn get_window(&self, start_ms: i64, end_ms: i64) -> WaveformWindow {
         // 毫秒量级 i64 -> f64 无精度损失 (2^53 以内整数可精确表示)
         #[allow(clippy::cast_precision_loss)]
@@ -37,7 +37,7 @@ impl DataBuffer {
         }
     }
 
-    /// 兼容查询：获取最近 N 个原始点。
+    /// 查询最近 N 个原始点。
     pub fn get_recent(&self, count: usize) -> WaveformWindow {
         let end = self.timestamps.len();
         let start = end.saturating_sub(count);

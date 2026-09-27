@@ -67,8 +67,6 @@ export interface RadioConfig extends WidgetBaseConfig {
 export interface CheckboxConfig extends WidgetBaseConfig {
   options: ChoiceOption[];
   selectedIds: string[];
-  /** 旧版单复选框的未选中返回值；新控件固定为 0。 */
-  emptyValue?: number;
   binding: WidgetBinding;
 }
 
@@ -82,8 +80,6 @@ export interface SliderConfig extends WidgetBaseConfig {
 
 export interface LabelConfig extends WidgetBaseConfig {
   text: string;
-  /** @deprecated 旧工作区兼容；新节点通过 value 输入边绑定。 */
-  channel: number | null;
 }
 
 export interface WaveformConfig extends WidgetBaseConfig {
@@ -99,8 +95,6 @@ export interface PieChartConfig {
   id: string;
   label: string;
   segments: string[];
-  /** @deprecated 旧工作区兼容；新节点通过 segN 输入边绑定。 */
-  channels: number[];
 }
 
 export interface ImageConfig {
@@ -118,8 +112,6 @@ export interface GaugeConfig {
   /// 量程/刻度配置 (手动或滑动窗口自适应)
   range: DisplayRangeConfig;
   unit: string;          // 单位后缀, 如 'V' / 'A' / ''
-  /** @deprecated 旧工作区兼容；新节点通过 value 输入边绑定。 */
-  channel: number | null; // 绑定的输入通道 (null = 不绑定)
 }
 
 /// 进度条控件 — 横向/纵向条形显示单通道实时值占比
@@ -134,8 +126,6 @@ export interface ProgressConfig {
   showValue: boolean;
   /// 填充色 HEX; '' = 主题默认色
   color: string;
-  /** @deprecated 旧工作区兼容；新节点通过 value 输入边绑定。 */
-  channel: number | null;
 }
 
 /// LED 指示灯 — 阈值控制开关色
@@ -145,8 +135,6 @@ export interface LEDConfig {
   threshold: number;     // 输入 >= threshold 视为 ON
   on_color: string;      // HEX, 如 '#89d185'
   off_color: string;     // HEX, 如 '#3c3c3c'
-  /** @deprecated 旧工作区兼容；新节点通过 value 输入边绑定。 */
-  channel: number | null;
 }
 
 /// 大数字显示 — 大字号展示单通道数值
@@ -155,8 +143,6 @@ export interface NumberDisplayConfig {
   label: string;
   unit: string;
   precision: number;     // 小数位数
-  /** @deprecated 旧工作区兼容；新节点通过 value 输入边绑定。 */
-  channel: number | null;
 }
 
 /// 自定义 JS 控件 — 用户代码在 iframe 沙箱中渲染

@@ -93,59 +93,6 @@ fn defaults_survive_normalize_idempotently() {
 }
 
 #[test]
-fn legacy_shapes_migrate_to_current_model() {
-    // Button: snake_case 旧字段
-    let mut button = json!({"id": "b", "label": "B", "press_value": 2, "release_value": 5});
-    normalize_params("Button", &mut button).unwrap();
-    assert_eq!(button["pressValue"], 2.0);
-    assert_eq!(button["releaseValue"], 5.0);
-    assert!(button.get("press_value").is_none(), "legacy key removed");
-
-    // Radio: 旧 default 索引 → selectedId
-    let mut radio = json!({
-        "id": "r", "label": "R",
-        "options": [["A", 0], ["B", 1]],
-        "default": 1,
-    });
-    normalize_params("Radio", &mut radio).unwrap();
-    assert_eq!(radio["options"][1]["id"], "r-option-2");
-    assert_eq!(radio["selectedId"], "r-option-2");
-
-    // Checkbox: 旧 checked_value/default
-    let mut checkbox = json!({
-        "id": "c", "label": "C",
-        "checked_value": 3, "unchecked_value": 7, "default": true,
-    });
-    normalize_params("Checkbox", &mut checkbox).unwrap();
-    assert_eq!(checkbox["options"][0]["value"], 3.0);
-    assert_eq!(checkbox["selectedIds"][0], "c-option-1");
-    assert_eq!(checkbox["emptyValue"], 7.0);
-
-    // Gauge: 顶层 min/max → range
-    let mut gauge = json!({"id": "g", "label": "G", "min": 10, "max": 5, "unit": "V"});
-    normalize_params("Gauge", &mut gauge).unwrap();
-    assert_eq!(gauge["range"]["min"], 10.0);
-    assert_eq!(gauge["range"]["max"], 110.0, "max <= min 时迁移为 min+100");
-    assert!(gauge.get("min").is_none());
-
-    // Command: 旧单帧 (顶层 blocks) → frames[0]
-    let mut command = json!({
-        "id": "cmd", "label": "C",
-        "blocks": [{ "id": "x", "type": "const_hex", "hex": "AA" }],
-        "appendNewline": true, "sendMode": "manual", "timerMs": 100,
-        "loopbackEnabled": false, "loopbackHistory": [],
-    });
-    normalize_params("Command", &mut command).unwrap();
-    assert_eq!(command["frames"][0]["id"], "cmd-frame-1");
-    assert_eq!(command["frames"][0]["blocks"][0]["hex"], "AA");
-    assert_eq!(command["frames"][0]["appendNewline"], true);
-    assert!(
-        command.get("blocks").is_none(),
-        "legacy top-level blocks removed"
-    );
-}
-
-#[test]
 fn normalize_keeps_unknown_forward_compatible_fields() {
     // 未知字段 (更新版本后端写入) 必须保留, 不能静默丢弃
     let mut label = json!({"id": "l", "label": "L", "text": "hi", "futureField": {"a": 1}});
@@ -293,4 +240,218 @@ fn lowering_delegates_with_registry_semantics() {
     // Custom 必须带 customPorts 合同
     assert!(lower("Custom", &json!({ "code": "..." }), None).is_err());
     assert!(lower("Nope", &json!({}), None).is_err());
+}
+
+/// 面板契约的完整形状 — 只有数据驱动控件声明 `panel`, 且每条的
+/// tab / i18n 键 / 数据面 / 绑定都必须精确匹配前端既有入口。
+#[test]
+fn data_panels_are_declared_on_exactly_ten_host_widgets() {
+    use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
+
+    /// 一行「宿主控件 → 面板契约」的期望值 (避免裸元组触发 type_complexity)。
+    struct ExpectedPanel {
+        host: &'static str,
+        panel: PanelKind,
+        tab_type: &'static str,
+        label_key: &'static str,
+        push: &'static str,
+        fetch: Option<&'static str>,
+    }
+
+    let expected = [
+        ExpectedPanel {
+            host: "Waveform",
+            panel: PanelKind::Waveform,
+            tab_type: "waveform-extra",
+            label_key: "dataTabWaveform",
+            push: panel_ops::PUSH_WAVEFORM,
+            fetch: Some(panel_ops::FETCH_WAVEFORM_WINDOW),
+        },
+        ExpectedPanel {
+            host: "Spectrum",
+            panel: PanelKind::Spectrum,
+            tab_type: "spectrum",
+            label_key: "dataTabSpectrum",
+            push: panel_ops::PUSH_SPECTRUM,
+            fetch: Some(panel_ops::FETCH_SPECTRUM),
+        },
+        ExpectedPanel {
+            host: "RawData",
+            panel: PanelKind::Raw,
+            tab_type: "raw",
+            label_key: "dataTabRawData",
+            push: panel_ops::PUSH_RAW_DATA,
+            fetch: Some(panel_ops::FETCH_RAW_DATA),
+        },
+        ExpectedPanel {
+            host: "PieChart",
+            panel: PanelKind::Pie,
+            tab_type: "pie",
+            label_key: "dataTabPie",
+            push: panel_ops::PUSH_PORT_SAMPLES,
+            fetch: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        },
+        ExpectedPanel {
+            host: "Model3D",
+            panel: PanelKind::Model3d,
+            tab_type: "model3d",
+            label_key: "dataTabModel3d",
+            push: panel_ops::PUSH_PORT_SAMPLES,
+            fetch: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        },
+        ExpectedPanel {
+            host: "TableView",
+            panel: PanelKind::TableView,
+            tab_type: "table-view",
+            label_key: "tableViewLabel",
+            push: panel_ops::PUSH_PORT_SAMPLES,
+            fetch: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        },
+        ExpectedPanel {
+            host: "Command",
+            panel: PanelKind::Command,
+            tab_type: "command",
+            label_key: "dataTabCommand",
+            push: panel_ops::PUSH_PORT_SAMPLES,
+            fetch: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        },
+        ExpectedPanel {
+            host: "Trigger",
+            panel: PanelKind::Trigger,
+            tab_type: "trigger",
+            label_key: "dataTabTrigger",
+            push: panel_ops::PUSH_PORT_SAMPLES,
+            fetch: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        },
+    ];
+
+    let mut hosts = definitions()
+        .filter(|def| def.panel.is_some())
+        .map(|def| def.kind)
+        .collect::<Vec<_>>();
+
+    // 10 个宿主: 上表 8 个 + 仅拉取的 Image + 事件平面的 FrameDecoder
+    let mut expected_hosts = expected.iter().map(|row| row.host).collect::<Vec<_>>();
+    expected_hosts.push("Image");
+    expected_hosts.push("FrameDecoder");
+    expected_hosts.sort_unstable();
+    hosts.sort_unstable();
+    assert_eq!(hosts, expected_hosts, "面板宿主集合必须精确");
+
+    for row in &expected {
+        let spec = definition(row.host)
+            .unwrap_or_else(|| panic!("missing widget: {}", row.host))
+            .panel
+            .unwrap_or_else(|| panic!("{} must declare a panel", row.host));
+        assert_eq!(spec.panel, row.panel, "{}: stable panel identity", row.host);
+        assert_eq!(spec.tab_type, row.tab_type, "{}: tab type", row.host);
+        assert_eq!(spec.label_key, row.label_key, "{}: i18n key", row.host);
+        assert_eq!(
+            spec.delivery,
+            PanelDelivery::Both,
+            "{}: 数值/事件平面面板支持订阅 + 拉取",
+            row.host
+        );
+        assert_eq!(
+            spec.push_request,
+            Some(row.push),
+            "{}: push request",
+            row.host
+        );
+        assert_eq!(spec.fetch_op, row.fetch, "{}: fetch operation", row.host);
+    }
+
+    // Image 已声明面板 (有独立 tab) 但数据面尚未实现 — 不预支获取能力名
+    let image = definition("Image")
+        .expect("Image")
+        .panel
+        .expect("Image panel");
+    assert_eq!(image.panel, PanelKind::Image);
+    assert_eq!(image.tab_type, "image");
+    assert_eq!(image.label_key, "dataTabImage");
+    assert_eq!(image.delivery, PanelDelivery::Unavailable);
+    assert!(!image.delivery.is_available());
+    assert_eq!(image.push_request, None, "Image 无推送流");
+    assert_eq!(image.fetch_op, None, "Image 无拉取面");
+
+    // FrameDecoder 走解码事件平面 (与逻辑分析仪同一事件总线)
+    let decoder = definition("FrameDecoder")
+        .expect("FrameDecoder")
+        .panel
+        .expect("FrameDecoder panel");
+    assert_eq!(decoder.panel, PanelKind::FrameDecoder);
+    assert_eq!(decoder.tab_type, "frame-decoder");
+    assert_eq!(decoder.label_key, "dataTabFrameDecoder");
+    assert_eq!(decoder.push_request, Some(panel_ops::PUSH_DECODED_EVENTS));
+    assert_eq!(decoder.fetch_op, Some(panel_ops::FETCH_DECODED_EVENTS));
+
+    // 绑定: RawData 由参数持有端口引用, 其余宿主跟随画布边
+    let raw = definition("RawData")
+        .expect("RawData")
+        .panel
+        .expect("RawData panel");
+    assert_eq!(
+        raw.binding,
+        PanelBindingSpec::ConfigBound {
+            config_key: "selectedInput",
+            port_template: "src:{source}:{handle}",
+        }
+    );
+    for kind in [
+        "Waveform",
+        "Spectrum",
+        "PieChart",
+        "Model3D",
+        "TableView",
+        "Command",
+        "Trigger",
+    ] {
+        let spec = definition(kind).expect("host").panel.expect("panel");
+        assert_eq!(
+            spec.binding,
+            PanelBindingSpec::EdgeBound,
+            "{kind}: 跟随画布边"
+        );
+    }
+
+    // 非数据驱动控件不得声明面板
+    for def in definitions() {
+        if !hosts.contains(&def.kind) {
+            assert!(
+                def.panel.is_none(),
+                "{} must not declare a data panel",
+                def.kind
+            );
+        }
+    }
+}
+
+/// tab 类型与 i18n 键一一对应, 且不得撞上纯应用外壳的 tab。
+#[test]
+fn panel_tab_types_and_labels_are_unique_and_not_shell_tabs() {
+    let mut tabs = Vec::new();
+    for def in definitions() {
+        let Some(spec) = def.panel else { continue };
+        assert!(
+            !SHELL_TAB_TYPES.contains(&spec.tab_type),
+            "{}: {} is an application shell tab, not a data panel",
+            def.kind,
+            spec.tab_type
+        );
+        tabs.push((spec.tab_type, spec.label_key, def.kind));
+    }
+    let mut sorted = tabs.clone();
+    sorted.sort_unstable();
+    sorted.dedup_by_key(|(tab, _, _)| *tab);
+    assert_eq!(
+        sorted.len(),
+        tabs.len(),
+        "panel tab types must be unique across hosts"
+    );
+
+    let mut labels = tabs.iter().map(|(_, label, _)| *label).collect::<Vec<_>>();
+    let total = labels.len();
+    labels.sort_unstable();
+    labels.dedup();
+    assert_eq!(labels.len(), total, "panel i18n keys must be unique");
 }

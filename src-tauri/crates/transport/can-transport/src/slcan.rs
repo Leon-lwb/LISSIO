@@ -1,5 +1,6 @@
 use acquisition::ByteMessage;
-use data_model::{Result, SlcanConfig};
+use data_model::SlcanConfig;
+use error::Result;
 use error::TransportError;
 use serial::serial::{SerialLifecycle, SerialSettings};
 use std::sync::Arc;

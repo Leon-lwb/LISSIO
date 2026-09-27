@@ -4,7 +4,7 @@
 //! 随 `update_tab_graph` Tauri 命令返回并经 `graph:derived` 事件差分推送。
 //! 前端 `derivedPorts` store 据此渲染 React Flow handle 与节点摘要。
 
-use pipeline::{NodeDef, NodeKind, PortDomain, port_table, protocol_source_port_names};
+use pipeline::{NodeDef, NodeKind, PortDomain, port_table};
 use schema_types::{ProtocolConfig, ProtocolSchema};
 use serde::Serialize;
 
@@ -84,9 +84,7 @@ fn derive_node(n: &NodeDef) -> NodeDerived {
                 .collect(),
             effective_channels: Some(points.len()),
         },
-        NodeKind::Protocol { config, schema, .. } => {
-            derive_protocol(n.id.clone(), config, schema.as_ref())
-        }
+        NodeKind::Protocol { config, schema, .. } => derive_protocol(n.id.clone(), config, schema),
         NodeKind::ProtocolSource { .. } => NodeDerived {
             // 端口表与所引用的当前页签 Protocol 节点同源 — 渲染端按节点 id 读,
             // 此处重复一份便于初次派生到达前的占位查询
@@ -113,47 +111,30 @@ fn derive_node(n: &NodeDef) -> NodeDerived {
 fn derive_protocol(
     node_id: String,
     config: &ProtocolConfig,
-    schema: Option<&ProtocolSchema>,
+    schema: &ProtocolSchema,
 ) -> NodeDerived {
-    let (ports, channels) = match schema {
-        // Custom: 端口由 decode 块派生, 通道数 = 端口数
-        Some(s) if s.preset == schema_types::SchemaPreset::Custom => {
-            let names = s.port_names();
-            let ports = names
-                .iter()
-                .map(|p| NodeDerivedPort {
-                    name: p.clone(),
-                    domain: domain_for_protocol_port(p),
-                })
-                .collect();
-            (ports, names.len())
-        }
-        // preset + 有 schema: 端口由 schema (legacyConfig) 决定; 无 channels 字段时用默认值
-        Some(_) => {
-            let names = preset_port_names(config);
-            let ports = names
-                .iter()
-                .map(|p| NodeDerivedPort {
-                    name: p.clone(),
-                    domain: domain_for_protocol_port(p),
-                })
-                .collect();
-            let n = names.len();
-            (ports, n)
-        }
-        // preset + 无 schema (前端省略 schema 时):按 config 工厂构造, 端口同 preset
-        None => {
-            let names = preset_port_names(config);
-            let ports = names
-                .iter()
-                .map(|p| NodeDerivedPort {
-                    name: p.clone(),
-                    domain: domain_for_protocol_port(p),
-                })
-                .collect();
-            let n = names.len();
-            (ports, n)
-        }
+    // Custom: 端口由 decode 块派生, 通道数 = 端口数; preset: 端口按 config 工厂构造
+    let (ports, channels) = if schema.preset == schema_types::SchemaPreset::Custom {
+        let names = schema.port_names();
+        let ports = names
+            .iter()
+            .map(|p| NodeDerivedPort {
+                name: p.clone(),
+                domain: domain_for_protocol_port(p),
+            })
+            .collect();
+        (ports, names.len())
+    } else {
+        let names = preset_port_names(config);
+        let ports = names
+            .iter()
+            .map(|p| NodeDerivedPort {
+                name: p.clone(),
+                domain: domain_for_protocol_port(p),
+            })
+            .collect();
+        let n = names.len();
+        (ports, n)
     };
     NodeDerived {
         node_id,
@@ -214,22 +195,24 @@ mod tests {
     use serde_json::json;
 
     fn protocol_node(id: &str, config: ProtocolConfig, schema: Option<ProtocolSchema>) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Protocol {
+        // 未显式给 schema 的用例按 config 构造预设 schema
+        let schema = schema.unwrap_or_else(|| schema_types::schema_from_protocol_config(&config));
+        NodeDef::new(
+            id.into(),
+            "tab1".into(),
+            NodeKind::Protocol {
+                schema,
                 config,
                 convert_to: None,
-                schema,
             },
-        }
+        )
     }
 
     #[test]
     fn custom_schema_derives_named_ports() {
         let schema = ProtocolSchema {
             preset: SchemaPreset::Custom,
-            legacy_config: None,
+            preset_config: None,
             decode: vec![
                 DecoderBlockDef::Field {
                     id: "f1".into(),
@@ -314,24 +297,20 @@ mod tests {
 
     #[test]
     fn non_protocol_kinds_produce_known_ports() {
-        let input = NodeDef {
-            id: "i1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Input,
-        };
-        let math = NodeDef {
-            id: "m1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Math {
+        let input = NodeDef::new("i1".into(), "tab1".into(), NodeKind::Input);
+        let math = NodeDef::new(
+            "m1".into(),
+            "tab1".into(),
+            NodeKind::Math {
                 op: pipeline::MathOp::Add,
                 input_count: 3,
             },
-        };
-        let text_in = NodeDef {
-            id: "t1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::TextInput { text: "hi".into() },
-        };
+        );
+        let text_in = NodeDef::new(
+            "t1".into(),
+            "tab1".into(),
+            NodeKind::TextInput { text: "hi".into() },
+        );
         let derived = compute_derived(&[input, math, text_in]);
         assert_eq!(derived[0].ports, vec![port("value", PortDomain::F32)]);
         assert_eq!(derived[1].ports, vec![port("result", PortDomain::F32)]);
@@ -340,10 +319,10 @@ mod tests {
 
     #[test]
     fn acquisition_outputs_are_derived_from_capability_ports() {
-        let node = NodeDef {
-            id: "device-1".into(),
-            tab_id: "tab1".into(),
-            kind: NodeKind::Acquisition {
+        let node = NodeDef::new(
+            "device-1".into(),
+            "tab1".into(),
+            NodeKind::Acquisition {
                 node: NodeDecl {
                     id: NodeId::new("device-1").unwrap(),
                     name: "serial".into(),
@@ -377,7 +356,7 @@ mod tests {
                     },
                 ],
             },
-        };
+        );
 
         let derived = compute_derived(&[node]);
         assert_eq!(

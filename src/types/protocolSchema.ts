@@ -15,9 +15,9 @@ export type { SchemaPreset } from './generated/SchemaPreset';
 // 两者不强行复用; 需要互转时在 lib/utils 中建映射函数。
 export type { EncodeBlockDef as EncodeBlock } from './generated/EncodeBlockDef';
 
-// 协议帧 schema — preset / legacyConfig (custom 时省略) / decode / encode
+// 协议帧 schema — preset / presetConfig (custom 时省略) / decode / encode
 export type { ProtocolSchema } from './generated/ProtocolSchema';
 
-// 解码块定义 (tag="type" 字段平铺); 前端历史命名保留。
+// 解码块定义 (tag="type" 字段平铺)。
 // FieldType 仍由 frameDecoder.ts 提供 (与 wire 逐字一致)。
-export type { DecoderBlockDef as DecoderBlockWire } from './generated/DecoderBlockDef';
+export type { DecoderBlockDef } from './generated/DecoderBlockDef';

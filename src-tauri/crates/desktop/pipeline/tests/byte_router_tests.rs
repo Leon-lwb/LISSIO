@@ -24,11 +24,7 @@ use schema_types::{ProtocolConfig, ProtocolSchema, SchemaPreset, TestDataLink};
 mod common;
 
 fn node(id: &str, kind: NodeKind) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: "t1".into(),
-        kind,
-    }
+    NodeDef::new(id.into(), "t1".into(), kind)
 }
 
 fn edge(src: &str, src_h: &str, tgt: &str, tgt_h: &str) -> Edge {
@@ -68,11 +64,16 @@ fn u8_decoder(id: &str) -> NodeDef {
     )
 }
 
-const fn firewater(channels: Option<usize>) -> NodeKind {
+fn firewater(channels: Option<usize>) -> NodeKind {
+    with_schema(ProtocolConfig::FireWater { channels }, None)
+}
+
+/// Protocol 节点构造: schema 由 config 构造预设 schema
+fn with_schema(config: ProtocolConfig, convert_to: Option<ProtocolConfig>) -> NodeKind {
     NodeKind::Protocol {
-        config: ProtocolConfig::FireWater { channels },
-        convert_to: None,
-        schema: None,
+        schema: schema_types::schema_from_protocol_config(&config),
+        config,
+        convert_to,
     }
 }
 
@@ -339,19 +340,14 @@ async fn convert_to_chain_reencodes_downstream() {
             node("tp", byte_device("tp")),
             node(
                 "pa",
-                NodeKind::Protocol {
-                    config: ProtocolConfig::FireWater { channels: Some(2) },
-                    convert_to: Some(ProtocolConfig::JustFloat { channels: Some(2) }),
-                    schema: None,
-                },
+                with_schema(
+                    ProtocolConfig::FireWater { channels: Some(2) },
+                    Some(ProtocolConfig::JustFloat { channels: Some(2) }),
+                ),
             ),
             node(
                 "pb",
-                NodeKind::Protocol {
-                    config: ProtocolConfig::JustFloat { channels: Some(2) },
-                    convert_to: None,
-                    schema: None,
-                },
+                with_schema(ProtocolConfig::JustFloat { channels: Some(2) }, None),
             ),
         ],
         vec![edge("tp", "rx", "pa", "in"), edge("pa", "out", "pb", "in")],
@@ -429,14 +425,7 @@ async fn rawdata_protocol_caches_text_and_passthrough_out() {
     let plane = setup_plane(
         vec![
             node("tp", byte_device("tp")),
-            node(
-                "pr",
-                NodeKind::Protocol {
-                    config: ProtocolConfig::RawData,
-                    convert_to: None,
-                    schema: None,
-                },
-            ),
+            node("pr", with_schema(ProtocolConfig::RawData, None)),
             u8_decoder("dec"),
         ],
         vec![edge("tp", "rx", "pr", "in"), edge("pr", "out", "dec", "in")],
@@ -484,11 +473,10 @@ async fn rawdata_with_convert_to_still_passthrough_out() {
             node("tp", byte_device("tp")),
             node(
                 "pr",
-                NodeKind::Protocol {
-                    config: ProtocolConfig::RawData,
-                    convert_to: Some(ProtocolConfig::FireWater { channels: Some(2) }),
-                    schema: None,
-                },
+                with_schema(
+                    ProtocolConfig::RawData,
+                    Some(ProtocolConfig::FireWater { channels: Some(2) }),
+                ),
             ),
             u8_decoder("dec"),
         ],
@@ -523,11 +511,9 @@ async fn rawdata_custom_schema_no_text_cache_no_passthrough() {
             node(
                 "pr",
                 NodeKind::Protocol {
-                    config: ProtocolConfig::RawData,
-                    convert_to: None,
-                    schema: Some(ProtocolSchema {
+                    schema: ProtocolSchema {
                         preset: SchemaPreset::Custom,
-                        legacy_config: None,
+                        preset_config: None,
                         decode: vec![DecoderBlockDef::Field {
                             id: "f1".into(),
                             field_type: FieldType::UInt8,
@@ -536,7 +522,9 @@ async fn rawdata_custom_schema_no_text_cache_no_passthrough() {
                             match_id: None,
                         }],
                         encode: None,
-                    }),
+                    },
+                    config: ProtocolConfig::RawData,
+                    convert_to: None,
                 },
             ),
             u8_decoder("dec"),
@@ -887,14 +875,7 @@ async fn run_stream_pressure_case(protocol: ProtocolConfig, channels: usize) {
     let plane = setup_plane(
         vec![
             node("tp", byte_device("tp")),
-            node(
-                "pt",
-                NodeKind::Protocol {
-                    config: protocol.clone(),
-                    convert_to: None,
-                    schema: None,
-                },
-            ),
+            node("pt", with_schema(protocol.clone(), None)),
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
@@ -1029,14 +1010,7 @@ async fn sustained_justfloat_over_10mbps_keeps_waveform_timeline_stable() {
     let plane = setup_plane(
         vec![
             node("tp", byte_device("tp")),
-            node(
-                "pt",
-                NodeKind::Protocol {
-                    config: protocol,
-                    convert_to: None,
-                    schema: None,
-                },
-            ),
+            node("pt", with_schema(protocol, None)),
         ],
         vec![edge("tp", "rx", "pt", "in")],
     );
@@ -1183,14 +1157,7 @@ async fn slcan_wire_frames_reach_can_buffer_with_explicit_direction() {
     let plane = setup_plane(
         vec![
             node("slcan-device", byte_device("slcan-device")),
-            node(
-                "slcan-protocol",
-                NodeKind::Protocol {
-                    config: ProtocolConfig::Slcan,
-                    convert_to: None,
-                    schema: None,
-                },
-            ),
+            node("slcan-protocol", with_schema(ProtocolConfig::Slcan, None)),
         ],
         vec![edge("slcan-device", "rx", "slcan-protocol", "in")],
     );

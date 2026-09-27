@@ -20,8 +20,8 @@ impl NodeArm for ProtocolSourceArm {
                 node_id,
                 channels,
                 port_names,
-            } => (node_id.as_str(), *channels, port_names.as_deref()),
-            NodeKind::PointSelector { points } => (node_id, points.len(), Some(points.as_slice())),
+            } => (node_id.as_str(), *channels, port_names.as_slice()),
+            NodeKind::PointSelector { points } => (node_id, points.len(), points.as_slice()),
             _ => return,
         };
         let frame = ctx.source_frames.get(source_id);

@@ -35,14 +35,14 @@ use trigger::lower_trigger;
 pub fn lower_node(node: &NodeDef, ctx: &mut LowerCtx) {
     match &node.kind {
         NodeKind::PointSelector { points } => {
-            lower_protocol_source(node, &node.id, points.len(), Some(points), ctx);
+            lower_protocol_source(node, &node.id, points.len(), points, ctx);
         }
         NodeKind::Acquisition { .. } => {}
         NodeKind::ProtocolSource {
             node_id: source_id,
             channels,
             port_names,
-        } => lower_protocol_source(node, source_id, *channels, port_names.as_deref(), ctx),
+        } => lower_protocol_source(node, source_id, *channels, port_names, ctx),
         NodeKind::Input => lower_input(node, ctx),
         NodeKind::Math { op, input_count } => lower_math(node, *op, *input_count, ctx),
         NodeKind::Custom { outputs, .. } => lower_custom(node, outputs, ctx),

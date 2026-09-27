@@ -14,6 +14,7 @@ mod display_normalize;
 mod display_params;
 mod displays;
 mod math_text;
+mod panel_spec;
 mod params;
 mod signal;
 mod trigger;
@@ -103,12 +104,17 @@ pub struct WidgetDefinition {
     pub fallback_label: &'static str,
     /// 无实例 ID 的默认 params 预览 (id/label 由 node_id 派生)。
     pub default_params: fn(node_id: &str) -> Value,
-    /// 原地归一化: 迁移旧形态 + 补齐缺省 + 校验; 幂等。
+    /// 原地归一化: 补齐缺省 + 校验; 幂等。
     pub normalize: fn(params: &mut Value),
     /// 按当前 params 解析完整端口表。
     pub ports: fn(params: &Value) -> WidgetPortTable,
     /// params → 图语义 (widget_document::lower 委托这里)。
     pub lower: fn(params: &Value, custom_ports: Option<&CustomPorts>) -> Result<NodeKind, String>,
+    /// 数据面板规格 — `None` 表示该控件不是可独立开窗的数据面板。
+    ///
+    /// 面板语义 (tab 类型 / 数据面投递 / 输入绑定) 与控件定义同处声明,
+    /// 避免第二张平行表; 目录投影见 `app::models::catalog`。
+    pub panel: Option<PanelSpec>,
 }
 
 impl WidgetDefinition {
@@ -137,6 +143,7 @@ pub use display_params::{
     ProgressParams, RawDataParams, SpectrumParams, TableViewColumn, TableViewParams,
     WaveformParams,
 };
+pub use panel_spec::{PanelBindingSpec, PanelSpec, SHELL_TAB_TYPES};
 pub use params::{
     BindingMode, BindingParams, ChoiceOption, DisplayPrecision, DisplayRange, DisplayRangeMode,
     InputBinding,
@@ -190,7 +197,7 @@ pub fn definition(kind: &str) -> Option<&'static WidgetDefinition> {
     definitions().find(|def| def.kind == kind)
 }
 
-/// 注册表完整性: id 唯一 + renderer_key 与 kind 同名。
+/// 注册表完整性: id 唯一 + renderer_key 与 kind 同名 + 面板规格自洽。
 /// 组合根启动时调用; 失败即启动失败 (而不是静默丢语义)。
 pub fn ensure_valid() -> Result<(), String> {
     let defs = definitions().collect::<Vec<_>>();
@@ -204,14 +211,17 @@ pub fn ensure_valid() -> Result<(), String> {
                 def.renderer_key, def.kind
             ));
         }
+        if let Some(panel) = &def.panel {
+            panel_spec::validate(panel, def.kind)?;
+        }
     }
     Ok(())
 }
 
 /// 归一化入口 — id/label 注入 + 按注册定义委托。
 ///
-/// label 缺省使用稳定 fallback (Label 用 text), 与历史前端行为一致;
-/// 之后切换语言不重写用户名称 (label 一旦非空即保留)。
+/// label 缺省使用稳定 fallback (Label 用 text); 之后切换语言不重写
+/// 用户名称 (label 一旦非空即保留)。
 pub fn normalize_params(kind: &str, params: &mut Value) -> Result<(), String> {
     let def = definition(kind).ok_or_else(|| format!("unknown widget kind: {kind}"))?;
     if !params.is_object() {
@@ -266,41 +276,27 @@ pub fn lower(
     (def.lower)(params, custom_ports)
 }
 
-/// 结构 round-trip 后保留原 Value 中的未知键 (向前兼容), 但显式排除
-/// 已迁移的 legacy 键, 避免新旧拼写同时存在。
-/// 结构 round-trip: params → T (补默认) → wire Value (+保留未知键)。
+/// 结构 round-trip: params → T (补默认) → wire Value (+保留未知键, 避免丢数据)。
 pub(crate) fn round_trip_params<T: serde::de::DeserializeOwned + serde::Serialize>(
     params: &mut Value,
-    legacy_keys: &[&str],
 ) {
     if let Ok(parsed) = serde_json::from_value::<T>(params.clone())
         && let Ok(mut wire) = serde_json::to_value(&parsed)
     {
-        merge_unknown(params, &mut wire, legacy_keys);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
 
-pub(crate) fn merge_unknown(original: &Value, wire: &mut Value, legacy_keys: &[&str]) {
+pub(crate) fn merge_unknown(original: &Value, wire: &mut Value) {
     let (Some(orig), Some(out)) = (original.as_object(), wire.as_object_mut()) else {
         return;
     };
     for (key, value) in orig {
-        if !out.contains_key(key) && !legacy_keys.contains(&key.as_str()) {
+        if !out.contains_key(key) {
             out.insert(key.clone(), value.clone());
         }
     }
-}
-
-pub(crate) fn value_finite_or(value: &Value, fallback: f64) -> f64 {
-    match value.as_f64() {
-        Some(v) if v.is_finite() => v,
-        _ => fallback,
-    }
-}
-
-pub(crate) fn value_str_or<'a>(value: &'a Value, fallback: &'a str) -> &'a str {
-    value.as_str().unwrap_or(fallback)
 }
 
 #[cfg(test)]

@@ -1,7 +1,6 @@
-//! 显示控件归一化 — 移植前端 `widgetNormalize.ts` 的显示部分。
+//! 显示控件归一化 — 显示类参数补齐缺省并按当前模型重建 wire 形状。
 //!
-//! 幂等: 已合法的配置原样返回; 旧形态 (Gauge/Progress 顶层 min/max,
-//! Model3D 缺失的姿态格式与模型来源) 迁移为当前模型。
+//! 幂等: 已合法的配置原样返回; 缺失字段补缺省值。
 
 // 数值转换均为有界索引/精度语义 (JSON number <-> 定宽整数), 与前端 JS 数值
 // 行为对齐; 统一豁免逐个标注的噪音。
@@ -27,29 +26,17 @@ use super::params::{
 
 // ============ 归一化 ============
 
-/// 显示量程归一化 — 幂等; 旧配置 (range 缺失, 顶层 min/max) 迁移为 manual 量程。
+/// 显示量程归一化 — 幂等; range 缺失时补缺省。
 pub(super) fn normalize_display_range(params: &Value) -> DisplayRange {
     let raw = params.get("range");
-    let legacy_min = params
-        .get("min")
-        .and_then(Value::as_f64)
-        .filter(|v| v.is_finite());
-    let legacy_max = params
-        .get("max")
-        .and_then(Value::as_f64)
-        .filter(|v| v.is_finite());
-    let min = legacy_min.unwrap_or_else(|| {
-        finite_or(
-            raw.and_then(|r| r.get("min")).and_then(Value::as_f64),
-            super::params::DEFAULT_DISPLAY_MIN,
-        )
-    });
-    let proposed_max = legacy_max.unwrap_or_else(|| {
-        finite_or(
-            raw.and_then(|r| r.get("max")).and_then(Value::as_f64),
-            super::params::DEFAULT_DISPLAY_MAX,
-        )
-    });
+    let min = finite_or(
+        raw.and_then(|r| r.get("min")).and_then(Value::as_f64),
+        super::params::DEFAULT_DISPLAY_MIN,
+    );
+    let proposed_max = finite_or(
+        raw.and_then(|r| r.get("max")).and_then(Value::as_f64),
+        super::params::DEFAULT_DISPLAY_MAX,
+    );
     let max = if proposed_max > min {
         proposed_max
     } else {
@@ -90,24 +77,16 @@ pub(super) fn normalize_display_range(params: &Value) -> DisplayRange {
     }
 }
 
-fn hex_color_or_empty(value: &Value) -> String {
-    match value.as_str() {
-        Some(text) if is_hex_color(text) => text.to_owned(),
-        _ => String::new(),
-    }
-}
-
 pub(super) fn is_hex_color(text: &str) -> bool {
     let bytes = text.as_bytes();
     bytes.len() == 7 && bytes[0] == b'#' && bytes[1..].iter().all(u8::is_ascii_hexdigit)
 }
 
 pub(super) fn normalize_via<T: DeserializeOwned + Serialize>(params: &mut Value) {
-    super::round_trip_params::<T>(params, &[]);
+    super::round_trip_params::<T>(params);
 }
 
 pub(super) fn normalize_gauge(params: &mut Value) {
-    // 旧配置: 顶层 min/max → range (normalize_display_range 处理); legacy 键不保留
     let range = normalize_display_range(params);
     let parsed: GaugeParams = serde_json::from_value(params.clone()).unwrap_or_default();
     if let Ok(mut wire) = serde_json::to_value(GaugeParams {
@@ -120,7 +99,7 @@ pub(super) fn normalize_gauge(params: &mut Value) {
                 serde_json::to_value(range).expect("range serializes"),
             );
         }
-        merge_unknown(params, &mut wire, &["min", "max"]);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
@@ -136,13 +115,13 @@ pub(super) fn normalize_progress(params: &mut Value) {
                 serde_json::to_value(range).expect("range serializes"),
             );
         }
-        merge_unknown(params, &mut wire, &["min", "max"]);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
 
 pub(super) fn normalize_model3d(params: &mut Value) {
-    // 移植 normalizeModel3DConfig: 旧数据补齐姿态格式与模型来源
+    // 补齐缺省姿态格式与模型来源
     let mode = match params.get("mode").and_then(Value::as_str) {
         Some("attitude") => Model3DMode::Attitude,
         Some("trajectory-attitude") => Model3DMode::TrajectoryAttitude,
@@ -227,7 +206,7 @@ pub(super) fn normalize_model3d(params: &mut Value) {
             object.remove("id");
             object.remove("label");
         }
-        merge_unknown(params, &mut wire, &[]);
+        merge_unknown(params, &mut wire);
         *params = wire;
     }
 }

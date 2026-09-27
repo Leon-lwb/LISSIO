@@ -10,12 +10,12 @@ interface ProgressProps {
 }
 
 /// 进度条控件 — 横向/纵向条形显示单通道实时值占比
-/// 数据源: edge 连线优先, 回退 channel 参数; 量程手动或滑动窗口自适应。
+/// 数据源: value 输入边; 量程手动或滑动窗口自适应。
 /// 刻度: 主刻度数量/精度由配置决定 (纵向空间紧凑, 仅画刻度线不画标签)。
 export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
   const params = widget.params;
-  const { range: rangeConfig, unit, channel, orientation, showValue, color } = params;
-  const input = useNumericInput(params.id, 'value', channel);
+  const { range: rangeConfig, unit, orientation, showValue, color } = params;
+  const input = useNumericInput(params.id, 'value');
   const range = useAutoRange(params.id, input, rangeConfig);
   const value = input.latest?.value ?? range.min;
   const ratio = Math.max(0, Math.min(1, (value - range.min) / (range.max - range.min || 1)));

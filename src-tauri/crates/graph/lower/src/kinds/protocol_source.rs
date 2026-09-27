@@ -9,7 +9,7 @@ pub(super) fn lower_protocol_source(
     node: &NodeDef,
     source_id: &str,
     channels: usize,
-    port_names: Option<&[String]>,
+    port_names: &[String],
     ctx: &mut LowerCtx,
 ) {
     let src = ctx.frame_source(source_id);

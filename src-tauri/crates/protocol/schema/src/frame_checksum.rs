@@ -3,15 +3,13 @@
 //! 与前端 `checksum.ts` 算法逐位对齐 (CRC-8 / CRC-16 Modbus / CRC-16 CCITT /
 //! CRC-32 / Sum8 / Xor8 / LRC); 字节序与多项式系数一致, 任何偏移视为契约漂移。
 //!
-//! `Custom` 类型 (用户 JS 脚本) 在后端不再支持 — 前端若需保留, 应转为
-//! 内置校验类型或迁移到独立 worker。
+//! `Custom` (用户 JS 脚本) 仅在前端执行; 后端遇到时跳过校验并报错。
 
 use serde::{Deserialize, Serialize};
 
 /// 校验类型 — 与前端 `ChecksumKind` (src/lib/utils/checksum.ts) 一一对应。
 ///
-/// 序列化采用前端的字面拼写 (`crc16Modbus` / `crc16CCITT` 大小写混合形式);
-/// 全小写形式作为兼容别名同时接受。
+/// 序列化采用前端的字面拼写 (`crc16Modbus` / `crc16CCITT` 大小写混合形式)。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ChecksumKind {
     #[serde(rename = "none")]
@@ -22,15 +20,15 @@ pub enum ChecksumKind {
     Xor8,
     #[serde(rename = "crc8")]
     Crc8,
-    #[serde(rename = "crc16Modbus", alias = "crc16modbus")]
+    #[serde(rename = "crc16Modbus")]
     Crc16Modbus,
-    #[serde(rename = "crc16CCITT", alias = "crc16ccitt")]
+    #[serde(rename = "crc16CCITT")]
     Crc16Ccitt,
     #[serde(rename = "crc32")]
     Crc32,
     #[serde(rename = "lrc")]
     Lrc,
-    /// 自定义 JS 脚本: 后端不支持, 走兜底 (跳过校验) 并返回错误
+    /// 自定义 JS 脚本: 前端执行; 后端跳过校验并报错
     #[serde(rename = "custom")]
     Custom,
 }

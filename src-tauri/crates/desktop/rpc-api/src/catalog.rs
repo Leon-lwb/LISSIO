@@ -95,6 +95,8 @@ pub const SUPPORTED: &[&str] = &[
     // 显示订阅控制 (推送本身走出口通道)
     "ack_data",
     "get_data_health",
+    // 数据面板拉取面 (面板身份的推送面同样走出口通道)
+    "fetch_panel_data",
     // 逻辑 / 原始数据 / CAN 负载 / 触发器
     "get_recent_logic_samples",
     "clear_logic_buffer",
@@ -157,8 +159,8 @@ pub const SUPPORTED: &[&str] = &[
 
 /// 尚未接入网络出口的命令。
 ///
-/// v2 已完成 AI/MCP 与 SecretStore 迁移；新业务命令若暂不能由独立后端承载，
-/// 必须显式列入此表并由 Web 契约检查阻止遗漏。当前没有 pending 命令。
+/// 尚未接入网络出口的命令必须显式列入此表并由 Web 契约检查阻止遗漏。
+/// 当前没有 pending 命令。
 pub const PENDING: &[&str] = &[];
 
 /// 由出口通道 (而非 `dispatch`) 承载的命令。

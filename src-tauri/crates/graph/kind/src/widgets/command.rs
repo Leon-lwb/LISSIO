@@ -1,7 +1,6 @@
 //! 命令发送控件 (Command) — 多帧字节流发送器。
 //!
-//! 归一化移植自前端 `commandFrames.ts::normalizeCommandConfig`: 旧版单帧配置
-//! (blocks 在顶层) 包装为 frames[0]; 已是多帧配置时仅补空帧; 幂等。
+//! 归一化补齐缺省字段并为空帧列表补一个空帧; 幂等。
 //! 输入端口 = 各帧 var_ref 块 portName 的并集 (去重保序)。
 
 // 数值转换均为有界索引/精度语义 (JSON number <-> 定宽整数), 与前端 JS 数值
@@ -14,12 +13,14 @@
     clippy::suboptimal_flops
 )]
 
+use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::WidgetDefinition;
 use super::WidgetPortTable;
 use super::params::bytes_port;
+use super::{PanelBindingSpec, PanelSpec};
 use crate::ports::LOOPBACK_OUT_HANDLE;
 
 /// 数据块类型 (snake_case wire, 与前端 BlockType 一致)
@@ -116,7 +117,7 @@ pub struct CommandParams {
 }
 
 impl CommandParams {
-    /// frames 为空时补一个空帧 (与前端 normalizeCommandConfig 语义一致)。
+    /// frames 为空时补一个空帧 (缺省填充)。
     fn ensure_frames(mut self) -> Self {
         if self.frames.is_empty() {
             self.frames = vec![CommandFrame {
@@ -148,7 +149,7 @@ pub fn command_input_port_names(params: &Value) -> Vec<String> {
     names
 }
 
-/// 归一化后的帧列表 (旧格式现场包装, 不落盘到原始 Value 之外的地方)。
+/// 归一化后的帧列表 (frames 缺失时为空)。
 pub fn frames_of(params: &Value) -> Vec<CommandFrame> {
     serde_json::from_value::<CommandParams>(params.clone())
         .map(|parsed| parsed.frames)
@@ -156,60 +157,10 @@ pub fn frames_of(params: &Value) -> Vec<CommandFrame> {
 }
 
 fn normalize_command(params: &mut Value) {
-    let Ok(parsed) = serde_json::from_value::<CommandParams>(params.clone()) else {
-        return;
-    };
-    if !parsed.frames.is_empty() {
-        // 已是多帧配置: 仅补默认字段 (serde default 已处理), 原样写回
-        if let Ok(mut wire) = serde_json::to_value(&parsed) {
-            super::merge_unknown(params, &mut wire, &[]);
-            *params = wire;
-        }
-        return;
-    }
-    // 旧格式: blocks/appendNewline/sendMode/timerMs 在顶层 → 单帧
-    let frame = CommandFrame {
-        id: format!("{}-frame-1", {
-            let id = params.get("id").and_then(Value::as_str).unwrap_or("cmd");
-            if id.is_empty() { "cmd" } else { id }
-        }),
-        label: params
-            .get("label")
-            .and_then(Value::as_str)
-            .unwrap_or("Frame 1")
-            .to_owned(),
-        blocks: serde_json::from_value(params.get("blocks").cloned().unwrap_or_else(|| json!([])))
-            .unwrap_or_default(),
-        append_newline: params
-            .get("appendNewline")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        send_mode: serde_json::from_value(
-            params
-                .get("sendMode")
-                .cloned()
-                .unwrap_or_else(|| json!("manual")),
-        )
-        .unwrap_or(CommandSendMode::Manual),
-        timer_ms: params
-            .get("timerMs")
-            .and_then(Value::as_u64)
-            .and_then(|v| u32::try_from(v).ok())
-            .unwrap_or(100),
-    };
-    if let Ok(mut wire) = serde_json::to_value(&CommandParams {
-        frames: vec![frame],
-        loopback_enabled: params
-            .get("loopbackEnabled")
-            .and_then(Value::as_bool)
-            .unwrap_or(false),
-        ..CommandParams::default()
-    }) {
-        super::merge_unknown(
-            params,
-            &mut wire,
-            &["blocks", "appendNewline", "sendMode", "timerMs"],
-        );
+    if let Ok(mut wire) = serde_json::from_value::<CommandParams>(params.clone())
+        .and_then(|parsed| serde_json::to_value(parsed.ensure_frames()))
+    {
+        super::merge_unknown(params, &mut wire);
         *params = wire;
     }
 }
@@ -252,6 +203,20 @@ pub(super) const COMMAND_DEF: WidgetDefinition = WidgetDefinition {
     ports: command_ports,
     // Command 的 value 输入端口由图求值读取; 节点本体是 Sink (无 f32 输出)
     lower: |_, _| Ok(crate::kind::NodeKind::Sink),
+    // 命令面板: 帧内 var_ref 块的实时端口值走数值流 (port_samples),
+    // 一次性读取走数值输出快照 (graphOutputs)。端口集合由 params 派生
+    // (frame[].blocks[].portName 并集), 故绑定是 EdgeBound 参数无关形式。
+    panel: Some(PanelSpec {
+        panel: PanelKind::Command,
+        tab_type: "command",
+        label_key: "dataTabCommand",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_PORT_SAMPLES),
+        fetch_op: Some(panel_ops::FETCH_GRAPH_OUTPUTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: None,
+    }),
 };
 
 pub(super) static COMMAND: WidgetDefinition = COMMAND_DEF;

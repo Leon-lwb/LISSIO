@@ -2,7 +2,7 @@
 //! 结构严格对应 (snake_case 字段逐一对应, 勿改名)。
 
 /// LLM provider 配置。保存的密钥由后端按 adapter 注入；`api_key` 仅保留为空的
-/// wire 兼容字段，禁止放入已保存的明文。
+/// wire 字段，禁止放入已保存的明文。
 export interface AiProviderConfig {
   adapter: string;
   base_url: string;

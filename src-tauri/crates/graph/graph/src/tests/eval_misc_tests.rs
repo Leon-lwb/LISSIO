@@ -169,13 +169,12 @@ fn test_protocol_source_named_ports_slot_run() {
 
 #[test]
 fn test_protocol_source_port_names_fallback() {
-    // port_names 越界/空名回退 "ch{i}"; None 保持 ch0..chN (旧前端兼容)
+    // port_names 越界/空名回退 "ch{i}"; 空表保持 ch0..chN
     use kind::protocol_source_port_names;
-    assert_eq!(protocol_source_port_names(None, 2), vec!["ch0", "ch1"]);
-    assert_eq!(protocol_source_port_names(Some(&[]), 2), vec!["ch0", "ch1"]);
+    assert_eq!(protocol_source_port_names(&[], 2), vec!["ch0", "ch1"]);
     let names = vec!["x".to_string(), String::new()];
     assert_eq!(
-        protocol_source_port_names(Some(&names), 3),
+        protocol_source_port_names(&names, 3),
         vec!["x", "ch1", "ch2"]
     );
 }

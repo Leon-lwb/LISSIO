@@ -55,6 +55,13 @@ fn main() {
         data_model::model_descriptor::NodePortDomain,
         data_model::model_descriptor::NodePortDescriptor,
 
+        // ---- 数据面板合同 (data-model::panel_descriptor) ----
+        data_model::panel_descriptor::PanelDescriptor,
+        data_model::panel_descriptor::PanelKind,
+        data_model::panel_descriptor::PanelDelivery,
+        data_model::panel_descriptor::PanelDataPlane,
+        data_model::panel_descriptor::PanelBinding,
+
         // ---- 设备树声明 (data-model::device_tree) ----
         data_model::device_tree::NodeId,
         data_model::device_tree::NodePath,
@@ -173,6 +180,7 @@ fn main() {
         kind::document::NodeLayout,
         kind::document::CustomPorts,
         kind::NodeDef,
+        kind::NodeOrigin,
         kind::NodeKind,
         kind::NewlineMode,
         kind::MathOp,

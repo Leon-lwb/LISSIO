@@ -308,19 +308,6 @@ export interface CommandConfig {
   loopbackHistory: LoopbackResult[];
 }
 
-/// 旧版 (单帧) 命令发送控件配置 — 仅用于快照/持久化数据迁移
-/// blocks/appendNewline/sendMode/timerMs 已迁入 CommandFrame
-export interface LegacyCommandConfig {
-  id: string;
-  label: string;
-  blocks: CommandBlock[];
-  appendNewline: boolean;
-  loopbackEnabled: boolean;
-  sendMode: 'manual' | 'onChange' | 'timer';
-  timerMs: number;
-  loopbackHistory: LoopbackResult[];
-}
-
 /// 协议回环发送-接收结果
 export interface LoopbackResult {
   /// 发送的 hex 字符串

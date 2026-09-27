@@ -285,7 +285,7 @@ async fn run_fixture(simd: bool) -> Observed {
     install(&state);
     set_config(&state, simd);
     let mut rx = subscribe_all(&state).await;
-    frame_dispatch::on_frames(&state.data_plane, "pt", &big_batch());
+    frame_dispatch::record_and_eval(&state.data_plane, "pt", &big_batch());
     observe(&state, &mut rx).await
 }
 

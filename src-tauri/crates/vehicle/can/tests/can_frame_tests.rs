@@ -136,13 +136,12 @@ fn bitrate_parse_accepts_contract_names() {
     }
 }
 
-/// 修复前 schema 曾以 `Bps1M` (大写 M) 写入工作区 — 反序列化必须兜底。
+/// 非 contract 拼写 (如 `Bps1M`) 解析失败 — 只接受精确契约名。
 #[test]
-fn bitrate_parse_is_case_insensitive_fallback() {
-    assert_eq!(CanBitrate::parse("Bps1M"), Some(CanBitrate::Bps1m));
-    assert_eq!(CanBitrate::parse("bps800K"), Some(CanBitrate::Bps800k));
-    assert_eq!(CanBitrate::parse("BPS500K"), Some(CanBitrate::Bps500k));
-    assert_eq!(CanBitrate::parse("bps10k"), Some(CanBitrate::Bps10k));
+fn bitrate_parse_rejects_mistyped_case() {
+    assert_eq!(CanBitrate::parse("Bps1M"), None);
+    assert_eq!(CanBitrate::parse("bps800K"), None);
+    assert_eq!(CanBitrate::parse("BPS500K"), None);
 }
 
 #[test]
@@ -154,15 +153,9 @@ fn bitrate_parse_rejects_unknown_names() {
 }
 
 #[test]
-fn bitrate_deserialize_accepts_legacy_uppercase_m() {
-    assert_eq!(
-        serde_json::from_str::<CanBitrate>("\"Bps1M\"").unwrap(),
-        CanBitrate::Bps1m
-    );
-    assert_eq!(
-        serde_json::from_str::<CanBitrate>("\"bps800K\"").unwrap(),
-        CanBitrate::Bps800k
-    );
+fn bitrate_deserialize_rejects_mistyped_case() {
+    assert!(serde_json::from_str::<CanBitrate>("\"Bps1M\"").is_err());
+    assert!(serde_json::from_str::<CanBitrate>("\"bps800K\"").is_err());
 }
 
 #[test]

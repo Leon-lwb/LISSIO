@@ -15,15 +15,15 @@ use trigger::{TriggerMatchType, TriggerRuleDef};
 use eval::{SourceFramesMap, SourceTextsMap};
 
 pub fn make_protocol_source(id: &str, tab_id: &str, node_id: &str, channels: usize) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::ProtocolSource {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::ProtocolSource {
             node_id: node_id.to_string(),
             channels,
-            port_names: None,
+            port_names: Vec::new(),
         },
-    }
+    )
 }
 
 /// 带命名端口的 ProtocolSource (schema 模型; port_names 与 channels 对齐)
@@ -33,15 +33,15 @@ pub fn make_protocol_source_named(
     node_id: &str,
     port_names: &[&str],
 ) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::ProtocolSource {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::ProtocolSource {
             node_id: node_id.to_string(),
             channels: port_names.len(),
-            port_names: Some(port_names.iter().map(ToString::to_string).collect()),
+            port_names: port_names.iter().map(ToString::to_string).collect(),
         },
-    }
+    )
 }
 
 pub fn make_device(id: &str) -> NodeDef {
@@ -50,10 +50,10 @@ pub fn make_device(id: &str) -> NodeDef {
 
 #[allow(clippy::default_trait_access)] // Keep the test helper free of a direct serde_json dependency.
 pub fn make_device_in(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Acquisition {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Acquisition {
             node: NodeDecl {
                 id: NodeId::new(id).expect("test node id"),
                 name: "device".into(),
@@ -77,85 +77,73 @@ pub fn make_device_in(id: &str, tab_id: &str) -> NodeDef {
                 },
             ],
         },
-    }
+    )
 }
 
 pub fn make_protocol(id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: "t1".to_string(),
-        kind: NodeKind::Protocol {
+    NodeDef::new(
+        id.to_string(),
+        "t1".to_string(),
+        NodeKind::Protocol {
+            schema: schema_types::schema_from_protocol_config(&ProtocolConfig::default()),
             config: ProtocolConfig::default(),
             convert_to: None,
-            schema: None,
         },
-    }
+    )
 }
 
 pub fn make_decoder(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::FrameDecoder {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::FrameDecoder {
             blocks: vec![],
             enable_valid: false,
             enable_frame_count: false,
             enable_last_timestamp: false,
             enable_fps: false,
         },
-    }
+    )
 }
 
 pub fn make_math(id: &str, tab_id: &str, op: MathOp, input_count: usize) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Math { op, input_count },
-    }
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Math { op, input_count },
+    )
 }
 
 pub fn make_input(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Input,
-    }
+    NodeDef::new(id.to_string(), tab_id.to_string(), NodeKind::Input)
 }
 
 pub fn make_sink(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Sink,
-    }
+    NodeDef::new(id.to_string(), tab_id.to_string(), NodeKind::Sink)
 }
 
 /// TextDisplay 节点 (字符串平面展示消费端, 输入口 "text")
 pub fn make_text_display(id: &str, tab_id: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::TextDisplay,
-    }
+    NodeDef::new(id.to_string(), tab_id.to_string(), NodeKind::TextDisplay)
 }
 
 pub fn make_custom(id: &str, tab_id: &str, inputs: Vec<&str>, outputs: Vec<&str>) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Custom {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Custom {
             inputs: inputs.iter().map(ToString::to_string).collect(),
             outputs: outputs.iter().map(ToString::to_string).collect(),
         },
-    }
+    )
 }
 
 pub fn make_filter(id: &str, tab_id: &str, config: FilterConfig) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Filter { config },
-    }
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Filter { config },
+    )
 }
 
 /// Str 节点 (默认内联数值参数: pos=1, len=0, size=0)
@@ -165,15 +153,15 @@ pub fn make_str(id: &str, tab_id: &str, op: StrOp) -> NodeDef {
 
 /// Str 节点 (显式内联数值参数)
 pub fn make_str_num(id: &str, tab_id: &str, op: StrOp, num: StrNumParams) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Str {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Str {
             op,
             num,
             tmpl: String::new(),
         },
-    }
+    )
 }
 
 pub fn make_spectrum_sink(
@@ -184,17 +172,17 @@ pub fn make_spectrum_sink(
     output: SpectrumOutput,
     sample_rate: f32,
 ) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Fft {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Fft {
             window_size,
             hop_size: (window_size / 2).max(1),
             window_type,
             output,
             sample_rate,
         },
-    }
+    )
 }
 
 pub fn edge(id: &str, src: &str, src_h: &str, tgt: &str, tgt_h: &str) -> Edge {
@@ -237,10 +225,10 @@ pub fn make_trigger(
     command: &str,
     rules: Vec<TriggerRuleDef>,
 ) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::Trigger {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::Trigger {
             mode: mode.to_string(),
             edge: edge.to_string(),
             default_miss: -1.0,
@@ -248,18 +236,18 @@ pub fn make_trigger(
             command: command.to_string(),
             rules,
         },
-    }
+    )
 }
 
 /// TextInput 节点 (文本输入源, 输出端口固定 "str")
 pub fn make_text_input(id: &str, tab_id: &str, text: &str) -> NodeDef {
-    NodeDef {
-        id: id.to_string(),
-        tab_id: tab_id.to_string(),
-        kind: NodeKind::TextInput {
+    NodeDef::new(
+        id.to_string(),
+        tab_id.to_string(),
+        NodeKind::TextInput {
             text: text.to_string(),
         },
-    }
+    )
 }
 
 /// 构造多源最新帧缓存 (key = Protocol 节点 id)

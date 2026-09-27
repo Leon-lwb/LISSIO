@@ -29,7 +29,10 @@ parking_lot = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
-can = { workspace = true }
+
+[dev-dependencies]
+# executor 测试从 AppState 构造 Toolbox (dev-only, 架构门禁要求非生产依赖)
+app = { workspace = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = { workspace = true }

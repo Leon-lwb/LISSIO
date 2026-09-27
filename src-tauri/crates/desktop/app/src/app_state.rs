@@ -320,15 +320,17 @@ mod tests {
         let state = AppState::new();
         state.data_plane.global_nodes.lock().insert(
             "live".into(),
-            NodeDef {
-                id: "live".into(),
-                tab_id: "tab".into(),
-                kind: NodeKind::Protocol {
+            NodeDef::new(
+                "live".into(),
+                "tab".into(),
+                NodeKind::Protocol {
+                    schema: schema_types::schema_from_protocol_config(&ProtocolConfig::FireWater {
+                        channels: Some(1),
+                    }),
                     config: ProtocolConfig::FireWater { channels: Some(1) },
                     convert_to: None,
-                    schema: None,
                 },
-            },
+            ),
         );
         for (id, source) in [("keep", "live"), ("release", "gone")] {
             state.waveform_snapshots.lock().insert(

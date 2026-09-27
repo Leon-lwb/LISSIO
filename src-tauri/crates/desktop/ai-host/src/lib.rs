@@ -1,25 +1,28 @@
 //! Exit-independent AI/MCP host.
 
 mod native_executor;
+mod prompt;
 mod secret;
-mod skills;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::native_executor::{NativeToolExecutor, PendingCalls, ToolOutcome};
-use crate::skills::Lang;
+use crate::native_executor::{
+    CompositeExecutor, McpToolExecutor, NativeToolExecutor, PendingCalls, ToolOutcome,
+};
 use chat::{
-    AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, ToolExecutor,
-    TurnRecorder, run_chat,
+    AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, TurnRecorder,
+    run_chat,
 };
 use chat_session::{
     AttachmentDto, ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
 };
 use control_api::Toolbox;
-use error::{McpError, Result};
+use control_api::capabilities::registry::CapabilityRegistry;
+use control_api::capabilities::skill::Lang;
+use error::Result;
 use events::EventSinkHandle;
-use llm::{AdapterInfo, AiProviderConfig, ToolSpecDto, validate_config};
+use llm::{AdapterInfo, AiProviderConfig, validate_config};
 use mcp_client::{McpManager, McpServerConfig, McpToolInfo};
 use mcp_server::McpServerHandle;
 use parking_lot::Mutex;
@@ -33,10 +36,12 @@ pub type ChatEventSink = Arc<dyn Fn(AiChatEvent) + Send + Sync>;
 
 /// AI 功能全局状态 (Tauri managed)。
 pub struct AiHost {
+    /// 软件能力注册表 — 内置工具与技能文档的单一事实来源。
+    registry: Arc<CapabilityRegistry>,
     toolbox: Toolbox,
     sink: EventSinkHandle,
     /// 对话任务取消注册表。
-    registry: Arc<ChatTaskRegistry>,
+    registry_tasks: Arc<ChatTaskRegistry>,
     /// 对话会话存储 (多会话 + 历史持久化, 所有权在后端)。
     sessions: Arc<SessionStore>,
     /// 外部 MCP server 连接管理器。
@@ -74,9 +79,10 @@ impl AiHost {
             SessionStore::empty(&config_dir)
         });
         Self {
+            registry: Arc::new(CapabilityRegistry::builtin()),
             toolbox,
             sink,
-            registry: Arc::new(ChatTaskRegistry::default()),
+            registry_tasks: Arc::new(ChatTaskRegistry::default()),
             sessions: Arc::new(sessions),
             mcp: Arc::new(mcp),
             tool_cache: Mutex::new(Vec::new()),
@@ -84,71 +90,6 @@ impl AiHost {
             pending_frontend: Arc::new(Mutex::new(std::collections::HashMap::new())),
             secrets,
         }
-    }
-}
-
-/// MCP 聚合工具执行器 — 对话循环调用外部 MCP 工具的桥梁。
-struct McpToolExecutor {
-    tools: Vec<McpToolInfo>,
-    mcp: Arc<McpManager>,
-}
-
-#[async_trait::async_trait]
-impl ToolExecutor for McpToolExecutor {
-    fn tools(&self) -> Vec<ToolSpecDto> {
-        self.tools
-            .iter()
-            .map(|t| ToolSpecDto {
-                name: t.prefixed_name.clone(),
-                description: if t.description.is_empty() {
-                    format!("{} 的工具 (server: {})", t.name, t.server_name)
-                } else {
-                    format!("{} (server: {})", t.description, t.server_name)
-                },
-                input_schema: t.input_schema.clone(),
-            })
-            .collect()
-    }
-
-    async fn call(&self, name: &str, arguments: Value) -> Result<String> {
-        self.mcp.call_by_prefixed(name, arguments).await
-    }
-}
-
-/// 组合执行器 — 内置原生工具 + 外部 MCP 工具;同名时内置优先。
-/// 两者皆无时 tools() 为空, 行为等同纯对话 (模型不会发起工具调用)。
-struct CompositeExecutor {
-    native: Option<NativeToolExecutor>,
-    mcp: Option<McpToolExecutor>,
-}
-
-#[async_trait::async_trait]
-impl ToolExecutor for CompositeExecutor {
-    fn tools(&self) -> Vec<ToolSpecDto> {
-        let mut out = Vec::new();
-        if let Some(n) = &self.native {
-            out.extend(n.tools());
-        }
-        if let Some(m) = &self.mcp {
-            out.extend(m.tools());
-        }
-        out
-    }
-
-    async fn call(&self, name: &str, arguments: Value) -> Result<String> {
-        if let Some(n) = &self.native
-            && NativeToolExecutor::handles(name)
-        {
-            return n.call(name, arguments).await;
-        }
-        if let Some(m) = &self.mcp {
-            return m.call(name, arguments).await;
-        }
-        Err(McpError::ToolFailed {
-            tool: name.to_string(),
-            details: "工具不存在".to_string(),
-        }
-        .into())
     }
 }
 
@@ -223,8 +164,8 @@ pub async fn ai_chat_send(
 
     let lang = ui_lang.as_deref().map_or(Lang::Zh, Lang::parse);
 
-    let (task_id, cancel_rx) = state.registry.register();
-    let registry = Arc::clone(&state.registry);
+    let (task_id, cancel_rx) = state.registry_tasks.register();
+    let registry_tasks = Arc::clone(&state.registry_tasks);
     let sessions = Arc::clone(&state.sessions);
     let mcp = Arc::clone(&state.mcp);
     let pending_frontend = Arc::clone(&state.pending_frontend);
@@ -235,8 +176,18 @@ pub async fn ai_chat_send(
     };
 
     let spawned_task_id = task_id.clone();
+    let registry = Arc::clone(&state.registry);
     let toolbox = state.toolbox.clone();
     let backend_sink = state.sink.clone();
+    let system_prompt = if use_builtin_tools {
+        Some(prompt::compose_system_prompt(
+            &registry,
+            lang,
+            system.as_deref(),
+        ))
+    } else {
+        system
+    };
     tokio::spawn(async move {
         // 事件双路: 转发前端流式渲染 + 记录器聚合 (终态后落盘)
         let recorder = Arc::new(Mutex::new(TurnRecorder::new()));
@@ -247,29 +198,23 @@ pub async fn ai_chat_send(
         });
         let provider = GenaiTurnProvider;
 
-        // 内置工具: toolbox 从 AppState 提取共享句柄, pending 注册表接收前端回执
+        // 内置工具: 注册表派发, toolbox 从 AppState 提取共享句柄, pending 注册表接收前端回执
         let native = use_builtin_tools.then(|| {
-            NativeToolExecutor::new(toolbox, backend_sink, frontend_sink, pending_frontend, lang)
+            NativeToolExecutor::new(
+                registry,
+                toolbox,
+                backend_sink,
+                frontend_sink,
+                pending_frontend,
+                lang,
+            )
         });
-        let mcp_executor = (!mcp_tools.is_empty()).then(|| McpToolExecutor {
-            tools: mcp_tools,
-            mcp,
-        });
-        let executor = CompositeExecutor {
-            native,
-            mcp: mcp_executor,
-        };
-
-        // 系统提示词: 启用内置工具时注入基础约定 + 知识库索引 (用户提示词在后)
-        let system = if use_builtin_tools {
-            Some(skills::compose_system_prompt(lang, system.as_deref()))
-        } else {
-            system
-        };
+        let mcp_executor = (!mcp_tools.is_empty()).then(|| McpToolExecutor::new(mcp_tools, mcp));
+        let executor = CompositeExecutor::new(native, mcp_executor);
 
         let payload = ChatPayload {
             config,
-            system,
+            system: system_prompt,
             messages: history,
             max_tool_rounds,
         };
@@ -283,7 +228,7 @@ pub async fn ai_chat_send(
         if let Err(e) = sessions.append_items(&session_id, items) {
             log::warn!("会话条目落盘失败: {e}");
         }
-        registry.remove(&spawned_task_id);
+        registry_tasks.remove(&spawned_task_id);
     });
     Ok(task_id)
 }
@@ -309,7 +254,7 @@ pub fn ai_tool_resolve(state: &AiHost, call_id: String, ok: bool, result: Value)
 
 /// 取消进行中的对话任务;返回是否存在该任务。
 pub fn ai_chat_cancel(state: &AiHost, task_id: String) -> bool {
-    state.registry.cancel(&task_id)
+    state.registry_tasks.cancel(&task_id)
 }
 
 // ============ API key 钥匙串 (密钥不落 settings.json) ============
@@ -475,6 +420,7 @@ pub async fn mcp_server_start(state: &AiHost, port: Option<u16>) -> Result<u16> 
 
     // 端口配置归后端: 显式设置 > LISSIO_MCP_PORT > DEFAULT_MCP_PORT
     let handle = mcp_server::start(
+        Arc::clone(&state.registry),
         state.toolbox.clone(),
         state.sink.clone(),
         mcp_server::resolve_port(port),

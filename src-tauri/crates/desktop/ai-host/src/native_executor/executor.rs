@@ -1,4 +1,9 @@
-//! 原生工具执行器本体 — 后端直连优先, 前端托管兜底
+//! 原生工具执行器本体 — 注册表后端直连, 前端托管兜底。
+//!
+//! 后端能力工具 (数据读取/设备发送/连线/知识库等) 经
+//! [`control_api::capabilities::CapabilityRegistry`] 动态派发, 与对外 MCP
+//! server 走同一份工具定义与实现; 前端托管工具 (画布/UI 状态操作) 经
+//! `ai_tool_invoke` 事件桥由前端 `toolHost` 执行。
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -6,20 +11,17 @@ use std::time::Duration;
 
 use chat::ToolExecutor;
 use control_api::Toolbox;
-use control_api::tools;
-use error::Result;
+use control_api::capabilities::registry::CapabilityRegistry;
+use control_api::capabilities::skill::Lang;
+use control_api::capabilities::tool::ToolContext;
+use error::{AppError, McpError, Result};
 use events::EventSinkHandle;
 use llm::ToolSpecDto;
 use parking_lot::Mutex;
 use serde_json::{Value, json};
 use tokio::sync::oneshot;
 
-use super::args::{
-    arg_f64, arg_i64, arg_opt_str, arg_opt_u32, arg_str, arg_vec_u8, parse_can_frame, shared,
-    tool_failed, value_to_content,
-};
-use super::specs::{BACKEND_TOOLS, FRONTEND_TOOLS, native_tool_specs};
-use crate::skills::{self, Lang};
+use super::frontend;
 
 /// 前端托管工具调用事件名 (前端 `toolHost.ts` 监听)。
 pub const AI_TOOL_INVOKE_EVENT: &str = "ai_tool_invoke";
@@ -38,10 +40,21 @@ pub enum ToolOutcome {
 /// pending 前端调用注册表 — call_id → 回执发送端 (`ai_tool_resolve` 消费)。
 pub type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<ToolOutcome>>>>;
 
+/// 构造工具失败错误。
+fn tool_failed(tool: &str, details: impl Into<String>) -> AppError {
+    McpError::ToolFailed {
+        tool: tool.to_string(),
+        details: details.into(),
+    }
+    .into()
+}
+
 /// 原生工具执行器 — 内置 AI 调用软件自有能力的桥梁。
 pub struct NativeToolExecutor {
+    /// 软件能力注册表 (后端工具单一事实来源)。
+    registry: Arc<CapabilityRegistry>,
     toolbox: Toolbox,
-    /// 事件端口 — 后端直连能力 (字节注入/连线) 复用与 MCP server 同一份实现。
+    /// 事件端口 — 后端能力 (字节注入/连线) 复用与 MCP server 同一份实现。
     sink: EventSinkHandle,
     /// 当前出口的前端事件端口。WebSocket 出口可为连接级实现。
     frontend: EventSinkHandle,
@@ -50,8 +63,10 @@ pub struct NativeToolExecutor {
 }
 
 impl NativeToolExecutor {
-    /// 构造。业务状态、后端事件与前端事件均由组合根注入。
+    /// 构造。注册表、业务状态、后端事件与前端事件均由组合根注入。
+    #[must_use]
     pub fn new(
+        registry: Arc<CapabilityRegistry>,
         toolbox: Toolbox,
         sink: EventSinkHandle,
         frontend: EventSinkHandle,
@@ -59,6 +74,7 @@ impl NativeToolExecutor {
         lang: Lang,
     ) -> Self {
         Self {
+            registry,
             toolbox,
             sink,
             frontend,
@@ -68,13 +84,14 @@ impl NativeToolExecutor {
     }
 
     /// 是否处理该工具 (内置优先于外部 MCP)。
-    pub fn handles(name: &str) -> bool {
-        BACKEND_TOOLS.contains(&name) || FRONTEND_TOOLS.contains(&name)
+    #[must_use]
+    pub fn handles(&self, name: &str) -> bool {
+        self.registry.find_tool(name).is_some() || frontend::is_frontend_tool(name)
     }
 
     /// 前端托管调用: 发事件 + 等回执 (超时兜底)。
     async fn call_frontend(&self, name: &str, arguments: Value) -> Result<String> {
-        let call_id = tools::next_call_id();
+        let call_id = control_api::tools::next_call_id();
         let (tx, rx) = oneshot::channel();
         self.pending.lock().insert(call_id.clone(), tx);
 
@@ -95,132 +112,115 @@ impl NativeToolExecutor {
         }
     }
 
-    /// 后端直连分发 — 返回 None 表示非后端工具 (交由前端托管路径)。
-    async fn call_backend(&self, name: &str, args: &Value) -> Result<Option<String>> {
-        let tb = &self.toolbox;
-        let out = match name {
-            "list_devices" => tools::list_devices(tb).await,
-            "list_serial_ports" => shared(name, tools::list_serial_ports(tb))?,
-            "send_bytes" => {
-                let node_id = arg_str(name, args, "node_id")?;
-                let data = arg_vec_u8(name, args, "data")?;
-                shared(name, tools::send_bytes(tb, node_id, &data).await)?
-            }
-            "send_string" => {
-                let node_id = arg_str(name, args, "node_id")?;
-                let text = arg_str(name, args, "text")?;
-                shared(name, tools::send_string(tb, node_id, text).await)?
-            }
-            "send_can_frame" => {
-                let node_id = arg_str(name, args, "node_id")?;
-                let protocol_node = arg_opt_str(args, "protocol_node").map(str::to_string);
-                let frame = parse_can_frame(name, args)?;
-                shared(
-                    name,
-                    tools::send_can_frame(tb, node_id, protocol_node, frame).await,
-                )?
-            }
-            "set_input_value" => {
-                let widget_id = arg_str(name, args, "widget_id")?;
-                #[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation)]
-                // 图求值内部是 f32, f64→f32 精度损失可接受
-                let value = arg_f64(name, args, "value")? as f32;
-                tools::set_input_value(tb, widget_id, value)
-            }
-            "inject_bytes" => {
-                let source = arg_str(name, args, "source_node_id")?;
-                let data = arg_vec_u8(name, args, "data")?;
-                shared(
-                    name,
-                    tools::inject_bytes(tb, self.sink.as_ref(), source, &data).await,
-                )?
-            }
-            "get_graph_outputs" => tools::get_graph_outputs(tb),
-            "get_recent_waveform" => {
-                let source = arg_str(name, args, "source")?;
-                let count = arg_opt_u32(args, "count").unwrap_or(100);
-                shared(name, tools::get_recent_waveform(tb, source, count))?
-            }
-            "get_waveform_window" => {
-                let source = arg_str(name, args, "source")?;
-                let start = arg_i64(name, args, "start_ms")?;
-                let end = arg_i64(name, args, "end_ms")?;
-                shared(name, tools::get_waveform_window(tb, source, start, end))?
-            }
-            "get_buffer_info" => {
-                let source = arg_str(name, args, "source")?;
-                tools::get_buffer_info(tb, source)
-            }
-            "list_data_sources" => tools::list_data_sources(tb),
-            "get_can_frames" => {
-                let count = arg_opt_u32(args, "count").unwrap_or(100);
-                let bitrate = arg_opt_u32(args, "bitrate");
-                tools::get_can_frames(tb, count, bitrate)
-            }
-            "get_logic_data" => {
-                let count = arg_opt_u32(args, "count").unwrap_or(200);
-                tools::get_logic_data(tb, count)
-            }
-            "get_raw_data" => {
-                let source = arg_str(name, args, "source")?;
-                let max_bytes = arg_opt_u32(args, "max_bytes").unwrap_or(4096);
-                tools::get_raw_data(tb, source, max_bytes)
-            }
-            "read_skill" => {
-                let skill_id = arg_str(name, args, "skill_id")?;
-                let lang = arg_opt_str(args, "lang").map_or(self.lang, Lang::parse);
-                return skills::read_skill(skill_id, lang).map(Some);
-            }
-            // 连线拓扑 — 后端权威实现 (编译失败返回真实原因, 画布经 graph:source 收敛)
-            "connect_nodes" => {
-                let source = arg_str(name, args, "source")?;
-                let target = arg_str(name, args, "target")?;
-                let tab_id = arg_opt_str(args, "tab_id").map(str::to_string);
-                let source_handle = arg_opt_str(args, "source_handle").map(str::to_string);
-                let target_handle = arg_opt_str(args, "target_handle").map(str::to_string);
-                shared(
-                    name,
-                    tools::connect_edge(
-                        tb,
-                        self.sink.as_ref(),
-                        tab_id,
-                        source,
-                        target,
-                        source_handle,
-                        target_handle,
-                    )
-                    .await,
-                )?
-            }
-            "disconnect_edge" => {
-                let edge_id = arg_opt_str(args, "edge_id").map(str::to_string);
-                let source = arg_opt_str(args, "source").map(str::to_string);
-                let target = arg_opt_str(args, "target").map(str::to_string);
-                shared(
-                    name,
-                    tools::disconnect_edge(tb, self.sink.as_ref(), edge_id, source, target).await,
-                )?
-            }
-            _ => return Ok(None),
-        };
-        Ok(Some(value_to_content(out)))
+    /// 注册表后端工具调用上下文。
+    fn context(&self) -> ToolContext {
+        ToolContext {
+            registry: Arc::clone(&self.registry),
+            toolbox: self.toolbox.clone(),
+            sink: Arc::clone(&self.sink),
+            lang: self.lang,
+        }
     }
 }
 
 #[async_trait::async_trait]
 impl ToolExecutor for NativeToolExecutor {
     fn tools(&self) -> Vec<ToolSpecDto> {
-        native_tool_specs()
+        // 后端能力工具从注册表派生 (与 MCP server 同一 schema/描述), 前端托管工具补充在后
+        let mut specs: Vec<_> = self
+            .registry
+            .tools()
+            .map(|(_, t)| ToolSpecDto {
+                name: t.name.to_string(),
+                description: t.description.to_string(),
+                input_schema: t.input_schema.clone(),
+            })
+            .collect();
+        specs.extend(frontend::frontend_tool_specs());
+        specs
     }
 
     async fn call(&self, name: &str, arguments: Value) -> Result<String> {
-        // 后端直连优先, 未命中走前端托管
-        if let Some(content) = self.call_backend(name, &arguments).await? {
-            return Ok(content);
+        // 注册表后端直连优先, 未命中走前端托管
+        if let Some((_, def)) = self.registry.find_tool(name) {
+            let out = def
+                .invoke(self.context(), arguments)
+                .await
+                .map_err(|e| tool_failed(name, e.to_string()))?;
+            return Ok(out.to_text());
         }
-        if FRONTEND_TOOLS.contains(&name) {
+        if frontend::is_frontend_tool(name) {
             return self.call_frontend(name, arguments).await;
         }
         Err(tool_failed(name, "未知内置工具"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn executor() -> NativeToolExecutor {
+        NativeToolExecutor::new(
+            Arc::new(CapabilityRegistry::builtin()),
+            Toolbox::from_state(&app::AppState::new()),
+            Arc::new(events::NullEventSink),
+            Arc::new(events::NullEventSink),
+            Arc::new(Mutex::new(HashMap::new())),
+            Lang::Zh,
+        )
+    }
+
+    /// 规格清单 = 注册表工具 + 前端托管工具, 无重名。
+    #[test]
+    fn specs_derive_from_registry() {
+        let executor = executor();
+        let registry_count = executor.registry.tools().count();
+        let specs = executor.tools();
+        let mut seen = std::collections::HashSet::new();
+        for t in &specs {
+            assert!(seen.insert(t.name.clone()), "重复工具名: {}", t.name);
+        }
+        assert_eq!(specs.len(), registry_count + frontend::FRONTEND_TOOLS.len());
+        assert!(seen.contains("read_skill"));
+        assert!(seen.contains("connect_edge"));
+        assert!(
+            !seen.contains("connect_nodes"),
+            "旧名 connect_nodes 应并入 connect_edge"
+        );
+    }
+
+    /// 注册表工具经执行器调用: read_skill 命中知识库节点。
+    #[tokio::test]
+    async fn dispatches_registry_tools() {
+        let executor = executor();
+        let out = executor
+            .call("read_skill", json!({"skill_id": "overview"}))
+            .await
+            .expect("read_skill 应命中注册表");
+        assert!(out.len() > 200);
+    }
+
+    /// 参数错误与未知工具都映射为工具失败。
+    #[tokio::test]
+    async fn unknown_and_invalid_report_tool_failure() {
+        let executor = executor();
+        assert!(executor.call("nope", json!({})).await.is_err());
+        assert!(
+            executor
+                .call("read_skill", json!({"skill_id": "不存在"}))
+                .await
+                .is_err()
+        );
+    }
+
+    /// handles 覆盖注册表与前端两组工具。
+    #[test]
+    fn handles_covers_both_groups() {
+        let executor = executor();
+        assert!(executor.handles("send_bytes"));
+        assert!(executor.handles("add_node"));
+        assert!(!executor.handles("nope"));
     }
 }

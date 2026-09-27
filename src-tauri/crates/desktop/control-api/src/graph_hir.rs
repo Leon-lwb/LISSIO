@@ -11,7 +11,8 @@
 //! - 显示订阅走 `graph:derived` 事件流 (每节点对外端口 + 通道数), 两者各司其职
 
 use app::{
-    AppState, CompiledGraph, EdgeClass, HirNode, NodeDef, PortDomain, TypedGraph, port_domain,
+    AppState, CompiledGraph, EdgeClass, HirNode, NodeDef, NodeOrigin, PortDomain, TypedGraph,
+    port_domain,
 };
 use petgraph::visit::{EdgeRef, IntoEdgeReferences};
 use serde::Serialize;
@@ -86,6 +87,21 @@ pub struct HirNodeView {
     pub node_id: String,
     pub has_value_def: bool,
     pub has_byte_def: bool,
+    /// 节点来源标记 — 设备树派生 / 画布手写 / 由其它节点派生。
+    ///
+    /// 双角色节点以字节定义为权威（设备树语义优先, 见 `CompiledGraph::origin_of`）。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub origin: Option<NodeOrigin>,
+}
+
+/// 「设备树节点 → 其派生子图」分组 — 编译结果即设备树派生的数据流图。
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct DeviceSubgraphView {
+    /// 设备树投影起点 id（与图节点 id 同值）。
+    pub device_node_id: String,
+    /// 该树派生的全部图节点 id（升序, 含起点自身）。
+    pub graph_nodes: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -94,6 +110,9 @@ pub struct GraphHir {
     pub tab_id: String,
     pub nodes: Vec<HirNodeView>,
     pub edges: Vec<HirEdgeView>,
+    /// 设备树起点 → 派生子图（按起点 id 升序; 无设备树派生时为空）。
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub device_subgraphs: Vec<DeviceSubgraphView>,
 }
 
 /// 按 tab 拉取 HIR 视图 (供 `compile-results` Tab 渲染)。
@@ -117,6 +136,7 @@ pub fn extract_hir(tab_id: &str, graph: Option<&CompiledGraph>) -> GraphHir {
             tab_id: tab_id.to_string(),
             nodes: Vec::new(),
             edges: Vec::new(),
+            device_subgraphs: Vec::new(),
         };
     };
     let typed: &TypedGraph = g.hir();
@@ -129,6 +149,7 @@ pub fn extract_hir(tab_id: &str, graph: Option<&CompiledGraph>) -> GraphHir {
                 node_id: w.id.clone(),
                 has_value_def: w.value_def.is_some(),
                 has_byte_def: w.byte_def.is_some(),
+                origin: g.origin_of(&w.id).cloned(),
             }
         })
         .collect();
@@ -161,6 +182,13 @@ pub fn extract_hir(tab_id: &str, graph: Option<&CompiledGraph>) -> GraphHir {
         tab_id: tab_id.to_string(),
         nodes,
         edges,
+        device_subgraphs: g
+            .device_subgraphs()
+            .map(|(device_node_id, graph_nodes)| DeviceSubgraphView {
+                device_node_id: device_node_id.to_string(),
+                graph_nodes: graph_nodes.to_vec(),
+            })
+            .collect(),
     }
 }
 
@@ -192,14 +220,14 @@ mod tests {
     use app::{NodeDef, NodeKind};
 
     fn math_def(id: &str, tab_id: &str) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: tab_id.into(),
-            kind: NodeKind::Math {
+        NodeDef::new(
+            id.into(),
+            tab_id.into(),
+            NodeKind::Math {
                 op: app::MathOp::Add,
                 input_count: 1,
             },
-        }
+        )
     }
 
     fn device_def(id: &str) -> NodeDef {
@@ -207,23 +235,21 @@ mod tests {
     }
 
     fn protocol_def(id: &str) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: "main".into(),
-            kind: NodeKind::Protocol {
+        NodeDef::new(
+            id.into(),
+            "main".into(),
+            NodeKind::Protocol {
+                schema: schema_types::schema_from_protocol_config(
+                    &schema_types::ProtocolConfig::JustFloat { channels: None },
+                ),
                 config: schema_types::ProtocolConfig::JustFloat { channels: None },
                 convert_to: None,
-                schema: None,
             },
-        }
+        )
     }
 
     fn input_def(id: &str, tab_id: &str) -> NodeDef {
-        NodeDef {
-            id: id.into(),
-            tab_id: tab_id.into(),
-            kind: NodeKind::Input,
-        }
+        NodeDef::new(id.into(), tab_id.into(), NodeKind::Input)
     }
 
     /// 编译成功 → HIR 含全部节点 + 边
@@ -278,15 +304,15 @@ mod tests {
     #[test]
     fn extract_hir_dual_role_node() {
         let nodes = vec![
-            NodeDef {
-                id: "pt".into(),
-                tab_id: "t1".into(),
-                kind: app::NodeKind::ProtocolSource {
+            NodeDef::new(
+                "pt".into(),
+                "t1".into(),
+                app::NodeKind::ProtocolSource {
                     node_id: "pt".into(),
                     channels: 1,
-                    port_names: None,
+                    port_names: Vec::new(),
                 },
-            },
+            ),
             protocol_def("pt"),
         ];
         let compiled = CompiledGraph::compile("t1".into(), nodes, vec![]).unwrap();
@@ -294,5 +320,67 @@ mod tests {
         let pt_node = view.nodes.iter().find(|n| n.node_id == "pt").unwrap();
         assert!(pt_node.has_value_def, "ProtocolSource 是数值平面定义");
         assert!(pt_node.has_byte_def, "Protocol 是字节平面定义");
+    }
+
+    /// 编译结果即设备树派生的数据流图: HIR 视图暴露来源标记与派生子图分组。
+    #[test]
+    fn extract_hir_exposes_device_tree_provenance() {
+        use data_model::device_tree::{NodeId, NodePath, NodeRole};
+
+        let mut device = device_def("source");
+        device.origin = NodeOrigin::DeviceTree {
+            node_id: NodeId::new("source").unwrap(),
+            path: NodePath::root("source").unwrap(),
+            role: None,
+            root: NodeId::new("source").unwrap(),
+            parent: None,
+        };
+        let mut protocol = protocol_def("pt");
+        protocol.origin = NodeOrigin::DeviceTree {
+            node_id: NodeId::new("pt").unwrap(),
+            path: NodePath::root("source").unwrap().child("pt").unwrap(),
+            role: Some(NodeRole::Protocol),
+            root: NodeId::new("source").unwrap(),
+            parent: Some(NodeId::new("source").unwrap()),
+        };
+        let mut canvas = math_def("m1", "main");
+        canvas.origin = NodeOrigin::Derived {
+            from: "pt".to_string(),
+        };
+
+        let compiled = CompiledGraph::compile(
+            "main".into(),
+            vec![device, protocol, canvas],
+            vec![buffer_graph::Edge {
+                id: "e-byte".into(),
+                source: "source".into(),
+                source_handle: "rx".into(),
+                target: "pt".into(),
+                target_handle: "in".into(),
+            }],
+        )
+        .unwrap();
+        let view = extract_hir("main", Some(&compiled));
+
+        let pt = view.nodes.iter().find(|n| n.node_id == "pt").unwrap();
+        assert_eq!(
+            pt.origin
+                .as_ref()
+                .and_then(NodeOrigin::root_device_node)
+                .map(NodeId::as_str),
+            Some("source")
+        );
+        let m1 = view.nodes.iter().find(|n| n.node_id == "m1").unwrap();
+        assert!(
+            matches!(m1.origin, Some(NodeOrigin::Derived { .. })),
+            "派生节点的设备树归属由分组索引回答, 节点标记只记录派生来源"
+        );
+        assert_eq!(view.device_subgraphs.len(), 1);
+        assert_eq!(view.device_subgraphs[0].device_node_id, "source");
+        assert_eq!(
+            view.device_subgraphs[0].graph_nodes,
+            ["m1", "pt", "source"],
+            "派生子图含起点自身及其派生节点 (升序)"
+        );
     }
 }

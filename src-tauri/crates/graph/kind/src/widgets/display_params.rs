@@ -1,9 +1,7 @@
 //! 显示控件参数结构 — wire 形状与前端 `src/types/widgets.ts` params 一致
 //! (camelCase + 全字段 serde default); 由 displays.rs 的默认/归一化/端口共用。
 
-use super::params::{
-    DisplayPrecision, DisplayRange, DisplayRangeMode, Model3DSource, Model3DSourceKind,
-};
+use super::params::{DisplayRange, Model3DSource, Model3DSourceKind};
 use serde::{Deserialize, Serialize};
 
 // ============ 参数结构 ============
@@ -14,7 +12,6 @@ pub struct LabelParams {
     pub id: String,
     pub label: String,
     pub text: String,
-    pub channel: Option<i64>,
 }
 
 impl Default for LabelParams {
@@ -23,7 +20,6 @@ impl Default for LabelParams {
             id: String::new(),
             label: String::new(),
             text: "Label".to_owned(),
-            channel: None,
         }
     }
 }
@@ -35,7 +31,6 @@ pub struct GaugeParams {
     pub label: String,
     pub range: DisplayRange,
     pub unit: String,
-    pub channel: Option<i64>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, ts_rs::TS)]
@@ -57,7 +52,6 @@ pub struct ProgressParams {
     pub show_value: bool,
     /// '#rrggbb' 或空串 (跟随主题)
     pub color: String,
-    pub channel: Option<i64>,
 }
 
 impl Default for ProgressParams {
@@ -70,7 +64,6 @@ impl Default for ProgressParams {
             orientation: ProgressOrientation::Horizontal,
             show_value: true,
             color: String::new(),
-            channel: None,
         }
     }
 }
@@ -83,7 +76,6 @@ pub struct LedParams {
     pub threshold: f64,
     pub on_color: String,
     pub off_color: String,
-    pub channel: Option<i64>,
 }
 
 impl Default for LedParams {
@@ -94,7 +86,6 @@ impl Default for LedParams {
             threshold: 0.5,
             on_color: "#89d185".to_owned(),
             off_color: "#3c3c3c".to_owned(),
-            channel: None,
         }
     }
 }
@@ -106,7 +97,6 @@ pub struct NumberDisplayParams {
     pub label: String,
     pub unit: String,
     pub precision: i64,
-    pub channel: Option<i64>,
 }
 
 impl Default for NumberDisplayParams {
@@ -116,7 +106,6 @@ impl Default for NumberDisplayParams {
             label: "Value".to_owned(),
             unit: String::new(),
             precision: 2,
-            channel: None,
         }
     }
 }
@@ -127,7 +116,6 @@ pub struct PieChartParams {
     pub id: String,
     pub label: String,
     pub segments: Vec<String>,
-    pub channels: Vec<i64>,
 }
 
 impl Default for PieChartParams {
@@ -136,7 +124,6 @@ impl Default for PieChartParams {
             id: String::new(),
             label: "Pie".to_owned(),
             segments: vec!["A".into(), "B".into(), "C".into()],
-            channels: vec![0, 1, 2],
         }
     }
 }
@@ -204,8 +191,6 @@ impl Default for WaveformParams {
 pub struct SpectrumParams {
     pub id: String,
     pub label: String,
-    /// 数据源 FFT widget id (null = 未选择)
-    pub source_id: Option<String>,
 }
 
 impl Default for SpectrumParams {
@@ -213,7 +198,6 @@ impl Default for SpectrumParams {
         Self {
             id: String::new(),
             label: "Spectrum".to_owned(),
-            source_id: None,
         }
     }
 }

@@ -14,12 +14,14 @@
     clippy::suboptimal_flops
 )]
 
+use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 
 use super::WidgetDefinition;
 use super::WidgetPortTable;
 use super::params::{bytes_port, f32_port};
+use super::{PanelBindingSpec, PanelSpec};
 
 pub(super) type BlockDef = crate::decoder_block::DecoderBlockDef;
 
@@ -108,7 +110,7 @@ pub(super) const FRAME_DECODER_DEF: WidgetDefinition = WidgetDefinition {
         })
     },
     normalize: |params| {
-        super::round_trip_params::<FrameDecoderParams>(params, &[]);
+        super::round_trip_params::<FrameDecoderParams>(params);
     },
     ports: decoder_ports,
     lower: |params, _| {
@@ -122,6 +124,19 @@ pub(super) const FRAME_DECODER_DEF: WidgetDefinition = WidgetDefinition {
             enable_fps: parsed.enable_fps,
         })
     },
+    // 帧解码面板: 解码事件走 decoded_events 推送 (与逻辑分析仪同一事件总线),
+    // 派生的 f32 输出口另走数值流 — 面板一次性读取取解码事件批。
+    panel: Some(PanelSpec {
+        panel: PanelKind::FrameDecoder,
+        tab_type: "frame-decoder",
+        label_key: "dataTabFrameDecoder",
+        delivery: PanelDelivery::Both,
+        push_request: Some(panel_ops::PUSH_DECODED_EVENTS),
+        fetch_op: Some(panel_ops::FETCH_DECODED_EVENTS),
+        binding: PanelBindingSpec::EdgeBound,
+        default_interval_ms: Some(33),
+        default_max_items: Some(200),
+    }),
 };
 
 pub(super) static FRAME_DECODER: WidgetDefinition = FRAME_DECODER_DEF;

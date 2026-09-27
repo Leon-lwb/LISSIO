@@ -29,7 +29,11 @@ Desktop and Web both use HTTP-RPC + WebSocket through `backend-server`; Tauri IP
 platform-shell-only exit. MCP (`mcp-server`) and headless CLI (`backend-cli`) are thin adapters over one
 capability core (`control-api`), one command dispatch table (`rpc-api`), one
 shared assembly (`backend-host`), and two push ports
-(`events::BackendEventSink`, `app::display::StreamSink`). Capability coverage
+(`events::BackendEventSink`, `app::display::StreamSink`). `control-api` also owns the
+software capability node registry (`capabilities`): every capability domain registers
+a node declaring its tools (schema from `schemars`) and skill docs, and the MCP tool
+router, the built-in AI tool specs/dispatch, and the skill index all derive from the
+same registry at runtime. Capability coverage
 matrix and conventions: [exits.md](exits.md); Web protocol contract and the
 per-command capability matrix: [web-exit.md](web-exit.md).
 
@@ -143,5 +147,5 @@ available adapter choices on one device card, and preserves each choice's
 configuration patch. Discoveries without identity remain adapter-scoped. React
 never infers OS aliases or hardware identity from device names. Manually
 configured/network connections remain accessible separately from discovered
-hardware. `PortInfo`, IPC signatures, and persisted configuration shapes remain
-unchanged; the discovery metadata addition is backward compatible.
+hardware. `PortInfo`, IPC signatures, and persisted configuration shapes follow
+the current contract; there is no legacy-format fallback.

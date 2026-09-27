@@ -118,8 +118,7 @@ pub const ADAPTERS: &[AdapterInfo] = &[
         requires_custom_url: false,
         requires_api_key: true,
     },
-    // OpenAI Responses API 协议适配器 (genai OpenAIResp) — 曾只在解析侧可用,
-    // 现纳入目录; 旧配置中的 `openai_responses` 保持可解析
+    // OpenAI Responses API 协议适配器 (genai OpenAIResp)
     AdapterInfo {
         id: "openai_responses",
         label: "OpenAI Responses",
@@ -224,7 +223,7 @@ pub const fn list_adapters() -> &'static [AdapterInfo] {
 ///
 /// # Errors
 /// 未知适配器字符串返回 [`AiError::UnknownAdapter`]。
-pub fn adapter_kind_from_str(adapter: &str) -> data_model::Result<AdapterKind> {
+pub fn adapter_kind_from_str(adapter: &str) -> error::Result<AdapterKind> {
     let kind = match adapter {
         "openai" | "openai_compatible" | "orcarouter" => AdapterKind::OpenAI,
         "openai_responses" => AdapterKind::OpenAIResp,

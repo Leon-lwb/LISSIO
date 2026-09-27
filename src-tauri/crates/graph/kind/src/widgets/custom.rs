@@ -62,6 +62,7 @@ pub(super) const CUSTOM_DEF: WidgetDefinition = WidgetDefinition {
             outputs: ports.outputs.clone(),
         })
     },
+    panel: None,
 };
 
 pub(super) static CUSTOM: WidgetDefinition = CUSTOM_DEF;

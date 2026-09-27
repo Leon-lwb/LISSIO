@@ -22,7 +22,7 @@ pub struct TriggerRuleDef {
     pub match_type: TriggerMatchType,
     #[serde(default)]
     pub flags: Option<String>,
-    /// 输出值类型: 'number' | 'string' (默认 'number', 兼容旧配置)
+    /// 输出值类型: 'number' | 'string' (默认 'number')
     #[serde(default = "default_output_type")]
     pub output_type: String,
     /// 数字输出值 (output_type='number' 时使用)

@@ -41,10 +41,10 @@ fn node_id(value: &str) -> NodeId {
 }
 
 fn device_node(id: &str, tab: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab.into(),
-        kind: NodeKind::Acquisition {
+    NodeDef::new(
+        id.into(),
+        tab.into(),
+        NodeKind::Acquisition {
             node: test_device_node(id),
             ports: vec![DevicePort {
                 id: "rx".into(),
@@ -52,19 +52,19 @@ fn device_node(id: &str, tab: &str) -> NodeDef {
                 domain: DevicePortDomain::Bytes,
             }],
         },
-    }
+    )
 }
 
 fn protocol_node(id: &str, tab: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: tab.into(),
-        kind: NodeKind::Protocol {
+    NodeDef::new(
+        id.into(),
+        tab.into(),
+        NodeKind::Protocol {
+            schema: schema_types::schema_from_protocol_config(&ProtocolConfig::default()),
             config: ProtocolConfig::default(),
             convert_to: None,
-            schema: None,
         },
-    }
+    )
 }
 
 async fn open_test_data(state: &AppState, id: &str, plane: &DataPlaneState) {
@@ -159,10 +159,10 @@ async fn reconcile_cleans_trigger_states() {
     // t1 图内含一个 Trigger 节点
     let g = CompiledGraph::compile(
         "t1".into(),
-        vec![NodeDef {
-            id: "tr1".into(),
-            tab_id: "t1".into(),
-            kind: NodeKind::Trigger {
+        vec![NodeDef::new(
+            "tr1".into(),
+            "t1".into(),
+            NodeKind::Trigger {
                 mode: "manual".into(),
                 edge: "level".into(),
                 default_miss: 0.0,
@@ -170,7 +170,7 @@ async fn reconcile_cleans_trigger_states() {
                 command: String::new(),
                 rules: vec![],
             },
-        }],
+        )],
         vec![],
     )
     .unwrap();

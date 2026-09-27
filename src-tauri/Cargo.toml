@@ -23,12 +23,7 @@ name = "lissio"
 path = "src/main.rs"
 
 [features]
-# Kept as no-op compatibility flags for existing desktop build invocations. Hardware adapter
-# features belong to the separately built lissio-server sidecar.
 default = []
-modbus-tcp = []
-modbus-rtu = []
-s7 = []
 
 [profile.release]
 debug = true
@@ -182,6 +177,9 @@ assert_is_empty = "allow"
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# schemars: 能力节点工具入参的 JSON Schema 单一来源 (与 rmcp 内嵌版本同大版本),
+# MCP 工具路由与内置 AI 工具规格由同一 schema 派生
+schemars = "1"
 # ts-rs: 由 Rust wire 类型生成 TypeScript 声明 (显式导出程序, 不走测试自动写盘)。
 # 仅用于构建期合同导出; 保留 serde-compat 的不兼容属性告警作为漂移检查的一部分。
 ts-rs = { version = "12.0.1", default-features = false, features = ["serde-compat", "serde-json-impl"] }

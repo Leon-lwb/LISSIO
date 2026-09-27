@@ -79,9 +79,14 @@ pub async fn serve(options: ServeOptions) -> Result<(), String> {
     // 旧行为: 仅 MCP (事件走 stderr JSON-lines)
     let host = crate::assemble(!options.no_restore).await?;
     let port = mcp_server::resolve_port(options.mcp_port);
-    let handle = mcp_server::start(host.toolbox.clone(), host.sink.clone(), port)
-        .await
-        .map_err(|error| error.to_string())?;
+    let handle = mcp_server::start(
+        std::sync::Arc::new(control_api::capabilities::CapabilityRegistry::builtin()),
+        host.toolbox.clone(),
+        host.sink.clone(),
+        port,
+    )
+    .await
+    .map_err(|error| error.to_string())?;
     eprintln!(
         "backend-cli serving: mcp http://127.0.0.1:{}/mcp (ctrl-c 退出)",
         handle.port

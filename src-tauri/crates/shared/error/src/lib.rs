@@ -26,7 +26,7 @@ mod transport;
 
 pub use ai::{AiError, McpError};
 pub use compile::{CompileError, CompileReport, PortDomain};
-pub use config::ConfigError;
+pub use config::{ConfigError, PanelResolveReason};
 pub use port::{PortAlreadyOpenError, PortNotFoundError, PortNotOpenError};
 pub use protocol::ProtocolError;
 pub use transport::TransportError;
@@ -257,6 +257,9 @@ impl AppError {
             }
             Self::Config(ConfigError::UrlParse { url, .. }) => {
                 std::collections::BTreeMap::from([("url", url.clone())])
+            }
+            Self::Config(ConfigError::PanelRequestUnresolved { panel, .. }) => {
+                std::collections::BTreeMap::from([("panel", panel.clone())])
             }
             Self::Ai(
                 AiError::MissingApiKey { adapter }

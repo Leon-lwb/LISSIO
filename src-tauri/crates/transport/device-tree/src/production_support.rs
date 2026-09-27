@@ -8,8 +8,9 @@ use acquisition::{
     AcquisitionError, AcquisitionResult, AcquisitionRunState, ExecutionGate, PointBatchObserver,
     StateLane,
 };
+use data_model::ConnectionState;
 use data_model::device_tree::{NodeDecl, NodeSnapshot};
-use data_model::{ConnectionState, Result};
+use error::Result;
 use points::{PointDescriptor, PointEnvelope};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -75,7 +76,7 @@ pub(super) fn byte_session(
         .and_then(|runtime| runtime.source_session())
         .filter(|session| session.byte_stream().is_some())
         .ok_or_else(|| {
-            data_model::Error::PortNotFound(error::PortNotFoundError {
+            error::AppError::PortNotFound(error::PortNotFoundError {
                 port: node_id.to_string(),
             })
         })
@@ -176,7 +177,7 @@ pub(super) fn protocol_link(node: &NodeDecl) -> Option<schema_types::TestDataLin
                     serde_json::from_value(child.config.clone()).ok()?;
                 Some(schema_types::TestDataLink {
                     protocol: config.protocol,
-                    schema: config.schema,
+                    schema: Some(config.schema),
                 })
             } else if child.driver.as_str() == data_model::device_tree::SIMULATION_DRIVER_ID {
                 protocol_link(child)

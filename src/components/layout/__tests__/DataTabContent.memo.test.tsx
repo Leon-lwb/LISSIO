@@ -12,7 +12,7 @@ const HEAVY_TAB: DataTab = { id: 'heavy', type: 'can', name: 'Heavy', closable: 
 
 const PIE_WIDGET: WidgetConfig = {
   kind: 'PieChart',
-  params: { id: 'pie-1', label: 'Pie', segments: ['A', 'B'], channels: [0, 1] },
+  params: { id: 'pie-1', label: 'Pie', segments: ['A', 'B'] },
 };
 
 /// React 19 的 memo 返回含 `.type` (真正渲染函数) 的对象 — 直接 spy `.type`

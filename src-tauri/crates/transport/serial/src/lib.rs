@@ -18,7 +18,8 @@ pub mod windows_ports;
 
 use acquisition::{TransportBackend, TransportConnection};
 use async_trait::async_trait;
-use data_model::{Result, TransportConfig};
+use data_model::TransportConfig;
+use error::Result;
 use schema_types::TestDataLink;
 use std::collections::BTreeMap;
 

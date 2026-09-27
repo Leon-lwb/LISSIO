@@ -1183,6 +1183,7 @@ menuPanelOpenLogic: Open Logic Analyzer
 panelOpenNoWidget: "no widget on canvas"
 dataPanelsStandaloneTitle: Standalone
 dataPanelsDerivedTitle: By Widget
+dataPanelsUnsupportedTitle: Unsupported
 dataTabWaveform: Waveform
 dataTabSpectrum: Spectrum
 dataTabRawData: Raw Data

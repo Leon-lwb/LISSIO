@@ -1,6 +1,7 @@
 use acquisition::ByteMessage;
 use can::CandleDeviceInfo;
-use data_model::{CandleConfig, INGEST_CHANNEL_CAPACITY, Result};
+use data_model::{CandleConfig, INGEST_CHANNEL_CAPACITY};
+use error::Result;
 use error::TransportError;
 use nusb::MaybeFuture;
 use nusb::transfer::{Bulk, In, Out};

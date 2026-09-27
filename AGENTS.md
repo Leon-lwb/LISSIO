@@ -41,15 +41,27 @@ root and owns Tauri IPC modules under `src-tauri/src/commands/`.
 - `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory
 - `pnpm check:architecture` — layout, metadata, DAG, layer, adapter, and testkit rules
 - `pnpm check:deps` — centralized third-party dependency versions
+- `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED ↔ dispatch) consistency
+- `pnpm check:contracts` — generated TypeScript must match the Rust wire types byte for byte
+- `pnpm generate:contracts` — regenerate `src/types/generated` after a wire change; local
+  step only, CI verifies its output via `check:contracts`
+- `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
+- `pnpm typecheck`, `pnpm lint:ci` (zero warnings), `pnpm test`
+- `pnpm build:web` — production frontend build
+- `pnpm test:e2e` — Playwright browser smoke tests
 - `cd src-tauri && cargo fmt --check`
 - `cd src-tauri && cargo clippy --workspace --all-targets`
 - `cd src-tauri && cargo test --workspace`
 - `cd src-tauri && cargo deny check`
-- `pnpm typecheck && pnpm test && pnpm build`
+
+That list is what CI (`.github/workflows/build.yml`, job `quality`) runs — all of it,
+not a subset. Do not treat a green subset as a green build.
 
 Rust production files are limited to 500 lines; split implementation modules
-without changing the stable crate API. Preserve serialization, command, event,
-and persisted-file compatibility. Keep TypeScript strict, use two-space
-indentation and single-quoted imports, and colocate Vitest tests.
+without changing the stable crate API. No legacy-format compatibility: persisted
+files, IPC payloads, and configuration are read and written in the current
+format only — never migrate or accept data from older releases. Keep TypeScript
+strict, use two-space indentation and single-quoted imports, and colocate
+Vitest tests.
 
 Never commit secrets or generated `dist/`, `target/`, or local application state.

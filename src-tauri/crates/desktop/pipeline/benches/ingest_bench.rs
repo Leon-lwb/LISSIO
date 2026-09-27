@@ -26,17 +26,19 @@ fn setup_plane() -> pipeline::DataPlaneState {
     let plane = state.data_plane;
     let nodes = vec![
         make_device_in("tp", "bench"),
-        NodeDef {
-            id: "pt".into(),
-            tab_id: "bench".into(),
-            kind: NodeKind::Protocol {
+        NodeDef::new(
+            "pt".into(),
+            "bench".into(),
+            NodeKind::Protocol {
+                schema: schema_types::schema_from_protocol_config(&ProtocolConfig::JustFloat {
+                    channels: Some(CHANNELS),
+                }),
                 config: ProtocolConfig::JustFloat {
                     channels: Some(CHANNELS),
                 },
                 convert_to: None,
-                schema: None,
             },
-        },
+        ),
     ];
     let edges = vec![Edge {
         id: "tp-pt".into(),

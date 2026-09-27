@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use async_trait::async_trait;
-use data_model::Result;
+use error::Result;
 use error::{AiError, Error as _};
 use futures::{Stream, StreamExt};
 use llm::{
@@ -142,8 +142,8 @@ fn tool_message(call: &ToolCallDto, content: String) -> ChatMessageDto {
     }
 }
 
-/// `data_model::Error` → 终止事件 — kind 与结构化字段随事件下发, 供前端本地化。
-fn error_event(e: &data_model::Error) -> AiChatEvent {
+/// `error::AppError` → 终止事件 — kind 与结构化字段随事件下发, 供前端本地化。
+fn error_event(e: &error::AppError) -> AiChatEvent {
     AiChatEvent::Error {
         message: e.to_string(),
         kind: e.kind().to_string(),

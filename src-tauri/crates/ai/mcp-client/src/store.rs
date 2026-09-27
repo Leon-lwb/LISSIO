@@ -3,8 +3,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use data_model::Result;
 use error::McpError;
+use error::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::types::McpServerConfig;

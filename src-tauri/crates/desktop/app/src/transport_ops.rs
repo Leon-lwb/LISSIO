@@ -6,8 +6,9 @@
 //! L1 类型 (AcquisitionRuntime) 经 [`runtime`] 门面引用, 不直连 transport crate。
 
 use can::CanFrame;
-use data_model::{ConnectionState, Error, Result, WidgetBinding};
+use data_model::{ConnectionState, WidgetBinding};
 use error::ConfigError;
+use error::{AppError as Error, Result};
 use events::{BackendEventSink, EventSinkHandle, NotifyLevel, emit_transport_state};
 use schema_types::{ProtocolConfig, ProtocolSchema, TestDataLink};
 use serde::Serialize;

@@ -1,46 +1,15 @@
 //! 命令发送控件 (Command) 的帧工具 — 多帧归一化 / 帧增删改 / 端口派生 / 字节拼接
 
 import { nanoid } from 'nanoid';
-import type { CommandConfig, CommandFrame, LegacyCommandConfig } from '../../types';
+import type { CommandConfig, CommandFrame } from '../../types';
 
-/// 归一化命令发送配置: 旧版单帧配置 (blocks 在顶层) 包装为 frames[0]
-/// 已是多帧配置时原样返回 (frames 为空时补一个空帧), 幂等
-export function normalizeCommandConfig(raw: CommandConfig | LegacyCommandConfig): CommandConfig {
-  const anyRaw = raw as Partial<CommandConfig> & Partial<LegacyCommandConfig>;
-  if (Array.isArray(anyRaw.frames)) {
-    return {
-      id: anyRaw.id ?? '',
-      label: anyRaw.label ?? '',
-      frames: anyRaw.frames.length > 0 ? anyRaw.frames : [makeEmptyFrame(anyRaw.id ?? '')],
-      loopbackEnabled: anyRaw.loopbackEnabled ?? false,
-      loopbackHistory: anyRaw.loopbackHistory ?? [],
-    };
-  }
-  // 旧格式: blocks/appendNewline/sendMode/timerMs 在顶层 → 单帧
-  const frame: CommandFrame = {
-    id: `${anyRaw.id ?? 'cmd'}-frame-1`,
-    label: anyRaw.label ?? 'Frame 1',
-    blocks: anyRaw.blocks ?? [],
-    appendNewline: anyRaw.appendNewline ?? false,
-    sendMode: anyRaw.sendMode ?? 'manual',
-    timerMs: anyRaw.timerMs ?? 100,
-  };
-  return {
-    id: anyRaw.id ?? '',
-    label: anyRaw.label ?? '',
-    frames: [frame],
-    loopbackEnabled: anyRaw.loopbackEnabled ?? false,
-    loopbackHistory: anyRaw.loopbackHistory ?? [],
-  };
-}
-
-/// 取配置的帧列表 (防御: 未归一化的旧配置现场包装, 不落盘)
-export function getCommandFrames(params: CommandConfig | LegacyCommandConfig): CommandFrame[] {
-  return normalizeCommandConfig(params).frames;
+/// 取配置的帧列表 (frames 为空时返回空表)
+export function getCommandFrames(params: CommandConfig): CommandFrame[] {
+  return params.frames;
 }
 
 /// 收集所有帧的 var_ref 块输入端口名 (并集, 去重, 保序) — 节点输入 Handle 派生
-export function commandInputPortNames(params: CommandConfig | LegacyCommandConfig): string[] {
+export function commandInputPortNames(params: CommandConfig): string[] {
   const seen = new Set<string>();
   const names: string[] = [];
   for (const frame of getCommandFrames(params)) {

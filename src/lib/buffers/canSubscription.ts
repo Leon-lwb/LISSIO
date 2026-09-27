@@ -22,9 +22,6 @@ export function subscribeCanFrames(
   );
 }
 
-/// 唯一 CAN wire 过滤类型已收敛到 `types/can`，此处保留兼容导入入口。
-export type CanFrameFilterOptions = CanFrameFilter;
-
 /// 订阅带过滤条件的 CAN 帧 — 统一分片流
 ///
 /// 后端只推送匹配 filter 的帧; 游标从最旧可读位置开始,

@@ -7,7 +7,8 @@ pub mod udp;
 
 use acquisition::{TransportBackend, TransportConnection};
 use async_trait::async_trait;
-use data_model::{Result, TransportConfig};
+use data_model::TransportConfig;
+use error::Result;
 use schema_types::TestDataLink;
 
 /// TCP/UDP adapter. All network variants expose the same byte connection.

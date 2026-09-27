@@ -22,14 +22,13 @@ const FONT_SIZE_CLASS: Record<TextDisplayConfig['fontSize'], string> = {
 
 export const TextDisplay = memo(function TextDisplay({ widget }: TextDisplayProps) {
   const { id, label, fontSize, monospace } = widget.params;
-  // 边解析 (仿 useGraphInput 数值版): 有边连到 text 口 → 读上游字符串平面;
-  // 无边 → 回退读自己 id (兼容旧图: 旧后端曾直接写 customTextOutputs[id].text)
+  // 边解析 (仿 useGraphInput 数值版): 有边连到 text 口 → 读上游字符串平面
   const edges = useAppStore((s) => s.rfEdges);
   const src = resolveStringSource(edges, id, 'text');
   const source = src?.source;
   const handle = src?.handle ?? 'text';
   const text = useAppStore((s) =>
-    (source ? s.customTextOutputs[source]?.[handle] : s.customTextOutputs[id]?.text) ?? ''
+    (source ? s.customTextOutputs[source]?.[handle] : undefined) ?? ''
   );
 
   const wrapperCls = useMemo(

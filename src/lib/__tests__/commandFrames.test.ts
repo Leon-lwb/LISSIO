@@ -1,66 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
-  normalizeCommandConfig,
-  getCommandFrames,
   commandInputPortNames,
   addCommandFrame,
   removeCommandFrame,
   updateCommandFrame,
   makeEmptyFrame,
 } from '../utils/commandFrames';
-import type { CommandConfig, LegacyCommandConfig } from '../../types';
-
-/// 旧版 (单帧) 配置样例
-const LEGACY: LegacyCommandConfig = {
-  id: 'cmd-1',
-  label: 'Cmd',
-  blocks: [
-    { id: 'b1', type: 'const_hex', hex: 'AA 01' },
-    { id: 'b2', type: 'var_ref', portName: 'speed', fieldType: 'uint16LE' },
-  ],
-  appendNewline: true,
-  loopbackEnabled: true,
-  sendMode: 'timer',
-  timerMs: 250,
-  loopbackHistory: [],
-};
-
-describe('normalizeCommandConfig (旧版单帧 → frames)', () => {
-  it('旧配置包装为单帧, 帧继承 blocks/appendNewline/sendMode/timerMs', () => {
-    const cfg = normalizeCommandConfig(LEGACY);
-    expect(cfg.frames).toHaveLength(1);
-    expect(cfg.frames[0].blocks).toEqual(LEGACY.blocks);
-    expect(cfg.frames[0].appendNewline).toBe(true);
-    expect(cfg.frames[0].sendMode).toBe('timer');
-    expect(cfg.frames[0].timerMs).toBe(250);
-    // 发送器级字段保留
-    expect(cfg.loopbackEnabled).toBe(true);
-    expect(cfg.loopbackHistory).toEqual([]);
-    // 顶层不再携带旧字段
-    expect('blocks' in cfg).toBe(false);
-    expect('sendMode' in cfg).toBe(false);
-  });
-
-  it('已是多帧配置时原样保留 (幂等)', () => {
-    const once = normalizeCommandConfig(LEGACY);
-    const twice = normalizeCommandConfig(once);
-    expect(twice).toEqual(once);
-  });
-
-  it('frames 为空数组时补一个空帧', () => {
-    const cfg = normalizeCommandConfig({
-      id: 'c', label: 'C', frames: [], loopbackEnabled: false, loopbackHistory: [],
-    });
-    expect(cfg.frames).toHaveLength(1);
-    expect(cfg.frames[0].blocks).toEqual([]);
-  });
-
-  it('getCommandFrames 对未归一化旧配置现场包装', () => {
-    const frames = getCommandFrames(LEGACY);
-    expect(frames).toHaveLength(1);
-    expect(frames[0].blocks).toEqual(LEGACY.blocks);
-  });
-});
+import type { CommandConfig } from '../../types';
 
 describe('commandInputPortNames (全帧 var_ref 并集)', () => {
   it('多帧端口名取并集, 去重且保序', () => {
@@ -90,13 +36,16 @@ describe('commandInputPortNames (全帧 var_ref 并集)', () => {
     expect(commandInputPortNames(cfg)).toEqual(['speed', 'dir', 'temp']);
   });
 
-  it('旧配置同样能取到端口名', () => {
-    expect(commandInputPortNames(LEGACY)).toEqual(['speed']);
-  });
 });
 
 describe('帧增删改', () => {
-  const base = normalizeCommandConfig(LEGACY);
+  const base: CommandConfig = {
+    id: 'cmd-legacy', label: 'Cmd', loopbackEnabled: false, loopbackHistory: [],
+    frames: [{
+      id: 'f0', label: 'F0', appendNewline: false, sendMode: 'manual', timerMs: 100,
+      blocks: [{ id: 'b1', type: 'const_hex', hex: 'AA 01' }],
+    }],
+  };
 
   it('addCommandFrame 追加一帧', () => {
     const f2 = makeEmptyFrame('cmd-1', 'F2');

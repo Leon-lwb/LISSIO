@@ -24,42 +24,6 @@ export type DockNode =
   | { id: string; type: 'card'; cardId: string }
   | { id: string; type: 'split'; dir: DockDirection; children: DockNode[]; sizes: number[] };
 
-interface LegacyDockCardNode {
-  id: string;
-  type: 'card';
-  cardId: string;
-}
-
-interface LegacyDockSplitNode {
-  id: string;
-  type: 'split';
-  dir: DockDirection;
-  a: LegacyDockNode;
-  b: LegacyDockNode;
-  ratio?: number;
-}
-
-type LegacyDockNode = LegacyDockCardNode | LegacyDockSplitNode;
-
-function isLegacyDockNode(value: unknown): value is LegacyDockNode {
-  if (typeof value !== 'object' || value === null || !('type' in value)) return false;
-  if (value.type === 'card') {
-    return 'id' in value && typeof value.id === 'string' && 'cardId' in value && typeof value.cardId === 'string';
-  }
-  return (
-    value.type === 'split' &&
-    'id' in value &&
-    typeof value.id === 'string' &&
-    'dir' in value &&
-    (value.dir === 'row' || value.dir === 'col') &&
-    'a' in value &&
-    'b' in value &&
-    isLegacyDockNode(value.a) &&
-    isLegacyDockNode(value.b) &&
-    (!('ratio' in value) || typeof value.ratio === 'number')
-  );
-}
-
 export interface DragTabPayload {
   kind: CardKind;
   tabId: string;
@@ -654,34 +618,6 @@ export const useDockStore = create<DockState>()(
       version: 3,
       storage: createJSONStorage(() => localStorage),
       partialize: (s) => ({ root: s.root, cards: s.cards, focusedCardId: s.focusedCardId }),
-      // v1 → v2: 二叉 split {a, b, ratio} → N 叉 {children, sizes}
-      // v2 → v3: 净化属性专属卡 — 旧版 reconcile 会把新 tab 塞进属性卡, 迁移
-      // 一次性逐出/拆出, 保证「画布右侧小卡只放属性面板」
-      migrate: (persisted: unknown, version: number) => {
-        const state = persisted as { root?: unknown; cards?: unknown; focusedCardId?: string | null };
-        if (version < 2 && isLegacyDockNode(state.root)) {
-          const conv = (n: LegacyDockNode): DockNode =>
-            n.type === 'card'
-              ? n
-              : {
-                  id: n.id,
-                  type: 'split',
-                  dir: n.dir,
-                  children: [conv(n.a), conv(n.b)],
-                  sizes: [n.ratio ?? 50, 100 - (n.ratio ?? 50)],
-                };
-          state.root = conv(state.root);
-        }
-        if (version < 3 && state.root && state.cards) {
-          const clean = ensurePropertiesExclusiveCard(
-            state.root as DockNode,
-            state.cards as Record<string, DockCard>
-          );
-          state.root = clean.root;
-          state.cards = clean.cards;
-        }
-        return state;
-      },
     }
   )
 );

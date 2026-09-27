@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { Edge, Node } from '@xyflow/react';
+import type { Edge } from '@xyflow/react';
 import { useShallow } from 'zustand/react/shallow';
 import { useAppStore } from '../../store/appStore';
 import {
@@ -37,10 +37,8 @@ interface ResolvedNumericPort {
 /** 纯函数端口解析器；示波器和普通显示节点共享同一 edge 语义。 */
 export function resolveNumericInputRef(
   edges: readonly Edge[],
-  nodes: readonly Node[],
   widgetId: string,
   inputHandle: string,
-  legacyChannel: number | null = null,
 ): ResolvedNumericPort {
   const edge = edges.find(
     (candidate) =>
@@ -51,17 +49,6 @@ export function resolveNumericInputRef(
       ref: numericPortRef(edge.source, edge.sourceHandle ?? 'value'),
       connected: true,
     };
-  }
-  if (legacyChannel !== null) {
-    const primary = nodes.find(
-      (node) => node.type === 'protocol' && node.data?.global === true,
-    );
-    if (primary) {
-      return {
-        ref: numericPortRef(primary.id, `ch${legacyChannel}`),
-        connected: false,
-      };
-    }
   }
   return { ref: null, connected: false };
 }
@@ -111,10 +98,8 @@ export function useNumericPort(ref: NumericPortRef | null): NumericPortState {
 export function useNumericInput(
   widgetId: string,
   inputHandle = 'value',
-  legacyChannel: number | null = null,
 ): NumericPortState {
-  // 仅订阅本输入端口和旧版通道回退所需的 Protocol 节点；无关连线变化
-  // 不应促使显示控件重渲染。
+  // 仅订阅本输入端口；无关连线变化不应促使显示控件重渲染。
   const edges = useAppStore(
     useShallow((state) =>
       (state.rfEdges ?? []).filter(
@@ -122,18 +107,9 @@ export function useNumericInput(
       ),
     ),
   );
-  const nodes = useAppStore(
-    useShallow((state) =>
-      legacyChannel === null
-        ? []
-        : (state.rfNodes ?? []).filter(
-            (node) => node.type === 'protocol' && node.data?.global === true,
-          ),
-    ),
-  );
   const resolved = useMemo(
-    () => resolveNumericInputRef(edges, nodes, widgetId, inputHandle, legacyChannel),
-    [edges, nodes, widgetId, inputHandle, legacyChannel],
+    () => resolveNumericInputRef(edges, widgetId, inputHandle),
+    [edges, widgetId, inputHandle],
   );
   return useResolvedPort(resolved);
 }
@@ -182,9 +158,8 @@ function aggregateStore(refs: readonly (NumericPortRef | null)[]) {
 export function useNumericInputs<const T extends readonly string[]>(
   widgetId: string,
   inputHandles: T,
-  legacyChannels?: readonly (number | null)[],
 ): Readonly<Record<T[number], NumericPortState>> {
-  // 窄订阅：仅本 widget 输入端口的边，以及旧版通道回退所需的 Protocol 节点。
+  // 窄订阅：仅本 widget 输入端口的边。
   // useShallow 令替换无关边数组时保持引用稳定。
   const edges = useAppStore(
     useShallow((state) =>
@@ -194,17 +169,8 @@ export function useNumericInputs<const T extends readonly string[]>(
       ),
     ),
   );
-  const nodes = useAppStore(
-    useShallow((state) =>
-      legacyChannels?.some((channel) => channel !== null)
-        ? (state.rfNodes ?? []).filter(
-            (node) => node.type === 'protocol' && node.data?.global === true,
-          )
-        : [],
-    ),
-  );
-  const resolved = inputHandles.map((handle, index) =>
-    resolveNumericInputRef(edges, nodes, widgetId, handle, legacyChannels?.[index] ?? null)
+  const resolved = inputHandles.map((handle) =>
+    resolveNumericInputRef(edges, widgetId, handle)
   );
   const refsKey = resolved
     .map(({ ref }) => (ref ? `${ref.nodeId}\u0001${ref.handle}` : ''))

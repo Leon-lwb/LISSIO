@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use events::{BackendEventSink, NotifyLevel};
-use schema_types::{ProtocolConfig, SchemaPreset};
+use schema_types::SchemaPreset;
 
 use super::DataPlaneState;
 use super::byte_router::{RouteSummary, route_inner};
@@ -213,16 +213,13 @@ pub(super) async fn feed_protocol(
     }
 
     // RawData 判定 + convert 引擎 (一次锁取齐)
-    // 有效预设判定: 有 schema 时按 preset (用户编辑块后 preset=Custom, 走 SchemaEngine 产帧,
-    // 不再做文本缓存/原文透传); 无 schema (旧前端) 回退按 config.kind
+    // 预设判定按 schema.preset (用户编辑块后 preset=Custom, 走 SchemaEngine 产帧,
+    // 不再做文本缓存/原文透传)
     let (convert_engine, is_raw_data) = {
         let s = st.lock();
         (
             s.convert_engine.clone(),
-            s.schema.as_ref().map_or_else(
-                || matches!(s.config, ProtocolConfig::RawData),
-                |schema| schema.preset == SchemaPreset::RawData,
-            ),
+            s.schema.preset == SchemaPreset::RawData,
         )
     };
 

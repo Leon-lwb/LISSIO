@@ -1,5 +1,6 @@
 use acquisition::ByteMessage;
-use data_model::{INGEST_CHANNEL_CAPACITY, Result, UdpConfig};
+use data_model::{INGEST_CHANNEL_CAPACITY, UdpConfig};
+use error::Result;
 use error::TransportError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

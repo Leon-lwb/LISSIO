@@ -19,7 +19,6 @@ serde_json = { workspace = true }
 parking_lot = { workspace = true }
 log = { workspace = true }
 error = { workspace = true }
-data_model = { workspace = true }
 
 [package.metadata.lissio]
 domain = "ai"

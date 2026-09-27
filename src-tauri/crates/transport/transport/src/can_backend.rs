@@ -11,7 +11,7 @@
 
 use async_trait::async_trait;
 use can::CanFrame;
-use data_model::Result;
+use error::Result;
 use tokio::sync::broadcast;
 
 /// CAN 后端 — 给诊断引擎提供 CanFrame 收发能力的抽象

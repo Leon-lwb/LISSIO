@@ -25,15 +25,15 @@ fn setup(computed: bool) -> DataPlaneState {
     let plane = AppState::new().data_plane;
     let nodes = vec![
         make_device_in("tp", "t"),
-        NodeDef {
-            id: "pt".into(),
-            tab_id: "t".into(),
-            kind: NodeKind::Protocol {
+        NodeDef::new(
+            "pt".into(),
+            "t".into(),
+            NodeKind::Protocol {
+                schema: schema_types::schema_from_protocol_config(&protocol()),
                 config: protocol(),
                 convert_to: None,
-                schema: None,
             },
-        },
+        ),
     ];
     let typed = graph::TypedGraph::build(nodes.clone(), vec![edge("wire", "tp", "rx", "pt", "in")])
         .unwrap();

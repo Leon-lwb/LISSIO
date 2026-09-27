@@ -8,7 +8,8 @@ use crate::{
 use async_trait::async_trait;
 use data_model::device::DriverPayload;
 use data_model::device_tree::{DriverId, NodeDecl, NodeId, NodeSnapshot};
-use data_model::{ConnectionState, Result, TestDataConfig, TransportConfig, TransportStats};
+use data_model::{ConnectionState, TestDataConfig, TransportConfig, TransportStats};
+use error::Result;
 use points::{PointDescriptor, PointId, PointSample, ReadResult, WriteRequest, WriteResult};
 use schema_types::TestDataLink;
 use std::sync::Arc;
@@ -81,7 +82,7 @@ impl AcquisitionBackend for UnconfiguredAcquisitionBackend {
         Err(crate::AcquisitionError::UnknownNode(node_id.to_string()))
     }
     fn send(&self, node_id: &NodeId, _bytes: &[u8]) -> Result<()> {
-        Err(data_model::Error::Io(std::io::Error::other(format!(
+        Err(error::AppError::Io(std::io::Error::other(format!(
             "acquisition node is not assembled: {node_id}"
         ))))
     }
@@ -113,7 +114,7 @@ impl AcquisitionBackend for UnconfiguredAcquisitionBackend {
         _link: TestDataLink,
         _config: Option<TestDataConfig>,
     ) -> Result<()> {
-        Err(data_model::Error::Io(std::io::Error::other(
+        Err(error::AppError::Io(std::io::Error::other(
             "acquisition backend is not assembled",
         )))
     }

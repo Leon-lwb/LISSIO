@@ -25,8 +25,7 @@ impl DataPlaneState {
                 schema,
             }) = nodes.get(id).map(|node| &node.kind)
             {
-                *state.lock() =
-                    ProtocolNodeState::new(config, convert_to.as_ref(), schema.as_ref());
+                *state.lock() = ProtocolNodeState::new(config, convert_to.as_ref(), schema);
             }
         }
     }
@@ -55,12 +54,8 @@ impl DataPlaneState {
                 match states.get(&n.id) {
                     Some(st) => {
                         let mut st = st.lock();
-                        if !st.matches(config, convert_to.as_ref(), schema.as_ref()) {
-                            *st = ProtocolNodeState::new(
-                                config,
-                                convert_to.as_ref(),
-                                schema.as_ref(),
-                            );
+                        if !st.matches(config, convert_to.as_ref(), schema) {
+                            *st = ProtocolNodeState::new(config, convert_to.as_ref(), schema);
                             rebuilt.push((n.id.clone(), config.clone()));
                         }
                     }
@@ -70,7 +65,7 @@ impl DataPlaneState {
                             Arc::new(Mutex::new(ProtocolNodeState::new(
                                 config,
                                 convert_to.as_ref(),
-                                schema.as_ref(),
+                                schema,
                             ))),
                         );
                         rebuilt.push((n.id.clone(), config.clone()));

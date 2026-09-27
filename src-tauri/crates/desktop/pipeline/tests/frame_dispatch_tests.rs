@@ -73,7 +73,7 @@ fn history_is_only_recorded_for_computed_waveform_inputs() {
             DataFrame::with_timestamp(1_000, vec![2.0]),
             DataFrame::with_timestamp(2_000, vec![3.0]),
         ];
-        frame_dispatch::on_frames(&plane, "pt", &frames);
+        frame_dispatch::record_and_eval(&plane, "pt", &frames);
         let window = plane.buffer_for("pt").lock().get_recent(2);
         assert_eq!(window.derived.len(), 1);
         assert_eq!(window.derived["wave"]["math"]["result"], vec![2.0, 3.0]);
@@ -88,15 +88,15 @@ fn on_frames_triggers_numeric_plane() {
     let plane = state.data_plane;
     let graph = CompiledGraph::compile(
         "t1".into(),
-        vec![NodeDef {
-            id: "src1".into(),
-            tab_id: "t1".into(),
-            kind: NodeKind::ProtocolSource {
+        vec![NodeDef::new(
+            "src1".into(),
+            "t1".into(),
+            NodeKind::ProtocolSource {
                 node_id: "pt".into(),
                 channels: 2,
-                port_names: None,
+                port_names: Vec::new(),
             },
-        }],
+        )],
         vec![],
     )
     .unwrap();
@@ -106,7 +106,7 @@ fn on_frames_triggers_numeric_plane() {
         DataFrame::with_timestamp(1000, vec![1.0, 2.0]),
         DataFrame::with_timestamp(2000, vec![3.0, 4.0]),
     ];
-    let ns = frame_dispatch::on_frames(&plane, "pt", &frames);
+    let ns = frame_dispatch::record_and_eval(&plane, "pt", &frames);
     assert!(ns > 0 || frames.len() == 2); // 耗时仅观测, 不断言
 
     // source_frames 缓存为最新帧
@@ -134,21 +134,21 @@ fn on_frames_skips_unrelated_graphs() {
     let plane = state.data_plane;
     let graph = CompiledGraph::compile(
         "t1".into(),
-        vec![NodeDef {
-            id: "src_other".into(),
-            tab_id: "t1".into(),
-            kind: NodeKind::ProtocolSource {
+        vec![NodeDef::new(
+            "src_other".into(),
+            "t1".into(),
+            NodeKind::ProtocolSource {
                 node_id: "other".into(),
                 channels: 1,
-                port_names: None,
+                port_names: Vec::new(),
             },
-        }],
+        )],
         vec![],
     )
     .unwrap();
     plane.eval.graphs.lock().insert("t1".into(), graph);
 
-    frame_dispatch::on_frames(&plane, "pt", &[DataFrame::with_timestamp(1, vec![9.0])]);
+    frame_dispatch::record_and_eval(&plane, "pt", &[DataFrame::with_timestamp(1, vec![9.0])]);
     // 图引用的是 "other" 源, 不被 "pt" 触发 → 快照无 src_other 输出
     let snap = plane.eval.output_snapshot.lock();
     assert!(!snap.values.contains_key("src_other"));
@@ -163,24 +163,24 @@ fn cache_source_text_feeds_str_port() {
     let graph = CompiledGraph::compile(
         "t1".into(),
         vec![
-            NodeDef {
-                id: "src1".into(),
-                tab_id: "t1".into(),
-                kind: NodeKind::ProtocolSource {
+            NodeDef::new(
+                "src1".into(),
+                "t1".into(),
+                NodeKind::ProtocolSource {
                     node_id: "rd".into(),
                     channels: 1,
-                    port_names: Some(vec!["str".to_string()]),
+                    port_names: vec!["str".to_string()],
                 },
-            },
-            NodeDef {
-                id: "mid1".into(),
-                tab_id: "t1".into(),
-                kind: NodeKind::Str {
+            ),
+            NodeDef::new(
+                "mid1".into(),
+                "t1".into(),
+                NodeKind::Str {
                     op: StrOp::Upper,
                     num: StrNumParams::default(),
                     tmpl: String::new(),
                 },
-            },
+            ),
         ],
         vec![buffer_graph::Edge {
             id: "e1".into(),
@@ -223,7 +223,7 @@ fn on_frames_preserves_authoritative_timestamps() {
         DataFrame::with_timestamp(2_000, vec![2.0]),
         DataFrame::with_timestamp(3_000, vec![3.0]),
     ];
-    frame_dispatch::on_frames(&plane, "pt", &frames);
+    frame_dispatch::record_and_eval(&plane, "pt", &frames);
 
     let buf = plane.buffer_for("pt");
     let b = buf.lock();
@@ -243,7 +243,7 @@ fn on_frames_preserves_shared_batch_timestamps_verbatim() {
     let batch: Vec<DataFrame> = (0..100_u16)
         .map(|i| DataFrame::with_timestamp(1_010_000, vec![f32::from(i)]))
         .collect();
-    frame_dispatch::on_frames(&plane, "pt", &batch);
+    frame_dispatch::record_and_eval(&plane, "pt", &batch);
 
     let buf = plane.buffer_for("pt");
     let b = buf.lock();

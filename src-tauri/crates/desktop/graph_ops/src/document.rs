@@ -3,10 +3,8 @@ use crate::GraphDerived;
 use acquisition::PortDirection;
 use app::{SourceGraphs, SourceNodeHint, WidgetRecord, WorkspaceState};
 use buffer_graph::Edge;
-use data_model::{
-    Error, Result,
-    device::{DevicePort, DevicePortDirection, DevicePortDomain},
-};
+use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
+use error::{AppError as Error, Result};
 use events::BackendEventSink;
 use flow::PayloadKind;
 use kind::document::{NodeBusiness, NodeDocument};

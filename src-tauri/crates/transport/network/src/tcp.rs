@@ -1,5 +1,6 @@
 use acquisition::ByteMessage;
-use data_model::{INGEST_CHANNEL_CAPACITY, Result, TcpClientConfig, TcpServerConfig};
+use data_model::{INGEST_CHANNEL_CAPACITY, TcpClientConfig, TcpServerConfig};
+use error::Result;
 use error::TransportError;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

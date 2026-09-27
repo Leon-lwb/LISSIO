@@ -92,7 +92,7 @@ async fn capabilities(State(state): State<Arc<ServerState>>) -> Json<Value> {
     Json(serde_json::to_value(state.capabilities()).unwrap_or(Value::Null))
 }
 
-/// Authenticated compatibility handshake used before the React application mounts.
+/// Authenticated handshake used before the React application mounts.
 async fn handshake(State(state): State<Arc<ServerState>>) -> Json<Value> {
     Json(json!({
         "status": "ok",

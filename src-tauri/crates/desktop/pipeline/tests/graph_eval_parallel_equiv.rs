@@ -249,9 +249,9 @@ async fn run_fixture(workers: usize) -> (Observed, Observed) {
     set_workers(&state, workers);
     let mut rx = subscribe_all(&state).await;
 
-    frame_dispatch::on_frames(&state.data_plane, "pt", &batch1());
+    frame_dispatch::record_and_eval(&state.data_plane, "pt", &batch1());
     let obs1 = observe(&state, &mut rx).await;
-    frame_dispatch::on_frames(&state.data_plane, "pt", &batch2());
+    frame_dispatch::record_and_eval(&state.data_plane, "pt", &batch2());
     let obs2 = observe(&state, &mut rx).await;
     (obs1, obs2)
 }
@@ -353,7 +353,7 @@ async fn parallel_matches_serial_across_chunks() {
         let state = AppState::new();
         install(&state);
         set_workers(&state, workers);
-        frame_dispatch::on_frames(&state.data_plane, "pt", &frames);
+        frame_dispatch::record_and_eval(&state.data_plane, "pt", &frames);
         let buf = state.data_plane.buffer_for("pt");
         let b = buf.lock();
         let mut derived = Vec::new();
@@ -390,7 +390,7 @@ async fn other_source_triggers_static_only() {
     let mut rx = subscribe_all(&state).await;
 
     // 先喂 pt 建立动态图输出
-    frame_dispatch::on_frames(&state.data_plane, "pt", &batch1());
+    frame_dispatch::record_and_eval(&state.data_plane, "pt", &batch1());
     let obs1 = observe(&state, &mut rx).await;
     let dynamic_samples: usize = ["m2/result", "f1/result", "m3/result", "m4/result"]
         .iter()
@@ -400,7 +400,7 @@ async fn other_source_triggers_static_only() {
 
     // pt2 批: 动态图不触发 (引用 pt), 静态图触发 → 仅静态图 1 个新样本
     let pt2_frames = vec![DataFrame::with_timestamp(20_000, vec![9.0; 2])];
-    frame_dispatch::on_frames(&state.data_plane, "pt2", &pt2_frames);
+    frame_dispatch::record_and_eval(&state.data_plane, "pt2", &pt2_frames);
     let obs2 = observe(&state, &mut rx).await;
 
     for t in [

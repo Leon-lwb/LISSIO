@@ -2,8 +2,10 @@ import { t } from '../../i18n';
 import type { DataTab, WidgetConfig } from '../../types';
 import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { useAppStore } from '../appStore';
-import { widgetToTab } from '../../lib/utils/widgetTab';
+import { widgetToTab, widgetTabType } from '../../lib/utils/widgetTab';
 import { selectWidgets } from '../appStoreHelpers';
+import { HOST_PANEL_DEFS, panelDefForTabType } from '../../components/panels/registry/panelDefs';
+import type { PanelKind } from '../../types/generated/PanelKind';
 import type { AppSlice } from './types';
 
 export interface DataTabSlice {
@@ -117,7 +119,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
     },
 
     addCompileResultsTab: () => {
-      // 整库已固定存在 compile-results-fixed; 此 action 用于兼容后续版本可能开放的
+      // 整库已固定存在 compile-results-fixed; 此 action 面向后续版本可能开放的
       // 多个独立结果实例, 也允许在 fixed Tab 不可用时兜底新建
       const existingFixed = get().dataTabs.find((t: DataTab) => t.id === 'compile-results-fixed');
       if (existingFixed) {
@@ -217,8 +219,8 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
 // 也只此一处。条目结构:
 //   { type, labelKey, available, open }
 //
-// 独立面板 (compile-errors / compile-results / can / logic) 无需 widget,
-// 总是 available; 派生面板按 widgets.some(...) 决定是否可点。
+// 独立面板 = 应用外壳 (无后端契约) + 整库数据面板 (注册表里的无宿主面板);
+// 派生面板由注册表的有宿主面板逐个投影, 按 widgets.some(...) 决定是否可点。
 
 import type { AppStore } from '../appStore';
 
@@ -235,102 +237,116 @@ export interface DataPanelEntry {
   group: 'standalone' | 'derived';
 }
 
+/// 面板条目需要的 store action 子集 (菜单 / 侧边栏传入 store 本身即可)。
+type DataPanelActions = Pick<
+  AppStore,
+  | 'addCompileErrorsTab'
+  | 'addCompileResultsTab'
+  | 'addCanTab'
+  | 'addLogicTab'
+  | 'addOperationHistoryTab'
+  | 'addNodePropertiesTab'
+  | 'addDataTab'
+  | 'setActiveDataTab'
+  | 'addWidgetTab'
+>;
+
+/// 独立面板的展示顺序 = 应用外壳与整库数据面板交错后的既定顺序。
+/// 外壳没有后端契约, 无法从注册表推导, 因此顺序在此显式排列;
+/// 出现在此表中的整库数据面板身份仍由注册表决定 (见 standaloneEntryOf)。
+const STANDALONE_ORDER: readonly DataTab['type'][] = [
+  'compile-errors',
+  'compile-results',
+  'can',
+  'logic',
+  'operation-history',
+  'node-properties',
+];
+
+/// 应用外壳的菜单标签与创建动作 —— 外壳没有后端契约, 只此一处声明。
+const SHELL_PANEL_ENTRIES: Partial<Record<DataTab['type'], {
+  labelKey: string;
+  open: (actions: DataPanelActions) => void;
+}>> = {
+  'compile-errors': {
+    labelKey: 'menuPanelOpenCompileErrors',
+    open: (actions) => actions.addCompileErrorsTab(),
+  },
+  'compile-results': {
+    labelKey: 'menuPanelOpenCompileResults',
+    open: (actions) => actions.addCompileResultsTab(),
+  },
+  'operation-history': {
+    labelKey: 'menuPanelOpenOperationHistory',
+    open: (actions) => actions.addOperationHistoryTab(),
+  },
+  'node-properties': {
+    labelKey: 'menuPanelOpenNodeProperties',
+    open: (actions) => actions.addNodePropertiesTab(),
+  },
+};
+
+/// 整库数据面板 → 所在 slice 的创建动作。
+/// 注册表决定「谁是无宿主数据面板」, 这里只补「怎么开」—— store action 无法
+/// 进入注册表 (它在 appStore 上)。新增整库面板时此表必须同步, 由
+/// `dataTabs` 的单元测试守卫 (注册表里的每个无宿主面板都必须有 opener)。
+const SINGLETON_PANEL_OPENERS: Partial<Record<PanelKind, (actions: DataPanelActions) => void>> = {
+  can: (actions) => actions.addCanTab(),
+  logic: (actions) => actions.addLogicTab(),
+};
+
+/// 独立面板 (外壳 + 整库数据面板) 的条目来源 — 外壳与注册表两条分支只此一处判断。
+function standaloneEntryOf(
+  type: DataTab['type'],
+  actions: DataPanelActions
+): { labelKey: string; open: () => void } | null {
+  const shell = SHELL_PANEL_ENTRIES[type];
+  if (shell) return { labelKey: shell.labelKey, open: () => shell.open(actions) };
+  const def = panelDefForTabType(type);
+  if (def === undefined) return null;
+  if (def.hostWidgetKind !== null) return null;
+  const openSingleton = SINGLETON_PANEL_OPENERS[def.panelKind];
+  return openSingleton ? { labelKey: def.labelKey, open: () => openSingleton(actions) } : null;
+}
+
 export function getAvailableDataPanelEntries(
   state: Pick<AppStore, 'dataTabs' | 'rfNodes' | 'lang'>,
-  actions: Pick<AppStore, 'addCompileErrorsTab' | 'addCompileResultsTab' | 'addCanTab' | 'addLogicTab' | 'addOperationHistoryTab' | 'addNodePropertiesTab' | 'addDataTab' | 'setActiveDataTab' | 'addWidgetTab'>,
+  actions: DataPanelActions,
 ): DataPanelEntry[] {
   const widgets = selectWidgets(state);
-  const widgetKinds = new Set(widgets.map((w) => w.kind));
   // 同一 kind 可有多个 widget (例如多个 Waveform) — 取首个派生 Tab 用作打开目标
   const firstWidgetOf = (kind: WidgetConfig['kind']) =>
     widgets.find((w) => w.kind === kind) ?? null;
 
-  const standalone: DataPanelEntry[] = [
-    {
-      type: 'compile-errors',
-      labelKey: 'menuPanelOpenCompileErrors',
+  const standalone: DataPanelEntry[] = [];
+  for (const type of STANDALONE_ORDER) {
+    const entry = standaloneEntryOf(type, actions);
+    if (!entry) continue;
+    standalone.push({
+      type,
+      labelKey: entry.labelKey,
       available: true,
-      open: () => {
-        actions.addCompileErrorsTab();
-      },
+      open: entry.open,
       group: 'standalone',
-    },
-    {
-      type: 'compile-results',
-      labelKey: 'menuPanelOpenCompileResults',
-      available: true,
-      open: () => {
-        actions.addCompileResultsTab();
-      },
-      group: 'standalone',
-    },
-    {
-      type: 'can',
-      labelKey: 'menuPanelOpenCan',
-      available: true,
-      open: () => {
-        actions.addCanTab();
-      },
-      group: 'standalone',
-    },
-    {
-      type: 'logic',
-      labelKey: 'menuPanelOpenLogic',
-      available: true,
-      open: () => {
-        actions.addLogicTab();
-      },
-      group: 'standalone',
-    },
-    {
-      type: 'operation-history',
-      labelKey: 'menuPanelOpenOperationHistory',
-      available: true,
-      open: () => {
-        actions.addOperationHistoryTab();
-      },
-      group: 'standalone',
-    },
-    {
-      type: 'node-properties',
-      labelKey: 'menuPanelOpenNodeProperties',
-      available: true,
-      open: () => {
-        actions.addNodePropertiesTab();
-      },
-      group: 'standalone',
-    },
-  ];
+    });
+  }
 
-  const derivedDefs: {
-    type: DataTab['type'];
-    labelKey: string;
-    kind: WidgetConfig['kind'];
-  }[] = [
-    { type: 'waveform-extra', labelKey: 'dataTabWaveform', kind: 'Waveform' },
-    { type: 'spectrum', labelKey: 'dataTabSpectrum', kind: 'Spectrum' },
-    { type: 'raw', labelKey: 'dataTabRawData', kind: 'RawData' },
-    { type: 'pie', labelKey: 'dataTabPie', kind: 'PieChart' },
-    { type: 'image', labelKey: 'dataTabImage', kind: 'Image' },
-    { type: 'model3d', labelKey: 'dataTabModel3d', kind: 'Model3D' },
-    { type: 'command', labelKey: 'dataTabCommand', kind: 'Command' },
-    { type: 'frame-decoder', labelKey: 'dataTabFrameDecoder', kind: 'FrameDecoder' },
-    { type: 'trigger', labelKey: 'dataTabTrigger', kind: 'Trigger' },
-  ];
-
-  const derived: DataPanelEntry[] = derivedDefs.map((d) => {
-    const widget = firstWidgetOf(d.kind);
-    return {
-      type: d.type,
-      labelKey: d.labelKey,
-      available: widgetKinds.has(d.kind) && widget != null,
+  const derived: DataPanelEntry[] = [];
+  for (const def of HOST_PANEL_DEFS) {
+    const kind = def.hostWidgetKind;
+    if (kind === null) continue;
+    const widget = firstWidgetOf(kind);
+    derived.push({
+      type: def.tabType,
+      labelKey: def.labelKey,
+      available: widget != null,
       open: () => {
         if (!widget) return;
         actions.addWidgetTab(widget);
       },
       group: 'derived',
-    };
-  });
+    });
+  }
 
   return [...standalone, ...derived];
 }
@@ -344,22 +360,22 @@ export function getAvailableDataPanelEntries(
 // - 已有 ≥ 2 个匹配 Tab: 当前 active 是其一 → 下一个; 否则第一个
 // - 仅 1 个匹配: 激活它
 // - 0 个匹配: 创建并激活
-//   - 独立类型走对应 add action (注意 can / logic 无固定初始 Tab, 首次
-//     打开必须靠这里兜底创建; compile-errors / results 才有 fixed 初始 Tab)
+//   - 独立类型走 standaloneEntryOf 的动作 (注意 can / logic 无固定初始 Tab,
+//     首次打开必须靠这里兜底创建; compile-errors / results 才有 fixed 初始 Tab)
 //   - 派生类型找到画布首个同类 widget, addWidgetTab 创建并激活
 
 export function cycleDataPanelTab(type: DataTab['type']): void {
   const app = useAppStore.getState();
   const matching = app.dataTabs.filter((tab) => tab.type === type);
   if (matching.length === 0) {
-    // 独立类型: 对应 add action (已存在则切过去, 不存在则创建)
-    const opener = standaloneOpener(type);
-    if (opener) {
-      opener(app);
+    // 独立类型: 对应创建动作 (已存在则切过去, 不存在则创建)
+    const standalone = standaloneEntryOf(type, app);
+    if (standalone) {
+      standalone.open();
       return;
     }
     // 派生类型: 用首个同类 widget 创建
-    const widget = selectWidgets(app).find((w) => widgetTabTypeOfKind(w.kind) === type);
+    const widget = selectWidgets(app).find((w) => widgetTabType(w.kind) === type);
     if (widget) app.addWidgetTab(widget);
     return;
   }
@@ -367,50 +383,4 @@ export function cycleDataPanelTab(type: DataTab['type']): void {
   const currentIdx = matching.findIndex((t) => t.id === app.activeDataTabId);
   const next = matching[(currentIdx + 1) % matching.length];
   app.setActiveDataTab(next.id);
-}
-
-/// 独立面板类型 → 所在 slice 的创建 action (cycleDataPanelTab 兜底用)
-function standaloneOpener(type: DataTab['type']): ((app: DataTabSlice) => void) | null {
-  switch (type) {
-    case 'compile-errors':
-      return (app) => app.addCompileErrorsTab();
-    case 'compile-results':
-      return (app) => app.addCompileResultsTab();
-    case 'can':
-      return (app) => app.addCanTab();
-    case 'logic':
-      return (app) => app.addLogicTab();
-    case 'operation-history':
-      return (app) => app.addOperationHistoryTab();
-    case 'node-properties':
-      return (app) => app.addNodePropertiesTab();
-    default:
-      return null;
-  }
-}
-
-/// widget kind → 对应 DataTab type 的辅助 (避免外部引用 widgetTab 模块时的循环耦合)
-function widgetTabTypeOfKind(kind: WidgetConfig['kind']): DataTab['type'] | null {
-  switch (kind) {
-    case 'Waveform':
-      return 'waveform-extra';
-    case 'PieChart':
-      return 'pie';
-    case 'Image':
-      return 'image';
-    case 'Model3D':
-      return 'model3d';
-    case 'Spectrum':
-      return 'spectrum';
-    case 'Command':
-      return 'command';
-    case 'FrameDecoder':
-      return 'frame-decoder';
-    case 'RawData':
-      return 'raw';
-    case 'Trigger':
-      return 'trigger';
-    default:
-      return null;
-  }
 }

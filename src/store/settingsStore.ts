@@ -15,12 +15,6 @@ import {
   deepMergeSettings,
 } from '../settings/defaults';
 import { applyAppearance } from '../settings/applyTheme';
-import {
-  DARK_THEME,
-  THEME_TOKENS,
-  type ThemeDefinition,
-  type ThemeToken,
-} from '../settings/theme';
 import { api, type PipelineConfig, type RecordingCleanupPolicy } from '../lib/tauri/tauri';
 import { setRawDataPreviewCapacity } from '../lib/buffers/rawDataPreviewRegistry';
 import { canFrameBuffer } from '../lib/buffers/canBuffer';
@@ -63,13 +57,11 @@ interface HydrateApiKeyResult {
   accessDenied: boolean;
 }
 
-/// 启动水合: 只读取密钥状态；兼容迁移旧 settings.json 中的明文后立即清空。
-/// 同时保留结构化的授权拒绝信号,供主窗口按启动顺序显示说明。
+/// 启动水合: 只读取密钥状态。
+/// 保留结构化的授权拒绝信号,供主窗口按启动顺序显示说明。
 async function hydrateApiKey(settings: AppSettings): Promise<HydrateApiKeyResult> {
   try {
-    const legacy = settings.ai.apiKey;
-    if (legacy) await api.aiSecretSet(settings.ai.adapter, legacy);
-    else await api.aiSecretStatus(settings.ai.adapter);
+    await api.aiSecretStatus(settings.ai.adapter);
     return {
       settings: { ...settings, ai: { ...settings.ai, apiKey: '' } },
       accessDenied: false,
@@ -210,81 +202,6 @@ function scheduleRecordingApply(settings: AppSettings) {
   }, 800);
 }
 
-/// 历史版本默认字体 — 若用户未自定义过(仍是旧默认), 迁移到最新默认
-const LEGACY_DEFAULT_UI_FONTS = [
-  "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  "'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-  "'JetBrains Mono', 'Maple Mono CN', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-  "'GoMono Nerd Font Mono', 'Clear Han Serif', 'Maple Mono CN', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
-];
-const LEGACY_DEFAULT_MONO_FONTS = [
-  "'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
-  "'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace",
-  "'JetBrains Mono', 'Maple Mono CN', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
-  "'GoMono Nerd Font Mono', 'Maple Mono CN', 'Clear Han Serif', 'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, 'PingFang SC', 'Microsoft YaHei', monospace",
-];
-
-/// 防御性 token 迁移映射: 历史版本曾用过的旧 token 名 -> 当前名。
-/// 当前语义层为纯增量 (未重命名任何可持久化 token), 映射保持为空;
-/// 未来若重命名 THEME_TOKENS 中的 key, 在此补条目即可平滑迁移已保存的自定义主题。
-const LEGACY_TOKEN_RENAMES: Readonly<Record<string, ThemeToken>> = {};
-
-/// 归一化自定义主题: 应用旧 key 重命名 + 补齐缺失 token。
-/// 防御旧版本/损坏数据 — 保证每个主题都持有完整 token 集合 (新语义结构)。
-export function migrateCustomTheme(theme: ThemeDefinition): ThemeDefinition {
-  const tokens: Record<string, string> = { ...theme.tokens };
-  for (const [oldKey, newKey] of Object.entries(LEGACY_TOKEN_RENAMES)) {
-    if (oldKey in tokens && !(newKey in tokens)) {
-      tokens[newKey] = tokens[oldKey];
-    }
-    delete tokens[oldKey];
-  }
-  for (const token of THEME_TOKENS) {
-    if (!(token in tokens)) {
-      tokens[token] = DARK_THEME.tokens[token];
-    }
-  }
-  return { ...theme, tokens: tokens };
-}
-
-function migrateSettings(settings: AppSettings): AppSettings {
-  const appearance = { ...settings.appearance };
-  if (LEGACY_DEFAULT_UI_FONTS.includes(appearance.uiFontFamily)) {
-    appearance.uiFontFamily = DEFAULT_SETTINGS.appearance.uiFontFamily;
-  }
-  if (LEGACY_DEFAULT_MONO_FONTS.includes(appearance.monoFontFamily)) {
-    appearance.monoFontFamily = DEFAULT_SETTINGS.appearance.monoFontFamily;
-  }
-  if (appearance.customThemes?.length) {
-    appearance.customThemes = appearance.customThemes.map(migrateCustomTheme);
-  }
-  const rawPerformance = settings.performance as AppSettings['performance'] & Record<string, unknown>;
-  const performance: AppSettings['performance'] = {
-    mode: 'auto',
-    maxWorkers:
-      typeof rawPerformance.maxWorkers === 'number'
-        ? rawPerformance.maxWorkers
-        : DEFAULT_SETTINGS.performance.maxWorkers,
-    evalWorkers:
-      typeof rawPerformance.evalWorkers === 'number'
-        ? rawPerformance.evalWorkers
-        : DEFAULT_SETTINGS.performance.evalWorkers,
-    memoryBudgetMb:
-      typeof rawPerformance.memoryBudgetMb === 'number'
-        ? rawPerformance.memoryBudgetMb
-        : DEFAULT_SETTINGS.performance.memoryBudgetMb,
-    previewFpsLimit:
-      typeof rawPerformance.previewFpsLimit === 'number'
-        ? rawPerformance.previewFpsLimit
-        : DEFAULT_SETTINGS.performance.previewFpsLimit,
-    previewBandwidthMbPerSec:
-      typeof rawPerformance.previewBandwidthMbPerSec === 'number'
-        ? rawPerformance.previewBandwidthMbPerSec
-        : DEFAULT_SETTINGS.performance.previewBandwidthMbPerSec,
-  };
-  return { ...settings, appearance, performance };
-}
-
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
   settings: DEFAULT_SETTINGS,
   isOpen: false,
@@ -345,8 +262,8 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       const raw = await getStore().get<AppSettings>(STORE_KEY);
       if (raw) {
-        // 与默认值合并, 防止新版本缺失字段
-        const base = migrateSettings(deepMergeSettings(DEFAULT_SETTINGS, raw));
+        // 与默认值合并, 补齐缺失字段
+        const base = deepMergeSettings(DEFAULT_SETTINGS, raw);
         const hydrated = await hydrateApiKey(base);
         const merged = hydrated.settings;
         set({
@@ -357,8 +274,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
           keychainPermissionRetrying: false,
           keychainPermissionRetryError: null,
         });
-        // 将旧版性能字段的一次性迁移结果写回，避免每次启动重复携带废弃键。
-        await getStore().set(STORE_KEY, sanitizeForPersist(merged));
         applyAppearance(merged.appearance);
         applyDataCapacity(merged);
         applyPipelineConfig(merged);

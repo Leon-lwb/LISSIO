@@ -5,7 +5,7 @@
 //! 历史可用、tab 图自动同步后端),执行后 `ai_tool_resolve` 回执;未回执时
 //! 后端 15s 超时报错兜底。
 //!
-//! 连线拓扑 (connect_nodes / disconnect_edge) 已下沉后端权威
+//! 连线拓扑 (connect_edge / disconnect_edge) 已下沉后端权威
 //! (`cmd_graph::source_graph`),由内置 AI 后端直连执行,不走本模块 —
 //! 编译失败 (端口域不匹配/成环) 直接报错且不建边,画布经 `graph:source`
 //! 事件收敛 (见 appStoreHelpers.adoptSourceGraph)。
@@ -244,7 +244,7 @@ function removeNode(args: Record<string, unknown>): unknown {
 }
 
 /** 连线 / 删线说明 — 拓扑工具已下沉后端权威 (cmd_graph::source_graph):
- *  connect_nodes / disconnect_edge 由内置 AI 后端直连执行, 编译失败
+ *  connect_edge / disconnect_edge 由内置 AI 后端直连执行, 编译失败
  *  (端口域不匹配/成环) 直接报错且不建边; 画布经 graph:source 事件收敛。
  *  此处不再注册前端 handler。 */
 

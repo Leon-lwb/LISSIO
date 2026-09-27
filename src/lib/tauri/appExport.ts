@@ -162,7 +162,7 @@ export function serializeSnapshot(snap: AppSnapshot): string {
 }
 
 /// 解析备份 JSON 并做最小校验, 非法时抛出带清晰信息的 Error。
-/// 仅接受 v3 快照 (v1/v2 备份不再支持 — 请用新版本导出后重新备份)。
+/// 仅接受当前版本 (v4) 快照。
 export function parseSnapshot(json: string): AppSnapshot {
   let parsed: unknown;
   try {
@@ -265,14 +265,6 @@ function stripApiKey(settings: AppSettings): AppSettings {
 
 /// 恢复设置到 settings store, 并同步应用到磁盘 / 主题 / 容量
 async function applySettings(settings: AppSettings): Promise<void> {
-  // 导入文件中的密钥 (旧版备份) 迁入钥匙串, 不再落盘
-  if (settings.ai.apiKey) {
-    try {
-      await api.aiSecretSet(settings.ai.adapter, settings.ai.apiKey);
-    } catch (e) {
-      console.warn('[appExport] 密钥迁入钥匙串失败:', e);
-    }
-  }
   useSettingsStore.setState({ settings });
   applyAppearance(settings.appearance);
   applyDataCapacity(settings);
@@ -340,8 +332,7 @@ export async function applySnapshot(
 
   // 5. 窗口组织
   if (want.has('windowLayout') && snap.dockRoot && snap.dockCards) {
-    // 净化属性专属卡 — 旧备份可能在右侧属性卡混装其他数据 tab
-    // (旧版 reconcile 的安置缺陷), 导入时统一逐出/拆出
+    // 属性专属卡保持排他 — 右侧属性卡只放属性面板, 其他数据 tab 逐出/拆出
     const cleanDock = ensurePropertiesExclusiveCard(snap.dockRoot, snap.dockCards);
     useDockStore.setState({
       root: cleanDock.root,

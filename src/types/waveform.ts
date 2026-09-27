@@ -213,7 +213,7 @@ export interface ScopeAxisConfig {
   grid: boolean;          // 网格可见
   running: boolean;       // true=运行 (持续更新), false=Stop (冻结)
   cursors: CursorConfig; // 游标
-  yUnit: string;          // Y 轴单位 (不一定是电压, 如 'A'/'°C'/'', 默认 'V' 向后兼容)
+  yUnit: string;          // Y 轴单位 (不一定是电压, 如 'A'/'°C'/'', 默认 'V')
   sharedY: boolean;       // true=所有通道共用一个 Y 轴 (共享 channels[0] 的 vPerDiv/position), 坐标轴显示真实值
 }
 

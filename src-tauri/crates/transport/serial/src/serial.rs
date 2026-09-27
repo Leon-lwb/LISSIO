@@ -1,5 +1,6 @@
 use acquisition::ByteMessage;
-use data_model::{INGEST_CHANNEL_CAPACITY, PortInfo, Result, SerialConfig};
+use data_model::{INGEST_CHANNEL_CAPACITY, PortInfo, SerialConfig};
+use error::Result;
 use error::TransportError;
 use serialport::{DataBits, FlowControl, Parity, StopBits};
 use std::io::{Read, Write};

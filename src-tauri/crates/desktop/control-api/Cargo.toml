@@ -1,6 +1,6 @@
 [package]
 name = "lissio-control-api"
-description = "Lissio 后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制的工具实现与状态切片 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"
+description = "Lissio 后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制/录制/波形快照的工具实现与状态切片, 以及软件能力节点注册表 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -29,8 +29,11 @@ recording = { workspace = true }
 waveform = { workspace = true }
 data_model = { workspace = true }
 events = { workspace = true }
+# panel_data 复用推送侧的面板解析失败词表 (ConfigError::PanelRequestUnresolved)
+error = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+schemars = { workspace = true }
 parking_lot = { workspace = true }
 tokio = { workspace = true }
 # graph_hir 投影: 直接遍历 TypedGraph (CompiledGraph.hir 的 petgraph 图)
@@ -43,4 +46,4 @@ graph_testkit = { workspace = true }
 [package.metadata.lissio]
 domain = "desktop"
 layer = 3
-responsibility = "后端控制能力核心 — 设备发送/数据读取/节点图编辑/端点开闭/运行控制/录制/波形快照的工具实现与状态切片 (MCP/CLI/内置 AI 共用, 无 Tauri/rmcp)"
+responsibility = "后端控制能力核心 — 工具实现与状态切片 + 软件能力节点注册表 (工具/技能文档单一事实来源, MCP 工具路由与内置 AI 工具规格运行期派生; 无 Tauri/rmcp)"

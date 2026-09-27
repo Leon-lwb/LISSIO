@@ -13,8 +13,8 @@
 
 use crate::dispatcher::{AdaptiveRate, StreamSink, adaptive_stream_loop};
 use can::{CanBuffer, CanCursor, CanFrameBatch};
-use data_model::{Error, Result};
-use error::ConfigError;
+
+use error::{AppError as Error, ConfigError, Result};
 use logic::{DecodedBuffer, DecodedEventBatch, LogicBuffer, LogicSampleBatch};
 use parking_lot::Mutex;
 use pipeline::StreamGroupState;

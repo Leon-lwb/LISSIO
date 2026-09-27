@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use data_model::Result;
+use error::Result;
 use error::{AppError, McpError};
 use parking_lot::Mutex;
 use rmcp::ServiceExt;

@@ -14,8 +14,14 @@ const tauriMock = vi.hoisted(() => {
   /** plugin-store 的底层存储: file -> (key -> value) */
   const fileStore = new Map<string, Map<string, unknown>>();
 
+  /// 目录契约版本 — 必须与 MODEL_CATALOG_CONTRACT_VERSION 一致 (v2: 目录下发 panels)。
+  /// 这里只能写字面量 (vi.hoisted 工厂先于 import 执行), 漂移由
+  /// store/__tests__/modelCatalogStore.test.ts 的守卫用例拦住。
+  const catalogContractVersion = 2;
+
   return {
     fileStore,
+    catalogContractVersion,
 
     /** 预置某个 store 文件/键的数据 (供 load 路径测试) */
     seedFile: (file: string, key: string, value: unknown) => {
@@ -34,7 +40,7 @@ const tauriMock = vi.hoisted(() => {
     invoke: vi.fn((cmd: string, args?: Record<string, unknown>): Promise<unknown> => {
       if (cmd === 'get_model_catalog') {
         return Promise.resolve({
-          contractVersion: 1,
+          contractVersion: catalogContractVersion,
           revision: 'rev-mock',
           models: [],
         });

@@ -98,8 +98,6 @@ export interface FFTConfig {
 export interface SpectrumConfig {
   id: string;
   label: string;
-  /// 数据源 FFT widget id (null = 未选择, 显示等待提示)
-  sourceId: string | null;
 }
 
 /// 逆 FFT 求解配置 (频域→时域: 输入频域 spectrum, 输出时域 out0)
@@ -290,7 +288,7 @@ export type Model3DMode = 'trajectory' | 'attitude' | 'trajectory-attitude';
 
 /// 姿态输入格式
 /// - degrees:    roll / pitch / yaw，单位为度
-/// - radians:    roll / pitch / yaw，单位为弧度（旧配置兼容默认值）
+/// - radians:    roll / pitch / yaw，单位为弧度（默认值）
 /// - quaternion: q0 / q1 / q2 / q3，其中 q0 = w
 export type Model3DAttitudeInputMode = 'degrees' | 'radians' | 'quaternion';
 

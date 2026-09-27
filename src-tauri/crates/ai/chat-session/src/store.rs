@@ -7,8 +7,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use data_model::Result;
 use error::AiError;
+use error::Result;
 use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 

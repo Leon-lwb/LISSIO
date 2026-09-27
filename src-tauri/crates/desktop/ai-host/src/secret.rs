@@ -3,7 +3,7 @@
 //! 每个适配器一个条目 (`service = "lissio"`, `user = "ai-api-key-{adapter}"`),
 //! 切换服务商互不影响。仅存取, 不做缓存 — 状态一致性由前端 settings store 负责。
 
-use data_model::Result;
+use error::Result;
 use keyring::Entry;
 
 use error::AiError;
@@ -24,7 +24,6 @@ pub struct SystemSecretStore;
 
 /// 钥匙串 service 标识。
 const SERVICE: &str = "lissio";
-const LEGACY_SERVICE: &str = "vofa-next";
 
 /// 密钥来源。前端只获取状态，不获取明文。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -88,7 +87,7 @@ fn entry_for(service: &str, adapter: &str) -> Result<Entry> {
     }
     Entry::new(service, &format!("ai-api-key-{sanitized}"))
         .map_err(map_keyring_error)
-        .map_err(data_model::Error::from)
+        .map_err(error::AppError::from)
 }
 
 fn entry(adapter: &str) -> Result<Entry> {
@@ -103,16 +102,7 @@ fn entry(adapter: &str) -> Result<Entry> {
 fn get_keyring(adapter: &str) -> Result<Option<String>> {
     match entry(adapter)?.get_password() {
         Ok(key) => Ok(Some(key)),
-        Err(keyring::Error::NoEntry) => match entry_for(LEGACY_SERVICE, adapter)?.get_password() {
-            Ok(key) => {
-                entry(adapter)?
-                    .set_password(&key)
-                    .map_err(map_keyring_error)?;
-                Ok(Some(key))
-            }
-            Err(keyring::Error::NoEntry) => Ok(None),
-            Err(error) => Err(map_keyring_error(error).into()),
-        },
+        Err(keyring::Error::NoEntry) => Ok(None),
         Err(e) => Err(map_keyring_error(e).into()),
     }
 }
@@ -126,7 +116,7 @@ fn set_keyring(adapter: &str, key: &str) -> Result<()> {
     entry(adapter)?
         .set_password(key)
         .map_err(map_keyring_error)
-        .map_err(data_model::Error::from)
+        .map_err(error::AppError::from)
 }
 
 /// 删除适配器的 API key (不存在时静默)。
@@ -135,11 +125,9 @@ fn set_keyring(adapter: &str, key: &str) -> Result<()> {
 /// 钥匙串访问失败 ([`AiError::Keyring`]) 或用户拒绝授权
 /// ([`AiError::KeyringAccessDenied`])。
 fn delete_keyring(adapter: &str) -> Result<()> {
-    for service in [SERVICE, LEGACY_SERVICE] {
-        match entry_for(service, adapter)?.delete_credential() {
-            Ok(()) | Err(keyring::Error::NoEntry) => {}
-            Err(error) => return Err(map_keyring_error(error).into()),
-        }
+    match entry(adapter)?.delete_credential() {
+        Ok(()) | Err(keyring::Error::NoEntry) => {}
+        Err(error) => return Err(map_keyring_error(error).into()),
     }
     Ok(())
 }

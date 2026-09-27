@@ -24,23 +24,21 @@ fn device_node(id: &str) -> NodeDef {
 }
 
 fn protocol_node(id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: "default".into(),
-        kind: NodeKind::Protocol {
+    NodeDef::new(
+        id.into(),
+        "default".into(),
+        NodeKind::Protocol {
+            schema: schema_types::schema_from_protocol_config(&ProtocolConfig::JustFloat {
+                channels: None,
+            }),
             config: ProtocolConfig::JustFloat { channels: None },
             convert_to: None,
-            schema: None,
         },
-    }
+    )
 }
 
 fn sink_node(id: &str) -> NodeDef {
-    NodeDef {
-        id: id.into(),
-        tab_id: "default".into(),
-        kind: NodeKind::Sink,
-    }
+    NodeDef::new(id.into(), "default".into(), NodeKind::Sink)
 }
 
 /// JustFloat 帧: 4 × f32 LE + 帧尾 [0x00, 0x00, 0x80, 0x7f]
@@ -143,14 +141,14 @@ async fn auto_channels_above_four_flow_through_math_topic() {
         vec![
             device_node("transport-tp"),
             protocol_node("protocol-jf"),
-            NodeDef {
-                id: "math-high".into(),
-                tab_id: "default".into(),
-                kind: NodeKind::Math {
+            NodeDef::new(
+                "math-high".into(),
+                "default".into(),
+                NodeKind::Math {
                     op: MathOp::Add,
                     input_count: 1,
                 },
-            },
+            ),
             sink_node("number-high"),
         ],
         vec![

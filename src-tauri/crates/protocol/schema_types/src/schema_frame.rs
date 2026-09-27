@@ -24,19 +24,19 @@ pub enum SchemaPreset {
 ///
 /// serde camelCase, 与前端 TS `ProtocolSchema` 类型对应。
 ///
-/// PartialEq 为手工实现: legacy_config (ProtocolConfig) 已派生 PartialEq,
+/// PartialEq 为手工实现: preset_config (ProtocolConfig) 已派生 PartialEq,
 /// 沿用应用层惯例用 serde 值比较。
 #[derive(Debug, Clone, Serialize, Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct ProtocolSchema {
     pub preset: SchemaPreset,
-    /// 预设对应的 legacy 引擎配置 (Custom 为 None) — 预设引擎构造用
+    /// 预设对应的引擎配置 (Custom 为 None) — 预设引擎构造用
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub legacy_config: Option<ProtocolConfig>,
+    pub preset_config: Option<ProtocolConfig>,
     /// 解析方向块列表
     #[serde(default)]
     pub decode: Vec<DecoderBlockDef>,
-    /// 编码方向块列表 (TestData 生成 / 协议转换用; 预设可为 None = 走 legacy 编码)
+    /// 编码方向块列表 (TestData 生成 / 协议转换用; 预设可为 None = 走预设编码)
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub encode: Option<Vec<EncodeBlockDef>>,
 }
@@ -46,7 +46,7 @@ impl PartialEq for ProtocolSchema {
         self.preset == other.preset
             && self.decode == other.decode
             && self.encode == other.encode
-            && self.legacy_config == other.legacy_config
+            && self.preset_config == other.preset_config
     }
 }
 
@@ -57,7 +57,7 @@ impl ProtocolSchema {
     /// field.portName / bitfield.portName / csv.ports / asciiField.portName
     /// 按块顺序组成端口列表 (去重, 保持首次出现顺序)。
     ///
-    /// 预设 (非 Custom) 端口为 ch0..chN (N 来自 legacy_config.channels 或自动检测),
+    /// 预设 (非 Custom) 端口为 ch0..chN (N 来自 preset_config.channels 或自动检测),
     /// 不走本派生 — 保持现有行为。
     pub fn port_names(&self) -> Vec<String> {
         let mut ports: Vec<String> = Vec::new();
@@ -154,8 +154,7 @@ pub fn encode_by_blocks(encode: &[EncodeBlockDef], ports: &[String], values: &[f
 
 /// 测试数据链路配置 — TestData 生成器热更新载荷
 ///
-/// 兼容旧的 `ProtocolConfig` 调用方: schema 为 None 或预设时走 legacy 编码;
-/// schema 为 Custom 且带 encode 块时按 schema 编码。
+/// `schema` 为 None 或预设时走预设编码; 为 Custom 且带 encode 块时按 schema 编码。
 #[derive(Debug, Clone)]
 pub struct TestDataLink {
     pub protocol: ProtocolConfig,
