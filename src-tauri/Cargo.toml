@@ -360,7 +360,9 @@ window-vibrancy = { workspace = true }
 
 [dev-dependencies]
 app = { workspace = true }
-backend-host = { workspace = true, default-features = false }
+# 继承 workspace 依赖时不能写 `default-features = false` 覆盖根清单的默认特性
+# (Cargo 拒绝解析清单); backend-host 的 modbus/s7 默认特性由 [workspace.dependencies] 统一决定。
+backend-host = { workspace = true }
 buffer_graph = { workspace = true }
 data_model = { workspace = true }
 error = { workspace = true }
