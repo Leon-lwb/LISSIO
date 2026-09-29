@@ -388,7 +388,7 @@ Build server, CLI, desktop, and web for the current platform:
 pnpm build:all
 ```
 
-This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once. The build stops if any step fails. Desktop packaging uses the existing Tauri configuration and requires its platform dependencies and signing setup.
+This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once. The build stops if any step fails. Local desktop builds disable updater artifacts using `src-tauri/tauri.local.conf.json`, so `TAURI_SIGNING_PRIVATE_KEY` is not required. Release CI retains updater signing through the default Tauri configuration.
 
 Individual build commands:
 

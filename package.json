@@ -12,7 +12,7 @@
     "server": "pnpm dev:server",
     "prepare:sidecar": "node scripts/prepare-sidecar.mjs",
     "prepare:sidecar:release": "node scripts/prepare-sidecar.mjs --release",
-    "build:desktop": "pnpm prepare:sidecar:release && tauri build",
+    "build:desktop": "pnpm prepare:sidecar:release && tauri build --config src-tauri/tauri.local.conf.json",
     "build:web": "tsc && vite build",
     "build:server": "cargo build --manifest-path src-tauri/Cargo.toml --release -p lissio-backend-server -p lissio-backend-cli",
     "build:cli": "cargo build --manifest-path src-tauri/Cargo.toml --release -p lissio-backend-cli",

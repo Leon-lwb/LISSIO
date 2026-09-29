@@ -376,7 +376,7 @@ pnpm dev:web   # 终端 2：vite 开发服务器，端口 1420，/api 自动代�
 pnpm build:all
 ```
 
-依次执行 `build:server`（server + CLI）和 `build:desktop`，后者通过 Tauri 钩子构建一次 web 资源。任一步骤失败即停止。桌面打包沿用现有 Tauri 配置，需要对应平台的依赖和签名配置。
+依次执行 `build:server`（server + CLI）和 `build:desktop`，后者通过 Tauri 钩子构建一次 web 资源。任一步骤失败即停止。本地桌面构建通过 `src-tauri/tauri.local.conf.json` 关闭更新包生成，无需设置 `TAURI_SIGNING_PRIVATE_KEY`。发布 CI 仍使用默认 Tauri 配置生成并签名更新包。
 
 也可以单独调用构建命令：
 
