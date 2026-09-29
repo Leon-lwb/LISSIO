@@ -148,7 +148,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     cssTheme: 'default',
     customCssThemes: [],
     reducedMotion: false,
-    uiFontFamily: "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif",
+    uiFontFamily: "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'MiSans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif",
     uiFontSize: 13,
     monoFontFamily: "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', 'Maple Mono CN', 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Menlo, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', monospace",
     monoFontSize: 12,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X, Github, ExternalLink } from 'lucide-react';
 import { platform } from '../lib/platform';
+import { FONT_ATTRIBUTIONS } from '../lib/fontAttributions';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
 import { LissajousMark } from './brand/LissajousMark';
@@ -81,6 +82,20 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <span className="text-text-secondary">{t(lang, 'aboutLicense')}</span>
             <span className="text-text-primary">{APP_LICENSE}</span>
           </div>
+        </div>
+
+        <div className="w-full text-left mb-3">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.5px] text-text-secondary mb-1.5">
+            {t(lang, 'aboutFonts')}
+          </div>
+          <ul className="m-0 p-0 list-none flex flex-col gap-1">
+            {FONT_ATTRIBUTIONS.map((font) => (
+              <li key={font.family} className="text-[10px] leading-snug text-text-secondary">
+                <span className="text-text-primary">{font.family}</span>
+                {' — '}{font.license}{' — '}{font.copyright}
+              </li>
+            ))}
+          </ul>
         </div>
 
         <div className="flex gap-2 mb-4">

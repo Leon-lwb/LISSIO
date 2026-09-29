@@ -175,6 +175,44 @@ describe('settingsStore', () => {
     expect(off.older_than_us).toBeNull();
     expect(off.keep_latest).toBeNull();
   });
+
+  it('把历史默认 UI 字体栈迁移到当前默认 (旧栈让中文落到 Maple Mono)', async () => {
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, {
+      appearance: {
+        uiFontFamily:
+          "'JetBrainsMono Nerd Font Mono', 'GoMono Nerd Font Mono', 'Clear Han Serif', 'Maple Mono CN', 'JetBrains Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif",
+      },
+    });
+
+    await useSettingsStore.getState().load();
+
+    const { uiFontFamily } = useSettingsStore.getState().settings.appearance;
+    expect(uiFontFamily).toBe(DEFAULT_SETTINGS.appearance.uiFontFamily);
+    expect(uiFontFamily).toContain('MiSans');
+    expect(uiFontFamily).not.toContain('Maple Mono CN');
+  });
+
+  it('迁移结果立即落盘, 不必每次启动重复改写', async () => {
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, {
+      appearance: { monoFontFamily: "'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace" },
+    });
+
+    await useSettingsStore.getState().load();
+
+    await vi.waitFor(() => {
+      const saved = tauriMock.fileStore.get(STORE_FILE)?.get(STORE_KEY) as AppSettings;
+      expect(saved.appearance.monoFontFamily).toBe(DEFAULT_SETTINGS.appearance.monoFontFamily);
+    });
+  });
+
+  it('保留用户自定义的字体栈, 不做迁移', async () => {
+    const custom = "'My Custom Font', monospace";
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, { appearance: { uiFontFamily: custom } });
+
+    await useSettingsStore.getState().load();
+
+    expect(useSettingsStore.getState().settings.appearance.uiFontFamily).toBe(custom);
+  });
 });
 
 describe('settingsStore API key 钥匙串集成', () => {

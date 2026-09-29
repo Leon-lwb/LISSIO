@@ -8,12 +8,15 @@
 @import "@fontsource/jetbrains-mono/700.css";
 
 /* ============ 字体许可与来源 ============ */
-/* 所有内置字体均为可再分发许可, 完整许可原文见 src/assets/fonts/*-LICENSE.txt:
+/* 内置字体许可原文见 src/assets/fonts/*-LICENSE.txt:
      - FiraCode Nerd Font Mono : SIL OFL 1.1 (c) The Fira Code Project Authors + Nerd Fonts 补丁 (MIT)
      - GoMono Nerd Font Mono   : BSD-3-Clause (c) 2016 Bigelow & Holmes Inc. + Nerd Fonts 补丁 (MIT)
      - Maple Mono CN           : SIL OFL 1.1
+     - MiSans                  : 小米《MiSans 字体知识产权许可协议》— 免费商用、允许嵌入,
+                                 但须在软件中署名, 且不得单独再分发字体本体或改变字形外观
+                                 (署名见 AboutModal; 许可原文见 MiSans-LICENSE.txt)
      - JetBrains Mono          : SIL OFL 1.1
-   本文件内的字体文件均为 woff2 子集。
+   本文件内的字体文件均为 woff2 子集 (仅剔除未用字形, 字形轮廓与内嵌版权记录未改)。
    切勿添加衬线中文或商业授权字体，本仓库以 GPL-2.0-only 分发。 */
 
 /* ============ FiraCode Nerd Font Mono (默认等宽) ============ */
@@ -66,8 +69,40 @@
   src: url("../assets/fonts/GoMonoNerdFontMono-Italic.woff2") format("woff2");
 }
 
+/* ============ MiSans (UI 中文, GB2312 子集) ============ */
+/* UI 中文字形 (比例无衬线)。MiSans 官方字重的 usWeightClass 为非标准刻度,
+   故在此显式映射: Regular(330)→400, Medium(380)→500, Semibold(520)→600, Bold(630)→700 */
+@font-face {
+  font-family: "MiSans";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../assets/fonts/MiSans-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "MiSans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("../assets/fonts/MiSans-Medium.woff2") format("woff2");
+}
+@font-face {
+  font-family: "MiSans";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("../assets/fonts/MiSans-Semibold.woff2") format("woff2");
+}
+@font-face {
+  font-family: "MiSans";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../assets/fonts/MiSans-Bold.woff2") format("woff2");
+}
+
 /* ============ 内置 Maple Mono CN (GB2312 子集, 覆盖常用中文) ============ */
-/* 等宽中文: 仅代码/数据区使用 (UI 中文走系统非衬线), 以保持中文 2:1 等宽对齐 */
+/* 等宽中文: 仅代码/数据区使用 (UI 中文走 MiSans), 以保持中文 2:1 等宽对齐 */
 @font-face {
   font-family: "Maple Mono CN";
   font-style: normal;
@@ -179,8 +214,8 @@
   --term-bg: transparent;               /* 终端默认背景 */
 
   /* ---------- 字体族 ---------- */
-  /* UI: FiraCode(拉丁, 连字) → GoMono(拉丁回退) → 系统非衬线(中文: 苹方/微软雅黑/Noto Sans CJK) */
-  --font-ui: "FiraCode Nerd Font Mono", "GoMono Nerd Font Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif;
+  /* UI: FiraCode(拉丁, 连字) → GoMono(拉丁回退) → MiSans(中文) → 系统非衬线中文兜底 */
+  --font-ui: "FiraCode Nerd Font Mono", "GoMono Nerd Font Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", "MiSans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", sans-serif;
   /* Mono: 中文先用 Maple Mono CN 保证 2:1 对齐, 生僻字再回退系统非衬线中文 */
   --font-mono: "FiraCode Nerd Font Mono", "GoMono Nerd Font Mono", "Maple Mono CN", "JetBrains Mono", "Cascadia Code", "SF Mono", Menlo, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "WenQuanYi Micro Hei", monospace;
 
