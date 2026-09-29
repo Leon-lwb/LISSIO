@@ -8,7 +8,7 @@ Lissio:基于 Tauri 2 的跨平台串口数据上位机(波形 / 节点图 / 协
 
 - 前端:React 19 + TypeScript + Vite + Tailwind 4 + Zustand + React Flow,包管理用 **pnpm**
 - 后端:Rust workspace(`src-tauri/crates/<domain>/<crate>`),Tauri 2 + Tokio
-- 前后端通过 Tauri command + event 通信,事件契约在 `events` crate,类型需前后端严格对齐
+- Desktop 与 Web 共用 `lissio-server` 的 HTTP-RPC + WebSocket transport;Tauri 只承载平台壳命令。事件契约在 `events` crate,wire 类型由 Rust 生成并严格对齐
 
 修改 Rust 前必须先读 `docs/architecture/crates.md`,并运行 `pnpm architecture` 查看定义者和反向依赖。
 
@@ -27,8 +27,15 @@ cargo test --workspace
 cargo clippy --workspace --all-targets   # 仓库对 clippy 从严,警告需清零
 cargo fmt --check
 
+# 契约与完整质量面
+pnpm check:web-contract
+pnpm check:contracts
+pnpm check:model-catalog
+pnpm build:web
+pnpm test:e2e
+
 # 整应用
-pnpm tauri dev
+pnpm dev:desktop
 ```
 
 ```bash
@@ -45,9 +52,9 @@ cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / �
 - `src/lib/` — 前端逻辑(hooks / tauri IPC 封装 / utils)
 - `src/types/` — 与后端对齐的 TS 类型(改 Rust 侧 serde 结构时必须同步)
 - `src/i18n/locales/{zh,en}.yml` — 所有用户可见文案走 i18n,中英双语同步添加
-- `src-tauri/src/lib.rs` — Tauri 组合根;IPC 命令位于 `src/commands/*`
+- `src-tauri/src/lib.rs` — Tauri 平台壳组合根;业务能力经 sidecar HTTP/WS 进入 `control-api` / `rpc-api`
 - `src-tauri/crates/<domain>/<crate>` — 二级目录按功能域直观分区;依赖层由 manifest metadata 表达
-- `src-tauri/buffer/src/{frame_field,frame_checksum,command_frame}.rs` — 命令帧字节打包后端权威
+- `src-tauri/crates/protocol/schema/src/{frame_field,frame_checksum,command_frame}.rs` — 命令帧字节打包权威
 
 ## 编码约定
 
@@ -61,13 +68,12 @@ cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / �
 
 vibe coding 提速的是写代码,不是验证。提 PR 前必须亲自跑通以下检查,**没跑过就不许说"完成"**:
 
-1. `pnpm typecheck` 通过
-2. `pnpm test` 通过;新增功能 / 修复 bug 必须附带或更新对应测试
-3. `cd src-tauri && cargo test --workspace` 通过
-4. `cd src-tauri && cargo clippy --workspace --all-targets` 无新增警告
-5. `pnpm check:architecture` 与 `pnpm check:deps` 通过 — 允许直接依赖任意更低层,禁止 facade;新第三方依赖必须先登记根 `[workspace.dependencies]`;涉及依赖变更时 `cargo deny check` 无新增告警
-6. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,两侧一起改并核对字段名逐一对应
-7. 涉及 UI 的改动,`pnpm tauri dev` 实际点开验证过,而不是"理论上没问题"
+1. `pnpm architecture`、`pnpm check:architecture`、`pnpm check:deps` 通过
+2. `pnpm check:web-contract`、`pnpm check:contracts`、`pnpm check:model-catalog` 通过
+3. `pnpm typecheck`、`pnpm lint:ci`、`pnpm test`、`pnpm build:web`、`pnpm test:e2e` 通过
+4. `cd src-tauri && cargo fmt --check`、`cargo clippy --workspace --all-targets`、`cargo test --workspace`、`cargo deny check` 通过
+5. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,同步更新 Rust owner 与生成 TS,并核对字段名逐一对应
+6. 涉及 UI 的改动,`pnpm dev:desktop` 实际点开验证过,而不是"理论上没问题"
 
 ## 责任条款
 

@@ -9,7 +9,10 @@ async fn invalid_prompt_does_not_append_user_turn() {
         .duration_since(UNIX_EPOCH)
         .expect("当前时间")
         .as_nanos();
-    let dir = std::env::temp_dir().join(format!("lissio-ai-turn-prompt-{}-{suffix}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!(
+        "lissio-ai-turn-prompt-{}-{suffix}",
+        std::process::id()
+    ));
     let host = AiHost::new(
         dir.clone(),
         Toolbox::from_state(&app::AppState::new()),

@@ -33,8 +33,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
   </p>
 </p>
 
-![](./images/example.png)
-![](./images/example2.png)
+![Lissio application example](./images/example.png)
 
 ## Table of Contents
 
@@ -222,95 +221,65 @@ The default layout looks like this (all panels can be freely rearranged):
 - [libautomotive](https://crates.io/crates/libautomotive) — UDS / OBD-II / J1939 diagnostics
 - Tauri plugins: `tauri-plugin-log`, `tauri-plugin-notification`, `tauri-plugin-store`, `tauri-plugin-opener`
 
-### Backend Workspace Crates
+### Backend Workspace Architecture
 
-| Crate | Responsibility |
+The Rust workspace is grouped by responsibility domain and constrained by declared
+dependency layers. The composition roots are the Tauri shell (`lissio`),
+`backend-server`, and `backend-cli`; product capabilities are shared through
+`control-api`, command dispatch through `rpc-api`, and assembly through
+`backend-host`.
+
+| Domain | Structural responsibility |
 | --- | --- |
-| `vofa_core` | Core types & config (transport / widget / pipeline configs, error types) |
-| `schema_types` / `schema_engine` | Protocol frame schema types & schema-driven protocol engine |
-| `can_types` / `logic_types` / `logic_decoder` / `diagnostic` | CAN / logic / diagnostics types & decoders |
-| `transport_core` / `serial` / `net` / `can_bridge` | Transport layer (serial / TCP / UDP / Slcan / CandleLight / test data) |
-| `protocol_engine` / `protocol_float` / `protocol_can_bridge` | Protocol engines (JustFloat / FireWater / RawData / Slcan / CandleLight / LogicDecode) |
-| `buffer_ring` / `buffer_databuffer` / `buffer_raw` / `buffer_graph` | Ring buffer, multi-channel `DataBuffer`, raw-data collector, graph routing |
-| `kind` / `hir` / `plane` / `lower` / `eval` / `engine` / `frame_decoder` / `trigger` | DAG node definitions, compiler pipeline (HIR → plane projection → lowering → slot runtime) & facade, frame decoder, trigger matching |
-| `dsp_window` / `dsp_fft` / `dsp_filter` | Digital signal processing (window functions, FFT spectrum, FIR/IIR filters) |
-| `automotive_isotp` / `automotive_can` / `automotive_diag` | Diagnostic engine (ISO-TP / UDS / OBD-II / J1939) bridging CAN backends |
-| `data_plane` / `stream` / `dispatcher` / `subscription` | Data plane: byte routing, chunked stream dispatch, subscription registry |
-| `app_state` / `notify_events` / `menu_shell` / `update_flow` | App state & tickers, frontend event contracts & notifications, menu, updater |
-| `cmd_*` (7 crates) | Tauri commands (buffer / can_load / can_transport / debug / graph / pipeline / rawdata) |
+| `shared` | Stable contracts: errors, flow envelopes, data/config models, subscriptions |
+| `signal` | Waveform buffers, raw data, filters, spectrum, measurements, GPU envelope adapter |
+| `vehicle` | CAN and diagnostic protocol types |
+| `protocol` | Protocol/schema engines, frame decoding, logic decoding, points, acquisition contracts |
+| `graph` | Node definitions and the HIR → plane → lower → eval compiler/runtime pipeline |
+| `transport` | Device tree contracts and serial/network/CAN/industrial protocol adapters |
+| `data` | Data bus and recording storage |
+| `ai` | LLM clients, chat/session state, MCP client |
+| `desktop` | Pipeline/application state, capability core, RPC dispatch, backend host/server/CLI, AI host, platform shell |
+
+See [`docs/architecture/crates.md`](docs/architecture/crates.md) for the complete
+crate inventory, dependency layers, domain DAG, and architecture checks.
 
 ## Project Structure
 
-```
+```text
 lissio/
-├── scripts/                       # Build scripts
-│   └── build.sh
-├── src/                           # Frontend source
-│   ├── components/
-│   │   ├── controls/              # Knob / Button / Slider / Radio / Checkbox / Label
-│   │   ├── displays/              # Waveform / Gauge / LED / PieChart / Spectrum /
-│   │   │                          # Image / NumberDisplay / Model3D / TableView /
-│   │   │                          # CanView / CanSender / CanLoadView / LogicView /
-│   │   │                          # RawDataView / CommandSender / FrameDecoder /
-│   │   │                          # OperationHistory / ...
-│   │   ├── layout/                # ActivityBar / Sidebar / DockLayout /
-│   │   │                          # DockCardFrame / DataTabContent / NodeEditor /
-│   │   │                          # StatusBar / BufferUsageStats / CanLoadAlarm
-│   │   ├── nodes/                 # React Flow node types (ChannelSource / Widget)
-│   │   ├── onboarding/            # OnboardingWizard / HelpCenter / Tour / ContextualHint
-│   │   ├── panels/
-│   │   │   ├── transport/         # Serial / Udp / TcpClient / TcpServer / TestData /
-│   │   │   │                      # Slcan / Candle forms
-│   │   │   ├── PortPicker.tsx
-│   │   │   ├── ProtocolSection.tsx
-│   │   │   ├── TransportConfigPanel.tsx
-│   │   │   └── WidgetPalette.tsx
-│   │   ├── ui/                    # ContextMenu / PanelTabs / ToolbarIconButton /
-│   │   │                          # WidgetCard / SlidingPill / SnapDropOverlay /
-│   │   │                          # AnimatedSwitch
-│   │   ├── AboutModal.tsx
-│   │   ├── CodeEditor.tsx
-│   │   ├── CustomWidgetEditor.tsx
-│   │   ├── NotificationToasts.tsx
-│   │   ├── SettingsModal.tsx
-│   │   └── ThemeEditor.tsx
-│   ├── i18n/                      # i18n loader + locales (en.yml / zh.yml)
-│   ├── lib/                       # Tauri API / buffers / subscriptions / utils / config export
-│   ├── settings/                  # Settings schema, defaults, theme application
-│   ├── store/                     # Zustand stores (connection / data / graph / tabs /
-│   │                              # dock layout / waveform scope / ... slices)
-│   ├── types/                     # TypeScript types (can / logic / transport / waveform / ...)
-│   ├── App.tsx                    # Top-level layout orchestration (activity bar + sidebar
-│   │                              # + dock area + status bar)
+├── docs/architecture/             # Architecture contracts and design references
+├── scripts/                       # Architecture, contract, build, and release tooling
+├── src/                           # React/TypeScript frontend
+│   ├── components/                # Controls, displays, layout, nodes, panels, AI UI
+│   ├── lib/
+│   │   ├── acquisition/           # Device tree and capability projections
+│   │   ├── ai/                    # Chat/tool frontend integration
+│   │   ├── models/                # Model catalog creation/describe consumers
+│   │   ├── platform/              # Desktop/Web platform-service shim
+│   │   ├── rpc/                   # Transport contract and reconnect/rehydration
+│   │   └── ...                    # Buffers, graph, quickstart, protocol utilities
+│   ├── store/                     # Zustand stores and state slices
+│   ├── types/
+│   │   └── generated/             # Rust-owned wire contracts exported by ts-rs
+│   ├── i18n/locales/              # English and Chinese user-facing copy
+│   ├── App.tsx
 │   └── main.tsx
-├── src-tauri/                     # Tauri + Rust backend
-│   ├── crates/                    # Rust workspace (see table above)
+├── src-tauri/
+│   ├── crates/<domain>/<crate>    # Rust workspace members
 │   ├── src/
-│   │   ├── commands/              # Tauri command handlers (transport/protocol/buffer/
-│   │   │                          # graph/can/logic/can_load/frame_decoder/window/...)
-│   │   ├── pipeline/              # data_loop / decoder_feed / graph_eval / spectrum_sync
-│   │   ├── state/                 # AppState / tickers (graph output / custom input / spectrum)
-│   │   ├── subscription/          # Event subscription manager
-│   │   ├── commands.rs
-│   │   ├── menu.rs                # Native menu bar
-│   │   ├── notify.rs
-│   │   ├── lib.rs
+│   │   ├── shell.rs               # Desktop-only window/splash/settings shell commands
+│   │   ├── sidecar.rs             # Supervised lissio-server lifecycle and diagnostics
+│   │   ├── lib.rs                 # Tauri composition root
 │   │   └── main.rs
-│   ├── capabilities/default.json
-│   ├── icons/                     # App icons (macOS / Windows / iOS / Android)
-│   ├── build.rs
-│   ├── Cargo.toml
+│   ├── Cargo.toml                 # Workspace and dependency authority
 │   └── tauri.conf.json
-├── public/                        # Static assets (tauri.svg / vite.svg)
+├── packaging/                     # Server startup and container packaging
+├── public/                        # Static application assets
 ├── images/                        # README assets
-├── .github/workflows/             # CI: build.yml / release.yml
 ├── package.json
 ├── pnpm-workspace.yaml
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── index.html
-└── README.md
+└── vite.config.ts
 ```
 
 ## Prerequisites
@@ -437,25 +406,28 @@ CI workflows are provided in `.github/workflows/` (`build.yml`, `release.yml`).
 
 ## Testing
 
-Frontend type check:
+Run the same quality surface as CI:
 
 ```sh
-pnpm tsc --noEmit
+pnpm architecture
+pnpm check:architecture
+pnpm check:deps
+pnpm check:web-contract
+pnpm check:contracts
+pnpm check:model-catalog
+pnpm typecheck
+pnpm lint:ci
+pnpm test
+pnpm build:web
+pnpm test:e2e
+cd src-tauri && cargo fmt --check
+cd src-tauri && cargo clippy --workspace --all-targets
+cd src-tauri && cargo test --workspace
+cd src-tauri && cargo deny check
 ```
 
-Frontend production build:
-
-```sh
-pnpm build
-```
-
-Backend unit tests (workspace-wide):
-
-```sh
-cd src-tauri && cargo test
-```
-
-The backend enforces strict Clippy lints (`all` / `pedantic` / `nursery` / `cargo` denied by default with curated allows) — run `cargo clippy --workspace` before submitting PRs.
+A green subset is not a green build; all commands above are part of the CI
+quality gate.
 
 ## Contributing
 

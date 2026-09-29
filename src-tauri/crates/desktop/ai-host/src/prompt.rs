@@ -97,10 +97,7 @@ pub fn load_prompt(config_dir: &Path) -> io::Result<String> {
     {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            format!(
-                "AI 系统提示词文件 {} 的条件段标记不完整",
-                path.display()
-            ),
+            format!("AI 系统提示词文件 {} 的条件段标记不完整", path.display()),
         ));
     }
     Ok(text)
@@ -193,13 +190,13 @@ mod tests {
     fn composition_respects_tool_availability_and_current_registry() {
         let registry = CapabilityRegistry::builtin();
         let base = DEFAULT_PROMPT;
-        let without = compose_system_prompt(&registry, Lang::Zh, base, false);
+        let without = compose_system_prompt(&registry, Lang::Zh, base, false, false);
         assert!(without.contains("行动范式"));
         assert!(!without.contains("connect_edge"));
         assert!(!without.contains("- overview:"));
         assert!(!without.contains(TOOLS_START));
 
-        let with = compose_system_prompt(&registry, Lang::Zh, base, true);
+        let with = compose_system_prompt(&registry, Lang::Zh, base, true, false);
         assert!(with.contains("行动范式"));
         assert!(with.contains("connect_edge"));
         assert!(with.contains("query_recording_history"));

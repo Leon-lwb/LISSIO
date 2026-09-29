@@ -2,9 +2,9 @@
 
 mod native_executor;
 mod prompt;
-mod secret;
 #[cfg(test)]
 mod prompt_integration_tests;
+mod secret;
 
 use std::path::PathBuf;
 use std::sync::Arc;

@@ -61,18 +61,24 @@ schema)与自带技能文档 (`docs/{zh,en}` 编译期嵌入)。MCP 工具路由
 
 ### 3. 端口(依赖倒置)
 
-| 端口 | 契约 | Tauri 实现 | Web 实现 | 无界面实现 |
-|---|---|---|---|---|
-| 后端事件 | `events::BackendEventSink` | `BroadcastEventSink`(sidecar WS) | `BroadcastEventSink`(广播到连接) | `CliEventSink`(stderr JSON-lines)/ `NullEventSink` |
-| 显示数据流 | `app::display::StreamSink` | `WsStreamSink`(连接级出站队列) | `WsStreamSink`(连接级出站队列) | CLI/测试自有实现 |
+| 端口 | 契约 | 常驻服务实现 | 无界面/测试实现 |
+|---|---|---|---|
+| 后端事件 | `events::BackendEventSink` | `backend-server::BroadcastEventSink`（广播到 WebSocket 连接） | `backend-cli::CliEventSink`（stderr JSON-lines）/ `NullEventSink` |
+| 显示数据流 | `app::display::StreamSink` | `backend-server::WsStreamSink`（连接级出站队列） | CLI/测试注入本地实现 |
+
+Desktop 前端不是这些端口的 Tauri 实现：Tauri webview 与浏览器一样通过同一
+HTTP/WS transport 连接受监管的 `lissio-server`。Tauri 组合根只负责窗口、菜单、
+更新器、启动页、文件对话框和 sidecar 生命周期。
 
 L0–L3 与 `mcp-server`、`backend-host`、`backend-cli` 不依赖 Tauri;
-Desktop 专有逻辑仅保留在 Tauri 平台壳；业务 flush 由 supervised sidecar 完成。
+Desktop 专有逻辑仅保留在 Tauri 平台壳；业务执行与 flush 由 supervised sidecar 完成。
+`src-tauri/src/commands`、`event_sink.rs`、`gui_host.rs` 是未挂入模块树的历史文件，
+不是出口实现，也不得重新承载业务命令。
 
 ## 出口能力矩阵
 
 能力按无头场景价值收敛到 control-api；仅窗口、启动页、更新器和 sidecar 管理
-保留为 Tauri IPC，AI 会话属于独立后端公共能力。
+保留为 Tauri 平台壳命令，AI 会话属于独立后端公共能力。
 
 | 能力域 | IPC | Web | MCP | CLI |
 |---|---|---|---|
@@ -83,7 +89,7 @@ Desktop 专有逻辑仅保留在 Tauri 平台壳；业务 flush 由 supervised s
 | 字节注入 / 输入值 | ✓ | ✓ | ✓ | `inject` / `input` |
 | 节点图提交 / 连线 | ✓ | ✓ | ✓ | `graph update/connect/disconnect` |
 | 波形 / CAN / 逻辑 / 原始读取 | ✓ | ✓ | ✓(轮询) | `data *` |
-| 流式订阅(推流 + 背压) | ✓(`StreamSink`) | ✓(WS 二进制帧) | —(协议所限,轮询替代) | 预留(`StreamSink` 注入) |
+| 流式订阅(推流 + 背压) | ✓(`StreamSink`) | ✓(WS 二进制帧) | —(协议所限,轮询替代) | —(命令结果 + stderr 事件；无常驻流会话) |
 | 波形停止快照 / 原始区间 | ✓ | ✓ | ✓ | `snapshot *` |
 | 命令帧编码 / 发送 | ✓ | ✓ | ✓ | `frame compute/send` |
 | 端点开闭 / 点位读写 | ✓ | ✓ | ✓ | `endpoint *` |

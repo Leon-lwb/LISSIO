@@ -10,12 +10,12 @@ capabilities visually adjacent without encoding two concepts in one directory.
 
 | Layer | Meaning | Examples |
 |---|---|---|
-| L0 | Stable contracts and configuration | `data-model`, `points`, `events`, `can`, `diagnostic` |
+| L0 | Stable contracts and configuration | `error`, `flow`, `data-model`, `points`, `can`, `diagnostic` |
 | L1 | Deterministic engines and in-memory structures | `waveform`, `schema`, `graph`, `bus` |
 | L2 | Stateful runtimes, storage, and orchestration ports | `transport`, `pipeline`, `stream`, `evaluator`, `recording`, `acquisition` |
 | L3 | Product use cases and application state | `app`, `graph_ops`, `control-api` |
-| L4 | Hardware, OS, SDK, and external-service adapters | `serial`, `gpu`, `llm`, `mcp-server`, `backend-host` |
-| L5 | Composition roots | `lissio` (Tauri), `backend-cli` (headless) |
+| L4 | Hardware, OS, SDK, protocol-dispatch, and external-service adapters | `serial`, `gpu`, `llm`, `mcp-server`, `rpc-api`, `backend-host` |
+| L5 | Platform/composition roots and root-only flows | `lissio` (Tauri), `backend-server`, `backend-cli`, `menu-shell`, `update-flow` |
 
 A crate may depend on the same layer or any lower layer. Direct dependencies
 across multiple layers are preferred to forwarding facades. L0-L3 must not
@@ -42,41 +42,57 @@ per-command capability matrix: [web-exit.md](web-exit.md).
 
 ## Domains
 
+The production dependency DAG is:
+
 ```mermaid
 flowchart TD
-  desktop --> integration & application & ai & data & transport & graph & protocol & signal & vehicle & workspace & shared
-  integration --> application & ai
-  application --> data & transport & graph & protocol & signal & vehicle & workspace & shared
-  data --> transport & graph & protocol & signal & vehicle & shared
-  workspace --> graph & shared
-  transport --> protocol & vehicle & shared
-  graph --> protocol & signal & shared
-  protocol --> vehicle & shared
-  signal --> shared
   vehicle --> shared
+  signal --> shared
+  protocol --> shared
+  protocol --> vehicle
+  graph --> protocol
+  graph --> signal
+  graph --> shared
+  transport --> protocol
+  transport --> vehicle
+  transport --> shared
   ai --> shared
+  desktop --> ai
+  desktop --> data
+  desktop --> graph
+  desktop --> protocol
+  desktop --> shared
+  desktop --> signal
+  desktop --> transport
+  desktop --> vehicle
 ```
 
-Domain dependencies only follow these arrows. Same-domain dependencies are
-allowed when they also satisfy the layer rule.
+Production dependencies follow the directions checked by
+`pnpm check:architecture`; test-only fixtures do not create shipped edges.
+Domain folders are navigation aids. Same-domain dependencies are allowed when
+they also satisfy the layer rule.
 
-## Stable target crates
+## Workspace target crates
 
 | Domain | Crates |
 |---|---|
-| shared | `data-model`, `config`, `flow` |
+| shared | `data-model`, `error`, `flow`, `subscription` |
 | signal | `waveform`, `raw-data`, `filter`, `spectrum`, `measurement`, `gpu` |
 | vehicle | `can`, `diagnostic` |
-| protocol | `logic`, `protocol`, `schema`, `frame-decoder`, `points`, `acquisition` |
-| graph | `trigger`, `graph`, `graph-testkit` |
-| transport | `device-tree`, `transport`, `serial`, `network`, `can-transport`, `test-data`, `automotive`, `automotive-isotp`, `automotive-diag`, `modbus-adapter`, `s7-adapter` |
+| protocol | `points`, `logic`, `logic-decoder`, `protocol`, `protocol-float`, `protocol-can-bridge`, `schema-types`, `schema`, `frame-decoder`, `acquisition` |
+| graph | `kind`, `hir`, `plane`, `lower`, `eval`, `buffer-graph`, `trigger`, `graph-testkit`, `graph` |
+| transport | `device-tree`, `transport`, `serial`, `network`, `can-transport`, `automotive`, `automotive-isotp`, `automotive-diag`, `modbus-adapter`, `s7-adapter` |
 | data | `bus`, `recording` |
-| workspace | `workspace` |
-| ai | `chat`, `llm`, `chat-session`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph_ops`, `control-api`, `ai-host`, `rpc-api`, `backend-host`, `menu_shell`, `update_flow`, `mcp-server`, `backend-cli`, `backend-server`, and the shell-only root package `lissio` |
+| ai | `llm`, `chat-session`, `chat`, `mcp-client` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph-ops`, `control-api`, `ai-host`, `rpc-api`, `backend-host`, `menu-shell`, `update-flow`, `mcp-server`, `backend-server`, `backend-cli`, and the shell-only root package `lissio` |
 
-`graph` keeps `compiler::{hir, plane, lower}` and `eval` as private
-implementation stages. Do not split compiler phases into crates.
+`graph` owns the compiler as separate responsibility crates:
+`kind` defines node semantics, `hir` builds and classifies the typed graph,
+`plane` projects value/byte planes, `lower` allocates slots and emits compiled
+operations, and `eval` executes them. The `graph` crate is the compile facade
+and semantic evaluation reference; consumers use that facade rather than
+chaining compiler phases through adjacent-layer helpers. `graph-testkit` is a
+dev-dependency only.
 
 ## Command-name contract
 

@@ -8,22 +8,27 @@ type owner and affected crates.
 
 ## Layout
 
-Lissio is a Tauri 2 application. React/TypeScript lives in `src/`; Rust is in
-`src-tauri/`. Rust members use `src-tauri/crates/<domain>/<crate>`. The domain
-directory is visual organization only; `[package.metadata.lissio]` records both
-domain and dependency layer. The root `lissio` package is the sole composition
-root and owns Tauri IPC modules under `src-tauri/src/commands/`.
+Lissio is an independent Rust backend delivered through a Tauri 2 desktop
+shell, Web frontend, MCP server, and headless CLI. React/TypeScript lives in
+`src/`; Rust is in `src-tauri/`. Rust members use
+`src-tauri/crates/<domain>/<crate>`. The domain directory is visual
+organization only; `[package.metadata.lissio]` records both domain and
+dependency layer. `lissio`, `backend-server`, and `backend-cli` are composition
+roots; `backend-host` owns shared product assembly, and the Tauri root only owns
+platform-shell commands and supervised `lissio-server` lifecycle.
 
 ## Dependency decisions
 
-- A crate has one clear reason to change. Keep phases of one capability as
-  private modules; `graph::compiler::{hir, plane, lower}` is the model.
+- A crate has one clear reason to change. Keep phases of one capability in the
+  responsibility crate that owns them; `graph` orchestrates the existing
+  `kind`/`hir`/`plane`/`lower`/`eval` compiler crates through one facade.
 - Create a crate only for an independent capability, dependency-inversion port,
   heavy optional adapter, or cross-crate test support.
 - Dependencies may go to the same or any lower layer and must follow the domain
   DAG in `docs/architecture/crates.md`. Never add an adjacent-layer facade.
 - L0-L3 cannot depend on Tauri, Keychain, `genai`, `rmcp`, `serialport`, `nusb`,
-  or `wgpu`. Define a port below and inject its L4 implementation in `lissio`.
+  or `wgpu`. Define a port below and inject its L4 implementation through
+  `backend-host`, which every composition root reuses.
 - Depend directly on the crate that defines a type. No facade-only crate,
   cross-crate glob re-export, repeated DTO, or public mutable lock.
 - `graph-testkit` is dev-dependency only.

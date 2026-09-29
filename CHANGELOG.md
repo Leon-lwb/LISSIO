@@ -10,7 +10,7 @@
   - `mcp-server` 改为 `ToolRoute::new_dyn` 运行期构建路由,instructions 由注册表组装;工具执行失败返回 `CallToolResult::error` (AI 客户端可见原因),参数错误映射 invalid params
   - 内置 AI 与 MCP 共用同一份工具定义;`read_skill`/新增 `list_skills` 两个出口同源;技能文档随能力节点挂载 (`protocols`→transport、`nodes-reference`→graph、其余→knowledge)
   - 工具名统一:内置 AI `connect_nodes` 并入 `connect_edge`;工具参数缺省值统一 (如 `get_recent_waveform.count` 缺省 100);CAN 帧 `extended` 缺省按 id 位数推断
-  - 技能文档迁至 `control-api/src/capabilities/docs/{zh,en}` (原 `src-tauri/src/commands/skills`,cleanup-plan T1 以此方案完成);删除 `ai-host/src/skills.rs` 与 `AiError::SkillNotFound`
+  - 技能文档迁至 `control-api/src/capabilities/docs/{zh,en}` (原 `src-tauri/src/commands/skills`);删除 `ai-host/src/skills.rs` 与 `AiError::SkillNotFound`
 - **移除全部旧数据兼容层**:持久化文件、IPC payload 与配置只按当前格式读写,不再迁移或接受旧版本数据
   - 后端:删除 widget 参数旧形态迁移管线 (`press_value` 等 serde alias、Radio/Checkbox 旧模型、Gauge/Progress 顶层 min/max、Command 单帧包装);`NodeKind::Protocol.schema` 与 `ProtocolSource.port_names` 收紧为必填;删除 `CanBitrate` 大小写兜底、钥匙串/配置目录旧标识迁移;删除零调用的 `migrate_legacy_config` 与 no-op cargo features
   - 命名修正:`legacy_config` → `preset_config` (wire 同步)、`compile_legacy` → `compile_preset`、`LegacyFlowReceiver` → `BroadcastFlowReceiver`、`on_frames` → `record_and_eval`;删除 `data_model::Error/Result` 兼容重导出 (调用点直连 `error` crate)
@@ -19,7 +19,7 @@
 
 ### 新增
 
-- **全量能力与平台 shim(P3, 进行中)**:把 Web 出口的待接入命令逐条补齐,并把宿主专有能力收口到平台 shim
+- **全量能力与平台 shim**:Web 出口命令补齐,宿主专有能力收口到平台 shim
   - `get_graph_hir` 与 `parse_frame_decoder_input` 的实现体下沉到 `control-api`(新增 `graph_hir` / `frame_decoder` 模块),桌面 IPC 与 Web 出口共用同一份实现,不再各留一份;`catalog` 中两条命令由 `PENDING` 移入 `SUPPORTED`
   - 顺带修掉 `parse_frame_decoder_input` 的返回形状:补 `#[serde(rename_all = "camelCase")]`,前端读的 `consumedBytes` 由 `undefined` 恢复为真实字节数(桌面路径同修)
   - 文件产物交付:新增 `GET /api/v1/download/{token}` 与 `backend-host::ArtifactStaging` 受管暂存区;`export_waveform_csv` / `export_can_load_csv` 在 Web 出口写受管目录并把下载链接经 `notify` 帧下发,**不再接受客户端指定的服务器路径**(原 IPC 语义照搬进 HTTP 等于任意路径写入面)
@@ -28,7 +28,7 @@
   - 设置持久化新增 `GET` / `PUT /api/v1/settings`:浏览器端没有 Tauri store,设置改由服务端落盘;文件仍是配置目录下的 `settings.json`,形状仍是 plugin-store 的 `{"app": …}`,因此**持久化格式对前端不变**,桌面与 Web 出口读写同一份设置(写入用临时文件 + rename,避免与桌面壳并发截断)
   - 新增 `src/lib/platform/` 平台服务 shim:把 `plugin-store` / `plugin-dialog` / `plugin-fs` / `plugin-opener` / `plugin-process` / `api/app` 与窗口控制收进一个运行时无关接口,由 `hasTauriRuntime()` 装配桌面或浏览器实现;~15 个调用点(设置、备份导入导出、附件、Markdown、录音面板、波形/CAN 导出、3D 控件、菜单栏)全部改走 shim,浏览器端因此拿到等价能力(服务端设置、Blob 下载、`<input type=file>` 句柄)或明确降级(退出仅告警、窗口控制 no-op)
   - `pnpm check:web-contract` 的出口泄漏门禁扩为两条并列规则:除 `src/lib/rpc/` 外禁止 `@tauri-apps/api/{core,event}` 与 `invoke()`/`listen()`(原有),**新增**除 `src/lib/platform/` 外禁止 import 任何 `@tauri-apps/*`(静态/动态 import 都匹配;`lib/rpc` 仅豁免本职的 `api/{core,event}`)
-- **前端出口解绑(P2)**:新增 `src/lib/rpc/` 把前端调用从 Tauri API 上解绑,一份 `dist/` 既跑桌面壳也跑浏览器
+- **前端出口解绑**:新增 `src/lib/rpc/` 把前端调用从 Tauri API 上解绑,一份 `dist/` 既跑桌面壳也跑浏览器
   - `Transport` 契约(`call` / `listen` / `eventChannel` / `subscribe` / `onReconnect`)+ 两个实现:`tauriTransport`(invoke / listen / Channel)与 `httpTransport`(fetch + WebSocket + 订阅分流 + 重连 + 微批量)
   - `tauri.ts` 的 88 个方法签名不变,内部改走 `transport.call`;显示订阅、事件监听、store 与工具宿主全部收口到 transport,~100 处调用点与 40+ 组件零改动
   - 订阅建立失败经 `onError` 上报(Web 侧由新增的 `fault{id}` 归位),`settled` 表示在途建立结束,取消竞态在两个出口都不漏注销;`ack_data` 背压反馈在两侧都能拿到订阅 id
@@ -49,7 +49,7 @@
   - 流式订阅端口 `app::display::StreamSink` 与后端事件端口 `events::BackendEventSink`:Tauri 实现收口组合根(`TauriEventSink`/`TauriChannelSink`),无界面宿主注入 stderr JSON-lines
   - 串口发现与 GPU 包络引擎端口化(`app::SerialDiscovery` / `waveform::EnvelopeEngine`):L4 实现(`serial`/`gpu`)由 `backend-host` 统一注入,`app`/`control-api` 不再依赖 adapter SDK
   - 层级元数据修正:`pipeline`/`stream`/`evaluator` 归位 L2、`graph_ops`/`control-api` L3、`backend-host`/`mcp-server` L4、`backend-cli` L5,`pnpm check:architecture` 恢复层序约束力;新增 `docs/architecture/exits.md`
-- 实验与验证体系 `docs/experiments`:实验设计、实测结果与结构不变量验证矩阵,配套 MATLAB 原生 figure 绘图脚本与无 MATLAB 许可环境的等价回退渲染器
+- 性能验证体系:`waveform_pyramid_bench` / `ingest_bench` / `eval_bench` / `pipeline_soak` 覆盖金字塔、摄入、图求值与端到端长跑,`bench-audit` 汇总可用证据
 - 基准结果采集器 `scripts/bench-collect.mjs`:把 Criterion 统计量与自定义基准的 JSON 行归一成可提交的 JSON / CSV,并支持对基线做带容差的回归比较
 
 ### 修复

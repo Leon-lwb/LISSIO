@@ -96,10 +96,10 @@ allocator 元数据或其他源，不是进程级内存上限。
 消费者仅合并已经到达的同源独占小批，最多 16,384 帧，不额外等待；共享批不复制、
 不越过。这样在摄入延迟后的集中补交中摊薄任务提交成本，仍保留逐帧计算和跨源轮询。
 
-**实测边界与复现方式见 `docs/experiments/`**：`performance.md` 第 12 节给出本节的实测值
-（摄入 438.7 MiB/s、金字塔写入 709.2 MiB/s、概览查询 12.48 µs、四路派生查询在历史
-增长 875 倍时仅变化 6.4%），`verification.md` 把上面五条不变量逐条映射到仲裁测试。
-一次 `bash scripts/bench-audit.sh quick` 即可重跑全部证据；`pipeline_soak` 的断言是硬门禁，
+**实测边界以仓库内基准代码为复现依据**：`waveform_pyramid_bench` 测长时间
+金字塔写入与预算查询，`ingest_bench` 测完整字节摄入，`eval_bench` 比较图求值
+调度形态，`pipeline_soak` 在墙钟长跑中仲裁丢弃、有界队列、查询与订阅并发。
+一次 `bash scripts/bench-audit.sh quick` 可重跑可用证据；`pipeline_soak` 的断言是硬门禁，
 常规场景要求零丢弃，人为注入超预算补交的场景要求队列有界且逐帧可记账。
 
 ## 6. 诊断指标 (2s 窗口, `数据平面指标`)
@@ -123,27 +123,27 @@ allocator 元数据或其他源，不是进程级内存上限。
 
 | 组件 | 位置 |
 |---|---|
-| 采样时钟域 | `data_plane/src/data_plane/mod.rs` (`SampleClock`, `restamp_frames`) |
-| 记录/求值入口 | `data_plane/src/data_plane/frame_dispatch.rs` (`record_frames` / `eval_frames`) |
-| 去重组路由 | `data_plane/src/data_plane/byte_router.rs` (`route_inner` 分组路径), `mod.rs` (`rebuild_route_groups`) |
-| 缺口记账/复位 | `eval_queue.rs` (`pending_gap` 与批次一同出队), `graph_eval.rs` (`reset_source_transient_state`) |
-| 金字塔 | `buffer_databuffer/src/tier.rs`, 预算查询 `window.rs` (`snapshot_window_budget`) |
-| 派生独立时间轴 | `buffer_databuffer/src/derived.rs` (`DerivedStore`) |
-| 容量整定 | `mod.rs` (`tune_buffer_capacity`), `data_buffer.rs` (`ensure_capacity_for_rate`) |
-| WWB1 v2 | `cmd/display/src/waveform_binary.rs`, 前端 `src/lib/data/waveformProtocol.ts` |
+| 采样时钟域 | `src-tauri/crates/desktop/pipeline/src/data_plane/protocol_node_state.rs` (`SampleClock`, `restamp_frames`) |
+| 记录/求值入口 | `src-tauri/crates/desktop/pipeline/src/data_plane/frame_dispatch.rs` (`record_frames` / `eval_frames`) |
+| 去重组路由 | `src-tauri/crates/desktop/pipeline/src/data_plane/byte_router.rs` (`route_inner` 分组路径), `src-tauri/crates/desktop/pipeline/src/data_plane/routes.rs` (`rebuild_route_groups`) |
+| 缺口记账/复位 | `src-tauri/crates/desktop/pipeline/src/data_plane/eval_queue.rs` (`pending_gap` 与批次一同出队), `src-tauri/crates/desktop/pipeline/src/graph_eval/mod.rs` (`reset_source_transient_state`) |
+| 金字塔 | `src-tauri/crates/signal/waveform/src/tier.rs`, 预算查询 `src-tauri/crates/signal/waveform/src/window/snapshot.rs` (`snapshot_window_budget`) |
+| 派生独立时间轴 | `src-tauri/crates/signal/waveform/src/derived.rs` (`DerivedStore`) |
+| 容量整定 | `src-tauri/crates/desktop/pipeline/src/data_plane/routes.rs` (`tune_buffer_capacity`), `src-tauri/crates/signal/waveform/src/data_buffer.rs` (`ensure_capacity_for_rate`) |
+| WWB1 v2 | `src-tauri/crates/desktop/app/src/display/waveform_binary.rs`, 前端 `src/lib/data/waveformProtocol.ts` |
 | 降载徽标 | `src/components/displays/waveform/WaveformChart.tsx` |
-| 合批上限/生成器补速 | `pipeline/src/data_plane/read_task.rs`, `transport/src/byte_simulation.rs` |
+| 合批上限/生成器补速 | `src-tauri/crates/desktop/pipeline/src/data_plane/read_task.rs`, `src-tauri/crates/transport/transport/src/byte_simulation.rs` |
 
 ## 8. 性能基准
 
-完整基准矩阵、数据与未验证边界见 [波形链路性能审计](../performance/bench-audit-2026-09-04.md)。
-
-长期波形与完整摄入路径使用 Criterion 独立量化：
+长期波形、完整摄入、图求值与端到端长跑分别由四个基准独立量化：
 
 ```bash
 cd src-tauri
 cargo bench -p lissio-waveform --bench waveform_pyramid_bench
 cargo bench -p lissio-pipeline --bench ingest_bench
+cargo bench -p lissio-pipeline --bench eval_bench
+cargo bench -p lissio-pipeline --bench pipeline_soak
 ```
 
 - `waveform_pyramid_write`: 4 通道 L0 滚动覆盖 + 多层级联写入，以 JustFloat
@@ -151,4 +151,6 @@ cargo bench -p lissio-pipeline --bench ingest_bench
 - `overview_3200k_to_2000`: 320 万帧历史的全局概览预算查询；
 - `detail_2s_700ksps_to_12000`: 700 kS/s 最近 2 秒主图预算查询；
 - `justfloat_4ch_64kb_parse_record_enqueue`: 64 KB 合批的解码、采样时钟、原始记录
-  与评估入队完整路径，持续门禁目标为 **>10 MB/s**。
+  与评估入队完整路径，持续门禁目标为 **>10 MB/s**；
+- `eval_bench`: 串行、fork-join、SIMD 与不同图拓扑的求值成本；
+- `pipeline_soak`: 限速摄入、长历史查询、派生订阅和有界队列丢弃记账的墙钟仲裁。

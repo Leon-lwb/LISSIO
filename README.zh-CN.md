@@ -33,8 +33,7 @@
   </p>
 </p>
 
-![](./images/example.png)
-![](./images/example2.png)
+![Lissio 应用界面示例](./images/example.png)
 
 ## 目录
 
@@ -84,7 +83,7 @@ Lissio 是一款面向嵌入式调试场景的桌面串口助手。前端基于 
 ### 节点编辑器与数据流
 
 - 基于 **React Flow** —— 从侧边栏拖拽控件到画布并连接数据流。
-- 后端 **DAG 引擎**（`node_engine`）将图编译为拓扑序，逐帧评估所有节点输出，含循环检测。
+- 后端 **DAG 引擎**（`graph` 门面与 `kind/hir/plane/lower/eval` 编译链）将图编译为拓扑序，逐帧评估所有节点输出，含循环检测。
 - 节点类型：`ChannelSource`、`Input`、`Math`、`Filter`、`SpectrumSink`、`FrameDecoder`、`Custom`（JS）、`Sink`。
 - **算术节点**：加 / 减 / 乘 / 除 / 均值 / 最小 / 最大 / 绝对值 / 取反 / 平方 / 开方 / sin / cos / tan / log。
 - **滤波器节点**：低通 / 高通 / 带通 / 带阻（FIR 系数或 IIR biquad），跨帧状态持久化。
@@ -220,92 +219,63 @@ Lissio 是一款面向嵌入式调试场景的桌面串口助手。前端基于 
 - [libautomotive](https://crates.io/crates/libautomotive) —— UDS / OBD-II / J1939 诊断
 - Tauri 插件：`tauri-plugin-log`、`tauri-plugin-notification`、`tauri-plugin-store`、`tauri-plugin-opener`
 
-### 后端 Workspace Crate
+### 后端 Workspace 架构
 
-| Crate | 职责 |
+Rust workspace 按责任领域分组，并通过声明的依赖层级约束边界。组合根是 Tauri
+桌面壳（`lissio`）、`backend-server` 与 `backend-cli`；产品能力统一进入
+`control-api`，命令派发统一进入 `rpc-api`，装配统一进入 `backend-host`。
+
+| 领域 | 结构职责 |
 | --- | --- |
-| `vofa_core` | 核心类型与配置（传输 / 控件 / 流水线配置、错误类型） |
-| `schema_types` / `schema_engine` | 协议帧 schema 类型与 schema 驱动的协议引擎 |
-| `can_types` / `logic_types` / `logic_decoder` / `diagnostic` | CAN / 逻辑 / 诊断类型与解码器 |
-| `transport_core` / `transport_serial` / `transport_net` / `transport_can_bridge` | 传输层（串口 / TCP / UDP / Slcan / CandleLight / 测试数据） |
-| `protocol_engine` / `protocol_float` / `protocol_can_bridge` | 协议引擎（JustFloat / FireWater / RawData / Slcan / CandleLight / LogicDecode） |
-| `buffer_ring` / `buffer_databuffer` / `buffer_raw` / `buffer_graph` | 环形缓冲区、多通道 `DataBuffer`、原始数据收集器、图路由 |
-| `node_kind` / `node_hir` / `node_plane` / `node_lower` / `node_eval` / `node_engine` / `node_frame_decoder` / `node_trigger` | DAG 节点定义、编译流水线（HIR → 平面投影 → lowering → 槽位运行时）与门面、帧解码器、触发器匹配 |
-| `dsp_window` / `dsp_fft` / `dsp_filter` | 数字信号处理（窗函数、FFT 频谱、FIR/IIR 滤波器） |
-| `automotive_isotp` / `automotive_can` / `automotive_diag` | 诊断引擎（ISO-TP / UDS / OBD-II / J1939），桥接 CAN 后端 |
-| `pipeline_data_plane` / `pipeline_stream` / `pipeline_dispatcher` / `subscription` | 数据平面：字节路由、分片流分发、订阅注册表 |
-| `app_state` / `notify_events` / `menu_shell` / `update_flow` | 应用状态与 ticker、前端事件契约与通知、菜单、更新器 |
-| `cmd_*`（7 个 crate） | Tauri 命令（buffer / can_load / can_transport / debug / graph / pipeline / rawdata） |
+| `shared` | 稳定契约：错误、流信封、数据/配置模型、订阅 |
+| `signal` | 波形缓冲、原始数据、滤波、频谱、测量、GPU 包络适配器 |
+| `vehicle` | CAN 与诊断协议类型 |
+| `protocol` | 协议/Schema 引擎、帧解码、逻辑解码、点位、采集契约 |
+| `graph` | 节点定义，以及 HIR → 平面投影 → Lower → Eval 编译/运行链 |
+| `transport` | 设备树契约，以及串口/网络/CAN/工业协议适配器 |
+| `data` | 数据总线与录制存储 |
+| `ai` | LLM 客户端、对话/会话状态、MCP 客户端 |
+| `desktop` | 数据平面/应用状态、能力核心、RPC 派发、后端装配/服务/CLI、AI 宿主、平台壳 |
+
+完整 crate 清单、依赖层级、领域 DAG 与架构检查见
+[`docs/architecture/crates.md`](docs/architecture/crates.md)。
 
 ## 目录结构
 
-```
+```text
 lissio/
-├── scripts/                       # 构建脚本
-│   └── build.sh
-├── src/                           # 前端源码
-│   ├── components/
-│   │   ├── controls/              # 旋钮 / 按钮 / 滑块 / 单选 / 复选 / 标签
-│   │   ├── displays/              # 波形 / 仪表 / LED / 饼图 / 频谱 /
-│   │   │                          # 图像 / 数字显示 / 3D 模型 / 表格 /
-│   │   │                          # CAN 视图 / CAN 发送 / CAN 负载 / 逻辑视图 /
-│   │   │                          # 原始数据 / 命令发送 / 帧解码 / 操作历史 / ...
-│   │   ├── layout/                # ActivityBar / Sidebar / DockLayout /
-│   │   │                          # DockCardFrame / DataTabContent / NodeEditor /
-│   │   │                          # StatusBar / BufferUsageStats / CanLoadAlarm
-│   │   ├── nodes/                 # React Flow 节点类型（ChannelSource / Widget）
-│   │   ├── onboarding/            # 引导向导 / 帮助中心 / 引导层 / 上下文提示
-│   │   ├── panels/
-│   │   │   ├── transport/         # 串口 / UDP / TCP 客户端 / TCP 服务端 / 测试数据 /
-│   │   │   │                      # Slcan / Candle 表单
-│   │   │   ├── PortPicker.tsx
-│   │   │   ├── ProtocolSection.tsx
-│   │   │   ├── TransportConfigPanel.tsx
-│   │   │   └── WidgetPalette.tsx
-│   │   ├── ui/                    # 右键菜单 / 面板标签 / 工具栏按钮 / 控件卡片 /
-│   │   │                          # 滑动指示器 / 吸附投放层 / 动画开关
-│   │   ├── AboutModal.tsx
-│   │   ├── CodeEditor.tsx
-│   │   ├── CustomWidgetEditor.tsx
-│   │   ├── NotificationToasts.tsx
-│   │   ├── SettingsModal.tsx
-│   │   └── ThemeEditor.tsx
-│   ├── i18n/                      # i18n 加载器 + 语言包（en.yml / zh.yml）
-│   ├── lib/                       # Tauri API / 缓冲区 / 订阅 / 工具 / 配置导出导入
-│   ├── settings/                  # 设置 schema、默认值、主题应用
-│   ├── store/                     # Zustand store（连接 / 数据 / 图 / 标签页 /
-│   │                              # Dock 布局 / 波形示波器 / ... 分片）
-│   ├── types/                     # TypeScript 类型（can / logic / transport / waveform / ...）
-│   ├── App.tsx                    # 顶层布局编排（活动栏 + 侧边栏 + Dock 区 + 状态栏）
+├── docs/architecture/             # 架构契约与设计文档
+├── scripts/                       # 架构、契约、构建与发布工具
+├── src/                           # React/TypeScript 前端
+│   ├── components/                # 控件、显示、布局、节点、面板、AI 界面
+│   ├── lib/
+│   │   ├── acquisition/           # 设备树与能力投影
+│   │   ├── ai/                    # 对话/工具前端集成
+│   │   ├── models/                # 模型目录创建与描述消费
+│   │   ├── platform/              # Desktop/Web 平台服务 shim
+│   │   ├── rpc/                   # Transport 契约、重连与重水合
+│   │   └── ...                    # 缓冲、图、快速开始、协议工具
+│   ├── store/                     # Zustand store 与状态分片
+│   ├── types/
+│   │   └── generated/             # 由 Rust/ts-rs 导出的 wire 合同
+│   ├── i18n/locales/              # 中英文用户文案
+│   ├── App.tsx
 │   └── main.tsx
-├── src-tauri/                     # Tauri + Rust 后端
-│   ├── crates/                    # Rust workspace（见上表）
+├── src-tauri/
+│   ├── crates/<domain>/<crate>    # Rust workspace 成员
 │   ├── src/
-│   │   ├── commands/              # Tauri 命令处理（transport/protocol/buffer/
-│   │   │                          # graph/can/logic/can_load/frame_decoder/window/...）
-│   │   ├── pipeline/              # data_loop / decoder_feed / graph_eval / spectrum_sync
-│   │   ├── state/                 # AppState / ticker（图输出 / 自定义输入 / 频谱）
-│   │   ├── subscription/          # 事件订阅管理器
-│   │   ├── commands.rs
-│   │   ├── menu.rs                # 原生菜单栏
-│   │   ├── notify.rs
-│   │   ├── lib.rs
+│   │   ├── shell.rs               # 桌面专属窗口/启动页/设置壳命令
+│   │   ├── sidecar.rs             # lissio-server sidecar 生命周期监管与诊断
+│   │   ├── lib.rs                 # Tauri 组合根
 │   │   └── main.rs
-│   ├── capabilities/default.json
-│   ├── icons/                     # 应用图标（macOS / Windows / iOS / Android）
-│   ├── build.rs
-│   ├── Cargo.toml
+│   ├── Cargo.toml                 # Workspace 与依赖权威来源
 │   └── tauri.conf.json
-├── public/                        # 静态资源（tauri.svg / vite.svg）
-├── images/                        # README 资源
-├── .github/workflows/             # CI：build.yml / release.yml
+├── packaging/                     # 服务启动与容器打包
+├── public/                        # 静态应用资源
+├── images/                        # README 图片
 ├── package.json
 ├── pnpm-workspace.yaml
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── index.html
-└── README.md
+└── vite.config.ts
 ```
 
 ## 开发环境
@@ -424,25 +394,27 @@ CI 工作流位于 `.github/workflows/`（`build.yml`、`release.yml`）。
 
 ## 测试
 
-前端类型检查：
+提交前运行与 CI 相同的完整质量面：
 
 ```sh
-pnpm tsc --noEmit
+pnpm architecture
+pnpm check:architecture
+pnpm check:deps
+pnpm check:web-contract
+pnpm check:contracts
+pnpm check:model-catalog
+pnpm typecheck
+pnpm lint:ci
+pnpm test
+pnpm build:web
+pnpm test:e2e
+cd src-tauri && cargo fmt --check
+cd src-tauri && cargo clippy --workspace --all-targets
+cd src-tauri && cargo test --workspace
+cd src-tauri && cargo deny check
 ```
 
-前端生产构建：
-
-```sh
-pnpm build
-```
-
-后端单元测试（整个 workspace）：
-
-```sh
-cd src-tauri && cargo test
-```
-
-后端强制执行严格 Clippy lint（默认 deny `all` / `pedantic` / `nursery` / `cargo`，并合理放宽部分规则）—— 提交 PR 前请运行 `cargo clippy --workspace`。
+局部检查通过不等于完整构建通过；以上命令均属于 CI 质量门禁。
 
 ## 贡献指南
 

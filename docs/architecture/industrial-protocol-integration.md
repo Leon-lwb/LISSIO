@@ -2,11 +2,11 @@
 
 > 状态：部分落地（Modbus TCP/RTU、Siemens S7 TCP、能力描述符、采集运行时与自动设备卡片已实现；其余协议仍为提案）
 >
-> 复核日期：2026-09-08
+> 复核日期：2026-09-29
 >
 > 许可证前提：Lissio 永久保持开源，并以 `GPL-2.0-only` 分发。Rust workspace metadata 与仓库根 GPL v2 许可证文本保持一致；依赖仍只采用 `src-tauri/deny.toml` 已允许且完成兼容审查的许可证。
 >
-> 范围：Tauri 桌面端的工业协议客户端与数据采集。协议服务端、设备模拟、硬实时控制和合规认证不是默认桌面构建的一部分。
+> 范围：Desktop/Web/CLI 共用后端中的工业协议客户端与数据采集。协议服务端、设备模拟、硬实时控制和合规认证不是默认构建的一部分。
 
 设备树、父子装配、能力闭环和生命周期模型见
 [device-tree.md](device-tree.md)。本文中的 `SourceFactory` / `SourceSession`
@@ -54,7 +54,7 @@ FlowHub ── 生命周期、epoch、typed lanes、有界队列、序列/缺口
 
 因此协议 SDK 直接实现点位能力，现有 transport 则实现字节能力；两者共享 `SourceSession`、`FlowEnvelope` 和 FlowHub，但不共享错误的业务假设。
 
-现有实现还有两个必须在迁移中保留的事实：
+现有实现有两个必须保持的结构事实：
 
 - `read_task` 会排空 `broadcast` 并拼接消息。对 TCP/串口流这通常安全，对 UDP datagram 或有消息边界的协议不安全。`BytesChunk` 必须声明 `Framing::Stream | Datagram | Message`，只有连续 Stream 且中间无 gap 才能拼接。
 - `broadcast::RecvError::Lagged(n)` 只知道丢失消息数，不知道字节数。统一信封应记录 sequence gap 和 `lost_units`，不能伪造丢失字节数；遇到 gap 后流式 parser 必须收到 discontinuity/reset 信号，禁止跨缺口拼帧。
@@ -127,7 +127,7 @@ Stars 和下载量只用于发现候选，不是发布证据。最终门槛是�
 | `s7-adapter` | `transport`，L4 | Siemens S7 私有配置、大端编解码、读窗口规划、轮询会话、位写和错误映射 | `acquisition`、`flow`、`points`、`tokio-s7` |
 | `opcua-adapter`、`mqtt-adapter` 等 | `transport`，L4 | 每个 crate 隔离一个外部 SDK 和协议特性 | `acquisition`、`flow`、`points` 与对应 SDK |
 
-`lissio` 是唯一组合根，按 Cargo feature 注册第一方适配器。普通构建不拉入未启用的重依赖。消费者直接依赖类型所有者，不增加“全工业协议” facade，也不跨 crate glob re-export。现有 `transport` L2 最终改为依赖 `flow` 并产出 `FlowEnvelope<BytesChunk>`；迁移期间由组合根 adapter 包装旧 `TransportConnection`，不要求一次重写所有 backend。
+`backend-host` 是适配器装配的唯一业务入口，`lissio`、`backend-server` 与 `backend-cli` 组合根复用该装配。按 Cargo feature 注册第一方适配器，普通构建不拉入未启用的重依赖。消费者直接依赖类型所有者，不增加“全工业协议” facade，也不跨 crate glob re-export。`transport` L2 依赖 `flow` 并产出 `FlowEnvelope<BytesChunk>`；字节 backend 的会话实现留在驱动/适配器内部。
 
 新 crate 必须同时增加 workspace 依赖、`[package.metadata.lissio]`、职责文档、架构表和架构测试。L4 以下不得出现具体协议 SDK。
 
@@ -497,17 +497,16 @@ EtherCAT、PROFINET 与 CANopen 需要平台权限/实时性边界，若进入�
 
 crate 自测或与一台设备通信只能证明有限互操作，不能证明协议合规。任何“认证/合规”声明必须有公认测试套件或认证产物。
 
-## 建议的首个实现变更集
+## 已落地结构与剩余边界
 
-1. 新增 `flow`，确定 `FlowEnvelope<T>`、Bytes 边界、epoch/sequence/gap 和序列化 fixture。
-2. 用兼容 adapter 把旧 `TransportConnection` 的广播接入 `FlowEnvelope<BytesChunk>`；保留 `BytePlan`，先验证无回归。
-3. 新增 `points`，确定富类型、质量、时间、事件和命令契约。
-4. 新增 `acquisition`，实现 SourceFactory/能力 traits、mock source、来源监督器、typed lanes 和合同测试。
-5. 实现 `PointStore`、`EventLog`、`CommandLedger` 与显式数值投影。
-6. 已新增 TCP/RTU client `modbus-adapter`，完成请求规划、回环服务和受控 RTU 帧测试。
-7. 已在 `lissio` 组合根静态注册来源，并加入薄 IPC、批量订阅、能力驱动设备卡片和通用 schema 回退。
-8. 已完成工作区兼容迁移和本机门禁；三平台构建、真实设备互操作和 24 小时 soak 仍需发布流水线与硬件实验室证据。
-9. 已新增 `s7-adapter`（tokio-s7 0.1.7，单一外部 SDK 变更集）：同合同测试、mock S7 服务器回环、组合根注册与中文表单标签完成；真实 PLC 互操作待验证。
+1. `flow` 已定义 `FlowEnvelope<T>`、Bytes 边界、epoch/sequence/gap 和序列化 fixtures。
+2. `points` 已定义富类型、质量、时间、事件和命令契约。
+3. `acquisition` 已定义 SourceFactory/能力 traits、mock source、来源监督器和 typed lanes。
+4. `device-tree` 已统一节点拓扑、驱动合同、能力投影与子树生命周期。
+5. `modbus-adapter` 已覆盖 TCP/RTU 请求规划、回环服务和受控 RTU 帧测试。
+6. `s7-adapter` 已覆盖请求规划、mock 服务器、重连与质量映射。
+7. `backend-host` 已统一注册来源，Desktop/Web/CLI/MCP 经同一能力面访问。
+8. 剩余证据缺口是三平台发布构建、真实 PLC 互操作和长时间 soak，不代表接口尚未落地。
 
 一个变更集不同时引入多个外部协议 SDK。公共合同用 mock 与 Modbus 走通后，OPC UA 用来证明抽象没有被寄存器模型绑死；MQTT 候选则先完成同合同对比再落锁。
 
