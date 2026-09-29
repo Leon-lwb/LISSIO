@@ -370,15 +370,24 @@ pnpm dev:web   # 终端 2：vite 开发服务器，端口 1420，/api 自动代�
 
 ## 构建与打包
 
-生成生产环境前端资源并打包桌面应用：
+一键构建当前平台的 server、CLI、desktop 和 web：
+
+```sh
+pnpm build:all
+```
+
+依次执行 `build:server`（server + CLI）和 `build:desktop`，后者通过 Tauri 钩子构建一次 web 资源。任一步骤失败即停止。桌面打包沿用现有 Tauri 配置，需要对应平台的依赖和签名配置。
+
+也可以单独调用构建命令：
 
 ```sh
 pnpm build:web
 pnpm build:server
+pnpm build:cli
 pnpm build:desktop
 ```
 
-输出产物位于 `src-tauri/target/release/bundle/`。
+web 资源输出到 `dist/`，server 和 CLI 二进制输出到 `src-tauri/target/release/`，桌面安装包输出到 `src-tauri/target/release/bundle/`。
 
 跨平台构建示例（见 `scripts/build.sh`）：
 

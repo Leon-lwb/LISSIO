@@ -382,15 +382,24 @@ sessionStorage). Point the proxy at a different backend with
 
 ## Build & Packaging
 
-Build production frontend assets and package the desktop app:
+Build server, CLI, desktop, and web for the current platform:
+
+```sh
+pnpm build:all
+```
+
+This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once. The build stops if any step fails. Desktop packaging uses the existing Tauri configuration and requires its platform dependencies and signing setup.
+
+Individual build commands:
 
 ```sh
 pnpm build:web
 pnpm build:server
+pnpm build:cli
 pnpm build:desktop
 ```
 
-Artifacts are output to `src-tauri/target/release/bundle/`.
+Web assets are output to `dist/`, server and CLI binaries to `src-tauri/target/release/`, and desktop installers to `src-tauri/target/release/bundle/`.
 
 Cross-platform build examples (see `scripts/build.sh`):
 
