@@ -53,6 +53,8 @@ const entries = new Map<string, Entry>();
 // subscribe/getSnapshot 引用稳定, 若每次调用都新建 facade, React 会在每次渲染后
 // 退订/重订阅, 叠加 start() 同步替换快照, 形成 "Maximum update depth" 死循环。
 const stores = new Map<string, PortSampleStore>();
+const IDLE_STORE_MS = 1_000;
+const idleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const INVALID_PORT_STORE: PortSampleStore = {
   subscribe: () => () => { return undefined; },
@@ -60,6 +62,7 @@ const INVALID_PORT_STORE: PortSampleStore = {
   clear: () => { return undefined; },
 };
 let decoderWorker: Worker | null | undefined;
+let nextGeneration = 0;
 
 function topicKey(sourceNodeId: string, sourceHandle: string): string {
   return `${sourceNodeId}\u0000${sourceHandle}`;
@@ -205,7 +208,7 @@ function enqueueDecode(entry: Entry, job: DecodeJob) {
 
 function start(entry: Entry) {
   if (entry.subscription || entry.startingGeneration !== null) return;
-  const generation = entry.generation + 1;
+  const generation = ++nextGeneration;
   entry.generation = generation;
   entry.startingGeneration = generation;
   entry.localPreviewSkipped = 0;
@@ -246,12 +249,29 @@ function start(entry: Entry) {
 }
 
 function stop(entry: Entry) {
-  entry.generation++;
+  entry.generation = ++nextGeneration;
   entry.startingGeneration = null;
   entry.pendingDecode = null;
   const subscription = entry.subscription;
   entry.subscription = null;
   subscription?.cancel();
+}
+
+function cancelIdleCleanup(key: string) {
+  const timer = idleTimers.get(key);
+  if (timer === undefined) return;
+  clearTimeout(timer);
+  idleTimers.delete(key);
+}
+
+function scheduleIdleCleanup(key: string, entry: Entry, store: PortSampleStore) {
+  cancelIdleCleanup(key);
+  idleTimers.set(key, setTimeout(() => {
+    idleTimers.delete(key);
+    if (entry.listeners.size > 0 || stores.get(key) !== store) return;
+    entries.delete(key);
+    stores.delete(key);
+  }, IDLE_STORE_MS));
 }
 
 export interface PortSampleStore {
@@ -268,7 +288,7 @@ export function getPortSampleStore(
     return INVALID_PORT_STORE;
   }
   const key = topicKey(sourceNodeId, sourceHandle);
-  let store = stores.get(key);
+  const store = stores.get(key);
   if (store) return store;
   let entry = entries.get(key);
   if (!entry) {
@@ -288,17 +308,35 @@ export function getPortSampleStore(
     entries.set(key, entry);
   }
   const target = entry;
-  store = {
+  const facade: PortSampleStore = {
     subscribe(listener) {
+      const current = stores.get(key);
+      if (current && current !== facade) return current.subscribe(listener);
+      if (!current) {
+        stores.set(key, facade);
+        entries.set(key, target);
+      }
+      cancelIdleCleanup(key);
       target.listeners.add(listener);
       if (target.listeners.size === 1) start(target);
       return () => {
         target.listeners.delete(listener);
-        if (target.listeners.size === 0) stop(target);
+        if (target.listeners.size === 0) {
+          stop(target);
+          scheduleIdleCleanup(key, target, facade);
+        }
       };
     },
-    getSnapshot: () => target.snapshot,
+    getSnapshot: () => {
+      const current = stores.get(key);
+      return current && current !== facade ? current.getSnapshot() : target.snapshot;
+    },
     clear() {
+      const current = stores.get(key);
+      if (current && current !== facade) {
+        current.clear();
+        return;
+      }
       target.snapshot = {
         ...EMPTY_SNAPSHOT,
         version: target.snapshot.version + 1,
@@ -306,8 +344,9 @@ export function getPortSampleStore(
       for (const listener of target.listeners) listener();
     },
   };
-  stores.set(key, store);
-  return store;
+  stores.set(key, facade);
+  scheduleIdleCleanup(key, target, facade);
+  return facade;
 }
 
 export function resetPortSampleStoresForSource(sourceNodeId: string): void {

@@ -27,11 +27,6 @@ describe('formatAiKindError', () => {
     expect(view.detail).toBe(raw);
   });
 
-  it('MaxToolRounds 插值轮次', () => {
-    const view = formatAiKindError('AiMaxToolRounds', { rounds: '8' }, '', zh);
-    expect(view.summary).toContain('8');
-  });
-
   it('未知 kind 回退原始描述', () => {
     const view = formatAiKindError('AiWhatever', {}, '原始信息', zh);
     expect(view.summary).toBe('原始信息');

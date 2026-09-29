@@ -20,6 +20,7 @@ can = { workspace = true }
 data_model = { workspace = true }
 error = { workspace = true }
 flow = { workspace = true }
+log = { workspace = true }
 parking_lot = { workspace = true }
 points = { workspace = true }
 schema_types = { workspace = true }

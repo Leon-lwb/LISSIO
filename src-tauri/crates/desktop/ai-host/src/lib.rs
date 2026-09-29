@@ -3,12 +3,15 @@
 mod native_executor;
 mod prompt;
 mod secret;
+#[cfg(test)]
+mod prompt_integration_tests;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::native_executor::{
-    CompositeExecutor, McpToolExecutor, NativeToolExecutor, PendingCalls, ToolOutcome,
+    CompositeExecutor, ConversationTitleExecutor, McpToolExecutor, NativeToolExecutor,
+    PendingCalls, ToolOutcome,
 };
 use chat::{
     AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, TurnRecorder,
@@ -29,6 +32,8 @@ use parking_lot::Mutex;
 use serde::Serialize;
 use serde_json::Value;
 
+#[cfg(debug_assertions)]
+use secret::DevEnvSecretStore;
 pub use secret::{SecretSource, SecretStatus, SecretStore, SystemSecretStore};
 
 /// 流式事件出口。WebSocket 使用连接级实现，旧 Tauri wrapper 可注入 Channel 适配器。
@@ -36,6 +41,8 @@ pub type ChatEventSink = Arc<dyn Fn(AiChatEvent) + Send + Sync>;
 
 /// AI 功能全局状态 (Tauri managed)。
 pub struct AiHost {
+    /// 设置目录 — 每轮从其中的 Markdown 文件读取系统提示词。
+    config_dir: PathBuf,
     /// 软件能力注册表 — 内置工具与技能文档的单一事实来源。
     registry: Arc<CapabilityRegistry>,
     toolbox: Toolbox,
@@ -59,7 +66,11 @@ impl AiHost {
     /// 从 app config dir 构造 (加载已配置的外部 MCP server 列表与会话历史;
     /// 配置文件损坏时按空配置启动, 不阻塞应用)。
     pub fn new(config_dir: PathBuf, toolbox: Toolbox, sink: EventSinkHandle) -> Self {
-        Self::with_secret_store(config_dir, toolbox, sink, Arc::new(SystemSecretStore))
+        #[cfg(debug_assertions)]
+        let secrets: Arc<dyn SecretStore> = Arc::new(DevEnvSecretStore::new());
+        #[cfg(not(debug_assertions))]
+        let secrets: Arc<dyn SecretStore> = Arc::new(SystemSecretStore);
+        Self::with_secret_store(config_dir, toolbox, sink, secrets)
     }
 
     /// Construct with an injected secret port (used by deterministic backend tests and alternate
@@ -70,6 +81,9 @@ impl AiHost {
         sink: EventSinkHandle,
         secrets: Arc<dyn SecretStore>,
     ) -> Self {
+        if let Err(error) = prompt::ensure_prompt_file(&config_dir) {
+            log::warn!("AI 系统提示词文件初始化失败: {error}");
+        }
         let mcp = McpManager::load(&config_dir).unwrap_or_else(|e| {
             log::warn!("MCP 配置加载失败, 按空配置启动: {e}");
             McpManager::empty(&config_dir)
@@ -79,6 +93,7 @@ impl AiHost {
             SessionStore::empty(&config_dir)
         });
         Self {
+            config_dir,
             registry: Arc::new(CapabilityRegistry::builtin()),
             toolbox,
             sink,
@@ -111,7 +126,7 @@ pub fn ai_list_providers() -> Vec<AdapterInfo> {
 /// 知识库, 系统提示词按 `ui_lang` 注入索引);`use_mcp_tools` 启用外部 MCP 工具。
 ///
 /// # Errors
-/// 配置校验失败 (缺 key / 未知适配器 / 缺模型名) 或会话落盘失败。
+/// 配置校验失败、系统提示词文件不可用或会话落盘失败。
 pub async fn ai_chat_send(
     state: &AiHost,
     session_id: String,
@@ -119,8 +134,6 @@ pub async fn ai_chat_send(
     attachments: Option<Vec<AttachmentDto>>,
     regenerate: bool,
     mut config: AiProviderConfig,
-    system: Option<String>,
-    max_tool_rounds: u32,
     use_mcp_tools: bool,
     use_builtin_tools: bool,
     ui_lang: Option<String>,
@@ -131,6 +144,10 @@ pub async fn ai_chat_send(
         config.api_key = state.secrets.resolve(&config.adapter)?.unwrap_or_default();
     }
     validate_config(&config)?;
+
+    // 提示词在每轮开始时读取。失败不能追加用户消息或截断待重试会话。
+    let lang = ui_lang.as_deref().map_or(Lang::Zh, Lang::parse);
+    let prompt_text = prompt::load_prompt(&state.config_dir)?;
 
     // 回合前置: 先落盘用户输入 / 截断待重试回合, 派生的历史才是权威上下文
     if regenerate {
@@ -147,6 +164,9 @@ pub async fn ai_chat_send(
                     text: body.to_string(),
                     attachments,
                     tools: None,
+                    timeline: None,
+                    reasoning: None,
+                    duration_ms: None,
                     error: None,
                     error_kind: None,
                     error_data: None,
@@ -154,15 +174,31 @@ pub async fn ai_chat_send(
             )?;
         }
     }
-    let history = derive_history(
-        &state
-            .sessions
-            .get(&session_id)
-            .map(|session| session.items)
-            .unwrap_or_default(),
+    let session = state.sessions.get(&session_id);
+    let first_turn_title = session.as_ref().is_some_and(|session| {
+        matches!(session.title.as_str(), "新会话" | "New chat")
+            && session
+                .items
+                .iter()
+                .filter(|item| item.role == ViewRoleDto::User)
+                .count()
+                == 1
+            && !session
+                .items
+                .iter()
+                .any(|item| item.role == ViewRoleDto::Assistant)
+    });
+    let expected_title = session
+        .as_ref()
+        .map_or_else(String::new, |session| session.title.clone());
+    let history = derive_history(&session.map(|session| session.items).unwrap_or_default());
+    let system_prompt = prompt::compose_system_prompt(
+        &state.registry,
+        lang,
+        &prompt_text,
+        use_builtin_tools,
+        first_turn_title,
     );
-
-    let lang = ui_lang.as_deref().map_or(Lang::Zh, Lang::parse);
 
     let (task_id, cancel_rx) = state.registry_tasks.register();
     let registry_tasks = Arc::clone(&state.registry_tasks);
@@ -179,15 +215,6 @@ pub async fn ai_chat_send(
     let registry = Arc::clone(&state.registry);
     let toolbox = state.toolbox.clone();
     let backend_sink = state.sink.clone();
-    let system_prompt = if use_builtin_tools {
-        Some(prompt::compose_system_prompt(
-            &registry,
-            lang,
-            system.as_deref(),
-        ))
-    } else {
-        system
-    };
     tokio::spawn(async move {
         // 事件双路: 转发前端流式渲染 + 记录器聚合 (终态后落盘)
         let recorder = Arc::new(Mutex::new(TurnRecorder::new()));
@@ -210,13 +237,18 @@ pub async fn ai_chat_send(
             )
         });
         let mcp_executor = (!mcp_tools.is_empty()).then(|| McpToolExecutor::new(mcp_tools, mcp));
-        let executor = CompositeExecutor::new(native, mcp_executor);
+        let executor = ConversationTitleExecutor::new(
+            CompositeExecutor::new(native, mcp_executor),
+            Arc::clone(&sessions),
+            session_id.clone(),
+            expected_title,
+            first_turn_title,
+        );
 
         let payload = ChatPayload {
             config,
-            system: system_prompt,
+            system: Some(system_prompt),
             messages: history,
-            max_tool_rounds,
         };
         if let Err(e) = run_chat(payload, &provider, &executor, cancel_rx, Arc::clone(&sink)).await
         {

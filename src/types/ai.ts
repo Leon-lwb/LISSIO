@@ -69,11 +69,19 @@ export interface AiToolRun {
   id: string;
   name: string;
   arguments: unknown;
+  /** 工具调用前已输出的正文长度（UTF-16），用于还原文字与工具的顺序。 */
+  text_offset: number;
   content: string;
   is_error: boolean;
   /** 是否已收到结果 */
   done: boolean;
 }
+
+/** 回合内正文、思考和工具调用的真实事件顺序。 */
+export type AiTurnEvent =
+  | { kind: 'text'; text: string }
+  | { kind: 'reasoning'; text: string }
+  | { kind: 'tool'; id: string };
 
 /// 用户附件 (文本文件) — 与后端 `ai_session::AttachmentDto` 对齐。
 export interface AiAttachment {
@@ -90,6 +98,11 @@ export interface AiViewItem {
   /** 用户条目携带的附件 (发送时并入 LLM 上下文) */
   attachments?: AiAttachment[];
   tools?: AiToolRun[];
+  timeline?: AiTurnEvent[];
+  /** 模型提供的推理文本，用于展开查看当前回合。 */
+  reasoning?: string;
+  /** 回合总用时（毫秒）。 */
+  duration_ms?: number;
   /** 错误条目 (仅 UI 展示, 不入 LLM 历史) */
   error?: boolean;
   /** 错误种类 (后端 error::AppError::kind(), 供本地化展示) */

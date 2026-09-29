@@ -278,6 +278,26 @@ impl AppState {
             .unwrap_or_else(|| std::sync::Arc::new(SerialDiscoveryUnavailable))
     }
 
+    /// 生命周期诊断摘要 — 将传输、显示订阅与数据平面缓存水位合并为一条日志。
+    pub fn lifecycle_summary(&self) -> String {
+        let stream_groups = self.stream_groups.lock().len();
+        let (snapshot_count, snapshot_bytes) = {
+            let snapshots = self.waveform_snapshots.lock();
+            let bytes: usize = snapshots
+                .values()
+                .map(|snapshot| snapshot.estimated_bytes)
+                .sum();
+            (snapshots.len(), bytes)
+        };
+        format!(
+            "open_nodes={} display_subs={} stream_groups={} waveform_snapshots={snapshot_count}/{snapshot_bytes}B | {}",
+            self.transport.list_open().len(),
+            self.subscriptions.len(),
+            stream_groups,
+            self.data_plane.lifecycle_summary(),
+        )
+    }
+
     /// 抽取图评估所需的 Arc 字段 (供 ticker / 数据平面持有)
     pub fn eval_state(&self) -> GraphEvalState {
         self.data_plane.eval.clone()

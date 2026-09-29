@@ -1,61 +1,142 @@
-//! 系统提示词组装 — 基础工作约定 + 能力注册表知识库索引 + 用户补充指令。
+//! 系统提示词文件与运行期能力索引。
 //!
-//! 索引只放标题与一句话用途 (省 token),全文经注册表的 `read_skill` 工具按需读;
-//! 知识库清单从 [`CapabilityRegistry`] 动态派生,新增能力节点自带文档即自动入索引。
+//! 主提示词从设置目录的 Markdown 文件逐轮读取，用户编辑后无需重启。
+//! 启用内置工具时，再附加当前可用的工具约定和能力注册表知识库索引。
+
+use std::fs::{self, OpenOptions};
+use std::io::{self, Write as _};
+use std::path::{Path, PathBuf};
 
 use control_api::capabilities::registry::CapabilityRegistry;
 use control_api::capabilities::skill::Lang;
 
-/// 组装启用内置工具时的系统提示词:基础约定 + 知识库索引 (来自能力注册表) +
-/// 用户自填提示词。
+/// 设置目录内供用户编辑的系统提示词文件。
+pub const PROMPT_FILE_NAME: &str = "ai-system-prompt.md";
+
+const DEFAULT_PROMPT: &str = include_str!("../default-system-prompt.md");
+const TOOLS_START: &str = "<!-- LISSIO_BUILTIN_TOOLS_START -->";
+const TOOLS_END: &str = "<!-- LISSIO_BUILTIN_TOOLS_END -->";
+const TITLE_START: &str = "<!-- LISSIO_FIRST_TURN_TITLE_START -->";
+const TITLE_END: &str = "<!-- LISSIO_FIRST_TURN_TITLE_END -->";
+
+fn prompt_path(config_dir: &Path) -> PathBuf {
+    config_dir.join(PROMPT_FILE_NAME)
+}
+
+fn path_error(action: &str, path: &Path, error: io::Error) -> io::Error {
+    io::Error::new(
+        error.kind(),
+        format!(
+            "{action} AI 系统提示词文件 {} 失败: {error}",
+            path.display()
+        ),
+    )
+}
+
+fn section_valid(text: &str, start: &str, end: &str) -> bool {
+    let start_count = text.matches(start).count();
+    let end_count = text.matches(end).count();
+    (start_count == 0 && end_count == 0)
+        || (start_count == 1
+            && end_count == 1
+            && text
+                .split_once(start)
+                .and_then(|(_, after)| after.split_once(end))
+                .is_some())
+}
+
+fn render_section(text: &str, start: &str, end: &str, include: bool) -> String {
+    let Some((before, rest)) = text.split_once(start) else {
+        return text.to_string();
+    };
+    let Some((section, after)) = rest.split_once(end) else {
+        return text.to_string();
+    };
+    if include {
+        format!("{before}{section}{after}")
+    } else {
+        format!("{before}{after}")
+    }
+}
+
+/// 首次创建默认提示词；已存在的文件绝不覆盖。
+///
+/// # Errors
+/// 设置目录或文件无法创建、默认内容无法写入。
+pub fn ensure_prompt_file(config_dir: &Path) -> io::Result<()> {
+    let path = prompt_path(config_dir);
+    fs::create_dir_all(config_dir).map_err(|error| path_error("创建目录以保存", &path, error))?;
+    let mut file = match OpenOptions::new().write(true).create_new(true).open(&path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => return Ok(()),
+        Err(error) => return Err(path_error("创建", &path, error)),
+    };
+    if let Err(error) = file.write_all(DEFAULT_PROMPT.as_bytes()) {
+        let _ = fs::remove_file(&path);
+        return Err(path_error("写入", &path, error));
+    }
+    Ok(())
+}
+
+/// 每轮重新读取 Markdown 主提示词，不缓存用户编辑。
+///
+/// # Errors
+/// 文件无法创建、读取，或不是有效 UTF-8。
+pub fn load_prompt(config_dir: &Path) -> io::Result<String> {
+    ensure_prompt_file(config_dir)?;
+    let path = prompt_path(config_dir);
+    let text = fs::read_to_string(&path).map_err(|error| path_error("读取", &path, error))?;
+    if text.trim().is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("AI 系统提示词文件 {} 为空，请编辑后重试", path.display()),
+        ));
+    }
+    if !section_valid(&text, TOOLS_START, TOOLS_END)
+        || !section_valid(&text, TITLE_START, TITLE_END)
+    {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!(
+                "AI 系统提示词文件 {} 的条件段标记不完整",
+                path.display()
+            ),
+        ));
+    }
+    Ok(text)
+}
+
+/// 组装文件主提示词；仅在内置工具可用时附加真实工具约定和知识库索引。
 #[must_use]
 pub fn compose_system_prompt(
     registry: &CapabilityRegistry,
     lang: Lang,
-    user: Option<&str>,
+    file_prompt: &str,
+    use_builtin_tools: bool,
+    first_turn: bool,
 ) -> String {
     use std::fmt::Write as _;
 
-    let mut out = match lang {
-        Lang::Zh => String::from(
-            "你是 Lissio (串口/CAN/波形调试上位机) 的内置 AI 助手,可以调用内置工具\n\
-             编辑节点图、操作软件、读取设备数据。工作约定:\n\
-             - 编辑节点前先用 get_workspace 读当前画布状态;节点 id 一律来自读取结果,不要捏造。\n\
-             - 小步修改:每做一次编辑,用对应读取工具 (get_graph_outputs / get_recent_waveform /\n\
-               get_can_frames 等) 验证效果后再继续。\n\
-             - 设备无数据时按序排查:连接状态 → get_raw_data 原始字节 → 连线与协议配置。\n\
-             - 用中文与用户交流 (除非用户使用其他语言)。\n",
-        ),
-        Lang::En => String::from(
-            "You are the built-in AI assistant of Lissio (a serial/CAN/waveform debugging\n\
-             host app). You can call built-in tools to edit the node graph, operate the app,\n\
-             and read device data. Working conventions:\n\
-             - Call get_workspace before editing the graph; only use node ids from read results.\n\
-             - Edit in small steps: verify each edit with the matching read tool\n\
-               (get_graph_outputs / get_recent_waveform / get_can_frames ...) before continuing.\n\
-             - For \"no data\", triage in order: connection state → get_raw_data raw bytes →\n\
-               wiring and protocol config.\n\
-             - Reply in the user's language.\n",
-        ),
-    };
-
-    // 知识库索引 (标题 + 一句话用途, 全文按需 read_skill) — 从能力注册表动态派生
-    out.push_str(match lang {
-        Lang::Zh => "\n可用知识库 (read_skill 工具按需读取全文):\n",
-        Lang::En => "\nKnowledge base (read full text via the read_skill tool):\n",
-    });
-    for (_, s) in registry.skills() {
-        // String 的 write! 实现不会失败, 直接忽略返回值
-        let _ = writeln!(out, "- {}: {} — {}", s.id, s.title(lang), s.summary(lang));
+    let out = render_section(file_prompt, TOOLS_START, TOOLS_END, use_builtin_tools);
+    let mut out = render_section(&out, TITLE_START, TITLE_END, first_turn);
+    if !use_builtin_tools {
+        return out;
     }
-
-    if let Some(user) = user.map(str::trim).filter(|s| !s.is_empty()) {
-        out.push_str(match lang {
-            Lang::Zh => "\n---\n用户自定义补充指令:\n",
-            Lang::En => "\n---\nUser-provided additional instructions:\n",
-        });
-        out.push_str(user);
+    if !out.ends_with('\n') {
         out.push('\n');
+    }
+    out.push_str(match lang {
+        Lang::Zh => "\n可用知识库 (read_skill 按需读取全文):\n",
+        Lang::En => "\nKnowledge base (read full text via read_skill as needed):\n",
+    });
+    for (_, skill) in registry.skills() {
+        let _ = writeln!(
+            out,
+            "- {}: {} — {}",
+            skill.id,
+            skill.title(lang),
+            skill.summary(lang)
+        );
     }
     out
 }
@@ -63,21 +144,67 @@ pub fn compose_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
-    /// 提示词: 含约定 + 注册表知识库索引;用户提示词追加在后。
+    fn temp_dir() -> PathBuf {
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("当前时间")
+            .as_nanos();
+        std::env::temp_dir().join(format!("lissio-ai-prompt-{}-{suffix}", std::process::id()))
+    }
+
     #[test]
-    fn system_prompt_composition() {
-        let registry = Arc::new(CapabilityRegistry::builtin());
-        let zh = compose_system_prompt(&registry, Lang::Zh, Some("  自定义:波特率默认 9600  "));
-        assert!(zh.contains("get_workspace"));
-        assert!(zh.contains("- overview:"));
-        assert!(zh.contains("- protocols:"));
-        assert!(zh.contains("自定义:波特率默认 9600"));
-        assert!(zh.find("自定义").unwrap() > zh.find("- overview:").unwrap());
+    fn creates_once_and_reads_edits_on_each_turn() {
+        let dir = temp_dir();
+        let path = prompt_path(&dir);
+        let initial = load_prompt(&dir).expect("首次创建并读取");
+        assert!(initial.contains("行动范式"));
+        assert_eq!(fs::read_to_string(&path).unwrap(), initial);
 
-        let en = compose_system_prompt(&registry, Lang::En, None);
-        assert!(en.contains("Knowledge base"));
-        assert!(!en.contains("用户自定义"));
+        fs::write(&path, "自定义完整提示词\n").expect("用户编辑");
+        ensure_prompt_file(&dir).expect("再次初始化不覆盖");
+        assert_eq!(load_prompt(&dir).unwrap(), "自定义完整提示词\n");
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn read_error_names_the_prompt_file() {
+        let dir = temp_dir();
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(prompt_path(&dir), [0xff]).unwrap();
+        let error = load_prompt(&dir).expect_err("非 UTF-8 文件应报错");
+        assert!(error.to_string().contains(PROMPT_FILE_NAME));
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn whitespace_only_prompt_is_visible_error() {
+        let dir = temp_dir();
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(prompt_path(&dir), " \n\t ").unwrap();
+        let error = load_prompt(&dir).expect_err("空提示词不能发送");
+        assert!(error.to_string().contains(PROMPT_FILE_NAME));
+        assert!(error.to_string().contains("为空"));
+        fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn composition_respects_tool_availability_and_current_registry() {
+        let registry = CapabilityRegistry::builtin();
+        let base = DEFAULT_PROMPT;
+        let without = compose_system_prompt(&registry, Lang::Zh, base, false);
+        assert!(without.contains("行动范式"));
+        assert!(!without.contains("connect_edge"));
+        assert!(!without.contains("- overview:"));
+        assert!(!without.contains(TOOLS_START));
+
+        let with = compose_system_prompt(&registry, Lang::Zh, base, true);
+        assert!(with.contains("行动范式"));
+        assert!(with.contains("connect_edge"));
+        assert!(with.contains("query_recording_history"));
+        assert!(with.contains("- overview:"));
+        assert!(!with.contains("connect_nodes"));
+        assert!(!with.contains(TOOLS_START));
     }
 }

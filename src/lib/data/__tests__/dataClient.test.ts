@@ -147,4 +147,59 @@ describe('port sample store facade identity', () => {
     const { getPortSampleStore } = await import('../dataClient');
     expect(getPortSampleStore(undefined, 'ch1')).toBe(getPortSampleStore('', undefined));
   });
+
+  it('releases an idle port and lets a retained facade use its replacement', async () => {
+    vi.useFakeTimers();
+    try {
+      const { getPortSampleStore } = await import('../dataClient');
+      const original = getPortSampleStore('idle-source', 'ch1');
+      const unsubscribe = original.subscribe(() => undefined);
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(getPortSampleStore('idle-source', 'ch1')).toBe(original);
+
+      unsubscribe();
+      await vi.advanceTimersByTimeAsync(1_000);
+      const replacement = getPortSampleStore('idle-source', 'ch1');
+      expect(replacement).not.toBe(original);
+
+      const stopOld = original.subscribe(() => undefined);
+      const stopNew = replacement.subscribe(() => undefined);
+      expect(subscribeCalls()).toHaveLength(2);
+      expect(original.getSnapshot()).toBe(replacement.getSnapshot());
+      stopOld();
+      stopNew();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('ignores a worker result from an evicted incarnation of the same port', async () => {
+    vi.useFakeTimers();
+    try {
+      const { getPortSampleStore } = await import('../dataClient');
+      const first = getPortSampleStore('reused-source', 'ch1');
+      const stopFirst = first.subscribe(() => undefined);
+      const firstChannel = subscribeCalls()[0][1].onEvent as {
+        onmessage: (buffer: ArrayBuffer) => void;
+      };
+      firstChannel.onmessage(new ArrayBuffer(1));
+      const stalePost = MockWorker.instance.posts[0];
+
+      stopFirst();
+      await vi.advanceTimersByTimeAsync(1_000);
+      const second = getPortSampleStore('reused-source', 'ch1');
+      const stopSecond = second.subscribe(() => undefined);
+      const secondChannel = subscribeCalls()[1][1].onEvent as {
+        onmessage: (buffer: ArrayBuffer) => void;
+      };
+      secondChannel.onmessage(new ArrayBuffer(2));
+      MockWorker.instance.respond(stalePost, 1);
+      expect(second.getSnapshot().rows).toEqual([]);
+      MockWorker.instance.respond(MockWorker.instance.posts[1], 2);
+      expect(second.getSnapshot().rows[0]?.value).toBe(2);
+      stopSecond();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

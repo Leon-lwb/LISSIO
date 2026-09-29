@@ -13,6 +13,7 @@ import type {
   AiChatEvent,
   AiSessionMeta,
   AiToolRun,
+  AiTurnEvent,
   AiViewItem,
   McpServerConfig,
   McpToolInfo,
@@ -33,6 +34,8 @@ interface AiChatState {
   streamingText: string;
   /** 当前推理文本聚合 */
   reasoningText: string;
+  /** 当前流式回合的原始事件顺序。 */
+  timeline: AiTurnEvent[];
   /** 当前回合的工具调用记录 */
   toolRuns: AiToolRun[];
   /** 进行中的 task_id (可取消) */
@@ -63,6 +66,15 @@ interface AiChatState {
   addServer: (config: McpServerConfig) => Promise<void>;
   removeServer: (id: string) => Promise<void>;
   setServerEnabled: (id: string, enabled: boolean) => Promise<void>;
+}
+
+function appendTextEvent(timeline: AiTurnEvent[], kind: 'text' | 'reasoning', text: string): AiTurnEvent[] {
+  if (!text) return timeline;
+  const last = timeline[timeline.length - 1];
+  if (last?.kind === kind) {
+    return [...timeline.slice(0, -1), { kind, text: last.text + text }];
+  }
+  return [...timeline, { kind, text }];
 }
 
 /** 从设置读取 provider 配置 (随请求传给后端, 后端不落盘) */
@@ -128,26 +140,40 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     channel.onmessage = (event) => {
       switch (event.type) {
         case 'delta':
-          set((s) => ({ streamingText: s.streamingText + event.text }));
+          set((s) => ({
+            streamingText: s.streamingText + event.text,
+            timeline: appendTextEvent(s.timeline, 'text', event.text),
+          }));
           break;
         case 'reasoning_delta':
-          set((s) => ({ reasoningText: s.reasoningText + event.text }));
+          set((s) => ({
+            reasoningText: s.reasoningText + event.text,
+            timeline: appendTextEvent(s.timeline, 'reasoning', event.text),
+          }));
           break;
         case 'tool_call':
           set((s) => ({
+            timeline: [...s.timeline, { kind: 'tool', id: event.id }],
             toolRuns: [
               ...s.toolRuns,
-              { id: event.id, name: event.name, arguments: event.arguments, content: '', is_error: false, done: false },
+              { id: event.id, name: event.name, arguments: event.arguments, text_offset: s.streamingText.length, content: '', is_error: false, done: false },
             ],
           }));
           break;
-        case 'tool_result':
+        case 'tool_result': {
+          const renamed = !event.is_error && get().toolRuns.some(
+            (run) => run.id === event.id && run.name === 'set_conversation_title'
+          );
           set((s) => ({
             toolRuns: s.toolRuns.map((r) =>
               r.id === event.id ? { ...r, content: event.content, is_error: event.is_error, done: true } : r
             ),
           }));
+          if (renamed) {
+            void api.chatListSessions().then((sessions) => set({ sessions })).catch(() => undefined);
+          }
           break;
+        }
         case 'done':
         case 'cancelled':
         case 'error':
@@ -164,8 +190,6 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         payload.attachments,
         payload.regenerate,
         providerConfigFromSettings(),
-        ai.systemPrompt.trim() || null,
-        ai.maxToolRounds,
         ai.mcpToolsEnabled,
         ai.builtinToolsEnabled,
         lang,
@@ -184,6 +208,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       streaming: false,
       streamingText: '',
       reasoningText: '',
+      timeline: [],
       toolRuns: [],
       taskId: null,
       streamingSessionId: null,
@@ -192,8 +217,8 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     const foldLocal = (items: AiViewItem[]): AiViewItem[] => {
       const tools = s.toolRuns.map((r) => ({ ...r }));
       const out = [...items];
-      if (s.streamingText || tools.length > 0) {
-        out.push({ role: 'assistant', text: s.streamingText, tools });
+      if (s.streamingText || s.reasoningText || tools.length > 0) {
+        out.push({ role: 'assistant', text: s.streamingText, reasoning: s.reasoningText, tools, timeline: s.timeline });
       }
       return out;
     };
@@ -204,6 +229,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     try {
       const session = await api.chatGetSession(s.activeSessionId);
       set({ ...patch, viewItems: toViewItems(session?.items ?? []) });
+      void api.chatListSessions().then((sessions) => set({ sessions })).catch(() => undefined);
     } catch {
       set((cur) => ({ ...patch, viewItems: foldLocal(cur.viewItems) }));
     }
@@ -217,6 +243,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     streamingSessionId: null,
     streamingText: '',
     reasoningText: '',
+    timeline: [],
     toolRuns: [],
     taskId: null,
     tools: [],
@@ -259,6 +286,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
           viewItems: [],
           streamingText: '',
           reasoningText: '',
+          timeline: [],
           toolRuns: [],
         }));
       } catch {
@@ -317,6 +345,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         streamingSessionId: activeSessionId,
         streamingText: '',
         reasoningText: '',
+        timeline: [],
         toolRuns: [],
       });
 
@@ -330,6 +359,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
             streamingSessionId: null,
             streamingText: '',
             reasoningText: '',
+            timeline: [],
             toolRuns: [],
             taskId: null,
             viewItems: [...s.viewItems, errorItemFromRejection(err)],
@@ -362,6 +392,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         streamingSessionId: activeSessionId,
         streamingText: '',
         reasoningText: '',
+        timeline: [],
         toolRuns: [],
       });
 
@@ -374,6 +405,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
             streamingSessionId: null,
             streamingText: '',
             reasoningText: '',
+            timeline: [],
             toolRuns: [],
             taskId: null,
             viewItems: [...s.viewItems, errorItemFromRejection(err)],
@@ -394,6 +426,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         viewItems: [],
         streamingText: '',
         reasoningText: '',
+        timeline: [],
         toolRuns: [],
         taskId: null,
         streaming: false,
@@ -450,7 +483,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     },
 
     removeServer: async (id) => {
-      void api.mcpRemoveServer(id);
+      await api.mcpRemoveServer(id);
       await get().refreshServers();
       await get().refreshTools();
     },

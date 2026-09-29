@@ -3,7 +3,12 @@ import type { GraphEdgeRef } from "./GraphEdgeRef";
 import type { NodeDocument } from "./NodeDocument";
 
 /**
- * 一次描述批请求。
+ * 一次描述批请求 — 与前端共享的**线缆合同类型** (`requestRevision` 等字段名即契约)。
+ *
+ * 注意: 该类型的 `documents` 是整体的 `Vec<NodeDocument>`, 因此它的反序列化是
+ * 全有全无的。线缆入口不得直接用本类型解码 (一条不合法即整批失败); 应先取
+ * 文档原值再走 [`DescribeBatch::decode`]。本类型保留给已持有强类型文档的
+ * 进程内调用方与 ts-rs 导出。
  */
 export type DescribeRequest = { 
 /**

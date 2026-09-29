@@ -6,7 +6,7 @@ import type { TriggerMatchType } from "./TriggerMatchType";
  */
 export type TriggerRuleDef = { id: string, pattern: string, match_type: TriggerMatchType, flags: string | null, 
 /**
- * 输出值类型: 'number' | 'string' (默认 'number', 兼容旧配置)
+ * 输出值类型: 'number' | 'string' (默认 'number')
  */
 output_type: string, 
 /**

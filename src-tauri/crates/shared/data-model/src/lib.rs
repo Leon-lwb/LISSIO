@@ -24,13 +24,18 @@ pub mod frame;
 pub mod model_descriptor;
 pub mod panel_descriptor;
 pub mod serial_params;
+pub mod simulation;
 
 /// Transport → 数据平面 ingest 广播通道容量。
 ///
-/// TestData 以最高 2000 条/s (每 500µs 一条) 发布,读任务单次服务(合批+解析,
-/// 评估解耦前还含数值平面)可达数十毫秒;容量必须能吸收数倍于服务时间的抖动,
-/// 否则广播环被覆盖 → `RecvError::Lagged` 直接丢数据(波形出现永久空洞)。
-/// 4096 条 ≈ 2s @ 500µs/条,内存上界 = 容量 × 单条字节数,可控。
+/// 生成侧按 [`simulation::MESSAGE_SAMPLE_SECONDS`] 的固定节拍发布: 速率不低于
+/// 200 采样/秒时消息条率约为 200 条/s **与速率无关**, 只有消息**大小**随速率
+/// 增长 (`simulation::samples_per_message`)。读任务单次服务 (合批 + 解析) 可达
+/// 数十毫秒, 容量必须吸收数倍于服务时间的抖动, 否则广播环被覆盖 →
+/// `RecvError::Lagged` 直接丢数据 (波形出现永久空洞)。
+///
+/// 4096 条 ≈ 20s @ 200 条/s 的抖动余量; 内存上界 = 容量 × 单条字节数 (单条随
+/// 速率线性增长), 故高采样率下的实际驻留量由消息大小而非条数决定。
 pub const INGEST_CHANNEL_CAPACITY: usize = 4096;
 
 pub use config::{

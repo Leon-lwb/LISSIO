@@ -70,8 +70,10 @@ FFT.spectrum(freq) → IFFT 或 Spectrum;str 口(string) → TextDisplay / Str /
 - RawData 控件的输入口是动态派生的 (`src:<source>:<handle>`),连线时自动改写
   targetHandle,无需手工指定;它接受 bytes 与 time 源,仅拒绝 freq。
 - 所有连线必须留在同一 tab，跨页签直接拒绝。
-- 端口名与端口域用 get_workspace 返回中各节点的 ports 字段对照 (inputs/outputs
-  均含 domain 标注,与画布渲染同源);连线前先读再连。
+- 内置 AI 连线前先用 get_workspace 查看单独返回的 derived_ports,核对实际**输出**
+  端口名与端口域；输入端口需结合节点类型与配置判断。外部 MCP 客户端没有这个
+  前端托管读取工具。
 - 连线由后端编译校验:域不匹配 / 成环 / 端口不存在会直接报错且不建边,
   错误信息含原因 — 按提示换端口或改配置后重试。
-- 编辑节点图统一走内置工具 (add_node/connect_nodes/...),画布即时同步且可撤销。
+- 内置 AI 可用 add_node 编辑节点,用 connect_edge 连线；整页替换用 update_graph
+  并提供完整 documents 和 edges,不要把局部列表当成整页提交。

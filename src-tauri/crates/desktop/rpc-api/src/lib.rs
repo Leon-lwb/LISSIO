@@ -71,7 +71,13 @@ pub async fn dispatch_with_context(
     args: Value,
     context: &RpcContext,
 ) -> Result<Value, RpcError> {
-    let args = normalize_args(args);
+    // 载荷型命令 ([`catalog::PAYLOAD_ARGS`]) 的参数对象本身就是请求 DTO,
+    // 顶层键已是其 ts-rs 契约形状, 不得做参数名归一。
+    let args = if catalog::args_are_a_payload(cmd) {
+        args
+    } else {
+        normalize_args(args)
+    };
     match cmd {
         // ===== AI / sessions / MCP =====
         "ai_list_providers" => ai::list_providers(),

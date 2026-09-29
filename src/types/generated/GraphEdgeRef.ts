@@ -2,5 +2,12 @@
 
 /**
  * 描述用边引用 (与图提交的 GraphEdge 同形, 只取描述所需字段)。
+ *
+ * 命名**刻意**与图提交 DTO 一致 (snake_case: `source_handle` / `target_handle`),
+ * 而不是本文件其余 DTO 的 camelCase —— 「与图提交同形」是它的定义。因此前端必须
+ * 用 ts-rs 导出的 `GraphEdgeRef` 构造本字段, 不得手写等价的 camelCase 形状:
+ * serde 默认忽略未知字段, 写错时 `sourceHandle` 会被静默丢弃、`source_handle`
+ * 退化为 `None`, 而 RawData 的 `src:*` 动态端口正是由 `source_handle` 推导 ——
+ * 表现为「RawData 端口丢失」且全程无任何报错。
  */
 export type GraphEdgeRef = { source: string, source_handle: string | null, target: string, target_handle: string | null, };

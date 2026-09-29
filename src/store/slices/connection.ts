@@ -7,6 +7,7 @@ import { nodeError } from '../../lib/tauri/errorGuidance';
 import { t } from '../../i18n';
 import { downstreamProtocolOf } from '../appStoreHelpers';
 import { resolveSimulation } from '../../lib/acquisition/simulation';
+import { simulationConfig, withSimulation, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { refreshDeviceNodeSnapshots } from '../../lib/acquisition/useDeviceNodeSnapshot';
 import { useSettingsStore } from '../settingsStore';
 import type { ConnectionState, PortInfo, TransportStats, WidgetBinding, WidgetConfig } from '../../types';
@@ -82,9 +83,26 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         clearRawDataTransportBuffers(nodeId);
         if (downstreamId) resetPortSampleStoresForSource(downstreamId);
         waveformWindow.clear();
+        // 测试数据编码跟随下游解析器: resolve 结果写回设备文档后端 open 才拿得到。
+        // 后端 open 只读已同步的图文档, 编码停留在旧值 (如 JustFloat) 时下游
+        // 协议节点解析不出任何帧 (CAN/波形面板全空)。直接补丁不进撤销历史,
+        // 也不触发 structure diff 的 mustClose 竞态 — open 紧随其后无需关闭。
+        const device = (node.data as AcquisitionNodeData).node;
+        const simulation = resolveSimulation(node, get().rfNodes, get().rfEdges);
+        if (
+          simulation &&
+          JSON.stringify(simulation.encoding) !== JSON.stringify(simulationConfig(device)?.encoding)
+        ) {
+          set((s) => ({
+            rfNodes: s.rfNodes.map((n) =>
+              n.id === nodeId && n.type === 'acquisition'
+                ? { ...n, data: { ...n.data, node: withSimulation(device, simulation) } }
+                : n,
+            ),
+          }));
+        }
         const error = await get().syncTabGraph(node.data.tabId as string);
         if (error) throw new Error(error);
-        resolveSimulation(node, get().rfNodes, get().rfEdges);
         await api.openAcquisitionNode(nodeId);
         if (!get().rfNodes.some(n => n.id === nodeId)) { await api.closeAcquisitionNode(nodeId); return; }
         await refreshDeviceNodeSnapshots();

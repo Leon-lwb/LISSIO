@@ -22,6 +22,8 @@ export default tseslint.config(
       'promo*.html',
       'index.html',
       'eslint.config.js',
+      // 本地未跟踪工具目录 (gitignore 同名) — 非仓库交付物
+      '.workbuddy/**',
     ],
   },
 

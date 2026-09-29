@@ -31,8 +31,6 @@ pub async fn chat_send(
             optional::<Vec<AttachmentDto>>(args, cmd, "attachments")?,
             required(args, cmd, "regenerate")?,
             required::<AiProviderConfig>(args, cmd, "config")?,
-            optional(args, cmd, "system")?,
-            required(args, cmd, "max_tool_rounds")?,
             required(args, cmd, "use_mcp_tools")?,
             required(args, cmd, "use_builtin_tools")?,
             optional(args, cmd, "ui_lang")?,

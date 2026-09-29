@@ -4,6 +4,7 @@
     clippy::cast_possible_truncation,
     clippy::cast_sign_loss
 )]
+use data_model::simulation::samples_per_message;
 use data_model::{TestDataConfig, TestSignal};
 use schema_types::{ProtocolConfig, SchemaPreset, TestDataLink, encode_by_blocks};
 use std::fmt::Write as _;
@@ -15,18 +16,9 @@ use tokio::sync::{broadcast, mpsc, watch};
 use acquisition::{ByteMessage, ConnectionControl, TransportBackend, TransportConnection};
 use async_trait::async_trait;
 
-/// TestData 每条广播消息覆盖的目标采样时长。数据平面使用同一换算规则把
-/// `broadcast::Lagged(消息数)` 还原成丢失帧数 (经 [`samples_per_message`] 折算)。
-const MESSAGE_SAMPLE_SECONDS: f64 = 0.005;
-
-/// 每条广播消息覆盖的采样数 — 生成器与数据平面共用的消息大小契约。
-/// 数据平面据此把 `broadcast::Lagged(消息数)` 折算为丢失帧数, 进而还原
-/// 采样时间戳缺口。修改消息节拍时必须保持两侧一致。
-pub fn samples_per_message(sample_rate: f32) -> u64 {
-    (f64::from(sample_rate.max(1.0)) * MESSAGE_SAMPLE_SECONDS)
-        .ceil()
-        .max(1.0) as u64
-}
+// 消息节拍契约 (每条消息覆盖的采样时长、消息大小换算) 的唯一权威已收进
+// `data_model::simulation`: 生成侧 (`byte_simulation`) 与消费侧的 Lagged 折算
+// (`pipeline::data_plane`) 必须用同一份换算, 放在两侧各自的 crate 里会各自演化。
 
 #[derive(Clone)]
 pub struct TestDataRuntime {
@@ -124,6 +116,11 @@ pub fn spawn(
 )> {
     let (data_tx, _) = broadcast::channel(data_model::INGEST_CHANNEL_CAPACITY);
     let (write_tx, mut write_rx) = mpsc::channel::<Vec<u8>>(64);
+    log::info!(
+        "TestData 生成器启动: rate={}/s, channels={}",
+        config.sample_rate,
+        config.channels
+    );
     let (runtime_tx, mut runtime_rx) = watch::channel(TestDataRuntime { config, link });
     let cancel = Arc::new(AtomicBool::new(false));
 
@@ -132,6 +129,8 @@ pub fn spawn(
     let cancel_gen = cancel.clone();
     tokio::spawn(async move {
         let mut sample_idx: u64 = 0;
+        let mut generated_messages = 0_u64;
+        let mut generated_bytes = 0_u64;
         // 采样时钟只由已生成样本数推进，批次调度抖动和热更新不会重置相位。
         let mut sample_time_sec = 0.0_f64;
         let mut previous_sample_dt = None;
@@ -174,6 +173,8 @@ pub fn spawn(
                         sample_time_sec += sample_dt;
                     }
 
+                    generated_messages += 1;
+                    generated_bytes = generated_bytes.saturating_add(data.len() as u64);
                     let _ = data_tx_gen.send(ByteMessage::from_device(data));
                 }
                 changed = runtime_rx.changed() => {
@@ -190,7 +191,7 @@ pub fn spawn(
                 break;
             }
         }
-        log::debug!("测试数据生成器退出");
+        log::info!("TestData 生成器退出: messages={generated_messages}, bytes={generated_bytes}");
     });
 
     Ok((write_tx, data_tx, cancel, runtime_tx))

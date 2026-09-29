@@ -8,6 +8,7 @@ import { useAppStore } from '../../../store/appStore';
 import { classifyRawDataChannel, resolveRawDataChannelKey } from '../../../lib/utils/rawDataChannel';
 import { rawDataPortId } from '../../../lib/utils/nodeDef';
 import { selectWidgets } from '../../../store/appStoreHelpers';
+import { deviceTreeCanvasEdges, deviceTreeCanvasNodes } from '../../../lib/acquisition/deviceTreeModel';
 
 export interface RawDataChannelOption {
   key: string;
@@ -23,6 +24,8 @@ export function useRawDataChannel(widgetId?: string) {
   const rfEdges = useAppStore((s) => s.rfEdges);
   const rfNodes = useAppStore((s) => s.rfNodes);
   const widgets = useAppStore((s) => selectWidgets(s));
+  const sourceNodes = useMemo(() => [...rfNodes, ...deviceTreeCanvasNodes(rfNodes)], [rfNodes]);
+  const sourceEdges = useMemo(() => [...rfEdges, ...deviceTreeCanvasEdges(rfNodes)], [rfEdges, rfNodes]);
   const updateWidget = useAppStore((s) => s.updateWidget);
 
   // 通道选择: 该 widget 的入边 (source, sourceHandle) 组合 (去重)
@@ -30,7 +33,7 @@ export function useRawDataChannel(widgetId?: string) {
   const channelOptions = useMemo(() => {
     if (!widgetId) return [];
     const globalLabel = (id: string): string | null => {
-      const n = rfNodes.find((n) => n.id === id);
+      const n = sourceNodes.find((n) => n.id === id);
       const cfg = (n?.data as { config?: { kind?: string } } | undefined)?.config;
       const device = (n?.data as { node?: { name?: string } } | undefined)?.node;
       if (n?.type === 'acquisition') return `${device?.name ?? '?'} (${id.slice(-4)})`;
@@ -54,7 +57,7 @@ export function useRawDataChannel(widgetId?: string) {
       });
     }
     return options;
-  }, [widgetId, rfEdges, rfNodes]);
+  }, [widgetId, rfEdges, sourceNodes]);
 
   // 纯端口制通道选择 (单一事实源 = 控件配置 RawDataConfig.selectedInput):
   // 配置选中且该连线仍存在 → 用它; 否则回退第一个已连接端口; 无连线 → '' (空态)。
@@ -85,9 +88,9 @@ export function useRawDataChannel(widgetId?: string) {
   const channelInfo = useMemo(
     () =>
       selectedChannel
-        ? classifyRawDataChannel(selectedChannel, rfNodes, rfEdges, widgets)
+        ? classifyRawDataChannel(selectedChannel, sourceNodes, sourceEdges, widgets)
         : null,
-    [selectedChannel, rfNodes, rfEdges, widgets]
+    [selectedChannel, sourceNodes, sourceEdges, widgets]
   );
 
   const sourceLabel = useCallback(
@@ -101,6 +104,8 @@ export function useRawDataChannel(widgetId?: string) {
   return {
     rfEdges,
     rfNodes,
+    sourceEdges,
+    sourceNodes,
     widgets,
     channelOptions,
     channel,

@@ -15,6 +15,9 @@
 //! 三个出口共用同一份能力核心与同一份装配; 本 crate 只做协议适配 (帧编解码、
 //! 鉴权、静态站点、订阅生命周期), 不承载业务判断。
 
+mod diagnostics;
+mod outbox;
+
 pub mod config;
 pub mod frames;
 pub mod http;
@@ -25,14 +28,14 @@ pub mod sink;
 use std::io::Write as _;
 use std::net::IpAddr;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, AtomicUsize};
 
 use backend_host::BackendHost;
 use tokio::sync::broadcast;
 
 pub use config::{DEFAULT_HTTP_PORT, ServerConfig};
 pub use frames::{Capabilities, PROTOCOL_VERSION};
-pub use sink::{BroadcastEventSink, OutFrame, WsStreamSink};
+pub use sink::{BroadcastEventSink, ConnectionOutbox, OutFrame, OutboxStats, WsStreamSink};
 
 /// 事件广播缓冲深度 — 单连接落后超过此值即丢帧并告警 (显示订阅走独立通道,
 /// 不受影响)。
@@ -51,6 +54,10 @@ pub struct ServerState {
     pub broadcast: broadcast::Sender<frames::ServerMessage>,
     /// 进程级订阅 id 分配器 (与 `app::display` 的全局订阅表同一命名空间)。
     pub next_subscription_id: Arc<AtomicU32>,
+    /// 当前活动 WebSocket 连接数。
+    pub active_websockets: Arc<AtomicUsize>,
+    /// 当前活动显示订阅数。
+    pub active_display_subscriptions: Arc<AtomicUsize>,
 }
 
 impl ServerState {
@@ -122,7 +129,10 @@ async fn serve_inner(config: ServerConfig, supervised_stdio: bool) -> Result<(),
         config: config.clone(),
         broadcast,
         next_subscription_id: Arc::new(AtomicU32::new(0)),
+        active_websockets: Arc::new(AtomicUsize::new(0)),
+        active_display_subscriptions: Arc::new(AtomicUsize::new(0)),
     });
+    diagnostics::spawn(host.clone());
     log::info!("Web 出口已监听: http://{}:{actual_port}", config.bind);
     println!(
         "LISSIO_READY={{\"port\":{actual_port},\"protocol\":\"{}\",\"version\":\"{}\"}}",

@@ -13,6 +13,8 @@ use events::{BackendEventSink, EventSinkHandle, NotifyLevel, emit_transport_stat
 use schema_types::{ProtocolConfig, ProtocolSchema, TestDataLink};
 use serde::Serialize;
 
+use std::time::Instant;
+
 use crate::app_state::AppState;
 
 /// 打开设备会话并在可用时挂载字节流读任务。
@@ -74,11 +76,22 @@ pub async fn close_device_session(
     sink: &dyn BackendEventSink,
     node_id: &data_model::device_tree::NodeId,
 ) -> Result<()> {
+    let started = Instant::now();
+    log::info!(
+        "连接关闭开始: node={node_id}, open_nodes={}, {}",
+        transport.list_open().len(),
+        data_plane.lifecycle_summary()
+    );
     data_plane.mark_source_disconnected(node_id.as_str());
     data_plane.detach(node_id.as_str());
     transport.close(node_id).await;
     emit_transport_state(sink, node_id.as_str(), ConnectionState::Disconnected);
-    log::info!("连接已关闭: {node_id}");
+    log::info!(
+        "连接关闭完成: node={node_id}, elapsed_ms={}, open_nodes={}, {}",
+        started.elapsed().as_millis(),
+        transport.list_open().len(),
+        data_plane.lifecycle_summary()
+    );
     sink.notify(NotifyLevel::Info, "连接已断开");
     Ok(())
 }

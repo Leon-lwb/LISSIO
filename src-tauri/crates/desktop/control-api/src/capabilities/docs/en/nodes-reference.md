@@ -80,11 +80,13 @@ TextDisplay / Str / TextOut.
   targetHandle is rewritten automatically on connect. RawData accepts bytes and
   time sources; only freq is rejected.
 - Every connection stays inside one tab; cross-tab edges are rejected.
-- Port names and domains: use each node's `ports` field in the get_workspace
-  response (inputs/outputs carry domain annotations, same source as the
-  canvas); read first, then connect.
+- Before wiring, the built-in AI should inspect `derived_ports`, returned
+  separately by get_workspace, for actual **output** port names and domains;
+  use node type and config for inputs. External MCP clients do not have this
+  frontend-hosted read tool.
 - Wires are compile-checked by the backend: domain mismatch / cycles /
   non-existent ports fail with the real reason and no edge is created — fix
   the port or config per the message and retry.
-- Always edit the graph via built-in tools (add_node/connect_nodes/...):
-  canvas syncs live and edits are undoable.
+- The built-in AI can use add_node for nodes and connect_edge for wires.
+  update_graph replaces a whole tab and requires its complete documents and
+  edges; never submit a partial list as a whole-tab update.

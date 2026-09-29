@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { invalidateDescriptions } from '../lib/models/describeStore';
 import {
@@ -41,6 +41,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
   const [logPath, setLogPath] = useState<string | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
+  const initialCheckStarted = useRef(false);
 
   const showWindow = useCallback(() => {
     if (!desktop) return;
@@ -136,7 +137,11 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
     }
   }, [base, connect, desktop, showWindow, token]);
 
-  useEffect(() => { void start(); }, [start]);
+  useEffect(() => {
+    if (initialCheckStarted.current) return;
+    initialCheckStarted.current = true;
+    void start();
+  }, [start]);
 
   // Keep the business tree mounted only while its backend is healthy. Remounting after a
   // successful reconnect deliberately rehydrates workspace/settings/subscriptions from the

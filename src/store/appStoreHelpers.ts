@@ -314,7 +314,10 @@ export async function hydrateWorkspaceFromBackend(): Promise<boolean> {
   if (!snap) return false;
 
   const rfNodes = snap.graphs.flatMap(g => g.documents.map(doc => canvasNode(doc)));
-  const cards = await loadAdapterCapabilities().then(buildDeviceCards).catch(() => []);
+  const cards = await loadAdapterCapabilities().then(buildDeviceCards).catch((error: unknown) => {
+    console.error('[workspace] 设备能力目录加载失败, 设备节点端口将不可用:', error);
+    return [];
+  });
   for (const node of rfNodes) {
     if (node.type !== 'acquisition') continue;
     const data = node.data as AcquisitionNodeData;

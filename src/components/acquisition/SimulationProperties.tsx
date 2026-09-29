@@ -4,6 +4,7 @@ import type { SimulationConfig, SignalParameters } from '../../types';
 import { simulationConfig, updateAcquisitionNode, withSimulation, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { DraftNumberInput } from '../ui/fields';
 import { downstreamParsers, resolveSimulation, applyTestAttribute } from '../../lib/acquisition/simulation';
+import { maxSimulationRate, simulationRateUnit } from '../../lib/acquisition/simulationRateLimits';
 
 export function SimulationProperties({ node }: { node: Node }) {
   const nodes = useAppStore(s => s.rfNodes);
@@ -14,8 +15,13 @@ export function SimulationProperties({ node }: { node: Node }) {
   const update = (patch: Partial<SimulationConfig>) => updateAcquisitionNode(node.id, withSimulation(device, { ...config, ...patch }));
   const parsers = downstreamParsers(node, nodes, edges);
   const pointSource = ports?.some(p => p.domain === 'points');
+  let resolved: SimulationConfig | null = null;
   let error = '';
-  try { resolveSimulation(node, nodes, edges); } catch (cause) { error = String(cause); }
+  try { resolved = resolveSimulation(node, nodes, edges); } catch (cause) { error = String(cause); }
+  // 速率的量纲取决于**生效**的编码 —— 可能来自下游解析器而不是文档里的 encoding。
+  // 帧定界协议 (Slcan/CandleLight) 下是帧/秒, 上限比采样率低一个量级;
+  // 权威校验在后端 (validate_for_protocol), 这里让输入框如实反映量纲并就地拒绝越界值。
+  const protocolKind = (resolved?.encoding as { protocol?: { kind?: string } } | null)?.protocol?.kind;
   const signals = ['sine', 'square', 'triangle', 'sawtooth', 'random', 'dc'] as const;
   const signalFields = (signal: SignalParameters, onChange: (signal: SignalParameters) => void, idPrefix: string) => <div className="grid grid-cols-2 gap-2">
     <label>波形<select className="form-select" value={signal.waveform} onChange={e => onChange({ ...signal, waveform: e.target.value as SignalParameters['waveform'] })}>{signals.map(s => <option key={s}>{s}</option>)}</select></label>
@@ -25,14 +31,14 @@ export function SimulationProperties({ node }: { node: Node }) {
     <div className="flex justify-between"><span>测试数据 · 不访问真实硬件</span><button className="text-red" onClick={() => updateAcquisitionNode(node.id, withSimulation(device, null))}>移除</button></div>
     {signalFields(config.signal, signal => update({ signal }), 'sim-signal')}
     <div className="grid grid-cols-2 gap-2">
-      <label htmlFor="sim-sampleRate">生成速率 / 秒<DraftNumberInput id="sim-sampleRate" className="form-input" min={1} max={5000000} value={config.sampleRate} onCommit={sampleRate => update({ sampleRate })} /></label>
+      <label htmlFor="sim-sampleRate">生成速率 ({simulationRateUnit(protocolKind)})<DraftNumberInput id="sim-sampleRate" className="form-input" min={1} max={maxSimulationRate(protocolKind)} value={config.sampleRate} onCommit={sampleRate => update({ sampleRate })} /></label>
       <label htmlFor="sim-seed">随机种子<DraftNumberInput id="sim-seed" className="form-input" min={0} max={4294967295} integer value={config.seed} onCommit={seed => update({ seed })} /></label>
       {!pointSource && <label htmlFor="sim-channels">通道数<DraftNumberInput id="sim-channels" className="form-input" min={1} max={256} integer value={config.channels} onCommit={channels => update({ channels })} /></label>}
     </div>
     {!pointSource && (parsers.length ? <label>参考解析器<select className="form-select" value={config.referenceNodeId ?? ''} onChange={e => update({ referenceNodeId: e.target.value || null })}>
       <option value="">自动匹配唯一格式</option>{parsers.map(p => <option key={p.id} value={p.id}>{typeof p.data.label === 'string' ? p.data.label : p.id}</option>)}
     </select></label> : <label>生成格式<select className="form-select" value={(config.encoding as { protocol?: { kind: string } } | null)?.protocol?.kind ?? ''} onChange={e => update({ encoding: e.target.value ? { protocol: { kind: e.target.value, channels: config.channels }, schema: null } : null })}>
-      <option value="">请选择</option><option>JustFloat</option><option>FireWater</option><option>RawData</option>
+      <option value="">请选择</option><option>JustFloat</option><option>FireWater</option><option>RawData</option><option>Slcan</option><option>CandleLight</option>
     </select></label>)}
     <details><summary className="cursor-pointer">逐通道 / 点位覆盖</summary>
       {Object.entries(config.overrides).map(([id, signal], index) => <div key={id} className="mt-2 border-t border-border pt-2"><div className="flex justify-between"><span>{id}</span><button onClick={() => { const overrides = { ...config.overrides }; delete overrides[id]; update({ overrides }); }}>删除覆盖</button></div>{signalFields(signal, value => update({ overrides: { ...config.overrides, [id]: value } }), `sim-override-${index}`)}</div>)}

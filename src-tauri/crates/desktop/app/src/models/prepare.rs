@@ -12,7 +12,7 @@ use data_model::model_descriptor::ModelIssue;
 use kind::document::NodeDocument;
 use serde_json::{Value, json};
 
-use crate::models::{catalog, issue};
+use crate::models::issue;
 
 /// 一次准备批请求中的单项操作。
 #[derive(Debug, Clone)]

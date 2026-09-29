@@ -69,6 +69,17 @@ pub fn close_splashscreen(app: tauri::AppHandle) {
     show_main_window(app);
 }
 
+/// Open the application's configuration directory in the system file manager.
+#[tauri::command]
+pub fn open_settings_folder(app: tauri::AppHandle) -> Result<(), String> {
+    let dir = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    tauri_plugin_opener::open_path(&dir, None::<&str>).map_err(|error| error.to_string())
+}
+
 /// Prevent a frontend initialization error from leaving the splash screen open forever.
 pub fn spawn_splashscreen_fallback(app: &tauri::AppHandle) {
     let fallback_handle = app.clone();

@@ -8,8 +8,9 @@
 //! - 未收到结果的工具调用在收束时标记为失败, 避免持久化"永远运行中"的卡片
 
 use std::collections::BTreeMap;
+use std::time::Instant;
 
-use chat_session::{ToolRunDto, ViewItemDto, ViewRoleDto};
+use chat_session::{ToolRunDto, TurnEventDto, ViewItemDto, ViewRoleDto};
 use serde_json::Value;
 
 use crate::events::AiChatEvent;
@@ -43,9 +44,12 @@ impl TurnError {
 }
 
 /// 单次助手回合的聚合器。
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct TurnRecorder {
+    started_at: Instant,
     text: String,
+    reasoning: String,
+    timeline: Vec<TurnEventDto>,
     tools: Vec<ToolRunDto>,
     error: Option<TurnError>,
 }
@@ -53,25 +57,44 @@ pub struct TurnRecorder {
 impl TurnRecorder {
     /// 新建聚合器。
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            started_at: Instant::now(),
+            text: String::new(),
+            reasoning: String::new(),
+            timeline: Vec::new(),
+            tools: Vec::new(),
+            error: None,
+        }
     }
 
     /// 记录一条事件 (仅消费聚合相关事件, Done / Cancelled 忽略)。
     pub fn record(&mut self, event: &AiChatEvent) {
         match event {
-            AiChatEvent::Delta { text } => self.text.push_str(text),
+            AiChatEvent::Delta { text } => {
+                self.text.push_str(text);
+                if let Some(TurnEventDto::Text { text: previous }) = self.timeline.last_mut() {
+                    previous.push_str(text);
+                } else {
+                    self.timeline
+                        .push(TurnEventDto::Text { text: text.clone() });
+                }
+            }
             AiChatEvent::ToolCall {
                 id,
                 name,
                 arguments,
-            } => self.tools.push(ToolRunDto {
-                id: id.clone(),
-                name: name.clone(),
-                arguments: arguments.clone(),
-                content: String::new(),
-                is_error: false,
-                done: false,
-            }),
+            } => {
+                self.tools.push(ToolRunDto {
+                    id: id.clone(),
+                    name: name.clone(),
+                    arguments: arguments.clone(),
+                    text_offset: self.text.encode_utf16().count(),
+                    content: String::new(),
+                    is_error: false,
+                    done: false,
+                });
+                self.timeline.push(TurnEventDto::Tool { id: id.clone() });
+            }
             AiChatEvent::ToolResult {
                 id,
                 content,
@@ -91,9 +114,16 @@ impl TurnRecorder {
             } => {
                 self.error = Some(TurnError::from_event(message, kind, data));
             }
-            AiChatEvent::ReasoningDelta { .. }
-            | AiChatEvent::Done { .. }
-            | AiChatEvent::Cancelled => {}
+            AiChatEvent::ReasoningDelta { text } => {
+                self.reasoning.push_str(text);
+                if let Some(TurnEventDto::Reasoning { text: previous }) = self.timeline.last_mut() {
+                    previous.push_str(text);
+                } else {
+                    self.timeline
+                        .push(TurnEventDto::Reasoning { text: text.clone() });
+                }
+            }
+            AiChatEvent::Done { .. } | AiChatEvent::Cancelled => {}
         }
     }
 
@@ -103,7 +133,7 @@ impl TurnRecorder {
     /// 未完成的工具调用在副本上标记为失败收束。
     pub fn finish(&self) -> Vec<ViewItemDto> {
         let mut out = Vec::new();
-        if !self.text.is_empty() || !self.tools.is_empty() {
+        if !self.text.is_empty() || !self.reasoning.is_empty() || !self.tools.is_empty() {
             let tools: Vec<ToolRunDto> = self
                 .tools
                 .iter()
@@ -118,6 +148,11 @@ impl TurnRecorder {
                 text: self.text.clone(),
                 attachments: None,
                 tools: (!tools.is_empty()).then_some(tools),
+                timeline: Some(self.timeline.clone()),
+                reasoning: (!self.reasoning.is_empty()).then(|| self.reasoning.clone()),
+                duration_ms: Some(
+                    u64::try_from(self.started_at.elapsed().as_millis()).unwrap_or(u64::MAX),
+                ),
                 error: None,
                 error_kind: None,
                 error_data: None,
@@ -129,12 +164,21 @@ impl TurnRecorder {
                 text: err.message.clone(),
                 attachments: None,
                 tools: None,
+                timeline: None,
+                reasoning: None,
+                duration_ms: None,
                 error: Some(true),
                 error_kind: (!err.kind.is_empty()).then(|| err.kind.clone()),
                 error_data: err.data_map(),
             });
         }
         out
+    }
+}
+
+impl Default for TurnRecorder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -163,6 +207,9 @@ mod tests {
     #[test]
     fn aggregates_text_and_tools_into_one_item() {
         let mut rec = TurnRecorder::new();
+        rec.record(&AiChatEvent::ReasoningDelta {
+            text: "分析问题".into(),
+        });
         rec.record(&AiChatEvent::Delta {
             text: "你好".into(),
         });
@@ -174,11 +221,61 @@ mod tests {
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].role, ViewRoleDto::Assistant);
         assert_eq!(items[0].text, "你好");
+        assert_eq!(items[0].reasoning.as_deref(), Some("分析问题"));
+        assert!(items[0].duration_ms.is_some());
         let tools = items[0].tools.as_ref().unwrap();
         assert_eq!(tools.len(), 1);
         assert!(tools[0].done);
         assert!(!tools[0].is_error);
         assert_eq!(tools[0].content, "42");
+        assert_eq!(tools[0].text_offset, 2);
+    }
+
+    #[test]
+    fn records_tool_positions_between_text_chunks_in_utf16() {
+        let mut rec = TurnRecorder::new();
+        rec.record(&AiChatEvent::Delta {
+            text: "😀先".into(),
+        });
+        rec.record(&tool_call("c1"));
+        rec.record(&tool_result("c1", false));
+        rec.record(&AiChatEvent::Delta { text: "后".into() });
+        rec.record(&tool_call("c2"));
+        let tools = rec.finish().remove(0).tools.unwrap();
+        assert_eq!(tools[0].text_offset, 3);
+        assert_eq!(tools[1].text_offset, 4);
+    }
+
+    #[test]
+    fn preserves_reasoning_and_tool_order_across_model_rounds() {
+        let mut rec = TurnRecorder::new();
+        rec.record(&AiChatEvent::ReasoningDelta {
+            text: "先想".into(),
+        });
+        rec.record(&tool_call("c1"));
+        rec.record(&tool_result("c1", false));
+        rec.record(&AiChatEvent::ReasoningDelta {
+            text: "再想".into(),
+        });
+        rec.record(&AiChatEvent::Delta {
+            text: "结论".into(),
+        });
+        let timeline = rec.finish().remove(0).timeline.unwrap();
+        assert_eq!(
+            timeline,
+            vec![
+                TurnEventDto::Reasoning {
+                    text: "先想".into()
+                },
+                TurnEventDto::Tool { id: "c1".into() },
+                TurnEventDto::Reasoning {
+                    text: "再想".into()
+                },
+                TurnEventDto::Text {
+                    text: "结论".into()
+                },
+            ]
+        );
     }
 
     /// Error 事件产出独立 error 条目 (排在回合条目之后, 与前端一致),

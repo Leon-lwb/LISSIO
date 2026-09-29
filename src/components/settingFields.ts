@@ -12,7 +12,7 @@ export type ControlType =
   | { kind: 'text' }
   | { kind: 'path' }
   | { kind: 'theme' }
-  | { kind: 'promptEditor' };
+  | { kind: 'openSettingsFolder' };
 
 export interface SettingFieldDef {
   category: keyof AppSettings;
@@ -528,19 +528,11 @@ const SETTING_FIELDS: SettingFieldDef[] = [
   },
   {
     category: 'ai',
-    field: 'systemPrompt',
+    field: 'promptFile',
     labelKey: 'settingAiSystemPrompt',
     descKey: 'settingAiSystemPromptDesc',
-    control: { kind: 'promptEditor' },
-    keywords: ['ai', 'system prompt', '提示词', 'md', 'markdown'],
-  },
-  {
-    category: 'ai',
-    field: 'maxToolRounds',
-    labelKey: 'settingAiMaxToolRounds',
-    descKey: 'settingAiMaxToolRoundsDesc',
-    control: { kind: 'number', min: 1, max: 50, step: 1 },
-    keywords: ['ai', 'tool', '工具', '轮次', 'mcp'],
+    control: { kind: 'openSettingsFolder' },
+    keywords: ['ai', 'system prompt', '提示词', 'md', 'markdown', 'folder', '文件夹'],
   },
   {
     category: 'ai',
@@ -567,4 +559,3 @@ const SETTING_FIELDS: SettingFieldDef[] = [
     keywords: ['ai', 'mcp', 'server', '端口', 'port'],
   },
 ];
-

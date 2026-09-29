@@ -9,6 +9,21 @@ use llm::{ChatMessageDto, ChatRoleDto, ToolCallDto};
 
 use crate::types::{ViewItemDto, ViewRoleDto};
 
+/// 将 UI 使用的 UTF-16 位置转换为安全的 UTF-8 字节边界。
+fn byte_offset_at_utf16(text: &str, target: usize) -> usize {
+    let mut units = 0;
+    for (byte, ch) in text.char_indices() {
+        if units >= target {
+            return byte;
+        }
+        units += ch.len_utf16();
+        if units > target {
+            return byte + ch.len_utf8();
+        }
+    }
+    text.len()
+}
+
 /// 从视图条目派生完整对话历史。
 ///
 /// 规则:
@@ -46,28 +61,53 @@ pub fn derive_history(items: &[ViewItemDto]) -> Vec<ChatMessageDto> {
                 let runs = item.tools.as_deref().unwrap_or_default();
                 let finished: Vec<&crate::types::ToolRunDto> =
                     runs.iter().take_while(|run| run.done).collect();
-                let calls: Vec<ToolCallDto> = finished
-                    .iter()
-                    .map(|run| ToolCallDto {
-                        id: run.id.clone(),
-                        name: run.name.clone(),
-                        arguments: run.arguments.clone(),
-                    })
-                    .collect();
-                out.push(ChatMessageDto {
-                    role: ChatRoleDto::Assistant,
-                    content: item.text.clone(),
-                    tool_calls: (!calls.is_empty()).then_some(calls),
-                    tool_call_id: None,
-                    name: None,
-                });
-                for run in finished {
+                let mut cursor = 0;
+                let mut index = 0;
+                while index < finished.len() {
+                    let offset =
+                        byte_offset_at_utf16(&item.text, finished[index].text_offset).max(cursor);
+                    let mut group_end = index + 1;
+                    while group_end < finished.len()
+                        && finished[group_end].text_offset == finished[index].text_offset
+                    {
+                        group_end += 1;
+                    }
+                    let group = &finished[index..group_end];
                     out.push(ChatMessageDto {
-                        role: ChatRoleDto::Tool,
-                        content: run.content.clone(),
+                        role: ChatRoleDto::Assistant,
+                        content: item.text[cursor..offset].to_string(),
+                        tool_calls: Some(
+                            group
+                                .iter()
+                                .map(|run| ToolCallDto {
+                                    id: run.id.clone(),
+                                    name: run.name.clone(),
+                                    arguments: run.arguments.clone(),
+                                })
+                                .collect(),
+                        ),
+                        tool_call_id: None,
+                        name: None,
+                    });
+                    for run in group {
+                        out.push(ChatMessageDto {
+                            role: ChatRoleDto::Tool,
+                            content: run.content.clone(),
+                            tool_calls: None,
+                            tool_call_id: Some(run.id.clone()),
+                            name: Some(run.name.clone()),
+                        });
+                    }
+                    cursor = offset;
+                    index = group_end;
+                }
+                if cursor < item.text.len() {
+                    out.push(ChatMessageDto {
+                        role: ChatRoleDto::Assistant,
+                        content: item.text[cursor..].to_string(),
                         tool_calls: None,
-                        tool_call_id: Some(run.id.clone()),
-                        name: Some(run.name.clone()),
+                        tool_call_id: None,
+                        name: None,
                     });
                 }
             }
@@ -88,6 +128,9 @@ mod tests {
             text: text.to_string(),
             attachments: None,
             tools: None,
+            timeline: None,
+            reasoning: None,
+            duration_ms: None,
             error: None,
             error_kind: None,
             error_data: None,
@@ -100,6 +143,9 @@ mod tests {
             text: text.to_string(),
             attachments: None,
             tools: None,
+            timeline: None,
+            reasoning: None,
+            duration_ms: None,
             error: None,
             error_kind: None,
             error_data: None,
@@ -111,6 +157,7 @@ mod tests {
             id: id.to_string(),
             name: "probe".to_string(),
             arguments: json!({}),
+            text_offset: 0,
             content: if done {
                 "42".to_string()
             } else {
@@ -133,6 +180,15 @@ mod tests {
     }
 
     #[test]
+    fn reasoning_only_item_is_not_sent_back_to_model() {
+        let mut thought = assistant("");
+        thought.reasoning = Some("内部推理".to_string());
+        let history = derive_history(&[user("你好"), thought]);
+        assert_eq!(history.len(), 1);
+        assert_eq!(history[0].role, ChatRoleDto::User);
+    }
+
+    #[test]
     fn finished_tool_calls_pair_with_results() {
         let items = vec![
             user("查一下"),
@@ -141,6 +197,9 @@ mod tests {
                 text: String::new(),
                 attachments: None,
                 tools: Some(vec![run("c1", true)]),
+                timeline: None,
+                reasoning: None,
+                duration_ms: None,
                 error: None,
                 error_kind: None,
                 error_data: None,
@@ -157,6 +216,34 @@ mod tests {
         assert_eq!(history[3].content, "结果是 42");
     }
 
+    #[test]
+    fn text_and_tool_results_keep_their_original_order() {
+        let mut item = assistant("😀先后结束");
+        item.tools = Some(vec![
+            ToolRunDto {
+                text_offset: 3,
+                ..run("c1", true)
+            },
+            ToolRunDto {
+                text_offset: 4,
+                ..run("c2", true)
+            },
+        ]);
+
+        let history = derive_history(&[user("执行"), item]);
+        assert_eq!(history.len(), 6);
+        assert_eq!(history[1].content, "😀先");
+        assert_eq!(history[1].tool_calls.as_ref().unwrap()[0].id, "c1");
+        assert_eq!(history[2].role, ChatRoleDto::Tool);
+        assert_eq!(history[2].tool_call_id.as_deref(), Some("c1"));
+        assert_eq!(history[3].content, "后");
+        assert_eq!(history[3].tool_calls.as_ref().unwrap()[0].id, "c2");
+        assert_eq!(history[4].role, ChatRoleDto::Tool);
+        assert_eq!(history[4].tool_call_id.as_deref(), Some("c2"));
+        assert_eq!(history[5].content, "结束");
+        assert!(history[5].tool_calls.is_none());
+    }
+
     /// 未完成的工具调用整体剔除 (不产生悬空 tool_calls);
     /// error 条目不进历史。
     #[test]
@@ -168,6 +255,9 @@ mod tests {
                 text: "partial".to_string(),
                 attachments: None,
                 tools: Some(vec![run("c1", false)]),
+                timeline: None,
+                reasoning: None,
+                duration_ms: None,
                 error: None,
                 error_kind: None,
                 error_data: None,
@@ -177,6 +267,9 @@ mod tests {
                 text: "请求失败".to_string(),
                 attachments: None,
                 tools: None,
+                timeline: None,
+                reasoning: None,
+                duration_ms: None,
                 error: Some(true),
                 error_kind: Some("AiProviderRequest".to_string()),
                 error_data: None,

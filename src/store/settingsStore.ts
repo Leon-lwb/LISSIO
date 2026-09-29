@@ -38,7 +38,9 @@ let saveTimer: ReturnType<typeof setTimeout> | null = null;
 /// API key 不入 settings.json，也不从后端读回。该字段仅作为覆盖写入控件的
 /// 临时输入；对话请求由后端 SecretStore 注入有效密钥。
 function sanitizeForPersist(settings: AppSettings): AppSettings {
-  return { ...settings, ai: { ...settings.ai, apiKey: '' } };
+  const ai = { ...settings.ai } as AppSettings['ai'] & { systemPrompt?: string };
+  delete ai.systemPrompt;
+  return { ...settings, ai: { ...ai, apiKey: '' } };
 }
 
 type KeychainPermissionRetryError = 'denied' | 'failed' | null;
@@ -264,6 +266,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       if (raw) {
         // 与默认值合并, 补齐缺失字段
         const base = deepMergeSettings(DEFAULT_SETTINGS, raw);
+        delete (base.ai as AppSettings['ai'] & { systemPrompt?: string }).systemPrompt;
         const hydrated = await hydrateApiKey(base);
         const merged = hydrated.settings;
         set({

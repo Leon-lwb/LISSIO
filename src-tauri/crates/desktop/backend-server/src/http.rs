@@ -258,6 +258,8 @@ async fn ws_handler(State(state): State<Arc<ServerState>>, upgrade: WebSocketUpg
         host: state.host.clone(),
         broadcast: state.broadcast.clone(),
         next_subscription_id: state.next_subscription_id.clone(),
+        active_websockets: state.active_websockets.clone(),
+        active_display_subscriptions: state.active_display_subscriptions.clone(),
     };
     upgrade.on_upgrade(move |socket| async move {
         crate::session::run(socket, context).await;

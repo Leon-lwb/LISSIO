@@ -9,19 +9,19 @@ import type { SchemaPreset } from "./SchemaPreset";
  *
  * serde camelCase, 与前端 TS `ProtocolSchema` 类型对应。
  *
- * PartialEq 为手工实现: legacy_config (ProtocolConfig) 已派生 PartialEq,
+ * PartialEq 为手工实现: preset_config (ProtocolConfig) 已派生 PartialEq,
  * 沿用应用层惯例用 serde 值比较。
  */
 export type ProtocolSchema = { preset: SchemaPreset, 
 /**
- * 预设对应的 legacy 引擎配置 (Custom 为 None) — 预设引擎构造用
+ * 预设对应的引擎配置 (Custom 为 None) — 预设引擎构造用
  */
-legacyConfig?: ProtocolConfig | null, 
+presetConfig?: ProtocolConfig | null, 
 /**
  * 解析方向块列表
  */
 decode: Array<DecoderBlockDef>, 
 /**
- * 编码方向块列表 (TestData 生成 / 协议转换用; 预设可为 None = 走 legacy 编码)
+ * 编码方向块列表 (TestData 生成 / 协议转换用; 预设可为 None = 走预设编码)
  */
 encode?: Array<EncodeBlockDef> | null, };

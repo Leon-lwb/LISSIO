@@ -1,11 +1,14 @@
 //! Deterministic generators shared by byte and point simulations.
 use crate::{AcquisitionError, AcquisitionResult};
 use data_model::device::{SignalParameters, SimulationConfig, TestWaveform};
+use data_model::simulation::{MAX_SAMPLE_RATE, SimulationRate};
+use schema_types::ProtocolConfig;
 
 pub fn validate(config: &SimulationConfig) -> AcquisitionResult<()> {
-    // 上限 5 MHz 为 4ch JustFloat 100 MB/s 压测留余量；更高会单 tick 生成
-    // 巨量字节，属误配而非合法仿真。
-    if !(1..=5_000_000).contains(&config.sample_rate) || !(1..=256).contains(&config.channels) {
+    // 上限为流式协议的采样率上限（见 `data_model::simulation`）；帧定界协议另由
+    // [`validate_for_protocol`] 按帧率上限收窄。
+    if !(1..=MAX_SAMPLE_RATE).contains(&config.sample_rate) || !(1..=256).contains(&config.channels)
+    {
         return Err(AcquisitionError::InvalidConfig(
             "simulation rate/channels out of range".into(),
         ));
@@ -22,6 +25,38 @@ pub fn validate(config: &SimulationConfig) -> AcquisitionResult<()> {
             ));
         }
     }
+    Ok(())
+}
+
+/// 按下游协议的量纲校验模拟配置。
+///
+/// `SimulationConfig::sample_rate` 的语义随协议而变: 帧定界协议
+/// ([`ProtocolConfig::is_frame_oriented`]) 下每个采样点产出一帧 CAN 报文, 该值即
+/// 帧率。用户若按「对齐 500k 波特率」把它填成 500 000, 链路会以 50 万帧/s 运行
+/// (真实 CAN 总线 2~5 k帧/s), 广播环与缓冲会按该量级驻留数百 MB。故此处按
+/// [`ProtocolConfig::max_simulation_rate`] 收窄上限, 并以类型构造完成校验。
+///
+/// # Errors
+///
+/// 基础范围校验失败, 或速率超过该协议量纲上限时返回
+/// [`AcquisitionError::InvalidConfig`]。
+pub fn validate_for_protocol(
+    config: &SimulationConfig,
+    protocol: &ProtocolConfig,
+) -> AcquisitionResult<()> {
+    validate(config)?;
+    let max = protocol.max_simulation_rate();
+    SimulationRate::new(config.sample_rate, max).map_err(|error| {
+        let dimension = if protocol.is_frame_oriented() {
+            "CAN frame rate (frames/s)"
+        } else {
+            "sample rate (samples/s)"
+        };
+        AcquisitionError::InvalidConfig(format!(
+            "{error} — with this protocol the simulation rate is a {dimension}, \
+             so it must not be derived from the bus bitrate"
+        ))
+    })?;
     Ok(())
 }
 
@@ -80,5 +115,99 @@ mod tests {
                 .abs()
                 > f64::EPSILON
         );
+    }
+
+    fn config_with_rate(sample_rate: u32) -> SimulationConfig {
+        SimulationConfig {
+            sample_rate,
+            ..SimulationConfig::default()
+        }
+    }
+
+    #[test]
+    fn default_rate_is_valid_for_every_protocol_dimension() {
+        let config = SimulationConfig::default();
+        for protocol in [
+            ProtocolConfig::JustFloat { channels: Some(4) },
+            ProtocolConfig::FireWater { channels: None },
+            ProtocolConfig::RawData,
+            ProtocolConfig::Slcan,
+            ProtocolConfig::CandleLight,
+        ] {
+            assert!(
+                validate_for_protocol(&config, &protocol).is_ok(),
+                "默认速率必须对所有协议合法: {protocol:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn frame_protocol_rejects_a_rate_derived_from_the_bus_bitrate() {
+        // 量级契约的核心回归: 「按 500k 波特率对齐」填进来的 500 000 在 SLCAN 下
+        // 是 50 万帧/s, 必须被拒绝而不是静默放大。
+        let config = config_with_rate(500_000);
+        let error = validate_for_protocol(&config, &ProtocolConfig::Slcan)
+            .expect_err("帧定界协议必须拒绝按波特率折算的高速率");
+        let message = error.to_string();
+        assert!(
+            message.contains("500000"),
+            "错误消息须含被拒速率: {message}"
+        );
+        assert!(
+            message.contains("frame rate"),
+            "错误消息须说明该量纲是帧率: {message}"
+        );
+        assert!(
+            validate_for_protocol(&config, &ProtocolConfig::CandleLight).is_err(),
+            "CandleLight 同为帧定界协议"
+        );
+    }
+
+    #[test]
+    fn sample_protocol_accepts_the_same_rate_that_the_frame_protocol_rejects() {
+        let config = config_with_rate(500_000);
+        assert!(
+            validate_for_protocol(&config, &ProtocolConfig::JustFloat { channels: Some(4) })
+                .is_ok(),
+            "流式协议的速率是采样率, 不受帧率上限约束"
+        );
+        assert!(
+            validate_for_protocol(&config, &ProtocolConfig::RawData).is_ok(),
+            "RawData 无逐采样帧, 不按帧率收窄"
+        );
+        // LogicDecode 同理 (每采样点只产出一个字节, 字节流速率与采样率同阶), 但它需要
+        // `logic::LogicDecoderConfig` 才能构造, 而本 crate 不依赖 `logic` —— 量纲分类
+        // 由 `schema_types` 的
+        // `logic_decode_uses_the_sample_cap_despite_producing_one_byte_per_sample` 覆盖,
+        // 本测试只负责「非帧定界协议不按帧率收窄」这一侧。
+    }
+
+    #[test]
+    fn frame_rate_cap_boundary_is_inclusive() {
+        let at_cap = config_with_rate(data_model::simulation::MAX_FRAME_RATE);
+        assert!(validate_for_protocol(&at_cap, &ProtocolConfig::Slcan).is_ok());
+        let over_cap = config_with_rate(data_model::simulation::MAX_FRAME_RATE + 1);
+        assert!(validate_for_protocol(&over_cap, &ProtocolConfig::Slcan).is_err());
+    }
+
+    #[test]
+    fn protocol_validation_does_not_skip_the_base_range_check() {
+        assert!(
+            validate_for_protocol(&config_with_rate(0), &ProtocolConfig::Slcan).is_err(),
+            "零速率必须先被基础校验拦下"
+        );
+        assert!(
+            validate_for_protocol(
+                &config_with_rate(data_model::simulation::MAX_SAMPLE_RATE + 1),
+                &ProtocolConfig::JustFloat { channels: None }
+            )
+            .is_err(),
+            "超出采样率上限仍须被基础校验拦下"
+        );
+        let bad_channels = SimulationConfig {
+            channels: 0,
+            ..SimulationConfig::default()
+        };
+        assert!(validate_for_protocol(&bad_channels, &ProtocolConfig::Slcan).is_err());
     }
 }

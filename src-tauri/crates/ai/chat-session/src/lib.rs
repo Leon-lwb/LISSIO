@@ -17,4 +17,6 @@ pub mod types;
 
 pub use history::derive_history;
 pub use store::SessionStore;
-pub use types::{AttachmentDto, ChatSession, SessionMeta, ToolRunDto, ViewItemDto, ViewRoleDto};
+pub use types::{
+    AttachmentDto, ChatSession, SessionMeta, ToolRunDto, TurnEventDto, ViewItemDto, ViewRoleDto,
+};

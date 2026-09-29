@@ -1,4 +1,4 @@
-//! AI 密钥存储 — 系统钥匙串优先，环境变量只读回退。
+//! AI 密钥存储 — debug 构建读取仓库 `.env`，release 构建使用系统钥匙串及环境变量回退。
 //!
 //! 每个适配器一个条目 (`service = "lissio"`, `user = "ai-api-key-{adapter}"`),
 //! 切换服务商互不影响。仅存取, 不做缓存 — 状态一致性由前端 settings store 负责。
@@ -8,6 +8,8 @@ use keyring::Entry;
 
 use error::AiError;
 use serde::Serialize;
+#[cfg(debug_assertions)]
+use std::path::{Path, PathBuf};
 
 /// Secret storage port owned by the backend AI host. Implementations never expose secrets through
 /// status APIs; `resolve` is used only inside a provider request.
@@ -21,6 +23,89 @@ pub trait SecretStore: Send + Sync {
 /// System keyring with a read-only provider-specific environment fallback.
 #[derive(Default)]
 pub struct SystemSecretStore;
+
+/// Debug 构建专用：从仓库根目录 `.env` 逐次读取，完全不访问系统钥匙串。
+#[cfg(debug_assertions)]
+pub struct DevEnvSecretStore {
+    path: PathBuf,
+}
+
+#[cfg(debug_assertions)]
+impl DevEnvSecretStore {
+    pub(crate) fn new() -> Self {
+        Self {
+            path: Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../../.env"),
+        }
+    }
+
+    fn secret(&self, adapter: &str) -> Result<Option<String>> {
+        let name = environment_name(adapter)?;
+        let content = match std::fs::read_to_string(&self.path) {
+            Ok(content) => content,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(error) => return Err(error.into()),
+        };
+        Ok(parse_dev_env(&content, &name))
+    }
+}
+
+#[cfg(debug_assertions)]
+impl Default for DevEnvSecretStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(debug_assertions)]
+fn parse_dev_env(content: &str, name: &str) -> Option<String> {
+    let mut secret = None;
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let line = trimmed.strip_prefix("export ").unwrap_or(trimmed);
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        if key.trim() != name {
+            continue;
+        }
+        let value = value.trim();
+        let value = if value.len() >= 2
+            && ((value.starts_with('"') && value.ends_with('"'))
+                || (value.starts_with('\'') && value.ends_with('\'')))
+        {
+            &value[1..value.len() - 1]
+        } else {
+            value
+        };
+        let value = value.trim();
+        secret = (!value.is_empty()).then(|| value.to_string());
+    }
+    secret
+}
+
+#[cfg(debug_assertions)]
+impl SecretStore for DevEnvSecretStore {
+    fn resolve(&self, adapter: &str) -> Result<Option<String>> {
+        self.secret(adapter)
+    }
+
+    fn status(&self, adapter: &str) -> Result<SecretStatus> {
+        let configured = self.secret(adapter)?.is_some();
+        Ok(SecretStatus {
+            configured,
+            source: configured.then_some(SecretSource::Environment),
+            writable: false,
+        })
+    }
+
+    fn set(&self, _adapter: &str, _secret: &str) -> Result<SecretStatus> {
+        Err(AiError::DevEnvReadOnly.into())
+    }
+
+    fn delete(&self, _adapter: &str) -> Result<SecretStatus> {
+        Err(AiError::DevEnvReadOnly.into())
+    }
+}
 
 /// 钥匙串 service 标识。
 const SERVICE: &str = "lissio";
@@ -248,6 +333,8 @@ impl SecretStore for SystemSecretStore {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(debug_assertions)]
+    use super::{DevEnvSecretStore, SecretStore, parse_dev_env};
     use super::{SecretSource, choose_secret, choose_status, environment_name, map_keyring_error};
     use error::{AiError, Error as _};
 
@@ -277,6 +364,57 @@ mod tests {
         assert_eq!(status.source, Some(SecretSource::Environment));
         assert!(!status.writable);
         assert!(choose_status::<()>(Err(()), None).is_err());
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn debug_env_reads_provider_key_without_keyring_and_is_read_only() {
+        let path = std::env::temp_dir().join(format!(
+            "lissio-dev-secret-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::write(
+            &path,
+            "# local keys\nexport LISSIO_AI_API_KEY_OPENAI='test-key'\nLISSIO_AI_API_KEY_ANTHROPIC=other\n",
+        )
+        .unwrap();
+        let store = DevEnvSecretStore { path: path.clone() };
+        assert_eq!(store.resolve("openai").unwrap(), Some("test-key".into()));
+        assert_eq!(store.resolve("gemini").unwrap(), None);
+        assert_eq!(
+            store.status("openai").unwrap(),
+            super::SecretStatus {
+                configured: true,
+                source: Some(SecretSource::Environment),
+                writable: false,
+            }
+        );
+        assert_eq!(
+            store.set("openai", "replacement").unwrap_err().kind(),
+            "AiDevEnvReadOnly"
+        );
+        assert_eq!(
+            store.delete("openai").unwrap_err().kind(),
+            "AiDevEnvReadOnly"
+        );
+        assert_eq!(store.resolve("openai").unwrap(), Some("test-key".into()));
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[cfg(debug_assertions)]
+    #[test]
+    fn debug_env_last_assignment_can_clear_a_secret() {
+        assert_eq!(
+            parse_dev_env(
+                "LISSIO_AI_API_KEY_OPENAI=first\nLISSIO_AI_API_KEY_OPENAI=\n",
+                "LISSIO_AI_API_KEY_OPENAI"
+            ),
+            None
+        );
     }
 
     #[cfg(target_os = "macos")]

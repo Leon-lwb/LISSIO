@@ -25,8 +25,6 @@ pub const MCP_ENDPOINT_PATH: &str = "/mcp";
 #[derive(Clone)]
 pub struct VofaMcpServer {
     registry: Arc<CapabilityRegistry>,
-    toolbox: Toolbox,
-    sink: EventSinkHandle,
     /// 动态构建的完整工具路由。
     tool_router: ToolRouter<Self>,
 }
@@ -35,11 +33,9 @@ impl VofaMcpServer {
     /// 构造 handler — 每个会话一份, 路由克隆共享。
     #[must_use]
     pub fn new(registry: Arc<CapabilityRegistry>, toolbox: Toolbox, sink: EventSinkHandle) -> Self {
-        let tool_router = router::build_router(&registry, toolbox.clone(), sink.clone());
+        let tool_router = router::build_router(&registry, toolbox, sink);
         Self {
             registry,
-            toolbox,
-            sink,
             tool_router,
         }
     }

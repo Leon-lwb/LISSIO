@@ -374,6 +374,9 @@ Windows 为 `%APPDATA%\top.pengheng.lissio\server-token`，Linux 为
 AI 对话、会话、外部 MCP、入站 MCP 与前端工具在 Desktop/Web 中功能一致。保存的
 Provider Key 不可读回，UI 只接收 `configured`、`source`、`writable` 状态。部署环境变量为
 `LISSIO_AI_API_KEY_<ADAPTER>`，例如 `LISSIO_AI_API_KEY_OPENAI`。
+Debug 构建会在每次请求时直接读取仓库根目录的 `.env`，不访问系统钥匙串。
+可将 `.env.example` 复制为 `.env` 后在本机填写；`.env` 已加入 Git 忽略规则。
+Release 构建继续使用系统钥匙串，并保留环境变量回退。
 
 ### OCI（server + Web）
 

@@ -272,9 +272,6 @@ impl AppError {
                     ("model", model.clone()),
                 ])
             }
-            Self::Ai(AiError::MaxToolRounds { rounds }) => {
-                std::collections::BTreeMap::from([("rounds", rounds.to_string())])
-            }
             Self::Ai(AiError::UnknownSession { id }) => {
                 std::collections::BTreeMap::from([("id", id.clone())])
             }
@@ -403,11 +400,6 @@ mod tests {
             fields.get("model").map(String::as_str),
             Some("openai/gpt-4o-mini")
         );
-
-        let e: AppError = AiError::MaxToolRounds { rounds: 8 }.into();
-        assert_eq!(e.data_fields().get("rounds").map(String::as_str), Some("8"));
-        // 顶层 kind 委托内层细粒度种类 (IPC 错误对象与 AI 错误事件共用)
-        assert_eq!(e.kind(), "AiMaxToolRounds");
 
         let e: AppError = AiError::Keyring {
             details: "locked".into(),

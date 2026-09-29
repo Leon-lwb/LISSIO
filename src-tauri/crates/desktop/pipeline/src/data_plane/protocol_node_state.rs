@@ -2,7 +2,7 @@
 
 use parking_lot::Mutex;
 use protocol::ProtocolEngine;
-use schema_types::{ProtocolConfig, ProtocolSchema};
+use schema_types::{ProtocolConfig, ProtocolSchema, SchemaPreset};
 use std::sync::Arc;
 
 use crate::feed_parallel::ParallelFeeder;
@@ -91,8 +91,13 @@ impl ProtocolNodeState {
         convert_to: Option<&ProtocolConfig>,
         schema: &ProtocolSchema,
     ) -> Self {
-        // 引擎统一由 schema 编译 (预设走预设引擎, Custom 走 SchemaEngine)
-        let engine = schema::compile_schema(schema);
+        // 预设引擎的参数以节点 protocol 配置为准；自定义块才由 schema 编译。
+        // preset_config 是 schema 的可选字段，缺失时不能落入空块解析器。
+        let engine = if schema.preset == SchemaPreset::Custom {
+            schema::compile_schema(schema)
+        } else {
+            create_protocol_engine(config)
+        };
         Self {
             engine: Arc::new(Mutex::new(engine)),
             convert_engine: convert_to.map(|c| Arc::new(Mutex::new(create_protocol_engine(c)))),
@@ -283,6 +288,18 @@ mod sample_clock_tests {
 
     use data_model::DataFrame;
     use schema_types::ProtocolConfig;
+
+    #[test]
+    fn preset_uses_node_config_when_schema_has_no_preset_config() {
+        let schema = schema_types::ProtocolSchema {
+            preset: schema_types::SchemaPreset::Slcan,
+            preset_config: None,
+            decode: Vec::new(),
+            encode: None,
+        };
+        let state = ProtocolNodeState::new(&ProtocolConfig::Slcan, None, &schema);
+        assert_eq!(state.engine.lock().name(), "Slcan");
+    }
 
     fn frames(count: usize) -> Vec<DataFrame> {
         (0..count)

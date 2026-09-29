@@ -21,7 +21,6 @@ import {
   Database,
   Gauge,
   Pencil,
-  FileText,
   Download,
   Upload,
   RefreshCw,
@@ -30,6 +29,7 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import { platform } from '../lib/platform';
+import { hasTauriRuntime, transport } from '../lib/rpc';
 import { ORCAROUTER_OFFERS_URL, ORCAROUTER_REFERRAL_URL } from '../settings/defaults';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppStore } from '../store/appStore';
@@ -37,17 +37,17 @@ import { t } from '../i18n';
 import type { Lang } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
 import { ThemeEditor } from './ThemeEditor';
-import { SystemPromptEditor } from './SystemPromptEditor';
 import { BUILT_IN_THEMES, type ThemeDefinition } from '../settings/theme';
 import type { SettingFieldDef} from './settingFields';
 import { buildSettingFields } from './settingFields';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
-import { formatError } from '../lib/tauri/notifications';
+import { formatError, notify } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
 import { SearchInput } from './ui/SearchInput';
 import { DraftInput, DraftNumberInput } from './ui/fields';
+import { AiMcpSettings } from './ai/AiMcpSettings';
 
 const CATEGORY_ICONS: Record<keyof AppSettings, React.ReactNode> = {
   general: <SettingsIcon size={16} />,
@@ -85,7 +85,6 @@ export function SettingsModal() {
   const reset = useSettingsStore((s) => s.reset);
   const resetCategory = useSettingsStore((s) => s.resetCategory);
   const [themeEditorOpen, setThemeEditorOpen] = useState(false);
-  const [promptEditorOpen, setPromptEditorOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
   const [appVersion, setAppVersion] = useState('');
   /// 更新状态 — 与状态栏/更新弹窗共享 updateStore
@@ -125,7 +124,10 @@ export function SettingsModal() {
 
   // 设置项清单 — AI provider 选项来自模型目录 (aiProvider 家族)
   const catalogModels = useModelCatalogStore((s) => s.models);
-  const settingFields = useMemo(() => buildSettingFields(catalogModels), [catalogModels]);
+  const settingFields = useMemo(() =>
+    buildSettingFields(catalogModels).filter((field) =>
+      hasTauriRuntime() || field.control.kind !== 'openSettingsFolder'
+    ), [catalogModels]);
 
   // 搜索过滤
   const filteredFields = useMemo(() => {
@@ -300,15 +302,22 @@ export function SettingsModal() {
             </button>
           </div>
         );
-      case 'promptEditor':
+      case 'openSettingsFolder':
         return (
           <button
+            type="button"
             className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
-            onClick={() => setPromptEditorOpen(true)}
-            title={t(lang, 'promptEditorOpen')}
+            onClick={() => {
+              void transport.call<void>('open_settings_folder').catch((error: unknown) => {
+                notify.error(t(lang, 'settingAiOpenSettingsFolderFailed'), formatError(error), {
+                  source: 'settings-folder',
+                });
+              });
+            }}
+            title={t(lang, 'settingAiOpenSettingsFolder')}
           >
-            <FileText size={12} />
-            <span>{t(lang, 'promptEditorOpen')}</span>
+            <FolderOpen size={12} />
+            <span>{t(lang, 'settingAiOpenSettingsFolder')}</span>
           </button>
         );
       case 'theme': {
@@ -555,6 +564,7 @@ export function SettingsModal() {
                       )}
                     </Fragment>
                   ))}
+                  {cat === 'ai' && !searchQuery.trim() && <AiMcpSettings />}
                 </div>
               );
             })}
@@ -627,18 +637,6 @@ export function SettingsModal() {
             'appearance',
             'cssTheme',
             id
-          )
-        }
-      />
-      <SystemPromptEditor
-        isOpen={promptEditorOpen}
-        initialText={settings.ai.systemPrompt}
-        onClose={() => setPromptEditorOpen(false)}
-        onSave={(text) =>
-          (update as (c: keyof AppSettings, f: string, v: unknown) => void)(
-            'ai',
-            'systemPrompt',
-            text
           )
         }
       />

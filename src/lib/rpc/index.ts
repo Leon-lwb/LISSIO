@@ -9,6 +9,7 @@ const SERVER_STORAGE_KEY = 'lissio.server';
 const TOKEN_STORAGE_KEY = 'lissio.token';
 const SHELL_COMMANDS = new Set([
   'inspect_element', 'set_window_acrylic', 'show_main_window', 'close_splashscreen',
+  'open_settings_folder',
   'check_update', 'download_and_install_update', 'backend_sidecar_info',
   'backend_sidecar_restart', 'backend_sidecar_open_logs',
 ]);

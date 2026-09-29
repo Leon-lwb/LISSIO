@@ -35,8 +35,9 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   const sendText = useAppStore((s) => s.sendText);
   // 通道选项/选择/分类拆至 useRawDataChannel (本文件 500 行上限)
   const {
-    rfEdges,
     rfNodes,
+    sourceEdges,
+    sourceNodes,
     channelOptions,
     channel,
     selectedChannel,
@@ -77,8 +78,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   // 溯源失败 (如自定义控件数值口) → null, 发送面板禁用
   const sendTargetId = useMemo(() => {
     if (!selectedChannel) return null;
-    return traceTransportSource(selectedChannel.sourceId, rfEdges, rfNodes);
-  }, [selectedChannel, rfEdges, rfNodes]);
+    return traceTransportSource(selectedChannel.sourceId, sourceEdges, sourceNodes);
+  }, [selectedChannel, sourceEdges, sourceNodes]);
 
   // 面板状态徽章的可观察 Transport: 字节源 = 通道字节源; 数值/字符串口 = 发送上溯目标;
   // FrameDecoder raw 口 = null (节点旁路, 无固定连接语义)

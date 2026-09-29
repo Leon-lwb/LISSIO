@@ -117,6 +117,7 @@ pub fn spawn_with_lifecycle(
     let data_tx_read = data_tx.clone();
     let cancel_read = cancel.clone();
     let read_lifecycle = lifecycle;
+    let read_port_name = settings.port_name.clone();
     std::thread::spawn(move || {
         let mut buf = vec![0u8; 65536].into_boxed_slice();
         while !cancel_read.load(Ordering::Relaxed) {
@@ -131,24 +132,29 @@ pub fn spawn_with_lifecycle(
             }
         }
         read_lifecycle.on_close(port.as_mut());
-        log::debug!("串口读线程退出");
+        log::info!("串口读线程退出: port={read_port_name}");
     });
 
-    // 写线程
+    // 写线程。取消必须在无待写数据时也能退出，不能永久阻塞在 blocking_recv；
+    // TransportHandle::close 同时释放 write_tx，作为 channel 关闭的最终兜底。
     let cancel_write = cancel.clone();
+    let write_port_name = settings.port_name.clone();
     std::thread::spawn(move || {
         while !cancel_write.load(Ordering::Relaxed) {
-            match write_rx.blocking_recv() {
-                Some(data) => {
+            match write_rx.try_recv() {
+                Ok(data) => {
                     if let Err(e) = write_port.write_all(&data) {
                         log::error!("串口写入失败: {e}");
                         break;
                     }
                 }
-                None => break,
+                Err(mpsc::error::TryRecvError::Empty) => {
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+                Err(mpsc::error::TryRecvError::Disconnected) => break,
             }
         }
-        log::debug!("串口写线程退出");
+        log::info!("串口写线程退出: port={write_port_name}");
     });
 
     Ok((write_tx, data_tx, cancel))

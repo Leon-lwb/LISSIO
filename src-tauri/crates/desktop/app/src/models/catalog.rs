@@ -82,8 +82,6 @@ const NODE_ACTIONS: &[data_model::model_descriptor::ModelAction] =
 
 const CREATE_ONLY: &[data_model::model_descriptor::ModelAction] = &[ModelAction::CreateNode];
 
-const CONFIGURE_ONLY: &[data_model::model_descriptor::ModelAction] = &[ModelAction::Configure];
-
 fn open_schema() -> ConfigurationSchema {
     ConfigurationSchema::open(1)
 }

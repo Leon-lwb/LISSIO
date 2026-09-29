@@ -1,6 +1,7 @@
 //! Protocol 节点喂入 — 解析 → 采样时钟定案 → 旁路缓冲 → convert 链下推
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use events::{BackendEventSink, NotifyLevel};
 use schema_types::SchemaPreset;
@@ -41,7 +42,10 @@ pub(super) async fn feed_protocol(
     can_direction: can::CanDirection,
 ) {
     let Some(st) = plane.protocol_states.lock().get(proto_id).cloned() else {
-        log::debug!("协议节点无运行时状态, 跳过喂入: {proto_id}");
+        plane.warn_feed_gap_once(
+            proto_id,
+            &format!("协议节点无运行时状态, 喂入被跳过 (图未同步或节点未编译): {proto_id}"),
+        );
         return;
     };
     let (engine, parallel) = {
@@ -59,6 +63,7 @@ pub(super) async fn feed_protocol(
     };
 
     let mut detection = None;
+    let parse_started = Instant::now();
     let mut out = if can_parallel {
         // 首次进入并行: 接续主引擎内部缓冲里的半个帧 (false→true 转换沿)
         let enter_parallel = {
@@ -94,6 +99,15 @@ pub(super) async fn feed_protocol(
             o
         }
     };
+
+    let parse_elapsed = parse_started.elapsed();
+    if parse_elapsed >= std::time::Duration::from_millis(100) {
+        log::warn!(
+            "协议解析慢: proto={proto_id}, source={source_id}, elapsed_ms={}, bytes={}, parallel={can_parallel}, workers={workers}",
+            parse_elapsed.as_millis(),
+            data.len()
+        );
+    }
 
     // 已连接 Transport 的运行时配置是采样时钟权威；图配置可能正处于防抖同步
     // 或编译错误状态。TestData 使用明确采样率；串口按波特率、字符格式和本批

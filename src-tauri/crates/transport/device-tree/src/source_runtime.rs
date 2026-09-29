@@ -15,6 +15,7 @@ use async_trait::async_trait;
 use data_model::device::DriverPayload;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Instant;
 use tokio::sync::broadcast;
 
 #[path = "source_ports.rs"]
@@ -338,14 +339,31 @@ impl NodeRuntime for SourceRuntime {
 
     async fn close(&self) -> Result<(), CloseError> {
         if self.inner.closed.swap(true, Ordering::AcqRel) {
+            log::debug!("设备来源会话重复关闭: node={}", self.inner.node_id);
             return Ok(());
         }
-        match &self.inner.session {
+        let started = Instant::now();
+        let session_kind = match &self.inner.session {
+            SessionHandle::Direct(_) => "direct",
+            SessionHandle::Supervised(_) => "supervised",
+            SessionHandle::Assembly(_) => "assembly",
+        };
+        log::info!(
+            "设备来源会话关闭开始: node={}, kind={session_kind}",
+            self.inner.node_id
+        );
+        let result = match &self.inner.session {
             SessionHandle::Direct(session) => session.close().await,
             SessionHandle::Supervised(handle) => handle.close().await,
             SessionHandle::Assembly(_) => Ok(()),
-        }
-        .map_err(|error| CloseError {
+        };
+        log::info!(
+            "设备来源会话关闭完成: node={}, kind={session_kind}, elapsed_ms={}, result={}",
+            self.inner.node_id,
+            started.elapsed().as_millis(),
+            if result.is_ok() { "ok" } else { "error" }
+        );
+        result.map_err(|error| CloseError {
             node_id: self.inner.node_id.clone(),
             detail: error.to_string(),
         })

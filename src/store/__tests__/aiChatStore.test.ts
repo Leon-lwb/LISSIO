@@ -35,6 +35,7 @@ const RESET = {
   streamingSessionId: null,
   streamingText: '',
   reasoningText: '',
+  timeline: [],
   toolRuns: [],
   taskId: null,
 };
@@ -92,6 +93,7 @@ describe('aiChatStore 多会话 (后端持有)', () => {
     expect(args.sessionId).toBe('s1');
     expect(args.text).toBe('你好');
     expect(args.regenerate).toBe(false);
+    expect(args).not.toHaveProperty('system');
   });
 
   it('done 事件后从后端拉取权威视图 (含工具卡片)', async () => {

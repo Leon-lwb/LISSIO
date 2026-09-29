@@ -22,7 +22,7 @@ impl ProtocolEngine for SchemaEngine {
         let ts = data_model::now_us();
         let mut base = 0usize;
 
-        loop {
+        while base < self.buf.len() {
             // 1. 帧定界: 定位 Header (无 Header 块则从当前位置起解析)
             let frame_start = if header.is_empty() {
                 0
@@ -56,6 +56,13 @@ impl ProtocolEngine for SchemaEngine {
                     valid,
                     consumed,
                 } => {
+                    // A schema containing only zero-width blocks can report a successful
+                    // parse without consuming input. Never emit a frame or retry the same
+                    // offset: that would grow `frames` without bound in a single feed call.
+                    if consumed == 0 {
+                        base += 1;
+                        continue;
+                    }
                     base += consumed;
                     if valid {
                         // checksum 失败跳过该帧; 输出按端口序

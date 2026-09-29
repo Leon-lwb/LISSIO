@@ -2,6 +2,6 @@
 import type { CanBitrate } from "./CanBitrate";
 
 /**
- * slcan 配置 — 基于 USB-CDC 串口
+ * slcan 配置 — 基于 USB-CDC 串口 (缺省字段按 Default 补齐)
  */
 export type SlcanConfig = { port_name: string, baud_rate: number, can_bitrate: CanBitrate, };

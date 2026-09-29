@@ -11,7 +11,8 @@ import {
   stopDescribeSync,
   useDescribeStore,
 } from '../describeStore';
-import { widgetDocument } from '../../../test/nodeDocuments';
+import { deviceDocument, widgetDocument } from '../../../test/nodeDocuments';
+import type { AcquisitionNodeData } from '../../acquisition/acquisitionNodes';
 
 function canvasNodeFor(doc: ReturnType<typeof widgetDocument>) {
   return canvasNode(doc);
@@ -51,6 +52,22 @@ describe('describeStore', () => {
     expect(describeDomainToUi('Bytes')).toBe('bytes');
     expect(describeDomainToUi('String')).toBe('string');
     expect(describeDomainToUi('Points')).toBe('points');
+  });
+
+  it('includes edges from device-tree protocol children when describing RawData ports', async () => {
+    const device = canvasNode(deviceDocument('device'));
+    const data = device.data as AcquisitionNodeData;
+    data.node = { ...data.node, children: [...data.node.children, {
+      id: 'parser', name: 'SLCAN', driver: 'protocol-engine', schemaVersion: 1, enabled: true,
+      config: { protocol: { kind: 'Slcan' }, schema: { preset: 'slcan', decode: [] } }, children: [],
+    }] };
+    const raw = canvasNodeFor(widgetDocument('raw'));
+    useAppStore.setState({ rfNodes: [device, raw], rfEdges: [{
+      id: 'parser-raw', source: 'parser', sourceHandle: 'out', target: 'raw', targetHandle: 'src:parser:out',
+    }] });
+    startDescribeSync();
+    await vi.waitFor(() => expect(tauriMock.invoke).toHaveBeenCalledWith('describe_node_documents',
+      expect.objectContaining({ edges: [expect.objectContaining({ source: 'parser', target: 'raw' })] })));
   });
 
   it('adopts descriptions and clears removed nodes', async () => {

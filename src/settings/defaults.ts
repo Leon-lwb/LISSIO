@@ -118,10 +118,6 @@ export interface AppSettings {
     temperature: number | null;
     /** 最大生成 token (null = provider 默认) */
     maxTokens: number | null;
-    /** 系统提示词 (空 = 不发送) */
-    systemPrompt: string;
-    /** 工具调用循环最大轮次 */
-    maxToolRounds: number;
     /** 对话中是否启用内置原生工具 (软件自有能力 + 知识库) */
     builtinToolsEnabled: boolean;
     /** 对话中是否启用 MCP 工具 */
@@ -213,8 +209,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
     model: '',
     temperature: null,
     maxTokens: null,
-    systemPrompt: '',
-    maxToolRounds: 10,
     builtinToolsEnabled: true,
     mcpToolsEnabled: true,
     mcpServerPort: 8765,

@@ -14,7 +14,7 @@ use crate::{ConnectionControl, TransportConnection};
 /// 持有写入通道 / 数据广播 / 取消标志 / 状态 / 统计 / 配置,
 /// TestData 传输额外持有链路配置热更新通道 (生成随连接生灭, 无独立运行开关)。
 pub struct TransportHandle {
-    write_tx: mpsc::Sender<Vec<u8>>,
+    write_tx: parking_lot::Mutex<Option<mpsc::Sender<Vec<u8>>>>,
     data_tx: broadcast::Sender<ByteMessage>,
     control: Arc<dyn ConnectionControl>,
     state: parking_lot::Mutex<ConnectionState>,
@@ -68,6 +68,9 @@ impl TransportHandle {
     }
     pub fn close(&self) {
         self.control.close();
+        // 显式释放写入端：底层读写任务以 channel 关闭为最终退出条件，
+        // 不能依赖整个 SourceSession/NodeEntry 延迟 drop。
+        self.write_tx.lock().take();
         self.closed.send_replace(true);
         *self.state.lock() = ConnectionState::Disconnected;
     }
@@ -91,7 +94,7 @@ impl TransportHandle {
     ) -> Self {
         let (closed, _) = watch::channel(false);
         Self {
-            write_tx: connection.write_tx,
+            write_tx: parking_lot::Mutex::new(Some(connection.write_tx)),
             data_tx: connection.data_tx,
             control: connection.control,
             state: parking_lot::Mutex::new(ConnectionState::Connected),
@@ -118,9 +121,15 @@ impl TransportHandle {
     /// Protocol/RawData 等订阅者可见, 且方向可辨、不与设备接收混淆)。
     /// 无订阅者时广播失败静默忽略。
     pub fn send(&self, data: &[u8]) -> Result<()> {
-        self.write_tx
-            .try_send(data.to_vec())
-            .map_err(|_| TransportError::Send(std::io::Error::other("channel closed")))?;
+        {
+            let write_tx = self.write_tx.lock();
+            let write_tx = write_tx
+                .as_ref()
+                .ok_or_else(|| TransportError::Send(std::io::Error::other("channel closed")))?;
+            write_tx
+                .try_send(data.to_vec())
+                .map_err(|_| TransportError::Send(std::io::Error::other("channel closed")))?;
+        }
         let _ = self.data_tx.send(ByteMessage::loopback(data.to_vec()));
         {
             let mut stats = self.stats.lock();
@@ -180,6 +189,30 @@ impl Drop for TransportHandle {
     fn drop(&mut self) {
         // 句柄被移除 (close / 重复 open 替换) 时确保后台任务收到取消信号
         self.control.close();
+        self.write_tx.lock().take();
         self.closed.send_replace(true);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::AtomicBool;
+
+    #[tokio::test]
+    async fn close_drops_write_sender_and_rejects_further_writes() {
+        let (write_tx, mut write_rx) = mpsc::channel(1);
+        let (data_tx, _data_rx) = broadcast::channel(1);
+        let cancel = Arc::new(AtomicBool::new(false));
+        let handle = TransportHandle::new(
+            TransportConnection::from_cancel_flag(write_tx, data_tx, cancel),
+            TransportConfig::TestData(TestDataConfig::default()),
+            1,
+        );
+
+        handle.close();
+
+        assert!(write_rx.recv().await.is_none());
+        assert!(handle.send(b"after-close").is_err());
     }
 }

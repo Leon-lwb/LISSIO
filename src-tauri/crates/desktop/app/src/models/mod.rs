@@ -20,8 +20,8 @@ pub use data_model::model_descriptor::{
     ModelCatalog as ModelCatalogSnapshot, ModelDescriptor, ModelDisplay, ModelFamily, ModelUiHints,
 };
 pub use describe::{
-    DescribeRequest, DescribeResult, GraphEdgeRef, NodeDescription, NodeDescriptionStatus,
-    NodeHint, describe_documents,
+    DecodedDocument, DescribeBatch, DescribeRequest, DescribeResult, GraphEdgeRef, NodeDescription,
+    NodeDescriptionStatus, NodeHint, UNKNOWN_NODE_ID, describe_batch, describe_documents,
 };
 pub use prepare::{
     PrepareIssue, PrepareOperation, PrepareResult, PreparedDocument, prepare_documents,

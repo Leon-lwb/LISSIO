@@ -147,7 +147,11 @@ export function CommandSender({ widget }: CommandSenderProps) {
   const canSend = runState === 'running';
 
   const config = params;
-  const frames = config.frames.length > 0 ? config.frames : [makeEmptyFrame(config.id)];
+  // 空帧兜底数组须记忆化 — 否则作为 useMemo 依赖每次渲染都是新引用
+  const frames = useMemo(
+    () => (config.frames.length > 0 ? config.frames : [makeEmptyFrame(config.id)]),
+    [config.frames, config.id]
+  );
 
   // 当前选中帧 (activeFrameId 失效时回退第一帧)
   const [activeFrameId, setActiveFrameId] = useState<string | null>(null);

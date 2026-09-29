@@ -40,8 +40,6 @@ export function formatAiKindError(
     case 'AiProviderRequest':
       // 原始描述携带 provider 返回的真实原因 (HTTP 状态 / 限流信息), 作为次要行展示
       return { summary: fill(t(lang, 'aiErrProviderRequest'), params), detail };
-    case 'AiMaxToolRounds':
-      return { summary: fill(t(lang, 'aiErrMaxToolRounds'), params) };
     case 'AiCancelled':
       return { summary: t(lang, 'aiErrCancelled') };
     case 'AiKeyring':

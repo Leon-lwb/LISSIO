@@ -91,7 +91,7 @@ describe('AcquisitionNode ports', () => {
   beforeEach(() => {
     mocks.loadAdapterCapabilities.mockReset();
     mocks.updateNodeInternals.mockReset();
-    useAppStore.setState({ rfEdges: [] });
+    useAppStore.setState({ rfEdges: [], lang: 'en' });
   });
 
   it('renders every backend port on the side declared by its direction', () => {
@@ -112,5 +112,22 @@ describe('AcquisitionNode ports', () => {
     await waitFor(() => expect(screen.getByTestId('source-points')).toBeInTheDocument());
     expect(mocks.loadAdapterCapabilities).toHaveBeenCalledOnce();
     expect(mocks.updateNodeInternals).toHaveBeenCalledWith('acquisition-1');
+  });
+
+  it('falls back to byte ports and surfaces an error when the driver is absent from the catalog', async () => {
+    mocks.loadAdapterCapabilities.mockResolvedValue([]);
+    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
+
+    await waitFor(() => expect(screen.getByTestId('source-rx')).toBeInTheDocument());
+    expect(screen.getByTestId('target-tx')).toBeInTheDocument();
+    expect(screen.getByText('Capability catalog mismatch; ports unavailable')).toBeInTheDocument();
+  });
+
+  it('falls back to byte ports when the capability catalog request fails', async () => {
+    mocks.loadAdapterCapabilities.mockRejectedValue(new Error('rpc unavailable'));
+    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
+
+    await waitFor(() => expect(screen.getByTestId('source-rx')).toBeInTheDocument());
+    expect(screen.getByText('Capability catalog mismatch; ports unavailable')).toBeInTheDocument();
   });
 });

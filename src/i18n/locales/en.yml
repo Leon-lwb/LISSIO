@@ -18,6 +18,7 @@ connected: Connected
 disconnected: Disconnected
 notConnected: Not connected
 connError: Connection error
+acquisitionCardMissing: Capability catalog mismatch; ports unavailable
 
 # Port Config
 portName: Port
@@ -181,8 +182,35 @@ aiToolCount: Tools {n}
 aiToolRunning: calling...
 aiToolDone: done
 aiToolFailed: failed
+aiToolInput: Input
+aiToolOutput: Output
+aiThinking: Thinking
+aiReasoning: Reasoning
+aiUsingTools: Using tools
+aiViewProcess: View process
+aiRunningFor: Running for {time}
+aiElapsed: Took {time}
+aiActivityReadRunning: Reading {name}
+aiActivityReadDone: Read {name}
+aiActivityReadError: Failed to read {name}
+aiActivityEditRunning: Editing {name}
+aiActivityEditDone: Edited {name}
+aiActivityEditError: Failed to edit {name}
+aiActivityCommandRunning: Running {name}
+aiActivityCommandDone: Ran {name}
+aiActivityCommandError: Failed to run {name}
+aiActivitySearchRunning: Searching {name}
+aiActivitySearchDone: Searched {name}
+aiActivitySearchError: Failed to search {name}
+aiActivityWebRunning: Opening {name}
+aiActivityWebDone: Opened {name}
+aiActivityWebError: Failed to open {name}
+aiActivityToolRunning: Calling {name}
+aiActivityToolDone: Called {name}
+aiActivityToolError: Failed to call {name}
 aiStop: Stop
 aiSend: Send
+aiScrollToBottom: Scroll to bottom
 aiClear: Clear chat
 aiClose: Close
 aiMcpServers: MCP Servers
@@ -193,6 +221,8 @@ aiServerName: Name (e.g. filesystem)
 aiServerCommand: Command (e.g. npx -y @modelcontextprotocol/server-filesystem)
 aiDeleteServer: Delete server
 aiServerStopped: local MCP not running
+aiServerStart: Start local MCP
+aiServerStop: Stop local MCP
 aiSessionSwitch: Switch session
 aiSessionNew: New chat
 aiSessionRename: Rename session
@@ -205,7 +235,6 @@ aiErrMissingBaseUrl: The "OpenAI-compatible" adapter requires a custom Base URL
 aiErrMissingModel: No model configured for "{adapter}"
 aiErrUnknownAdapter: "Unsupported model provider: {adapter}"
 aiErrProviderRequest: Request to {adapter} / {model} failed
-aiErrMaxToolRounds: Tool-call loop exceeded {rounds} rounds without a final answer
 aiErrCancelled: Chat cancelled
 aiErrKeyring: Failed to access the system keychain
 aiErrKeyringAccessDenied: System keychain access was denied
@@ -656,22 +685,9 @@ settingAiTemperatureDesc: Sampling temperature (0-2); leave empty for the provid
 settingAiMaxTokens: Max Output Tokens
 settingAiMaxTokensDesc: Maximum tokens per reply; leave empty for the provider default
 settingAiSystemPrompt: System Prompt
-settingAiSystemPromptDesc: System-level instruction for the model, Markdown supported (describe your device protocol for better context)
-promptEditorOpen: Edit Prompt
-promptEditorTitle: System Prompt Editor
-promptEditorImport: Import .md
-promptEditorExport: Export .md
-promptEditorSource: Source
-promptEditorPreview: Preview
-promptEditorSave: Save
-promptEditorChars: "{n} chars"
-promptEditorExportSuccess: Prompt exported
-promptEditorExportSuccessDesc: Markdown file saved
-promptEditorExportFailed: Failed to export prompt
-promptEditorImportFailed: Failed to import prompt
-promptEditorImportEmpty: File is empty
-settingAiMaxToolRounds: Tool Round Limit
-settingAiMaxToolRoundsDesc: Maximum tool-call loop rounds (model calls tool -> result fed back) per chat
+settingAiSystemPromptDesc: Edit ai-system-prompt.md in the app settings folder. Changes take effect with your next AI message.
+settingAiOpenSettingsFolder: Open Settings Folder
+settingAiOpenSettingsFolderFailed: Failed to open settings folder
 settingAiBuiltinTools: Enable Built-in Tools
 settingAiBuiltinToolsDesc: Let the AI edit the node graph, operate the app, read device data, and consult the built-in knowledge base (skills)
 settingAiMcpTools: Enable MCP Tools

@@ -34,7 +34,7 @@ use kind::NodeDef;
 use logic::{DecodedBuffer, LogicBuffer};
 use parking_lot::{Mutex, RwLock};
 use raw_data::RawDataCollector;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::task::JoinHandle;
@@ -105,6 +105,9 @@ pub struct DataPlaneState {
     read_tasks: Arc<Mutex<HashMap<String, JoinHandle<()>>>>,
     /// 最近一次已对悬空 ProtocolSource 发出警告的 graphs_version (reconcile 去重)
     pub(crate) reconcile_warn_version: Arc<AtomicU64>,
+    /// 已发出过喂入断链警告的 key 集合 (协议状态缺失 / 字节源无路由) —
+    /// 热路径逐批触发, 同 key 只警告一次避免刷屏
+    feed_gaps_warned: Arc<Mutex<HashSet<String>>>,
     /// 数值平面状态 (图/滤波/解码器/快照等)
     pub eval: GraphEvalState,
     pub can_buffer: Arc<Mutex<CanBuffer>>,
@@ -147,6 +150,7 @@ impl DataPlaneState {
             eval_worker_started: Arc::new(AtomicBool::new(false)),
             read_tasks: Arc::new(Mutex::new(HashMap::new())),
             reconcile_warn_version: Arc::new(AtomicU64::new(u64::MAX)),
+            feed_gaps_warned: Arc::new(Mutex::new(HashSet::new())),
             eval,
             can_buffer,
             can_load_stats,
@@ -301,6 +305,48 @@ impl DataPlaneState {
         }
     }
 
+    /// 生命周期诊断摘要 — 断连/泄漏调查用，统计仍被共享状态持有的缓存与任务。
+    pub fn lifecycle_summary(&self) -> String {
+        let read_tasks = self.read_tasks.lock().len();
+        let (buffer_count, buffer_points, buffer_bytes) = {
+            let buffers = self.buffers.lock();
+            let mut points = 0_usize;
+            let mut bytes = 0_usize;
+            for buffer in buffers.values() {
+                let buffer = buffer.lock();
+                points = points.saturating_add(buffer.point_count());
+                bytes = bytes.saturating_add(buffer.estimated_bytes());
+            }
+            (buffers.len(), points, bytes)
+        };
+        let (raw_count, raw_bytes) = {
+            let collectors = self.raw_collectors.lock();
+            let bytes: usize = collectors
+                .values()
+                .map(|collector| collector.lock().stored_bytes())
+                .sum();
+            (collectors.len(), bytes)
+        };
+        let (decoder_raw_count, decoder_raw_bytes) = {
+            let collectors = self.eval.decoder_raw_collectors.lock();
+            let bytes: usize = collectors
+                .values()
+                .map(|collector| collector.lock().stored_bytes())
+                .sum();
+            (collectors.len(), bytes)
+        };
+        let eval = self.eval_diagnostics();
+        let queue_sources = self.frame_queues.lock().len();
+        format!(
+            "read_tasks={read_tasks} buffers={buffer_count}/{buffer_points}pts/{buffer_bytes}B              raw_collectors={raw_count}/{raw_bytes}B decoder_raw={decoder_raw_count}/{decoder_raw_bytes}B              eval_queue_sources={queue_sources}/{}B/{}frames protocol_states={} route_groups={} aliases={}",
+            eval.queued_estimated_bytes,
+            eval.queued_frames,
+            self.protocol_states.lock().len(),
+            self.route_groups.lock().len(),
+            self.buffer_aliases.lock().len(),
+        )
+    }
+
     /// 非破坏性诊断快照：累计值不随日志窗口清零，队列值不含执行中的批次。
     pub fn eval_diagnostics(&self) -> EvalDiagnostics {
         let queues = self.frame_queues.lock();
@@ -350,5 +396,18 @@ impl DataPlaneState {
             let plane = self.clone();
             tokio::spawn(eval_worker::eval_worker(plane));
         }
+    }
+
+    /// 喂入断链一次性警告 — 数据在到达与消费之间被静默丢弃 (否则所有面板零数据
+    /// 且无任何日志); 同 key 只警告首次, 恢复后不重复打扰。
+    pub(crate) fn warn_feed_gap_once(&self, key: &str, message: &str) {
+        if self.feed_gaps_warned.lock().insert(key.to_string()) {
+            log::warn!("{message} (key: {key})");
+        }
+    }
+
+    /// 图重编译时清除断链警告去重集 — 配置变化后同 key 的新断链应再次可见。
+    pub(crate) fn reset_feed_gap_warnings(&self) {
+        self.feed_gaps_warned.lock().clear();
     }
 }

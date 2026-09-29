@@ -18,6 +18,7 @@ use flow::{BytesChunk, FlowEnvelope, SourceId};
 use points::{ReadRequest, ReadResult, WriteRequest, WriteResult};
 use serde_json::Value;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tokio::sync::{broadcast, mpsc};
 
 use crate::source_support::SOURCE_CHANNEL_CAPACITY;
@@ -43,6 +44,8 @@ impl ByteSourceCapability for SourceRuntime {
                 .map(|handle| (session.epoch(), handle.subscribe_flow(source_id.clone())))
         });
         tokio::spawn(async move {
+            let mut forwarded = 0_u64;
+            let mut last_diag = Instant::now();
             loop {
                 if inner.is_closed() || output.receiver_count() == 0 {
                     break;
@@ -72,6 +75,7 @@ impl ByteSourceCapability for SourceRuntime {
                                     continue;
                                 }
                                 if output.send(envelope).is_err() { return; }
+                                forwarded += 1;
                             }
                             Err(_) => {
                                 if let Some(changes) = sessions.as_mut() {
@@ -89,6 +93,15 @@ impl ByteSourceCapability for SourceRuntime {
                             }
                         } => break,
                     }
+                }
+                if last_diag.elapsed() >= Duration::from_secs(1) {
+                    log::info!(
+                        "字节订阅转发水位: input_queue={}, output_receivers={}, forwarded={}",
+                        input.len(),
+                        output.receiver_count(),
+                        forwarded
+                    );
+                    last_diag = Instant::now();
                 }
             }
         });

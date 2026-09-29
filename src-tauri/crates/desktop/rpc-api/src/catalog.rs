@@ -13,6 +13,7 @@ pub const DESKTOP_ONLY: &[&str] = &[
     "set_window_acrylic",
     "show_main_window",
     "close_splashscreen",
+    "open_settings_folder",
     "check_update",
     "download_and_install_update",
     "backend_sidecar_info",
@@ -170,15 +171,37 @@ pub const PENDING: &[&str] = &[];
 /// 本身就是推送目标, 因此没有可派发的参数形状。
 pub const CHANNEL: &[&str] = &["subscribe_data", "unsubscribe_data"];
 
+/// 参数对象**本身就是请求 DTO** 的命令。
+///
+/// 命令的参数形状有两类, 必须显式区分, 不能靠启发式猜测:
+///
+/// - **命名参数** (绝大多数): `{ "nodeId": "n1" }` 里的 `nodeId` 是 Tauri 参数名,
+///   由 [`crate::normalize_args`] 按 Tauri v2 规则归一为 `node_id` 后逐字段取值。
+/// - **整体载荷** (本表): 参数对象的顶层键就是请求 DTO 的字段, 契约由 ts-rs 导出
+///   的 `src/types/generated/*.ts` 定义 (camelCase)。对它们做顶层改名会把整个载荷
+///   改形, 结果是解码失败, 或更糟 —— 带 `#[serde(default)]` 的字段静默落空。
+///
+/// 曾经缺失本表导致的两个真实缺陷:
+/// - `describe_node_documents`: `requestRevision` → `request_revision`, 而 serde 契约
+///   是 camelCase → 每次调用整批 `InvalidArguments` → 前端 `markFailed()` → 全部节点端口丢失。
+/// - `prepare_node_documents`: `catalogRevision` 静默落空为 `""`, 目录版本守卫 (目录已刷新
+///   时拒绝旧版本请求) 从未生效。
+pub const PAYLOAD_ARGS: &[&str] = &["prepare_node_documents", "describe_node_documents"];
+
 /// 判断命令是否由本出口的 RPC 派发表实现 (供 HTTP 层在写响应前给出稳定的
 /// 不支持语义, 避免为必然失败的调用做参数解包)。
 pub fn is_supported(cmd: &str) -> bool {
     SUPPORTED.contains(&cmd)
 }
 
+/// 该命令的参数对象是否为整体载荷 ([`PAYLOAD_ARGS`]) — 是则不参与顶层参数名归一。
+pub fn args_are_a_payload(cmd: &str) -> bool {
+    PAYLOAD_ARGS.contains(&cmd)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{CHANNEL, DESKTOP_ONLY, PENDING, SUPPORTED};
+    use super::{CHANNEL, DESKTOP_ONLY, PAYLOAD_ARGS, PENDING, SUPPORTED};
     use std::collections::HashSet;
 
     /// 四个集合必须互不相交 — 否则能力矩阵自相矛盾。
@@ -210,5 +233,23 @@ mod tests {
         }
     }
 
-    use super::is_supported;
+    /// 载荷型命令必须已接入出口 — 否则「跳过归一」保护的是永不执行的命令。
+    #[test]
+    fn payload_arg_commands_are_supported() {
+        assert!(PAYLOAD_ARGS.len() == 2, "新增载荷型命令时必须同步登记");
+        for cmd in PAYLOAD_ARGS {
+            assert!(is_supported(cmd), "{cmd} 声明了载荷型参数但未接入 dispatch");
+            assert!(
+                !DESKTOP_ONLY.contains(cmd) && !CHANNEL.contains(cmd),
+                "{cmd} 不可能同时是载荷型派发命令"
+            );
+        }
+        assert!(args_are_a_payload("describe_node_documents"));
+        assert!(args_are_a_payload("prepare_node_documents"));
+        // 反例: 命名参数命令不得被误列入, 否则其 nodeId 不再归一
+        assert!(!args_are_a_payload("send_raw"));
+        assert!(!args_are_a_payload("update_tab_graph"));
+    }
+
+    use super::{args_are_a_payload, is_supported};
 }

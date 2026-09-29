@@ -50,6 +50,22 @@ fn justfloat_like_schema() -> ProtocolSchema {
 }
 
 #[test]
+fn empty_decode_never_emits_unbounded_frames() {
+    let schema = ProtocolSchema {
+        preset: SchemaPreset::Custom,
+        preset_config: None,
+        decode: Vec::new(),
+        encode: None,
+    };
+    let mut engine = compile_schema(&schema);
+    for _ in 0..100 {
+        let output = engine.feed(b"t1238DEADBEEF01020304\r");
+        assert!(output.frames.is_empty());
+    }
+    assert!(engine.take_pending().is_empty());
+}
+
+#[test]
 fn test_custom_schema_justfloat_equivalent_decode() {
     let mut engine = compile_schema(&justfloat_like_schema());
     let mut data = Vec::new();

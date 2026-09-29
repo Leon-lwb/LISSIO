@@ -6,4 +6,4 @@ export type ProgressParams = { id: string, label: string, range: DisplayRange, u
 /**
  * '#rrggbb' 或空串 (跟随主题)
  */
-color: string, channel: number | null, };
+color: string, };

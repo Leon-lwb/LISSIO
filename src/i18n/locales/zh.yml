@@ -18,6 +18,7 @@ connected: 已连接
 disconnected: 已断开
 notConnected: 未连接
 connError: 连接错误
+acquisitionCardMissing: 能力目录不匹配，端口不可用
 
 # 串口配置
 portName: 端口
@@ -181,8 +182,35 @@ aiToolCount: 工具 {n}
 aiToolRunning: 调用中...
 aiToolDone: 完成
 aiToolFailed: 失败
+aiToolInput: 输入
+aiToolOutput: 输出
+aiThinking: 正在思考
+aiReasoning: 思考过程
+aiUsingTools: 正在调用工具
+aiViewProcess: 查看过程
+aiRunningFor: 已运行 {time}
+aiElapsed: 用时 {time}
+aiActivityReadRunning: 正在读取 {name}
+aiActivityReadDone: 已读取 {name}
+aiActivityReadError: 读取失败 {name}
+aiActivityEditRunning: 正在编辑 {name}
+aiActivityEditDone: 已编辑 {name}
+aiActivityEditError: 编辑失败 {name}
+aiActivityCommandRunning: 正在运行 {name}
+aiActivityCommandDone: 已运行 {name}
+aiActivityCommandError: 运行失败 {name}
+aiActivitySearchRunning: 正在搜索 {name}
+aiActivitySearchDone: 已搜索 {name}
+aiActivitySearchError: 搜索失败 {name}
+aiActivityWebRunning: 正在访问 {name}
+aiActivityWebDone: 已访问 {name}
+aiActivityWebError: 访问失败 {name}
+aiActivityToolRunning: 正在调用 {name}
+aiActivityToolDone: 已调用 {name}
+aiActivityToolError: 调用失败 {name}
 aiStop: 停止
 aiSend: 发送
+aiScrollToBottom: 滚动到底部
 aiClear: 清空会话
 aiClose: 关闭
 aiMcpServers: MCP 服务器
@@ -193,6 +221,8 @@ aiServerName: 名称 (如 filesystem)
 aiServerCommand: 启动命令 (如 npx -y @modelcontextprotocol/server-filesystem)
 aiDeleteServer: 删除服务器
 aiServerStopped: 本地 MCP 未运行
+aiServerStart: 启动本地 MCP
+aiServerStop: 停止本地 MCP
 aiSessionSwitch: 切换会话
 aiSessionNew: 新会话
 aiSessionRename: 重命名会话
@@ -205,7 +235,6 @@ aiErrMissingBaseUrl: 「OpenAI 兼容」适配器需要填写自定义端点 (Ba
 aiErrMissingModel: 「{adapter}」未配置模型名
 aiErrUnknownAdapter: 不支持的模型服务商:{adapter}
 aiErrProviderRequest: 请求 {adapter} / {model} 失败
-aiErrMaxToolRounds: 工具调用循环超过 {rounds} 轮仍未得到最终回答
 aiErrCancelled: 对话已取消
 aiErrKeyring: 系统钥匙串访问失败
 aiErrKeyringAccessDenied: 系统钥匙串访问授权被拒绝
@@ -656,22 +685,9 @@ settingAiTemperatureDesc: 采样温度 (0-2), 留空使用服务商默认
 settingAiMaxTokens: 最大生成长度
 settingAiMaxTokensDesc: 单次回复的最大 token 数, 留空使用服务商默认
 settingAiSystemPrompt: 系统提示词
-settingAiSystemPromptDesc: 发送给模型的系统级指令, 支持 Markdown (可描述设备协议, 让 AI 更懂上下文)
-promptEditorOpen: 编辑提示词
-promptEditorTitle: 系统提示词编辑器
-promptEditorImport: 导入 .md
-promptEditorExport: 导出 .md
-promptEditorSource: 源码
-promptEditorPreview: 预览
-promptEditorSave: 保存
-promptEditorChars: "{n} 字符"
-promptEditorExportSuccess: 提示词已导出
-promptEditorExportSuccessDesc: Markdown 文件已保存
-promptEditorExportFailed: 提示词导出失败
-promptEditorImportFailed: 提示词导入失败
-promptEditorImportEmpty: 文件内容为空
-settingAiMaxToolRounds: 工具调用轮次上限
-settingAiMaxToolRoundsDesc: 单次对话允许的最大"模型调用工具→回填结果"循环轮数
+settingAiSystemPromptDesc: 在软件设置文件夹中编辑 ai-system-prompt.md，修改将在下一条 AI 消息生效。
+settingAiOpenSettingsFolder: 打开设置文件夹
+settingAiOpenSettingsFolderFailed: 打开设置文件夹失败
 settingAiBuiltinTools: 启用内置工具
 settingAiBuiltinToolsDesc: 对话中允许 AI 编辑节点图、操作软件、读取数据并查询内置知识库 (skills)
 settingAiMcpTools: 启用 MCP 工具

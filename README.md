@@ -385,6 +385,9 @@ AI, session, external MCP, inbound MCP, and frontend-tool commands have the same
 surface in Desktop and Web. Saved provider keys are write-only: the UI receives only
 `configured`, `source`, and `writable`. Deployment fallback variables use
 `LISSIO_AI_API_KEY_<ADAPTER>` (for example `LISSIO_AI_API_KEY_OPENAI`).
+Debug builds read these keys directly from the repository root `.env` on each request and do
+not access the system keychain. Copy `.env.example` to `.env` and edit it locally. The file is
+gitignored. Release builds continue to use the system keychain with the environment fallback.
 
 ### OCI (server + Web)
 

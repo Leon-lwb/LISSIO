@@ -53,6 +53,38 @@ export function nodeDocument(node: Node): NodeDocument {
   };
 }
 
+/** 单条画布节点无法投影为文档 — 只影响该节点, 不中断同批其他节点。 */
+export interface NodeDocumentFailure {
+  nodeId: string;
+  message: string;
+}
+
+export type NodeDocumentOutcome =
+  | { document: NodeDocument }
+  | { failure: NodeDocumentFailure };
+
+/**
+ * 逐节点容错投影。
+ *
+ * `nodeDocument` 对未知 `node.type` 与缺失的必填字段抛异常, 而描述管线是**批量**
+ * 的: 一条抛异常会让整批描述从未发出, 画布上全部 widget 节点失去端口且不自愈
+ * (协议/设备节点的端口来自其他来源, 故不受影响 —— 表现为「只有 widget 集体丢端口」)。
+ * 把「该节点失败」放进返回值, 使容错成为类型层面的事实, 而不是调用方需要记得
+ * 遵守的约定。
+ */
+export function tryNodeDocument(node: Node): NodeDocumentOutcome {
+  try {
+    return { document: nodeDocument(node) };
+  } catch (error) {
+    return {
+      failure: {
+        nodeId: node.id,
+        message: error instanceof Error ? error.message : String(error),
+      },
+    };
+  }
+}
+
 export function canvasNode(doc: NodeDocument, previous?: Node): Node {
   const base = {
     id: doc.id,

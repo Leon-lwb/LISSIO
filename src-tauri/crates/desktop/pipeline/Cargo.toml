@@ -40,7 +40,6 @@ protocol_can_bridge = { workspace = true }
 logic_decoder = { workspace = true }
 schema = { workspace = true }
 schema_types = { workspace = true }
-transport = { workspace = true }
 flow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -51,6 +50,7 @@ parking_lot = { workspace = true }
 events = { workspace = true }
 
 [dev-dependencies]
+transport = { workspace = true }
 # pipeline/{frame_dispatch, reconcile} 的 #[cfg(test)] 模块用 AppState 构造测试
 app = { workspace = true }
 graph_testkit = { workspace = true }

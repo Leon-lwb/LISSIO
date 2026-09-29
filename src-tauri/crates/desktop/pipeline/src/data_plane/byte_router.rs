@@ -143,6 +143,13 @@ pub(super) async fn route_inner(
     }
     // 路由表快照 (锁即刻释放, 下游分发不持 byte_plan 锁)
     let routes: Vec<_> = plane.byte_plan.lock().routes_for(source_id).to_vec();
+    // 活跃字节源无任何下游: 数据在此被静默丢弃 (连线缺失/图未同步), 显式可见
+    if routes.is_empty() && !data.is_empty() {
+        plane.warn_feed_gap_once(
+            &format!("no-route:{source_id}"),
+            &format!("字节源无任何下游路由, 数据被丢弃 (设备未连接到协议/解码节点): {source_id}"),
+        );
+    }
     // 路由去重组 (不变量 4): 同 (字节源, 协议配置等价) 的 Protocol 目标只解析
     // 一次, 帧经 Arc fan-out 到组内各节点。组缺失时 (尚未 sync) 退回逐目标。
     let groups = plane.route_groups.lock().get(source_id).cloned();

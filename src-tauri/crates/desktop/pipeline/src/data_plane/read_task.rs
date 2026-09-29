@@ -42,6 +42,41 @@ pub(super) fn mark_downstream_disconnected(plane: &DataPlaneState, transport_id:
     }
 }
 
+/// 读任务生命周期卫兵 — `detach` 使用 abort，普通函数尾部日志不会执行；
+/// Drop 保证正常退出与主动中止都能留下任务级计数，供泄漏调查关联。
+struct ReadTaskGuard {
+    node_id: String,
+    started: Instant,
+    messages: u64,
+    bytes: u64,
+    frames: u64,
+}
+
+impl ReadTaskGuard {
+    fn new(node_id: String) -> Self {
+        Self {
+            node_id,
+            started: Instant::now(),
+            messages: 0,
+            bytes: 0,
+            frames: 0,
+        }
+    }
+}
+
+impl Drop for ReadTaskGuard {
+    fn drop(&mut self) {
+        log::info!(
+            "数据读任务退出: node={}, elapsed_ms={}, messages={}, bytes={}, frames={}",
+            self.node_id,
+            self.started.elapsed().as_millis(),
+            self.messages,
+            self.bytes,
+            self.frames
+        );
+    }
+}
+
 /// A byte gap invalidates every stateful parser downstream of this source.
 /// Rebuilding from the already-committed node configuration prevents a frame
 /// from being assembled across missing bytes while preserving the BytePlan.
@@ -150,6 +185,7 @@ pub(super) async fn read_task(
     mut rx: acquisition::FlowReceiver,
 ) {
     log::debug!("数据读任务已启动: {node_id}");
+    let mut guard = ReadTaskGuard::new(node_id.clone());
     let mut dec_cache = crate::decoder_feed::DecoderFeedCache::new();
     let mut last_stats = Instant::now();
     let mut acc_bytes: u64 = 0;
@@ -165,6 +201,7 @@ pub(super) async fn read_task(
         .and_then(|node_id| plane.transport.live_handle(&node_id));
     let mut pending = None;
     let mut last_connection_epoch = None;
+    let mut last_diag = Instant::now();
 
     loop {
         let first = if let Some(envelope) = pending.take() {
@@ -247,8 +284,19 @@ pub(super) async fn read_task(
                 ) => break,
             }
         }
+        guard.messages = guard.messages.saturating_add(coalesced as u64);
+        guard.bytes = guard.bytes.saturating_add(data.len() as u64);
         // 沿全局 BytePlan 路由 (深度提示取广播积压, 供并行解析判定)
         let t_feed = Instant::now();
+        if last_diag.elapsed() >= std::time::Duration::from_secs(1) {
+            log::info!(
+                "数据读任务路由开始: node={node_id}, rx_queue={}, batch_bytes={}, messages={}",
+                rx.len(),
+                data.len(),
+                guard.messages
+            );
+            last_diag = Instant::now();
+        }
         let depth_hint = rx.len().max(
             controller
                 .workers()
@@ -306,6 +354,15 @@ pub(super) async fn read_task(
             continue;
         }
         let service_time = t_feed.elapsed();
+        if service_time >= std::time::Duration::from_millis(100) {
+            log::warn!(
+                "字节路由慢: node={node_id}, elapsed_ms={}, batch_bytes={}, messages={}, frames={}",
+                service_time.as_millis(),
+                data.len(),
+                guard.messages,
+                summary.frames
+            );
+        }
         let cfg = *plane.pipeline_config.read();
         let queued = rx.len();
         // queue_fill 用广播通道真实容量 (通道均以 INGEST_CHANNEL_CAPACITY 创建),
@@ -356,6 +413,7 @@ pub(super) async fn read_task(
             .metrics
             .frames_ingested
             .fetch_add(summary.frames, Ordering::Relaxed);
+        guard.frames = guard.frames.saturating_add(summary.frames);
 
         // 统计节流 emit (100ms 窗口)
         if last_stats.elapsed().as_millis() >= STATS_THROTTLE_MS {
@@ -386,5 +444,4 @@ pub(super) async fn read_task(
 
     mark_downstream_disconnected(&plane, &node_id);
     emit_transport_state(sink.as_ref(), &node_id, ConnectionState::Disconnected);
-    log::debug!("数据读任务已退出: {node_id}");
 }

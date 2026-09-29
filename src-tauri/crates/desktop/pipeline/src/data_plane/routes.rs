@@ -94,6 +94,8 @@ impl DataPlaneState {
             .retain(|id, _| live.iter().any(|k| k == id));
         // 路由去重组与缓冲别名 (不变量 4): 同 (字节源, 协议配置等价) 只解析一次
         self.rebuild_route_groups();
+        // 图已重编译: 断链警告去重集复位, 拓扑变化后的新断链应再次可见
+        self.reset_feed_gap_warnings();
     }
 
     /// 依据 BytePlan + 协议节点配置等价性重建去重组与缓冲别名 (冷路径,
@@ -189,8 +191,9 @@ impl DataPlaneState {
         lost_messages: u64,
         sample_rate: f32,
     ) {
+        // 消息大小契约的唯一权威在 data_model::simulation — 与生成侧同源
         let lost_frames =
-            lost_messages.saturating_mul(transport::test_data::samples_per_message(sample_rate));
+            lost_messages.saturating_mul(data_model::simulation::samples_per_message(sample_rate));
         if lost_frames == 0 {
             return;
         }

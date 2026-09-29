@@ -5,4 +5,4 @@ import type { ProtocolSchema } from "./ProtocolSchema";
 /**
  * 协议节点的解析、转换和自定义帧配置。
  */
-export type ProtocolNodeConfig = { protocol: ProtocolConfig, convertTo: ProtocolConfig | null, schema: ProtocolSchema | null, };
+export type ProtocolNodeConfig = { protocol: ProtocolConfig, convertTo: ProtocolConfig | null, schema: ProtocolSchema, };

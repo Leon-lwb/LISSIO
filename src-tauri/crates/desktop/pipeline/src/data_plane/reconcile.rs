@@ -127,6 +127,10 @@ impl DataPlaneState {
         self.buffers
             .lock()
             .retain(|id, _| sets.protocols.contains(id));
+        // 容量整备记录与缓冲同源；节点反复增删时不可永久保留旧 id。
+        self.tuned_rate
+            .lock()
+            .retain(|id, _| sets.protocols.contains(id));
         // raw_collectors: 仅保留仍存在的设备节点键
         self.raw_collectors
             .lock()

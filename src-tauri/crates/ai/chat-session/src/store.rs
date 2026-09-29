@@ -173,6 +173,26 @@ impl SessionStore {
         self.persist(&sessions)
     }
 
+    /// 仅当标题仍为预期值时重命名，避免自动命名覆盖用户手动修改。
+    ///
+    /// # Errors
+    /// 会话不存在或落盘失败。
+    pub fn rename_if_matches(&self, session_id: &str, expected: &str, title: &str) -> Result<bool> {
+        let mut sessions = self.inner.lock();
+        let Some(session) = sessions.iter_mut().find(|s| s.id == session_id) else {
+            return Err(AiError::UnknownSession {
+                id: session_id.to_string(),
+            }
+            .into());
+        };
+        if session.title != expected {
+            return Ok(false);
+        }
+        session.title = title.to_string();
+        self.persist(&sessions)?;
+        Ok(true)
+    }
+
     /// 删除会话 (不存在时静默)。
     ///
     /// # Errors
@@ -259,6 +279,9 @@ mod tests {
             text: text.to_string(),
             attachments: None,
             tools: None,
+            timeline: None,
+            reasoning: None,
+            duration_ms: None,
             error: None,
             error_kind: None,
             error_data: None,
@@ -271,6 +294,9 @@ mod tests {
             text: text.to_string(),
             attachments: None,
             tools: None,
+            timeline: None,
+            reasoning: None,
+            duration_ms: None,
             error: None,
             error_kind: None,
             error_data: None,
@@ -295,10 +321,21 @@ mod tests {
                         id: "c1".to_string(),
                         name: "probe".to_string(),
                         arguments: json!({"value": 7}),
+                        text_offset: 0,
                         content: "42".to_string(),
                         is_error: false,
                         done: true,
                     }]),
+                    timeline: Some(vec![
+                        crate::types::TurnEventDto::Tool {
+                            id: "c1".to_string(),
+                        },
+                        crate::types::TurnEventDto::Text {
+                            text: "回答".to_string(),
+                        },
+                    ]),
+                    reasoning: Some("正在分析".to_string()),
+                    duration_ms: Some(812),
                     error: None,
                     error_kind: None,
                     error_data: None,

@@ -2,8 +2,9 @@
 
 Lissio is a data-acquisition and debugging host application (successor of
 VOFA+) for embedded development with serial / TCP / UDP / CAN / logic-analyzer
-scenarios. Core capabilities: device connection, protocol parsing, waveform
-display, interactive control panels, CAN bus analysis, logic decoding.
+and industrial point scenarios. Its capabilities include device-tree
+acquisition, protocol parsing, waveforms and widgets, CAN/logic analysis,
+command frames, and recording with history queries.
 
 ## Typed Data Architecture
 
@@ -28,17 +29,25 @@ display, interactive control panels, CAN bus analysis, logic decoding.
 
 ## Software Operation Entrypoints (built-in AI tools)
 
-- Graph read/write: get_workspace reads full canvas state; add_node /
-  remove_node / update_node_config / connect_nodes / disconnect_edge /
-  move_node edit incrementally (equivalent to manual editing: canvas updates
-  live and changes enter undo history).
-- Devices: list_devices / list_serial_ports, connect_device / disconnect_device,
-  send_bytes / send_string / send_can_frame.
+- Graph read/write: the built-in AI uses get_workspace for the full canvas and
+  add_node / remove_node / update_node_config / move_node for node editing.
+  connect_edge / disconnect_edge edit wires incrementally; update_graph
+  atomically replaces a complete tab. Backend compilation checks each wire.
+- Devices and run control: list_driver_manifests / list_device_tree_nodes /
+  list_endpoints inspect capabilities and state. The built-in AI can use
+  connect_device / disconnect_device; backend tools provide open_endpoint /
+  close_endpoint, read_points / write_points, and run_workspace.
+- Transport and commands: list_devices / list_serial_ports inspect sessions;
+  send_bytes / send_string / send_can_frame / send_command_frame send data,
+  while compute_command_frame_bytes previews encoding.
 - Data reads: get_graph_outputs (latest values of all output ports),
   get_recent_waveform / get_waveform_window, get_can_frames, get_logic_data,
   get_raw_data (raw TX/RX bytes), get_buffer_info, list_data_sources.
-- Others: set_input_value drives input widgets; apply_template builds a
-  template workspace in one step.
+- Waveform and history: create_waveform_snapshot / query_waveform_snapshot
+  freeze and inspect waves; export_waveform_csv exports them. Recording tools
+  manage sessions, query history or read-only SQL, and export data.
+- Others: set_input_value drives input widgets; the built-in AI can use
+  apply_template to create a template workspace.
 
 ## Example Data Flow
 

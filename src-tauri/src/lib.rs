@@ -7,7 +7,9 @@ mod shell;
 mod sidecar;
 
 pub use menu_shell::{build_menu, on_menu_event};
-pub use shell::{close_splashscreen, inspect_element, set_window_acrylic, show_main_window};
+pub use shell::{
+    close_splashscreen, inspect_element, open_settings_folder, set_window_acrylic, show_main_window,
+};
 pub use sidecar::{backend_sidecar_info, backend_sidecar_open_logs, backend_sidecar_restart};
 // Tauri command macros are exported as hidden companion macros and require a glob import at the
 // composition root so `generate_handler!` can resolve them.
@@ -63,6 +65,7 @@ pub fn run() {
             set_window_acrylic,
             show_main_window,
             close_splashscreen,
+            open_settings_folder,
             check_update,
             download_and_install_update,
             backend_sidecar_info,

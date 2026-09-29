@@ -126,21 +126,45 @@ pub async fn prepare_node_documents(
     })
 }
 
-/// `describe_node_documents` — 批量端口描述。
+/// 描述请求信封 — 字段名与 `app::models::DescribeRequest` (ts-rs 导出合同) 一致。
+///
+/// 唯一的差别是 `documents` 的元素保持为原始 JSON 值: 若在此处解码为
+/// `NodeDocument`, 单条文档结构不合法就会让整次调用 `invalid_args`, 与「一次请求
+/// 内某节点参数不完整不阻断其他节点」的契约相违 —— 画布上任意一条坏文档都会让
+/// 全部 widget 节点失去端口。逐条解码由 `app::models::DescribeBatch::decode` 负责。
+///
+/// 本信封是**整体载荷** (`catalog::PAYLOAD_ARGS`): 顶层键直接对应 DTO 字段, 因此
+/// `dispatch` 不会对它做顶层参数名归一。若把它从 `PAYLOAD_ARGS` 移除,
+/// `requestRevision` 会被改名为 `request_revision` 而在此处解码失败。
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DescribeEnvelope {
+    documents: Vec<Value>,
+    edges: Vec<app::models::GraphEdgeRef>,
+    request_revision: u64,
+}
+
+/// `describe_node_documents` — 批量端口描述 (逐节点容错)。
 pub async fn describe_node_documents(
     host: &crate::BackendHost,
     cmd: &str,
     args: &Value,
 ) -> Result<Value, RpcError> {
-    let request: app::models::DescribeRequest =
-        serde_json::from_value(args.clone()).map_err(|error| {
-            RpcError::invalid_args(cmd, format!("describe request decode failed: {error}"))
-        })?;
+    // 信封整体结构错误属协议错误 → invalid_args; 信封内的单条文档不合法属节点
+    // 配置错误 → 只影响该节点 (产出 Unsupported 描述 + document/invalid 问题)。
+    let envelope: DescribeEnvelope = serde_json::from_value(args.clone()).map_err(|error| {
+        RpcError::invalid_args(cmd, format!("describe request decode failed: {error}"))
+    })?;
     let catalog = host
         .state
         .model_catalog()
         .ok_or_else(|| RpcError::text("model catalog not assembled"))?;
-    let result = app::models::describe_documents(&request);
+    let batch = app::models::DescribeBatch::decode(
+        &envelope.documents,
+        envelope.edges,
+        envelope.request_revision,
+    );
+    let result = app::models::describe_batch(&batch);
     let response = DescribeResponse {
         request_revision: result.request_revision,
         catalog_revision: catalog.revision.clone(),

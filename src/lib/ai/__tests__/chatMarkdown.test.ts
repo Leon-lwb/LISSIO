@@ -32,9 +32,9 @@ describe('sessionToMarkdown', () => {
         role: 'assistant',
         text: '已完成',
         tools: [
-          { id: '1', name: 'mcp_filesystem_read_file', arguments: {}, content: '', is_error: false, done: true },
-          { id: '2', name: 'read_skill', arguments: {}, content: '', is_error: true, done: true },
-          { id: '3', name: 'mcp_browser_web_search', arguments: {}, content: '', is_error: false, done: false },
+          { id: '1', name: 'mcp_filesystem_read_file', arguments: {}, text_offset: 0, content: '', is_error: false, done: true },
+          { id: '2', name: 'read_skill', arguments: {}, text_offset: 0, content: '', is_error: true, done: true },
+          { id: '3', name: 'mcp_browser_web_search', arguments: {}, text_offset: 0, content: '', is_error: false, done: false },
         ],
       },
     ];
@@ -47,7 +47,7 @@ describe('sessionToMarkdown', () => {
   it('无正文但有工具的助手条目只输出工具摘要', () => {
     const items: AiViewItem[] = [
       { role: 'assistant', text: '', tools: [
-        { id: '1', name: 'plot', arguments: {}, content: '', is_error: false, done: true },
+        { id: '1', name: 'plot', arguments: {}, text_offset: 0, content: '', is_error: false, done: true },
       ] },
     ];
     const md = sessionToMarkdown('t', items, 'zh', NOW);
@@ -85,7 +85,7 @@ describe('sessionToMarkdown', () => {
         text: '',
         attachments: [{ name: 'data.csv', content: 'a,b' }],
         tools: [
-          { id: '1', name: 'plot', arguments: {}, content: '', is_error: false, done: true },
+          { id: '1', name: 'plot', arguments: {}, text_offset: 0, content: '', is_error: false, done: true },
         ],
       },
     ];

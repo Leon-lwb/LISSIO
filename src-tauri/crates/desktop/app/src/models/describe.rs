@@ -17,7 +17,12 @@ use serde_json::Value;
 
 use crate::models::issue;
 
-/// 一次描述批请求。
+/// 一次描述批请求 — 与前端共享的**线缆合同类型** (`requestRevision` 等字段名即契约)。
+///
+/// 注意: 该类型的 `documents` 是整体的 `Vec<NodeDocument>`, 因此它的反序列化是
+/// 全有全无的。线缆入口不得直接用本类型解码 (一条不合法即整批失败); 应先取
+/// 文档原值再走 [`DescribeBatch::decode`]。本类型保留给已持有强类型文档的
+/// 进程内调用方与 ts-rs 导出。
 #[derive(Debug, Clone, serde::Deserialize, ts_rs::TS)]
 #[serde(rename_all = "camelCase")]
 pub struct DescribeRequest {
@@ -30,6 +35,13 @@ pub struct DescribeRequest {
 }
 
 /// 描述用边引用 (与图提交的 GraphEdge 同形, 只取描述所需字段)。
+///
+/// 命名**刻意**与图提交 DTO 一致 (snake_case: `source_handle` / `target_handle`),
+/// 而不是本文件其余 DTO 的 camelCase —— 「与图提交同形」是它的定义。因此前端必须
+/// 用 ts-rs 导出的 `GraphEdgeRef` 构造本字段, 不得手写等价的 camelCase 形状:
+/// serde 默认忽略未知字段, 写错时 `sourceHandle` 会被静默丢弃、`source_handle`
+/// 退化为 `None`, 而 RawData 的 `src:*` 动态端口正是由 `source_handle` 推导 ——
+/// 表现为「RawData 端口丢失」且全程无任何报错。
 #[derive(Debug, Clone, serde::Deserialize, Serialize, ts_rs::TS)]
 pub struct GraphEdgeRef {
     pub source: String,
@@ -90,21 +102,133 @@ pub struct DescribeResult {
     pub nodes: Vec<NodeDescription>,
 }
 
-/// 描述一批文档。`request_revision` 原样回传。
-pub fn describe_documents(request: &DescribeRequest) -> DescribeResult {
-    let nodes = request
+/// 文档缺少可辨识 id 时的占位 — 前端据此把失败归因到「某条未知节点」而不是静默丢弃。
+pub const UNKNOWN_NODE_ID: &str = "<unknown>";
+
+/// 单条文档的解码结果。
+///
+/// 逐节点容错的最小单位。描述契约要求「一次请求内某节点参数不完整不阻断其他节点」,
+/// 而 [`NodeDocument`] 的必填字段 (`schema` 非 Option、`points` / `layout` 必填) 使
+/// **整体**反序列化成为全有全无的失败面: 画布上任意一条文档不合法即让整批描述失败,
+/// 全部 widget 节点失去端口。把解码结果显式建模为「成功, 或该节点自己的失败」,
+/// 使容错成为类型层面的事实, 而不是调用方需要记得遵守的约定。
+#[derive(Debug, Clone)]
+pub enum DecodedDocument {
+    /// 文档结构合法, 可进入端口投影。
+    Ready(Box<NodeDocument>),
+    /// 文档结构不合法 —— 只为该节点产出 `Unsupported` 描述。
+    Invalid {
+        /// 请求文档声明的节点 id (缺失时为 [`UNKNOWN_NODE_ID`])。
+        node_id: String,
+        /// 结构失败的结构化问题 (含 serde 的位置信息)。
+        issue: ModelIssue,
+    },
+}
+
+/// 一次描述批 — 逐节点容错形态的请求。
+#[derive(Debug, Clone)]
+pub struct DescribeBatch {
+    /// 请求侧版本号 (响应原样携带)。
+    pub request_revision: u64,
+    /// 逐条解码结果 (与请求顺序一致)。
+    pub documents: Vec<DecodedDocument>,
+    /// 相关边 (RawData `src:*` 动态端口推断用)。
+    pub edges: Vec<GraphEdgeRef>,
+}
+
+impl DescribeBatch {
+    /// 逐条解码请求文档 — 单条不合法只产出该条 [`DecodedDocument::Invalid`]。
+    ///
+    /// `documents` 为请求原样的 JSON 值, 每条独立 `from_value::<NodeDocument>`。
+    /// 外层的整体结构不合法仍应由调用方在解码请求信封时拒绝 (那是协议错误,
+    /// 不是节点配置错误); 本方法只兜住「信封合法、个别文档不合法」。
+    #[must_use]
+    pub fn decode(documents: &[Value], edges: Vec<GraphEdgeRef>, request_revision: u64) -> Self {
+        let documents = documents
+            .iter()
+            .map(
+                |document| match serde_json::from_value::<NodeDocument>(document.clone()) {
+                    Ok(document) => DecodedDocument::Ready(Box::new(document)),
+                    Err(error) => DecodedDocument::Invalid {
+                        node_id: document
+                            .get("id")
+                            .and_then(Value::as_str)
+                            .unwrap_or(UNKNOWN_NODE_ID)
+                            .to_owned(),
+                        issue: issue(
+                            "document/invalid",
+                            None,
+                            error.to_string(),
+                            data_model::model_descriptor::IssueSeverity::Error,
+                        ),
+                    },
+                },
+            )
+            .collect();
+        Self {
+            request_revision,
+            documents,
+            edges,
+        }
+    }
+}
+
+/// 描述一批已解码文档。`request_revision` 原样回传。
+///
+/// 不合法文档不会中断整批 —— 这是与 [`describe_documents`] 的唯一差别, 也是
+/// 线上路径必须走本函数的原因。
+#[must_use]
+pub fn describe_batch(batch: &DescribeBatch) -> DescribeResult {
+    let nodes = batch
         .documents
         .iter()
-        .map(|document| describe_one(document, request))
+        .map(|document| match document {
+            DecodedDocument::Ready(document) => {
+                describe_one(document, batch.request_revision, &batch.edges)
+            }
+            DecodedDocument::Invalid { node_id, issue } => NodeDescription {
+                node_id: node_id.clone(),
+                request_revision: batch.request_revision,
+                status: NodeDescriptionStatus::Unsupported,
+                inputs: Vec::new(),
+                outputs: Vec::new(),
+                default_input: None,
+                default_output: None,
+                effective_channels: None,
+                hint: None,
+                issues: vec![issue.clone()],
+            },
+        })
         .collect();
     DescribeResult {
-        request_revision: request.request_revision,
+        request_revision: batch.request_revision,
         nodes,
     }
 }
 
-fn describe_one(document: &NodeDocument, request: &DescribeRequest) -> NodeDescription {
-    let request_revision = request.request_revision;
+/// 描述一批**已持有强类型文档**的请求。
+///
+/// 入参要求每条文档都已成功解码, 因此只适合进程内调用方; 线缆入口必须用
+/// [`DescribeBatch::decode`] + [`describe_batch`], 否则退回全有全无的失败面。
+pub fn describe_documents(request: &DescribeRequest) -> DescribeResult {
+    let batch = DescribeBatch {
+        request_revision: request.request_revision,
+        documents: request
+            .documents
+            .iter()
+            .cloned()
+            .map(|document| DecodedDocument::Ready(Box::new(document)))
+            .collect(),
+        edges: request.edges.clone(),
+    };
+    describe_batch(&batch)
+}
+
+fn describe_one(
+    document: &NodeDocument,
+    request_revision: u64,
+    edges: &[GraphEdgeRef],
+) -> NodeDescription {
     let node_id = document.id.clone();
     let base = |issues: Vec<ModelIssue>, inputs, outputs| NodeDescription {
         node_id: node_id.clone(),
@@ -142,9 +266,7 @@ fn describe_one(document: &NodeDocument, request: &DescribeRequest) -> NodeDescr
                 .map(|point| port(point.clone(), NodePortDomain::F32))
                 .collect(),
         ),
-        kind::document::NodeBusiness::Protocol {
-            protocol, schema, ..
-        } => {
+        kind::document::NodeBusiness::Protocol { schema, .. } => {
             let names: Vec<String> = schema.port_names();
             let channels = names.len();
             let (inputs, outputs) = if names.is_empty() {
@@ -257,7 +379,7 @@ fn describe_one(document: &NodeDocument, request: &DescribeRequest) -> NodeDescr
 
             // RawData: 动态 src:* 端口由连线派生; 未连接回退单默认口
             if widget_kind == "RawData" {
-                let derived = derive_raw_data_ports(&document.id, &request.edges);
+                let derived = derive_raw_data_ports(&document.id, edges);
                 if let Some(inputs) = derived {
                     let mut description = base(issues, inputs, outputs);
                     description.hint = Some(NodeHint::RawDataRouting);
