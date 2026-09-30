@@ -90,7 +90,8 @@ pub(super) fn spawn_sample_consumer(
 ) {
     tokio::spawn(async move {
         while let Some(envelope) = envelopes.recv().await {
-            if execution.state() != AcquisitionRunState::Running {
+            // 只有停止丢弃采样; 暂停期间数据链继续 (暂停只停发送)
+            if execution.state() == AcquisitionRunState::Stopped {
                 continue;
             }
             if let Some(observer) = &observer {

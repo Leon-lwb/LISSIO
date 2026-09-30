@@ -1540,9 +1540,13 @@ envelopeStats: "窗口 {n} 点 → {columns} 列包络"
 runStateStopped: 已停止
 runStateRunning: 运行中
 runStatePaused: 已暂停
-runStartHint: 启动工作区 (数据处理与自动发送开始; 暂停后恢复)
-runPauseHint: 暂停工作区 (保持连接, 丢弃暂停期间数据, 不积压)
-runStopHint: 停止工作区 (清空执行状态与待发送任务)
+runStartHint: 启动工作区 (采集/缓存/求值开始; 从暂停恢复时保持数据连续)
+runPauseHint: 暂停工作区 (保持连接与采集, 数据继续入缓存与录制; 仅停自动发送与设备写)
+runStopHint: 停止工作区 (在途数据直接丢弃且不入缓存; 清空待发送任务, 已有缓存保留)
+runRecordingActive: 录制中
+runRecordingActiveHint: 工作区已暂停, 采集与录制仍在继续写入数据库
+displayFrozen: 非实时
+displayFrozenHint: 工作区未运行, 或该面板已离开最新 — 从暂停恢复时会自动跳到最新
 cmdSendRequiresRun: 工作区未运行 — 手动发送要求运行态, 请先在状态栏启动
 capabilityVersionFallback: 当前应用版本暂不支持连接该接口。
 capabilityDiscoveredEndpoint: 已发现的端点

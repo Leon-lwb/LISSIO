@@ -205,14 +205,11 @@ impl SubscribeCapability for S7Session {
                     }
                     let execution_state = *execution.borrow();
                     match execution_state {
+                        // 只有停止中止轮询; 暂停状态下数据链继续 (暂停只停发送),
+                        // 采集必须照常产出, 否则波形/录制会出现暂停缺口。
                         acquisition::AcquisitionRunState::Stopped => break,
-                        acquisition::AcquisitionRunState::Paused => {
-                            if execution.changed().await.is_err() {
-                                break;
-                            }
-                            continue;
-                        }
-                        acquisition::AcquisitionRunState::Running => {}
+                        acquisition::AcquisitionRunState::Running
+                        | acquisition::AcquisitionRunState::Paused => {}
                     }
                     tokio::select! {
                         _ = interval.tick() => {}
@@ -223,7 +220,7 @@ impl SubscribeCapability for S7Session {
                     }
                     let execution_epoch = runtime.execution.epoch();
                     if let Ok(result) = read_points(&runtime, &points).await {
-                        if runtime.execution.state() != acquisition::AcquisitionRunState::Running
+                        if runtime.execution.state() == acquisition::AcquisitionRunState::Stopped
                             || runtime.execution.epoch() != execution_epoch
                         {
                             continue;

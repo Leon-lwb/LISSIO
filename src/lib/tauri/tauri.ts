@@ -1,4 +1,5 @@
 import { transport } from '../rpc';
+import { subscribeDisplayTransport } from '../rpc/livePushGate';
 import type { EventChannel } from '../rpc/types';
 import type { AiSecretStatus } from '../../types/ai';
 import type {
@@ -404,7 +405,7 @@ export const api = {
     },
   ) : { cancel: () => void } => {
     perfEvent('subscribe display:waveform');
-    const subscription = transport.subscribe<ArrayBuffer>(
+    const subscription = subscribeDisplayTransport<ArrayBuffer>(
       {
         kind: 'waveform',
         source,

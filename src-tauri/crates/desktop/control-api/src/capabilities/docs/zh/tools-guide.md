@@ -50,7 +50,8 @@ Lissio 内置 AI 可用两组工具：能力注册表工具由后端直接执行
 - `list_driver_manifests`、`list_device_tree_nodes`、`list_endpoints`：分别读取驱动
   ID 与能力、设备树状态、已打开端点。对采集节点使用 `open_endpoint {node_id}` /
   `close_endpoint {node_id}` 开闭子树。
-- `run_workspace {action: start|pause|stop}`：控制采集和图求值。启动后才处理数据；
+- `run_workspace {action: start|pause|stop}`：控制采集与图求值。运行与暂停都采集、
+  写缓存与录制，暂停只停自动发送与设备写；停止丢弃在途数据、清空待发送任务。
   新建或切换录制会话前须暂停。
 - `read_points {node_id, point_ids}`、`write_points {node_id, request}`：读写稳定点位 id。
   写入请求包含 `correlationId`、`deadlineUnixNs` 和 `items`，按工具 schema 构造。

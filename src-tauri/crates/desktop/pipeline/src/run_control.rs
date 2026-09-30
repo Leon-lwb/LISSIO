@@ -6,10 +6,12 @@
 //! 旧 epoch 的异步结果无法在切换后发布。
 //!
 //! 语义 (对应工作区运行契约):
-//! - 暂停: 停止处理与自动发送, 保持设备连接 (读任务存活但丢弃字节),
-//!   清空已解析未评估队列 — 不积压暂停期间的数据
-//! - 恢复/启动: 建立新流序列 (组序号归零) 并复位全部连续性状态
-//! - 停止: 暂停语义 + 清空自动发送任务注册表 (待发送任务一并取消)
+//! - 暂停: 停止自动发送与设备写, 数据链继续 — 字节照常解析并写入波形/原始
+//!   数据/CAN/逻辑缓存与录制, 图求值不停; 只复位发送簿记 (暂停期间的变更不补发)
+//! - 恢复/启动: 从停止启动建立新流序列 (组序号归零) 并复位全部连续性状态;
+//!   从暂停恢复保持数据连续 — 不重建流序列、不重置解析器与瞬时状态
+//! - 停止: 硬门控 — 在途字节直接丢弃且不进入任何缓存, 清空已解析未评估队列
+//!   与自动发送任务注册表; 已有缓存保留, 由展示层冻结
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -25,6 +27,9 @@ use crate::{DataPlaneState, graph_eval};
 pub type StreamGroups = Arc<Mutex<HashMap<String, StreamGroupState>>>;
 
 /// 应用一个运行控制动作, 返回切换后的运行快照 (幂等: 目标态相同则原样返回)。
+///
+/// 停止态收到 `Pause` 也是 no-op: 暂停语义建立在"数据链连续"之上, 从未启动
+/// 的停止态没有可暂停的采集 (界面禁用该按钮, MCP/CLI 直达时同样收敛)。
 pub async fn apply_run_action(
     plane: &DataPlaneState,
     stream_groups: &StreamGroups,
@@ -37,7 +42,8 @@ pub async fn apply_run_action(
         RunAction::Stop => RunState::Stopped,
     };
     let current = execution.snapshot();
-    if current.state == target {
+    if current.state == target || (current.state == RunState::Stopped && target == RunState::Paused)
+    {
         return current;
     }
 
@@ -46,18 +52,14 @@ pub async fn apply_run_action(
         let _guard = execution.boundary.write().await;
         let snapshot = execution.transition(target);
         match (current.state, target) {
-            // 进入 Paused: 丢弃已解析未评估的积压, 保持连接
+            // 进入 Paused: 数据链继续 (不清评估队列、不复位解析器), 只复位发送
+            // 簿记 (任务定义保留): 恢复后 OnChange 重建基线, Timer 从下个周期
+            // 起算 — 暂停期间的变更不补发
             (_, RunState::Paused) => {
-                let dropped = plane.clear_all_eval_queues();
-                if dropped > 0 {
-                    log::debug!("工作区暂停: 丢弃评估队列积压 {dropped} 帧");
-                }
-                // 发送簿记复位 (任务定义保留): 恢复后 OnChange 重建基线,
-                // Timer 从下个周期起算 — 暂停期间的变更不补发
                 plane.eval.send.lock().reset_schedules();
             }
-            // 进入 Running (启动或恢复): 新流序列 + 全部连续性状态复位
-            (_, RunState::Running) => {
+            // 从 Stopped 启动: 新流序列 + 全部连续性状态复位
+            (RunState::Stopped, RunState::Running) => {
                 let dropped = plane.clear_all_eval_queues();
                 if dropped > 0 {
                     log::debug!("工作区启动: 丢弃切换前评估队列积压 {dropped} 帧");
@@ -69,7 +71,12 @@ pub async fn apply_run_action(
                 plane.reset_protocol_parsers();
                 plane.eval.send.lock().reset_schedules();
             }
-            // 进入 Stopped: 暂停语义 + 清空待发送任务
+            // 从 Paused 恢复: 暂停期数据没有丢, 保持连续 — 只复位发送簿记
+            (RunState::Paused, RunState::Running) => {
+                plane.eval.send.lock().reset_schedules();
+            }
+            // 进入 Stopped: 硬门控 (读任务丢弃在途字节) + 清空评估队列 +
+            // 待发送任务注册表
             (_, RunState::Stopped) => {
                 let dropped = plane.clear_all_eval_queues();
                 if dropped > 0 {
@@ -79,6 +86,8 @@ pub async fn apply_run_action(
                 send.reset_schedules();
                 send.clear();
             }
+            // 同态已在函数开头返回, 此臂仅为穷尽性
+            (RunState::Running, RunState::Running) => {}
         }
         snapshot
     };
@@ -90,7 +99,8 @@ pub async fn apply_run_action(
     );
     let recording_state = match target {
         RunState::Running => recording::SessionState::Running,
-        RunState::Paused => recording::SessionState::Paused,
+        // 暂停期间数据链与录制都在继续, 会话状态反映实际写入
+        RunState::Paused => recording::SessionState::Running,
         RunState::Stopped => recording::SessionState::Stopped,
     };
     if let Err(error) = plane.eval.recording.set_state(recording_state) {

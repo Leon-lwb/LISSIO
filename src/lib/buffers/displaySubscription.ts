@@ -1,4 +1,4 @@
-import { transport } from '../rpc';
+import { subscribeDisplayTransport } from '../rpc/livePushGate';
 import type { SubscriptionHandle } from '../rpc/types';
 import { tickMetric, perfEvent } from '../utils/perfLog';
 
@@ -41,7 +41,7 @@ export function subscribeDisplay<T>(
   };
   perfEvent(`subscribe display:${expectedKind}`);
 
-  return transport.subscribe<DisplayEvent<T>>(request, countedSink, {
+  return subscribeDisplayTransport<DisplayEvent<T>>(request, countedSink, {
     ...options,
     onError: (error) => {
       console.error(`显示订阅失败 (${expectedKind}):`, error);

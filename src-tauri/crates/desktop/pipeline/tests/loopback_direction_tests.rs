@@ -153,7 +153,7 @@ async fn loopback_and_device_receive_stay_separate_batches() {
 }
 
 #[tokio::test]
-async fn pause_drains_real_device_bytes_without_collecting_or_counting_them() {
+async fn pause_keeps_collecting_device_bytes() {
     let (state, slot) = app_state();
     open_and_attach(&state, "tp").await;
     let data_tx = slot.lock().unwrap().clone().unwrap();
@@ -161,7 +161,6 @@ async fn pause_drains_real_device_bytes_without_collecting_or_counting_them() {
         .send(ByteMessage::from_device(b"before".to_vec()))
         .unwrap();
     wait_for_chunks(&state.data_plane, "tp", 1).await;
-    let before = state.transport.stats(&node_id("tp")).unwrap().rx_bytes;
 
     app::apply_workspace_run(
         &state.transport,
@@ -173,25 +172,71 @@ async fn pause_drains_real_device_bytes_without_collecting_or_counting_them() {
     data_tx
         .send(ByteMessage::from_device(b"paused".to_vec()))
         .unwrap();
-    tokio::time::sleep(Duration::from_millis(30)).await;
+    wait_for_chunks(&state.data_plane, "tp", 2).await;
+    let (chunks, _) = state
+        .data_plane
+        .raw_collector_for("tp")
+        .lock()
+        .read_from(0, usize::MAX);
+    assert_eq!(
+        chunks[1].1,
+        RawDataDirection::Rx,
+        "暂停期间的设备字节仍按接收方向入缓存"
+    );
+    assert_eq!(chunks[1].2, b"paused");
+
+    // 暂停不构成数据断点: 恢复后继续追加到同一序列
+    app::apply_workspace_run(
+        &state.transport,
+        &state.data_plane,
+        &state.stream_groups,
+        pipeline::RunAction::Start,
+    )
+    .await;
+    data_tx
+        .send(ByteMessage::from_device(b"after".to_vec()))
+        .unwrap();
+    wait_for_chunks(&state.data_plane, "tp", 3).await;
+    let (chunks, _) = state
+        .data_plane
+        .raw_collector_for("tp")
+        .lock()
+        .read_from(0, usize::MAX);
+    assert_eq!(chunks[2].2, b"after");
+}
+
+#[tokio::test]
+async fn stop_discards_in_flight_device_bytes() {
+    let (state, slot) = app_state();
+    open_and_attach(&state, "tp").await;
+    let data_tx = slot.lock().unwrap().clone().unwrap();
+    data_tx
+        .send(ByteMessage::from_device(b"before".to_vec()))
+        .unwrap();
+    wait_for_chunks(&state.data_plane, "tp", 1).await;
+
+    app::apply_workspace_run(
+        &state.transport,
+        &state.data_plane,
+        &state.stream_groups,
+        pipeline::RunAction::Stop,
+    )
+    .await;
+    data_tx
+        .send(ByteMessage::from_device(b"dropped".to_vec()))
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
     assert_eq!(
         state
             .data_plane
             .raw_collector_for("tp")
             .lock()
             .chunk_count(),
-        1
-    );
-    assert_eq!(
-        state.transport.stats(&node_id("tp")).unwrap().rx_bytes,
-        before
+        1,
+        "停止是硬门控: 在途字节直接丢弃, 不进入缓存"
     );
 
-    // 立刻恢复，第二条暂停期字节可能还在广播队列中。
-    data_tx
-        .send(ByteMessage::from_device(b"queued-during-pause".to_vec()))
-        .unwrap();
-
+    // 重新启动后字节照常入缓存 (旧字节仍在缓冲里, 新字节追加)
     app::apply_workspace_run(
         &state.transport,
         &state.data_plane,
@@ -330,7 +375,7 @@ async fn real_and_virtual_device_tree_sources_reach_the_same_slcan_display_buffe
 }
 
 #[tokio::test]
-async fn resume_discards_an_incomplete_slcan_frame_from_before_pause() {
+async fn pause_continues_parsing_an_incomplete_slcan_frame() {
     let (state, slot) = app_state();
     let source = spec("tp");
     slcan_graph(&state, source.clone());
@@ -355,8 +400,11 @@ async fn resume_discards_an_incomplete_slcan_frame_from_before_pause() {
     )
     .await;
     tx.send(ByteMessage::from_device(b"BB\r".to_vec())).unwrap();
-    tokio::time::sleep(Duration::from_millis(20)).await;
-    assert!(state.data_plane.can_buffer.lock().get_recent(1).is_empty());
+    // 暂停期间解析与求值继续: 暂停前留下的半帧在这里补全并落进 CAN 缓冲
+    let frames = wait_for_can_frames(&state, 1).await;
+    assert_eq!(frames[0].id, 0x123);
+    assert_eq!(frames[0].data.as_slice(), &[0xAA, 0xBB]);
+
     app::apply_workspace_run(
         &state.transport,
         &state.data_plane,
@@ -366,7 +414,7 @@ async fn resume_discards_an_incomplete_slcan_frame_from_before_pause() {
     .await;
     tx.send(ByteMessage::from_device(b"t4561CC\r".to_vec()))
         .unwrap();
-    let frames = wait_for_can_frames(&state, 1).await;
-    assert_eq!(frames[0].id, 0x456);
-    assert_eq!(frames[0].data.as_slice(), &[0xCC]);
+    let frames = wait_for_can_frames(&state, 2).await;
+    assert_eq!(frames[1].id, 0x456);
+    assert_eq!(frames[1].data.as_slice(), &[0xCC]);
 }

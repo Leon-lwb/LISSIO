@@ -64,8 +64,9 @@ edge. Graph writes update the canvas; frontend-hosted edits enter undo history.
   `open_endpoint {node_id}` / `close_endpoint {node_id}` open or close an
   acquisition subtree.
 - `run_workspace {action: start|pause|stop}` controls acquisition and graph
-  evaluation. Data is processed after start; pause before creating or
-  switching a recording session.
+  evaluation. Running and paused both acquire, fill caches and record; pause only
+  stops auto-send and device writes, while stop drops in-flight data and clears
+  pending send tasks. Pause before creating or switching a recording session.
 - `read_points {node_id, point_ids}`, `write_points {node_id, request}` read
   or write stable point IDs. A write request includes `correlationId`,
   `deadlineUnixNs`, and `items`; follow the tool schema.

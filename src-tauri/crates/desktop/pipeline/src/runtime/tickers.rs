@@ -211,7 +211,7 @@ pub async fn send_scheduler_ticker(
                 .retain_existing(|w| nodes.contains_key(w));
         }
 
-        // 运行门控: 暂停/停止不触发任何自动发送
+        // 发送门控: 仅运行态触发自动发送 (暂停照常采集入缓存, 但不写设备)
         let Some(ticket) = plane.eval.execution.ticket() else {
             continue;
         };
@@ -316,7 +316,7 @@ pub async fn textout_sender_ticker(
     loop {
         tokio::time::sleep(Duration::from_millis(10)).await;
 
-        // 运行门控: TextOut 自动发送只在运行态生效 (暂停不积压, 恢复按变化重发)
+        // 发送门控: TextOut 自动发送只在运行态生效 (暂停不写设备, 恢复按变化重发)
         if state.execution.ticket().is_none() {
             continue;
         }

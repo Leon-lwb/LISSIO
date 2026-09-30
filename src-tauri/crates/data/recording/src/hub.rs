@@ -139,8 +139,9 @@ impl RecordingHub {
     /// replacement opens its own: `Connection::open` creates an independent
     /// database instance, and concurrent instances on one file checkpoint over
     /// each other, silently erasing committed writes. While the recorder is
-    /// absent no batches are produced, so this window must only be entered
-    /// while the run is paused.
+    /// absent no batches are produced, so the caller must exclude in-flight
+    /// producers for the whole swap (the desktop path holds the execution
+    /// boundary write lock) — a paused run keeps feeding data.
     ///
     /// A swap that cannot open the database leaves recording *unavailable*
     /// ([`Self::health`] reports it) without raising a writer fault — nothing

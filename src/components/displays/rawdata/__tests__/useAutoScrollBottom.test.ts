@@ -60,19 +60,42 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
     expect(pendingCount()).toBe(0);
   });
 
-  it('大距离 (>2 屏): 瞬间跳底不追赶', () => {
-    const el = fakeEl(0, 3000, 100); // target = 2900 > 200
+  it('大距离: 逐帧连续追赶, 不做整屏跳变 (跟随刷新不再整屏替换可见内容)', () => {
+    const el = fakeEl(0, 3000, 100); // 落后 2900px — 流式跟随的常见落后量
     const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
 
     act(() => {
       result.current.scheduleToBottom();
     });
-    // 启动帧后第一帧即吸附: 仅剩启动帧未执行
+    expect(pendingCount()).toBe(1);
+
+    act(() => {
+      flushFrames(1);
+    });
+    // 第一帧只走剩余距离的固定比例 — 一帧跳满整屏会让每次数据刷新都替换可见内容
+    expect(el.scrollTop).toBeGreaterThan(0);
+    expect(el.scrollTop).toBeLessThan(2900);
+    expect(pendingCount()).toBe(1);
+
+    act(() => {
+      flushFrames(30);
+    });
+    expect(el.scrollTop).toBe(2900);
+    expect(pendingCount()).toBe(0);
+  });
+
+  it('落后到追赶无意义 (超过 20000px): 瞬时跳底, 不做长时间追赶', () => {
+    const el = fakeEl(0, 30_000, 100); // target = 29900
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+
+    act(() => {
+      result.current.scheduleToBottom();
+    });
     expect(pendingCount()).toBe(1);
     act(() => {
       flushFrames(1);
     });
-    expect(el.scrollTop).toBe(2900);
+    expect(el.scrollTop).toBe(29_900);
     expect(pendingCount()).toBe(0);
   });
 
@@ -256,5 +279,182 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
     });
     expect(pendingCount()).toBe(0);
     expect(el.scrollTop).toBe(150);
+  });
+
+  it('滞后到达的自身写入事件不算用户接管 (跟随不半途中断)', () => {
+    const el = fakeEl(0, 250, 100); // target = 150
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    act(() => {
+      flushFrames(1);
+    });
+    const staleWrite = el.scrollTop;
+    expect(staleWrite).toBeGreaterThan(0);
+
+    // 内容继续增长把视口推离最新; 此刻 scroll 事件才带着上一帧的写入值到达
+    el.scrollHeight = 400;
+    act(() => {
+      result.current.handleScroll();
+    });
+    // 滞后事件与本 hook 的写入一致 → 不是接管, 追赶继续
+    expect(result.current.userScrolledRef.current).toBe(false);
+    expect(pendingCount()).toBe(1);
+  });
+
+  it('动画收敛后数据增长: 滞后写入事件不误判上滚, 真实上滚仍能脱离', () => {
+    const el = fakeEl(0, 250, 100);
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    act(() => {
+      flushFrames(30);
+    });
+    expect(el.scrollTop).toBe(150);
+    expect(pendingCount()).toBe(0);
+
+    // 新数据到达 (视口被动推离) + 上一帧写入的 scroll 事件此时才派发
+    el.scrollHeight = 320;
+    act(() => {
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(false);
+
+    act(() => {
+      el.scrollTop = 10;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(true);
+    expect(result.current.userScrolledRef.current).toBe(true);
+  });
+
+  it('上滚输入立即让位: 数据持续到达也不再抢回视口 (高频流下"滚不动")', () => {
+    const el = fakeEl(0, 500, 100); // target = 400
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    act(() => {
+      flushFrames(1);
+    });
+    const chasing = el.scrollTop;
+    expect(chasing).toBeGreaterThan(0);
+
+    // 滚轮上滚: 输入事件先到, scroll 事件随后异步派发
+    act(() => {
+      result.current.handleUserScrollIntent(true);
+    });
+    expect(pendingCount()).toBe(0);
+    expect(result.current.userScrolledUp).toBe(true);
+
+    // 数据继续到达, 但视口不再被拽回最新
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(0);
+
+    // 用户位置生效 → scroll 事件归属用户 (视口脱离最新)
+    act(() => {
+      el.scrollTop = chasing - 60;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(true);
+    expect(result.current.userScrolledRef.current).toBe(true);
+
+    // 视口滑到底部只恢复跟随显示, 平台侧"用户上滚"仍在 → 工作区保持暂停语义
+    act(() => {
+      el.scrollTop = 400;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(false);
+    expect(result.current.userScrolledUp).toBe(true);
+    el.scrollHeight = 600;
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(0);
+
+    // 显式回到最新 (按钮/重新开启自动滚动) 才解除并恢复追底
+    act(() => {
+      result.current.resetUserScroll();
+    });
+    expect(result.current.userScrolledUp).toBe(false);
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(1);
+  });
+
+  it('朝最新的滚动输入不阻断跟随', () => {
+    const el = fakeEl(0, 500, 100);
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+
+    act(() => {
+      result.current.handleUserScrollIntent(false);
+    });
+    expect(result.current.userScrolledUp).toBe(false);
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(1);
+  });
+
+  it('内容不足一屏时的上滚输入不触发暂停也不停掉跟随', () => {
+    const el = fakeEl(0, 80, 100); // 无滚动余量
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+
+    act(() => {
+      result.current.handleUserScrollIntent(true);
+      result.current.scheduleToBottom();
+    });
+    // 没有可滚动余量 → 上滚改变不了视口, 不算离开最新
+    expect(result.current.userScrolledUp).toBe(false);
+    expect(pendingCount()).toBe(0);
+
+    el.scrollHeight = 500; // 数据增长到可滚动
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(1);
+    act(() => {
+      flushFrames(40);
+    });
+    expect(el.scrollTop).toBe(400);
+  });
+
+  it('位置变小 (拖滚动条上滚) 同样触发"用户上滚"', () => {
+    const el = fakeEl(300, 500, 100); // 远离底部
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    expect(result.current.userScrolledUp).toBe(false);
+
+    act(() => {
+      result.current.handleScroll(); // 首个事件只记录基线
+    });
+    expect(result.current.userScrolledUp).toBe(false);
+
+    act(() => {
+      el.scrollTop = 200; // 向上拖滚动条: 位置变小
+      result.current.handleScroll();
+    });
+    expect(result.current.userScrolledUp).toBe(true);
+    expect(result.current.detached).toBe(true);
+  });
+
+  it('jumpToLatest 解除"用户上滚"约束 (显式回到最新)', () => {
+    const el = fakeEl(300, 100_000, 100);
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    act(() => {
+      result.current.handleUserScrollIntent(true);
+    });
+    expect(result.current.userScrolledUp).toBe(true);
+
+    act(() => {
+      result.current.jumpToLatest();
+    });
+    expect(result.current.userScrolledUp).toBe(false);
+    expect(result.current.detached).toBe(false);
+    expect(el.scrollTop).toBe(99_900);
   });
 });

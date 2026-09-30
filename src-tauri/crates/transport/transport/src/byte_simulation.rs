@@ -178,7 +178,9 @@ pub fn open(
                 }
                 () = tokio::time::sleep_until(next_deadline) => {
                     next_deadline += interval;
-                    if context.execution.state() != AcquisitionRunState::Running {
+                    // 只有停止中止生成; 暂停期间数据链继续 (暂停只停发送),
+                    // 模拟源必须照常产字节, 否则缓存/录制出现暂停缺口。
+                    if context.execution.state() == AcquisitionRunState::Stopped {
                         continue;
                     }
                     if data.receiver_count() == 0 {
@@ -204,7 +206,7 @@ pub fn open(
                         last_progress = std::time::Instant::now();
                     }
                     if context.execution.epoch() == epoch
-                        && context.execution.state() == AcquisitionRunState::Running
+                        && context.execution.state() != AcquisitionRunState::Stopped
                         && let Err(error) = data.send(ByteMessage::from_device(bytes))
                     {
                         log::debug!(

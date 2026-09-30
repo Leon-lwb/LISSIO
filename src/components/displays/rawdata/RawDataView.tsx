@@ -21,6 +21,8 @@ import { RawDataViewNumericContent } from './RawDataViewNumericContent';
 import { RawDataViewSendPanel } from './RawDataViewSendPanel';
 import { RawDataViewSettings } from './RawDataViewSettings';
 import { RawDataBackToLatest } from './RawDataBackToLatest';
+import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
+import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { getRawDataViewPrefs } from '../../../lib/buffers/rawDataViewStore';
 /// 原始数据显示 — Grid/Line/终端 × HEX/ASCII 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
 /// 纯端口制: 每张卡片独立的输入选择 (存 RawDataConfig.selectedInput), 选择器只列该卡片
@@ -149,8 +151,29 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     if (isStr) return strScrollRef.current;
     return parentRef.current;
   }, [isNum, isStr]);
-  const { detached, scheduleToBottom, handleScroll, resetUserScroll, jumpToLatest } =
+  const { detached, userScrolledUp, scheduleToBottom, handleScroll, handleUserScrollIntent, resetUserScroll, jumpToLatest } =
     useAutoScrollBottom(autoScroll, getScrollEl);
+
+  // 显示时效: 跟随最新 = 自动滚动开启且未被用户上滚拖离
+  const reportFollowing = usePanelFollowing();
+  const panelKey = usePanelKey();
+  const rawFollowing = autoScroll && !detached;
+  useEffect(() => {
+    reportFollowing(rawFollowing);
+  }, [reportFollowing, rawFollowing]);
+
+  // 上滚脱离最新 → 暂停工作区 (多卡片按 key 计数); 回到底部/卸载时自动恢复。
+  // 以"用户主动上滚"为准而非"视口不在底部": 高速流下追赶期间视口长期不在底部,
+  // 且用户往下滚回实时的动作不应触发暂停
+  useListScrollPause(panelKey, userScrolledUp);
+
+  // 从暂停恢复 → 统一跳最新 (开启自动滚动并跳到缓冲末尾)
+  const handleGoLive = useCallback(() => {
+    setAutoScroll(true);
+    resetUserScroll();
+    jumpToLatest();
+  }, [resetUserScroll, jumpToLatest]);
+  usePanelGoLive(handleGoLive);
 
   useEffect(() => {
     clearSelection();
@@ -336,10 +359,18 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       : renderByteContent;
 
   // 内容视口 — 相对定位容器承载右下角"回到最新"浮层 (相对内容区而非整卡, 不被发送面板挤走)
+  // 滚轮/触摸输入挂在这一层 (冒泡覆盖三种内容视图): 跟随时高频追底会盖过用户的滚动,
+  // 故以输入事件本身判定"用户上滚接管", 上滚后立即让位并触发工作区暂停
   const contentViewport = (
-    <div className="relative flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+    <div
+      className="relative flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden"
+      onWheel={(e) => handleUserScrollIntent(e.deltaY < 0)}
+      onTouchMove={() => handleUserScrollIntent(true)}
+    >
       {channelContent}
-      {detached && <RawDataBackToLatest lang={lang} onClick={jumpToLatest} />}
+      {/* 脱离最新, 或处于"用户上滚暂停"状态时都给出显式回最新入口 —
+          暂停后的恢复是显式动作 (不因视口恰好滑到底部而自动恢复) */}
+      {(detached || userScrolledUp) && <RawDataBackToLatest lang={lang} onClick={jumpToLatest} />}
     </div>
   );
 

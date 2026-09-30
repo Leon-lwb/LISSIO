@@ -204,7 +204,7 @@ async fn seeded_simulation_is_reproducible() {
 }
 
 #[tokio::test]
-async fn simulation_requires_encoding_and_pauses_without_catching_up() {
+async fn simulation_requires_encoding_and_only_stopped_halts_it() {
     let (runtime, _) = setup();
     let mut config = spec("a", true);
     update_simulation(&mut config, |simulation| {
@@ -213,6 +213,7 @@ async fn simulation_requires_encoding_and_pauses_without_catching_up() {
     assert!(runtime.open_node(config).await.is_err());
     runtime.open_node(spec("a", true)).await.unwrap();
     let mut rx = runtime.subscribe_bytes(&id("a")).unwrap();
+    // 停止态不产数据
     assert!(
         tokio::time::timeout(Duration::from_millis(30), rx.recv())
             .await
@@ -224,10 +225,21 @@ async fn simulation_requires_encoding_and_pauses_without_catching_up() {
             .await
             .is_ok()
     );
+    // 暂停只停发送: 模拟源照常产出, 数据链继续写入缓存
     runtime.set_run_state(AcquisitionRunState::Paused);
     while rx.try_recv().is_ok() {}
     assert!(
-        tokio::time::timeout(Duration::from_millis(30), rx.recv())
+        tokio::time::timeout(Duration::from_secs(1), rx.recv())
+            .await
+            .is_ok(),
+        "暂停期间模拟源必须继续产字节"
+    );
+    // 停止才是硬门控: 等在途一批收尾后排空, 之后不应再有新字节
+    runtime.set_run_state(AcquisitionRunState::Stopped);
+    tokio::time::sleep(Duration::from_millis(50)).await;
+    while rx.try_recv().is_ok() {}
+    assert!(
+        tokio::time::timeout(Duration::from_millis(60), rx.recv())
             .await
             .is_err()
     );

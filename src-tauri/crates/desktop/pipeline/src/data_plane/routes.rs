@@ -15,7 +15,7 @@ use super::{
 };
 
 impl DataPlaneState {
-    /// 丢弃暂停期间未完成的字节帧，恢复后由同一设备树来源重新同步。
+    /// 丢弃未完成的字节帧，启动时由同一设备树来源重新同步。
     pub fn reset_protocol_parsers(&self) {
         let nodes = self.global_nodes.lock();
         for (id, state) in self.protocol_states.lock().iter() {

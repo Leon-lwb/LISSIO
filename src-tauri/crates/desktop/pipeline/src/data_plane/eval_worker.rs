@@ -29,10 +29,10 @@ pub(super) async fn eval_worker(plane: DataPlaneState) {
             // boundary 读锁先行并跨越整个批次求值: 运行状态切换 (写锁) 等待
             // 在途批次完成 — 旧 epoch 的求值结果不可能在切换后发布。
             let boundary = plane.eval.execution.boundary.read().await;
-            // 运行门控: 暂停/停止瞬间残留入队的批次直接丢弃 (切换路径已清空
-            // 队列, 此处兜底竞态窗口内入队的最后一批), 不在非运行态求值。
-            // 锁内复查 — 取锁与查票之间不会有切换插入。
-            if plane.eval.execution.ticket().is_none() {
+            // 数据链门控: 运行与暂停都照常求值 (暂停只停发送); 停止瞬间残留
+            // 入队的批次直接丢弃 (切换路径已清空队列, 此处兜底竞态窗口内入队的
+            // 最后一批)。锁内复查 — 取锁与查票之间不会有切换插入。
+            if plane.eval.execution.ingest_ticket().is_none() {
                 continue;
             }
             // 缺口 (队列溢出丢批) → 复位该源关联有状态算子 (不变量 5)

@@ -242,7 +242,7 @@ impl DataPlaneState {
         })
     }
 
-    /// 清空全部源的评估队列 (工作区暂停/停止边沿用) — 不积压暂停期间的已解析帧,
+    /// 清空全部源的评估队列 (工作区停止边沿用 — 停止是硬门控, 丢弃在途已解析帧),
     /// 返回丢弃帧数。调用方持 `execution.boundary` 写锁时执行, 与在途评估批次互斥。
     pub fn clear_all_eval_queues(&self) -> u64 {
         let mut dropped = 0_u64;

@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { logicSampleBuffer } from '../../../lib/buffers/logicBuffer';
 import { clearLogicBuffer } from '../../../lib/buffers/logicSubscription';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
+import { usePanelFollowing, usePanelGoLive } from '../common/PanelLiveness';
 import { Trash2, ArrowDown, ZoomIn, ZoomOut } from 'lucide-react';
 import type { LogicSample } from '../../../types';
 
@@ -29,6 +30,19 @@ export function LogicTimingChart() {
       containerRef.current.scrollLeft = containerRef.current.scrollWidth;
     }
   }, [samples, autoScroll]);
+
+  // 显示时效: 跟随最新 = 自动滚动开启
+  const reportFollowing = usePanelFollowing();
+  useEffect(() => {
+    reportFollowing(autoScroll);
+  }, [reportFollowing, autoScroll]);
+
+  // 从暂停恢复 → 统一跳最新 (恢复自动滚动并定位到最右)
+  const handleGoLive = useCallback(() => {
+    setAutoScroll(true);
+    if (containerRef.current) containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+  }, []);
+  usePanelGoLive(handleGoLive);
 
   const handleClear = () => {
     void clearLogicBuffer();

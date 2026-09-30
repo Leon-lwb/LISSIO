@@ -10,7 +10,8 @@ import type { AppSlice } from './types';
 export interface RunControlSlice {
   runState: RunState;
   setRunState: (state: RunState) => void;
-  /// start 从停止启动 / 从暂停恢复; pause 停止处理并保持连接; stop 清空执行状态
+  /// start 从停止启动 / 从暂停恢复 (保持数据连续); pause 保持连接与采集、
+  /// 只停自动发送与设备写; stop 丢弃在途数据并清空执行状态
   workspaceRun: (action: RunAction) => Promise<void>;
   /// 启动水合 — 读取后端当前运行快照 (新建/重开项目默认 stopped)
   hydrateRunState: () => Promise<void>;

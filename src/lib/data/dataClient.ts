@@ -1,4 +1,5 @@
 import { transport } from '../rpc';
+import { subscribeDisplayTransport } from '../rpc/livePushGate';
 import type { SubscriptionHandle } from '../rpc/types';
 import {
   decodeSampleEnvelope,
@@ -216,7 +217,7 @@ function start(entry: Entry) {
     ...EMPTY_SNAPSHOT,
     version: entry.snapshot.version + 1,
   };
-  const subscription = transport.subscribe<ArrayBuffer>(
+  const subscription = subscribeDisplayTransport<ArrayBuffer>(
     {
       kind: 'port_samples',
       source_node_id: entry.sourceNodeId,

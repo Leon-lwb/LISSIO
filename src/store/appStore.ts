@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { setWorkspaceRunState } from './displayLiveness';
 import { createSidebarSlice, type SidebarSlice } from './slices/sidebar';
 import { createConnectionSlice, type ConnectionSlice } from './slices/connection';
 import { createProtocolSlice, type ProtocolSlice } from './slices/protocol';
@@ -53,3 +54,12 @@ export const useAppStore = create<AppStore>()((set, get) => ({
   ...createCompileHirSlice(set, get),
   ...createRunControlSlice(set, get),
 }));
+
+// 显示时效派生层接线 — 运行态是唯一输入: 派生层据此冻结实时推送 (暂停),
+// 并在"从暂停恢复"时统一广播"跳最新"。挂在 store 订阅而不是逐写入点调用:
+// 命令返回、`workspace:run` 事件与其他写入方都收敛到 runState, 一处接线即可覆盖。
+useAppStore.subscribe((state, previous) => {
+  if (state.runState !== previous.runState) {
+    setWorkspaceRunState(state.runState);
+  }
+});

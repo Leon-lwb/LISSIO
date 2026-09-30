@@ -29,6 +29,7 @@ import {
 import { useWaveformSourceBuffer } from '../../../lib/hooks/useWaveformSourceBuffer';
 import { useWaveformMeasurements } from '../../../lib/hooks/useWaveformMeasurements';
 import { setWaveformOverviewActive } from '../../../lib/buffers/sourceManagers';
+import { usePanelFollowing, usePanelGoLive } from '../common/PanelLiveness';
 import { traceProtocolSource } from '../../../store/appStoreHelpers';
 import type { ProtocolConfig, ScopeAxisConfig, WidgetConfig } from '../../../types';
 import type { PanelTabViewProps } from '../../panels/registry/panelTypes';
@@ -193,6 +194,21 @@ export const WaveformTabView = memo(function WaveformTabView({ widget }: PanelTa
   useEffect(() => {
     if (waveSourceId) setWaveformOverviewActive(waveSourceId, waveRunning);
   }, [waveSourceId, waveRunning]);
+
+  // 显示时效: 跟随最新 = 实时跟随开启且水平延迟为 0 (hPosition > 0 = 回看历史)
+  const reportFollowing = usePanelFollowing();
+  const waveFollowing = waveRunning && widgetScopeState.config.hPosition === 0;
+  useEffect(() => {
+    reportFollowing(waveFollowing);
+  }, [reportFollowing, waveFollowing]);
+
+  // 从暂停恢复 → 统一跳最新: 复位水平延迟并恢复实时跟随 (详情/测量流随之重订阅)
+  const handleGoLive = useCallback(() => {
+    const current = useWaveformScopeStore.getState().states[wid]?.config;
+    if (!current || (current.running && current.hPosition === 0)) return;
+    setConfig(wid, channelCount, { ...current, hPosition: 0, running: true });
+  }, [wid, channelCount, setConfig]);
+  usePanelGoLive(handleGoLive);
 
   // 懒初始化 + 通道数扩展
   useEffect(() => {

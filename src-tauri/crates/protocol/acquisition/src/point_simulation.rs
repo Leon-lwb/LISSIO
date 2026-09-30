@@ -218,7 +218,8 @@ impl SubscribeCapability for SimulationSession {
                     _ = cancel.changed() => break,
                     _ = execution.changed() => {},
                     () = tokio::time::sleep(period) => {
-                        if session.context.execution.state() != AcquisitionRunState::Running { continue; }
+                        // 只有停止中止采样; 暂停期间数据链继续 (暂停只停发送)
+                        if session.context.execution.state() == AcquisitionRunState::Stopped { continue; }
                         let epoch = session.context.execution.epoch();
                         let batch = session.batch(&requested);
                         if epoch != session.context.execution.epoch()

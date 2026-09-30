@@ -1,4 +1,4 @@
-import { transport } from '../rpc';
+import { subscribeDisplayTransport } from '../rpc/livePushGate';
 import { decodeEnvelopeFrame, type WaveformEnvelopeFrame } from '../data/envelopeProtocol';
 
 /// 订阅波形包络 (后端逐列 min/max 降采样, GPU 加速 + CPU 回退)。
@@ -12,7 +12,7 @@ export function subscribeWaveformEnvelope(
   onEnvelope: (frame: WaveformEnvelopeFrame) => void,
   options?: { intervalMs?: number },
 ): { cancel: () => void } {
-  return transport.subscribe<ArrayBuffer>(
+  return subscribeDisplayTransport<ArrayBuffer>(
     { kind: 'waveform_envelope', source, columns },
     (buffer) => {
       try {

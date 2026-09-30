@@ -1,7 +1,8 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Pause, Play, Square } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
+import { api } from '../../lib/tauri/tauri';
 import { t } from '../../i18n';
 import type { RunState } from '../../types';
 
@@ -14,12 +15,34 @@ const STATE_BADGE: Record<RunState, { dot: string; label: string; title: string 
 
 /// 工作区运行控制 — 启动/暂停/停止 (状态权威在 Rust, 本组件仅触发与镜像)
 ///
-/// 数据链与自动发送只在运行态工作: 新建/重开项目默认停止,
-/// 暂停保持设备连接并丢弃期间数据, 停止同时清空待发送任务。
+/// 数据链在运行与暂停态都工作: 暂停保持设备连接, 数据继续写入缓存与录制,
+/// 只停自动发送与设备写; 停止则丢弃在途数据并冻结现有缓存。
+/// 暂停期间录制仍在落库, 因此在按钮旁给出「录制中」指示 (数据库不可用时不显示)。
 export const RunControls = memo(function RunControls() {
   const lang = useAppStore((s) => s.lang);
   const runState = useAppStore((s) => s.runState);
   const workspaceRun = useAppStore((s) => s.workspaceRun);
+  // 暂停期间是否真的在落库 — 只有 recorder 健康时才指示「录制中」
+  const [recordingActive, setRecordingActive] = useState(false);
+
+  useEffect(() => {
+    if (runState !== 'paused') {
+      setRecordingActive(false);
+      return;
+    }
+    let cancelled = false;
+    void api
+      .getRecordingHealth()
+      .then((health) => {
+        if (!cancelled) setRecordingActive(health.failed === null);
+      })
+      .catch(() => {
+        if (!cancelled) setRecordingActive(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [runState]);
 
   const badge = STATE_BADGE[runState];
 
@@ -69,6 +92,16 @@ export const RunControls = memo(function RunControls() {
       >
         <Square size={10} />
       </button>
+      {recordingActive && (
+        <span
+          className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-red"
+          data-testid="run-recording-active"
+          title={t(lang, 'runRecordingActiveHint')}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-red inline-block" />
+          {t(lang, 'runRecordingActive')}
+        </span>
+      )}
     </div>
   );
 });

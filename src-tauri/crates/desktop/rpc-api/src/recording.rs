@@ -154,18 +154,25 @@ pub async fn apply_settings(
             |dir| PathBuf::from(dir).join(RECORDING_DATABASE_FILE),
         );
     let recording_hub = host.state.eval_state().recording;
+    let initial = control_api::recording::session_state_for_run(&host.toolbox);
+    // 暂停期间管道继续喂数据 — 换 recorder 前独占数据链边界
+    let boundary = host
+        .toolbox
+        .data_plane
+        .eval
+        .execution
+        .boundary
+        .write()
+        .await;
     let outcome = tokio::task::spawn_blocking(move || {
         recording_hub
-            .apply_settings(
-                Some(path),
-                continue_empty_session,
-                recording::SessionState::Paused,
-            )
+            .apply_settings(Some(path), continue_empty_session, initial)
             .map(|_| ())
             .map_err(|error| error.to_string())
     })
     .await
     .map_err(|error| RpcError::text(error.to_string()))?;
+    drop(boundary);
     outcome.map_err(RpcError::text)?;
     ok()
 }

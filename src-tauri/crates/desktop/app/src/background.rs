@@ -33,7 +33,7 @@ pub fn spawn_backend_tasks(
     spawn_push_tickers(state, sink, spawn);
 }
 
-/// 启动录制会话 (管线尚未运行, 会话以 paused 开局)。
+/// 启动录制会话 (工作区尚未启动, 会话以 paused 开局 = recorder 就绪但未写入)。
 pub fn start_recording(state: &AppState, config_dir: &Path) {
     let path = config_dir.join("recordings").join("acquisition.duckdb");
     let recording = state.eval_state().recording;

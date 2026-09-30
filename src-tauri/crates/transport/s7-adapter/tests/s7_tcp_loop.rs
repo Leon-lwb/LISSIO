@@ -259,7 +259,7 @@ async fn polling_subscription_delivers_typed_batches() {
 }
 
 #[tokio::test]
-async fn polling_obeys_pause_resume_and_stop_epochs() {
+async fn polling_keeps_running_while_paused_and_stops_on_stop() {
     let mock = MockServer::spawn().await;
     mock.poke(AREA_DB, 10, 0, &[0x12, 0x34]).await;
     let factory = S7Factory::default();
@@ -302,26 +302,44 @@ async fn polling_obeys_pause_resume_and_stop_epochs() {
         .await
         .unwrap();
 
-    assert!(
-        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
-            .await
-            .is_err()
-    );
+    // 初始暂停: 订阅建立后仍会轮询 (暂停语义 = 只停发送)
+    let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
+        .await
+        .expect("暂停态下 S7 轮询必须继续")
+        .unwrap();
+    assert_eq!(batch.payload.samples.len(), 1);
+
     execution.set(acquisition::AcquisitionRunState::Running);
+    while receiver.try_recv().is_ok() {}
     let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
         .await
         .unwrap()
         .unwrap();
     assert_eq!(batch.payload.samples.len(), 1);
 
+    // 暂停只停发送: 轮询与采样继续 (数据链照常写入缓存)
     execution.set(acquisition::AcquisitionRunState::Paused);
     while receiver.try_recv().is_ok() {}
-    assert!(
-        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
-            .await
-            .is_err()
-    );
+    let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
+        .await
+        .expect("暂停期间 S7 轮询必须继续")
+        .unwrap();
+    assert_eq!(batch.payload.samples.len(), 1);
+
+    // 停止才中止轮询: 排空在途批次后轮询任务在状态检查处退出 —
+    // 要么超时无产出, 要么通道关闭, 绝不会再收到批次
     execution.set(acquisition::AcquisitionRunState::Stopped);
+    for _ in 0..3 {
+        while receiver.try_recv().is_ok() {}
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    while receiver.try_recv().is_ok() {}
+    match tokio::time::timeout(Duration::from_millis(80), receiver.recv()).await {
+        Err(_) | Ok(None) => {}
+        Ok(Some(batch)) => {
+            panic!("停止后仍产出 {} 个样本", batch.payload.samples.len());
+        }
+    }
     session.close().await.unwrap();
 }
 

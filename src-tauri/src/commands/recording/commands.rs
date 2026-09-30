@@ -61,19 +61,21 @@ pub async fn apply_recording_settings(
             || config_dir.join("recordings").join(RECORDING_DATABASE_FILE),
             |dir| PathBuf::from(dir).join(RECORDING_DATABASE_FILE),
         );
-    let recording_hub = state.eval_state().recording;
-    tokio::task::spawn_blocking(move || {
+    let tb = Toolbox::from_state(state);
+    let initial = control_api::recording::session_state_for_run(&tb);
+    let recording_hub = tb.data_plane.eval.recording.clone();
+    // 暂停期间管道继续喂数据 — 换 recorder 前独占数据链边界
+    let boundary = tb.data_plane.eval.execution.boundary.write().await;
+    let outcome = tokio::task::spawn_blocking(move || {
         recording_hub
-            .apply_settings(
-                Some(path),
-                continue_empty_session,
-                control_api::recording::SessionState::Paused,
-            )
+            .apply_settings(Some(path), continue_empty_session, initial)
             .map(|_| ())
             .map_err(|error| error.to_string())
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+    drop(boundary);
+    outcome
 }
 
 #[tauri::command]

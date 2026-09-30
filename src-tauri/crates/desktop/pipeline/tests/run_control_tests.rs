@@ -30,7 +30,11 @@ async fn start_pause_resume_stop_transition_epochs() {
     assert_eq!(paused.state, RunState::Paused);
     assert!(
         plane.eval.execution.ticket().is_none(),
-        "暂停后数据链门控必须关闭"
+        "暂停必须停自动发送与设备写"
+    );
+    assert!(
+        plane.eval.execution.ingest_ticket().is_some(),
+        "暂停期间数据链继续 — 字节照常入缓存与录制"
     );
     assert_eq!(plane.eval.execution.snapshot().epoch, 2);
 
@@ -57,6 +61,18 @@ async fn idempotent_actions_do_not_bump_epoch() {
     let stopped = apply_run_action(&plane, &groups, RunAction::Stop).await;
     let stopped_again = apply_run_action(&plane, &groups, RunAction::Stop).await;
     assert_eq!(stopped.epoch, stopped_again.epoch);
+}
+
+#[tokio::test]
+async fn pause_from_stopped_is_noop() {
+    let (plane, groups) = test_state();
+    let paused = apply_run_action(&plane, &groups, RunAction::Pause).await;
+    assert_eq!(paused.state, RunState::Stopped, "停止态没有可暂停的采集");
+    assert_eq!(paused.epoch, 0, "no-op 不推进 epoch");
+    assert!(
+        plane.eval.execution.ingest_ticket().is_none(),
+        "从未启动不放行数据链"
+    );
 }
 
 #[tokio::test]
@@ -127,6 +143,33 @@ async fn start_resets_stream_group_sequences() {
             .seq
             .load(std::sync::atomic::Ordering::SeqCst),
         0,
-        "启动/恢复必须建立新流序列 (组序号归零)"
+        "从停止启动必须建立新流序列 (组序号归零)"
+    );
+}
+
+#[tokio::test]
+async fn resume_from_pause_keeps_stream_group_sequences() {
+    let (plane, groups) = test_state();
+    groups.lock().insert(
+        "g1".into(),
+        StreamGroupState {
+            seq: Arc::new(AtomicU64::new(0)),
+            shards: 1,
+            source: Arc::new(()),
+        },
+    );
+    apply_run_action(&plane, &groups, RunAction::Start).await;
+    groups.lock()["g1"]
+        .seq
+        .store(7, std::sync::atomic::Ordering::SeqCst);
+
+    apply_run_action(&plane, &groups, RunAction::Pause).await;
+    apply_run_action(&plane, &groups, RunAction::Start).await;
+    assert_eq!(
+        groups.lock()["g1"]
+            .seq
+            .load(std::sync::atomic::Ordering::SeqCst),
+        7,
+        "从暂停恢复保持数据连续 — 不重建流序列"
     );
 }

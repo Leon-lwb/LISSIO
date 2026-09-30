@@ -134,7 +134,7 @@ pub fn node() -> CapabilityNode {
             ),
             tool(
                 "run_workspace",
-                "工作区运行控制: start (启动/恢复) / pause / stop。返回 {state, epoch}; 启动后采集与图求值才处理数据",
+                "工作区运行控制: start (启动/恢复) / pause / stop。返回 {state, epoch}; 运行与暂停都采集、入缓存并录制, 暂停只停自动发送与设备写; 停止丢弃在途数据且不入缓存",
                 |ctx, p: RunWorkspaceParams| async move {
                     json_result(
                         control::run_workspace(&ctx.toolbox, ctx.sink.as_ref(), p.action.into())

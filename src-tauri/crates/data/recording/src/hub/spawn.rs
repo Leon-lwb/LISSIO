@@ -54,7 +54,8 @@ pub(super) fn spawn_recorder(
 /// path and the empty-session continuation toggle. Swaps the recorder only
 /// when the effective target differs — another database path, or continuation
 /// disabled while the boot-resumed session is still empty. Returns whether a
-/// swap happened. The caller must ensure the run is paused or stopped (see
+/// swap happened. The caller must ensure the run is paused or stopped and must
+/// exclude in-flight producers while the recorder is absent (see
 /// `replace_recording`).
 pub(super) fn apply_settings(
     hub: &super::RecordingHub,

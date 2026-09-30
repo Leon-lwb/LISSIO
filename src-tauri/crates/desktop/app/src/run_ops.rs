@@ -2,7 +2,10 @@
 //!
 //! 层级: L3 app。Tauri 命令、MCP `run_workspace` 工具与 CLI 共用这一条编排:
 //! 切换语义/状态重置在 [`pipeline::apply_run_action`], acquisition 运行态与之
-//! 配对 (Start 在切换完成后置位, 保证读任务只在 Running 期间放行字节)。
+//! 配对 (Start 在切换完成后置位, 保证读任务只在启动后才放行字节)。
+//!
+//! acquisition 侧只有 Stopped 中止采集: 暂停 (AcquisitionRunState::Paused) 下
+//! 轮询/采样继续, 设备写由 `ExecutionControl::ticket` 单独停住。
 
 use std::sync::Arc;
 

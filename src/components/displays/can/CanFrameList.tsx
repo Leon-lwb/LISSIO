@@ -8,6 +8,8 @@ import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { SearchInput } from '../../ui/SearchInput';
+import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
+import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
 import type { CanFrame, CanFrameFilter } from '../../../types';
 
@@ -132,6 +134,20 @@ export function CanFrameList() {
   const parentRef = useRef<HTMLDivElement>(null);
   const userScrolledRef = useRef(false);
   const isAutoScrollingRef = useRef(false);
+  // userScrolledRef 的响应式镜像 — 驱动显示时效角标 (仅在翻转时重渲染)
+  const [detached, setDetached] = useState(false);
+  // 用户已上滚接管 — 追底让位, 直到回到底部 (或内容无滚动余量) 才解除
+  const userIntentRef = useRef(false);
+  // 响应式镜像 — 驱动"上滚暂停工作区" (视口瞬时不在底部不等于用户上滚)
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  /// 上一次观察到的滚动位置 — 识别"位置变小 = 用户朝最新之外滚动" (拖滚动条);
+  /// null = 尚未观察到 (首个事件只记录基线, 不下方向判断)
+  const lastScrollTopRef = useRef<number | null>(null);
+  const markUserScrolledUp = useCallback((value: boolean) => {
+    if (userIntentRef.current === value) return;
+    userIntentRef.current = value;
+    setUserScrolledUp(value);
+  }, []);
 
   // 过滤条件 (后端过滤): 方向 + ID (HEX); 非法 ID 显式报错，不发送空过滤请求
   const isFiltered = filterDir !== 'all' || filterId.trim() !== '';
@@ -207,22 +223,68 @@ export function CanFrameList() {
 
   // 自动滚动到底部
   useEffect(() => {
-    if (!autoScroll || userScrolledRef.current || frames.length === 0) return;
+    if (!autoScroll || frames.length === 0) return;
+    const el = parentRef.current;
+    // 无滚动余量 (内容不足一屏): 用户上滚输入并未真的离开最新, 解除约束
+    if (el && el.scrollHeight - el.clientHeight <= 0) markUserScrolledUp(false);
+    if (userScrolledRef.current || userIntentRef.current) return;
     isAutoScrollingRef.current = true;
     virtualizer.scrollToIndex(frames.length - 1, { align: 'end' });
     const t = setTimeout(() => {
       isAutoScrollingRef.current = false;
     }, 50);
     return () => clearTimeout(t);
-  }, [frames.length, autoScroll, version, virtualizer]);
+  }, [frames.length, autoScroll, version, virtualizer, markUserScrolledUp]);
+
+  // 用户滚动输入 (滚轮/触摸): 高频追底会把视口一直拉回最新, 位置比较无法区分
+  // "用户上滚"与"自身定位写回", 故以输入事件本身为准让位
+  const handleUserScrollIntent = useCallback(
+    (awayFromLatest: boolean) => {
+      isAutoScrollingRef.current = false;
+      if (!awayFromLatest) return;
+      const el = parentRef.current;
+      // 没有可滚动余量: 上滚改变不了视口, 不算"离开最新"
+      if (!el || el.scrollHeight - el.clientHeight <= 0) return;
+      markUserScrolledUp(true);
+    },
+    [markUserScrolledUp]
+  );
 
   // 检测用户手动滚动
   const handleScroll = useCallback(() => {
-    if (isAutoScrollingRef.current || !parentRef.current) return;
     const el = parentRef.current;
+    if (!el) return;
+    const previousScrollTop = lastScrollTopRef.current;
+    lastScrollTopRef.current = el.scrollTop;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+    // 视口滑到底部只恢复跟随, 不清除"用户上滚": 暂停后的恢复是显式动作
+    if (!atBottom && isAutoScrollingRef.current && !userIntentRef.current) return;
+    if (atBottom) isAutoScrollingRef.current = false;
+    else if (previousScrollTop !== null && el.scrollTop < previousScrollTop) markUserScrolledUp(true);
     userScrolledRef.current = !atBottom;
-  }, []);
+    setDetached(!atBottom);
+  }, [markUserScrolledUp]);
+
+  // 显示时效: 跟随最新 = 自动滚动开启且未被用户上滚拖离
+  const reportFollowing = usePanelFollowing();
+  const panelKey = usePanelKey();
+  const canFollowing = autoScroll && !detached;
+  useEffect(() => {
+    reportFollowing(canFollowing);
+  }, [reportFollowing, canFollowing]);
+
+  // 用户主动上滚 → 暂停工作区 (多面板按 key 计数); 显式回最新/卸载时释放
+  useListScrollPause(panelKey, userScrolledUp);
+
+  // 从暂停恢复 → 统一跳最新 (恢复自动滚动并定位到末尾)
+  const handleGoLive = useCallback(() => {
+    userScrolledRef.current = false;
+    markUserScrolledUp(false);
+    setDetached(false);
+    setAutoScroll(true);
+    if (frames.length > 0) virtualizer.scrollToIndex(frames.length - 1, { align: 'end' });
+  }, [frames.length, virtualizer, markUserScrolledUp]);
+  usePanelGoLive(handleGoLive);
 
   const handleClear = () => {
     void clearCanBuffer();
@@ -230,6 +292,8 @@ export function CanFrameList() {
     filteredBuffer?.clear();
     selection.clear();
     userScrolledRef.current = false;
+    markUserScrolledUp(false);
+    setDetached(false);
     setVersion((v) => v + 1);
   };
 
@@ -342,11 +406,16 @@ export function CanFrameList() {
 
         <ToolbarIconButton
           icon={<ArrowDown />}
-          active={autoScroll && !userScrolledRef.current}
+          active={autoScroll && !detached}
           title={t(lang, 'autoScroll')}
           onClick={() => {
-            setAutoScroll(!autoScroll);
+            const next = !autoScroll;
+            setAutoScroll(next);
+            // 只有重新开启自动滚动才是"显式回到最新"; 关闭跟随不动暂停语义
+            if (!next) return;
             userScrolledRef.current = false;
+            markUserScrolledUp(false);
+            setDetached(false);
           }}
         />
         <ToolbarIconButton
@@ -380,6 +449,8 @@ export function CanFrameList() {
         className="flex-1 overflow-auto font-mono text-xs leading-relaxed min-h-0 outline-none"
         ref={parentRef}
         onScroll={handleScroll}
+        onWheel={(e) => handleUserScrollIntent(e.deltaY < 0)}
+        onTouchMove={() => handleUserScrollIntent(true)}
         onKeyDown={handleKeyDown}
         tabIndex={0}
         role="grid"

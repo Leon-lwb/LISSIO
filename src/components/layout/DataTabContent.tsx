@@ -17,6 +17,7 @@ import { selectWidgets } from '../../store/appStoreHelpers';
 import { useWaveformScopeStore } from '../../store/waveformScopeStore';
 import { isShellTabType, panelDefForTabType } from '../panels/registry/panelDefs';
 import { PANEL_VIEWS, SHELL_TAB_CONTENT } from '../panels/registry/panelViews';
+import { FrozenPanelOutline, LiveStatusBadge, PanelLivenessProvider } from '../displays/common/PanelLiveness';
 import type { WidgetConfig } from '../../types';
 
 /// 单个数据 Tab 的内容渲染器 — 由 DockCardFrame 挂载, 可被多个卡片各自实例化。
@@ -41,7 +42,17 @@ export const DataTabContent = memo(function DataTabContent({ tabId }: { tabId: s
         ? undefined
         : widgets.find((w) => w.params.id === tab.widgetId && w.kind === hostKind);
     const View = PANEL_VIEWS[def.panelKind];
-    return <View tab={tab} widget={widget} widgets={widgets} />;
+    // 时效派生层统一挂载点: 面板只上报"是否跟随最新"与"跳最新"处理,
+    // 非实时角标与内容区描边由宿主渲染, 面板自身不重复实现时效 UI。
+    return (
+      <PanelLivenessProvider panelKey={tab.id}>
+        <div className="relative h-full w-full">
+          <View tab={tab} widget={widget} widgets={widgets} />
+          <FrozenPanelOutline panelKey={tab.id} />
+          <LiveStatusBadge panelKey={tab.id} />
+        </div>
+      </PanelLivenessProvider>
+    );
   }
 
   if (isShellTabType(tab.type)) return SHELL_TAB_CONTENT[tab.type];

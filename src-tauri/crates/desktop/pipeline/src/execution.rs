@@ -5,6 +5,10 @@
 //! 评估批次、发送调度) 持 [`ExecutionControl::boundary`] 读锁跨越其异步段,
 //! 运行状态切换持写锁 — 切换因此与在途求值批次/设备写入互斥, 旧 epoch 的
 //! 异步结果不可能在切换后发布或发送。
+//!
+//! 票据分两类: [`ExecutionControl::ingest_ticket`] (运行或暂停) 放行采集/解析/
+//! 缓存/求值 — 暂停只是停止发送, 数据链继续; [`ExecutionControl::ticket`] (仅运行)
+//! 放行自动发送与命令帧等设备写路径。
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
@@ -64,7 +68,10 @@ impl ExecutionControl {
         }
     }
 
-    /// 运行中返回当前原子字作为票据; 暂停/停止返回 None (数据链门控依据)。
+    /// 发送门控票据 — 仅运行态返回当前原子字; 暂停/停止返回 None。
+    ///
+    /// 自动发送 / 命令帧 / TextOut 等设备写路径据此停发: 暂停只停发送,
+    /// 数据链本身继续 (见 [`ExecutionControl::ingest_ticket`])。
     pub fn ticket(&self) -> Option<u64> {
         let word = self.word.load(Ordering::Acquire);
         (word & 3 == 1).then_some(word)
@@ -75,13 +82,30 @@ impl ExecutionControl {
         ticket & 3 == 1 && self.word.load(Ordering::Acquire) == ticket
     }
 
+    /// 数据链票据 — 运行或暂停都放行采集/解析/缓存/图求值; 停止返回 None。
+    ///
+    /// 暂停期间字节继续进入全部缓存与录制, 所以读任务路由与评估批次用本票据;
+    /// 只有停止是硬门控: 在途字节直接丢弃, 不进入任何缓存。
+    pub fn ingest_ticket(&self) -> Option<u64> {
+        let word = self.word.load(Ordering::Acquire);
+        (word & 3 != 0).then_some(word)
+    }
+
+    /// 数据链票据是否仍有效 (未停止且 epoch 未前进) — 求值/入队前的最后校验。
+    pub fn accepts_ingest(&self, ticket: u64) -> bool {
+        ticket & 3 != 0 && self.word.load(Ordering::Acquire) == ticket
+    }
+
     /// 切换运行状态并推进 epoch。
     ///
     /// 调用方必须持 [`ExecutionControl::boundary`] 写锁, 并在锁内完成依赖状态的
     /// 重置 (评估队列 / 连续性状态 / 发送基线) — 保证切换原子地对在途批次生效。
     pub fn transition(&self, state: RunState) -> RunSnapshot {
-        let epoch = self.snapshot().epoch.wrapping_add(1);
-        if state == RunState::Running {
+        let previous = self.snapshot();
+        let epoch = previous.epoch.wrapping_add(1);
+        // 恢复点只在真正启动 (Stopped → Running) 推进: 从暂停恢复保持数据连续,
+        // 不把暂停期排队尾字节按"早于恢复点"丢弃 (见读任务的源端时间戳过滤)。
+        if state == RunState::Running && previous.state != RunState::Paused {
             let now = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_or(0, |duration| {
@@ -329,6 +353,48 @@ mod tests {
         control.transition(RunState::Paused);
         control.transition(RunState::Running);
         assert!(!control.accepts(ticket));
+    }
+
+    #[test]
+    fn pause_keeps_ingest_open_and_closes_send() {
+        let control = ExecutionControl::default();
+        assert!(control.ingest_ticket().is_none(), "停止态数据链关闭");
+
+        control.transition(RunState::Running);
+        let running = control.ingest_ticket().unwrap();
+        assert!(control.accepts_ingest(running));
+
+        control.transition(RunState::Paused);
+        assert!(control.ticket().is_none(), "暂停必须停自动发送与设备写");
+        assert!(
+            control.ingest_ticket().is_some(),
+            "暂停期间数据链继续, 字节入缓存"
+        );
+        assert!(!control.accepts_ingest(running), "切换后旧数据链票据失效");
+
+        control.transition(RunState::Stopped);
+        assert!(control.ingest_ticket().is_none(), "停止是硬门控: 直接丢弃");
+    }
+
+    #[test]
+    fn resume_from_pause_keeps_the_start_boundary() {
+        let control = ExecutionControl::default();
+        control.transition(RunState::Running);
+        let started_at = control.resumed_at_unix_ns();
+        control.transition(RunState::Paused);
+        control.transition(RunState::Running);
+        assert_eq!(
+            control.resumed_at_unix_ns(),
+            started_at,
+            "从暂停恢复不推进恢复点, 暂停期尾字节不被误判为陈旧"
+        );
+
+        control.transition(RunState::Stopped);
+        control.transition(RunState::Running);
+        assert!(
+            control.resumed_at_unix_ns() >= started_at,
+            "真正启动必须重建恢复点"
+        );
     }
 
     fn frame_task(widget_id: &str, frame_id: &str, mode: SendMode) -> SendTask {

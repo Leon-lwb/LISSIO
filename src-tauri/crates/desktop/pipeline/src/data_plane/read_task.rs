@@ -213,7 +213,8 @@ pub(super) async fn read_task(
             }
         };
 
-        // 源端为字节标记到达时刻，恢复后仍排队的暂停期字节在这里丢弃。
+        // 源端为字节标记到达时刻; 停止后重新启动时, 早于本次启动的旧字节在
+        // 这里丢弃 (从暂停恢复不推进恢复点 — 暂停期字节本就连续入缓存)。
         // 不以消费时刻判断，否则恢复瞬间尚未排空的旧字节会被当成新帧。
         if first.observed_time_unix_ns != 0
             && first.observed_time_unix_ns < plane.eval.execution.resumed_at_unix_ns()
@@ -303,16 +304,17 @@ pub(super) async fn read_task(
                 .saturating_sub(1)
                 .saturating_mul(FEED_PARALLEL_UNIT),
         );
-        // 运行门控: 暂停/停止时丢弃字节 (广播通道容量有界, 积压自然转化为
-        // Lagged 计数) — 不积压暂停期间的数据; read_task 保持存活排空通道,
+        // 数据链门控: 运行与暂停都放行 — 暂停期间字节继续解析并进入波形/原始
+        // 数据/CAN/逻辑缓存与录制; 只有停止是硬门控, 字节直接丢弃 (广播通道容量
+        // 有界, 积压自然转化为 Lagged 计数)。read_task 保持存活排空通道,
         // 设备连接不受影响。快速路径先行免锁; 路由持 boundary 读锁并在锁内
         // 复查票据 — 与运行状态切换 (写锁) 互斥: 切换不可能打断在途路由,
         // 旧 epoch 的解析结果不会在切换后继续入队。
-        if plane.eval.execution.ticket().is_none() {
+        if plane.eval.execution.ingest_ticket().is_none() {
             continue;
         }
         let boundary = plane.eval.execution.boundary.read().await;
-        if plane.eval.execution.ticket().is_none() {
+        if plane.eval.execution.ingest_ticket().is_none() {
             continue;
         }
         plane.metrics.rx_msgs.fetch_add(
@@ -323,7 +325,7 @@ pub(super) async fn read_task(
             .metrics
             .rx_bytes
             .fetch_add(data.len() as u64, Ordering::Relaxed);
-        // 原始数据、统计和协议帧共用运行边界；暂停仍排空设备输入。
+        // 原始数据、统计和协议帧共用数据链边界；暂停继续采集, 停止才丢弃。
         plane.raw_collector_for(&node_id).lock().push_chunk(
             data_model::now_us(),
             if is_receive {

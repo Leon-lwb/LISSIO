@@ -353,7 +353,7 @@ async fn polling_subscription_uses_a_bounded_typed_sink() {
 }
 
 #[tokio::test]
-async fn polling_obeys_pause_resume_and_stop_epochs() {
+async fn polling_keeps_running_while_paused_and_stops_on_stop() {
     let (port, _) = spawn_mock().await;
     let factory = ModbusFactory::default();
     let validated = factory.validate(&driver_payload(port)).unwrap();
@@ -393,28 +393,39 @@ async fn polling_obeys_pause_resume_and_stop_epochs() {
         .await
         .unwrap();
 
-    assert!(
-        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
-            .await
-            .is_err()
-    );
+    // 初始暂停: 订阅建立后仍会轮询 (暂停语义 = 只停发送)
+    let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
+        .await
+        .expect("暂停态下 Modbus 轮询必须继续")
+        .unwrap();
+    assert_eq!(batch.payload.samples.len(), 1);
+
     let paused_epoch = execution.epoch();
     execution.set(acquisition::AcquisitionRunState::Running);
     assert!(execution.epoch() > paused_epoch);
+    while receiver.try_recv().is_ok() {}
     let batch = tokio::time::timeout(Duration::from_secs(1), receiver.recv())
         .await
         .unwrap()
         .unwrap();
     assert_eq!(batch.payload.samples.len(), 1);
 
-    execution.set(acquisition::AcquisitionRunState::Paused);
-    while receiver.try_recv().is_ok() {}
-    assert!(
-        tokio::time::timeout(Duration::from_millis(40), receiver.recv())
-            .await
-            .is_err()
-    );
+    // 停止才中止轮询: 逐步排空在途批次 (含阻塞在 sink.send 上的那一批),
+    // 轮询循环随后在状态检查处退出 — 之后再无产出
+    // 停止才中止轮询: 排空在途批次后轮询任务在状态检查处退出 —
+    // 要么超时无产出, 要么通道关闭, 绝不会再收到批次
     execution.set(acquisition::AcquisitionRunState::Stopped);
+    for _ in 0..3 {
+        while receiver.try_recv().is_ok() {}
+        tokio::time::sleep(Duration::from_millis(20)).await;
+    }
+    while receiver.try_recv().is_ok() {}
+    match tokio::time::timeout(Duration::from_millis(80), receiver.recv()).await {
+        Err(_) | Ok(None) => {}
+        Ok(Some(batch)) => {
+            panic!("停止后仍产出 {} 个样本", batch.payload.samples.len());
+        }
+    }
     session.close().await.unwrap();
 }
 

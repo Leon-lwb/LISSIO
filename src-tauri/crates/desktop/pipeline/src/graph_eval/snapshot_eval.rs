@@ -215,12 +215,12 @@ pub fn reset_source_transient_state(eval_state: &GraphEvalState, source_id: &str
     }
 }
 
-/// 工作区级连续性状态复位 — 暂停恢复 / 启动 / 停止时调用。
+/// 工作区级连续性状态复位 — 从停止启动 (新流序列) 时调用。
 ///
-/// 暂停期间字节被显式丢弃 (读任务门控), 字节流与样本时间轴在恢复点断裂;
-/// 全部跨帧有状态算子 (滤波延迟线 / IFFT 重叠相加 / 触发边沿 / 帧解码状态机 /
-/// FFT 滑窗) 一律清空, 恢复后从新流序列重新连续。各状态均为求值时懒建
-/// (或 ticker 每拍与 graphs 同步重建), 清空即复位, 不丢配置。
+/// 停止是硬门控, 字节在途丢弃, 字节流与样本时间轴在启动点断裂; 从暂停恢复
+/// 保持连续, 不调用本函数。全部跨帧有状态算子 (滤波延迟线 / IFFT 重叠相加 /
+/// 触发边沿 / 帧解码状态机 / FFT 滑窗) 一律清空, 启动后从新流序列重新连续。
+/// 各状态均为求值时懒建 (或 ticker 每拍与 graphs 同步重建), 清空即复位, 不丢配置。
 pub fn reset_all_transient_state(eval_state: &GraphEvalState) {
     let mut reset = 0_usize;
     reset += clear_state_map(&eval_state.filter_states);

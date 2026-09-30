@@ -1540,9 +1540,13 @@ envelopeStats: "window {n} pts → {columns}-col envelope"
 runStateStopped: Stopped
 runStateRunning: Running
 runStatePaused: Paused
-runStartHint: Start workspace (data processing & auto-send begin; also resumes from pause)
-runPauseHint: Pause workspace (keeps connection, drops data while paused, no backlog)
-runStopHint: Stop workspace (clears execution state and pending send tasks)
+runStartHint: Start workspace (acquisition/cache/eval begin; resuming from pause keeps data continuous)
+runPauseHint: Pause workspace (keeps connection and acquisition; data keeps filling caches and recording; only auto-send and device writes stop)
+runStopHint: Stop workspace (drops in-flight data without caching; clears pending send tasks, keeps existing caches)
+runRecordingActive: Recording
+runRecordingActiveHint: Workspace is paused — acquisition and recording keep writing to the database
+displayFrozen: Not live
+displayFrozenHint: The workspace is not running, or this panel left the latest — resuming from pause jumps back to the latest
 cmdSendRequiresRun: Workspace is not running — manual send requires running state, start it from the status bar
 capabilityVersionFallback: This interface cannot be connected with the current app version.
 capabilityDiscoveredEndpoint: Discovered endpoints

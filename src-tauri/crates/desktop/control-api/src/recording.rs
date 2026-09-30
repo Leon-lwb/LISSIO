@@ -1,8 +1,12 @@
 //! 录制会话 — 无人值守采集记录的会话生命周期 / 查询 / 导出能力。
 //!
 //! 实现全部委托 `recording` crate (`RecordingHub`), 本模块补充运行态门控
-//! (会话创建/切换仅在暂停态开放 — 暂停期间管道不喂数据, 切换写入目标不丢
-//! 批次) 与阻塞线程调度, Tauri IPC 命令与 MCP/CLI 共用同一份实现。
+//! (会话创建/切换仅在暂停态开放) 与阻塞线程调度, Tauri IPC 命令与 MCP/CLI
+//! 共用同一份实现。
+//!
+//! 暂停期间数据链仍在写入 (暂停只停发送), 换 recorder 不再天然有安静窗口:
+//! 创建/切换时持 `execution.boundary` 写锁跨越整个替换过程 — 在途路由批次先写完,
+//! 替换期间不放行新批次, 替换完成后再恢复, 批次不会落在 recorder 缺席的窗口。
 
 pub use recording::{
     BindingInfo, HistoryPage, HistoryQuery, RecordingCleanupPolicy, RecordingCleanupResult,
@@ -20,17 +24,35 @@ fn require_paused_run(tb: &Toolbox) -> Result<(), String> {
     Err("recording sessions can only be created or switched while the run is paused".into())
 }
 
+/// 新建/续写会话时的初始状态 — 反映"是否正在写入"。
+///
+/// 暂停期间数据链与录制都在继续, 因此运行态与暂停态都记为 `Running`; 只有停止态
+/// 才是"recorder 就绪但未写入"(`Paused`)。
+#[must_use]
+pub fn session_state_for_run(tb: &Toolbox) -> SessionState {
+    if tb.data_plane.eval.execution.snapshot().state == pipeline::RunState::Stopped {
+        SessionState::Paused
+    } else {
+        SessionState::Running
+    }
+}
+
 /// 暂停时新建录制会话并使其成为当前写入目标;被替换的会话标记为已停止。
 pub async fn create_session(tb: &Toolbox) -> Result<SessionInfo, String> {
     require_paused_run(tb)?;
     let recording = tb.data_plane.eval.recording.clone();
-    tokio::task::spawn_blocking(move || {
+    let initial = session_state_for_run(tb);
+    // 暂停期间管道继续喂数据 — 独占数据链边界, 在途批次走完再换 recorder
+    let boundary = tb.data_plane.eval.execution.boundary.write().await;
+    let session = tokio::task::spawn_blocking(move || {
         recording
-            .create_session(SessionState::Paused)
+            .create_session(initial)
             .map_err(|error| error.to_string())
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+    drop(boundary);
+    session
 }
 
 /// 暂停时把写入目标切换到指定的已停止会话(继续写入该表)。
@@ -38,13 +60,17 @@ pub async fn switch_session(tb: &Toolbox, session_id: &str) -> Result<SessionInf
     require_paused_run(tb)?;
     let recording = tb.data_plane.eval.recording.clone();
     let session_id = session_id.to_string();
-    tokio::task::spawn_blocking(move || {
+    let initial = session_state_for_run(tb);
+    let boundary = tb.data_plane.eval.execution.boundary.write().await;
+    let session = tokio::task::spawn_blocking(move || {
         recording
-            .switch_session(&session_id, SessionState::Paused)
+            .switch_session(&session_id, initial)
             .map_err(|error| error.to_string())
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| error.to_string())?;
+    drop(boundary);
+    session
 }
 
 /// 全部录制会话 (含状态与行数)。
