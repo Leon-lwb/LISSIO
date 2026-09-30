@@ -8,6 +8,13 @@ import { createFrameBatcher } from '../utils/frameBatcher';
 
 export const RAWDATA_BYTES_PER_ROW = 16;
 
+/// 行视图单行字节上限 — 行分组按 0x0A 切分, 但二进制流与非 ASCII 文本 (如无换行的
+/// 中文日志) 可能整段没有一个换行符: 此时整段数据会挤进一行, 每字节 2 个 cell,
+/// DOM 节点数随接收字节数线性膨胀 (1MB 数据 ≈ 200 万 span)。超限处按此上限自动折行,
+/// 折行点回退到 UTF-8 序列起点, 多字节字符不会被截成替换符。
+/// 行末的 0x0A 始终留在本行 (不推到下一行), 故单行实际长度上界为该上限 + 1 字节。
+export const RAWDATA_LINE_MAX_BYTES = 64;
+
 /// base64 → Uint8Array (atob 一次解码 + 定长拷贝, ~100MB/s 量级)
 function decodeBase64(b64: string): Uint8Array {
   const bin = atob(b64);
@@ -24,6 +31,9 @@ export interface RawDataLineView {
   timestamp: number;
   direction: RawDataDirection;
   bytes: Uint8Array;
+  /// 本行是上一行的折行续行 (行首前一个字节不是 0x0A, 即超过单行上限被折开)。
+  /// 仅行分组 (换行模式) 会置位; 复制时续行不插入换行, 保持原始字节序。
+  continued?: boolean;
 }
 
 let nextWaveformCacheVersion = 1;
@@ -316,45 +326,80 @@ export class RawDataBuffer {
     return bytes;
   }
 
-  /// 增量维护换行索引 — 只扫描新写入的字节 (pushBatch 后调用)
+  /// 读取单个绝对偏移的字节; 落在保留窗口外返回 -1
+  private byteAt(offset: number): number {
+    const stored = this.storedBytes;
+    const baseOffset = Math.max(0, this.totalWritten - stored);
+    if (offset < baseOffset || offset >= this.totalWritten) return -1;
+    return this.buf[(this.writePos - stored + (offset - baseOffset) + this.capacity) % this.capacity];
+  }
+
+  /// 增量维护换行/折行索引 — 只扫描新写入的字节 (pushBatch 后调用)
   private updateLineIndex() {
     const stored = this.storedBytes;
     const baseOffset = Math.max(0, this.totalWritten - stored);
 
-    while (this.lineStarts.length > 0 && this.lineStarts[0] < baseOffset) {
-      this.lineStarts.shift();
+    // 批量剔除被环形覆盖的行起点 — 一次 splice 而非逐个 shift (折行后行数可达上万)
+    let expired = 0;
+    while (expired < this.lineStarts.length && this.lineStarts[expired] < baseOffset) {
+      expired++;
     }
+    if (expired > 0) this.lineStarts.splice(0, expired);
     if (this.lineStarts.length === 0 || this.lineStarts[0] !== baseOffset) {
       this.lineStarts.unshift(baseOffset);
     }
 
     const scanStart = Math.max(this.lastScannedOffset, baseOffset);
-    const scanCount = Math.max(0, this.totalWritten - scanStart);
-    const startPos = (this.writePos - stored + (scanStart - baseOffset) + this.capacity) % this.capacity;
-    for (let i = 0; i < scanCount; i++) {
-      if (this.buf[(startPos + i) % this.capacity] === 0x0a) {
-        this.lineStarts.push(scanStart + i + 1);
-      }
-    }
+    this.scanLineBreaks(scanStart, Math.max(0, this.totalWritten - scanStart));
 
     this.lastScannedOffset = this.totalWritten;
   }
 
-  /// 全量重建换行索引 (仅在容量变更后惰性调用)
+  /// 扫描 [scanStart, scanStart + count) 的字节并追加行起点 —
+  /// 0x0A 结束一行 (换行符含在行末), 行长达 RAWDATA_LINE_MAX_BYTES 处强制折行。
+  /// 折行点回退到多字节字符起点, 保证每行都是完整的 UTF-8 序列。
+  private scanLineBreaks(scanStart: number, count: number) {
+    if (count <= 0) return;
+    const stored = this.storedBytes;
+    const baseOffset = Math.max(0, this.totalWritten - stored);
+    const startPos = (this.writePos - stored + (scanStart - baseOffset) + this.capacity) % this.capacity;
+    // 当前未闭合行的起点 = 最后一个已知行起点 (跨调用保持折行相位)
+    let rowStart = this.lineStarts.length > 0 ? this.lineStarts[this.lineStarts.length - 1] : scanStart;
+    for (let i = 0; i < count; i++) {
+      const offset = scanStart + i;
+      const byte = this.buf[(startPos + i) % this.capacity];
+      if (byte === 0x0a) {
+        rowStart = offset + 1;
+        this.lineStarts.push(rowStart);
+        continue;
+      }
+      if (offset - rowStart + 1 > RAWDATA_LINE_MAX_BYTES) {
+        // 从本字节向前回退到所属 UTF-8 序列的首字节 (续字节形如 10xxxxxx)。
+        // 序列最长 4 字节, 故最多回退 3 步; 再往前仍是续字节说明上游不是合法 UTF-8
+        // (二进制流), 此时按上限硬折行 —— 否则会退化成每字节一行, 行数反而爆炸。
+        let cut = offset;
+        while (cut > offset - 3 && cut > rowStart + 1 && (this.byteAt(cut) & 0xc0) === 0x80) {
+          cut--;
+        }
+        rowStart = cut;
+        this.lineStarts.push(rowStart);
+      }
+    }
+  }
+
+  /// 全量重建换行/折行索引 (仅在容量变更后惰性调用)
   private rebuildLineIndex() {
     this.lineStarts = [];
-    this.lastScannedOffset = this.totalWritten;
     this.lineIndexDirty = false;
     const stored = this.storedBytes;
     const baseOffset = Math.max(0, this.totalWritten - stored);
-    if (stored === 0) return;
-    this.lineStarts.push(baseOffset);
-    const startPos = (this.writePos - stored + this.capacity) % this.capacity;
-    for (let i = 0; i < stored; i++) {
-      if (this.buf[(startPos + i) % this.capacity] === 0x0a) {
-        this.lineStarts.push(baseOffset + i + 1);
-      }
+    if (stored === 0) {
+      this.lastScannedOffset = this.totalWritten;
+      return;
     }
+    this.lineStarts.push(baseOffset);
+    this.scanLineBreaks(baseOffset, stored);
+    this.lastScannedOffset = this.totalWritten;
   }
 
   /// 换行模式行数 (0x0A 分隔; 换行符作为行末字节, 空行计 1 行)
@@ -371,11 +416,14 @@ export class RawDataBuffer {
     }
     const start = this.lineStarts[rowIndex];
     const end = rowIndex + 1 < this.lineStarts.length ? this.lineStarts[rowIndex + 1] : this.totalWritten;
+    // 行首前一字节不是 0x0A → 该行由单行上限折开 (行窗口外无法判定, 视为新行)
+    const previous = this.byteAt(start - 1);
     return {
       offset: start,
       timestamp: this.getTimeForOffset(start),
       direction: this.getDirectionForOffset(start),
       bytes: this.readBytesAt(start, end),
+      continued: previous !== -1 && previous !== 0x0a,
     };
   }
 

@@ -306,6 +306,7 @@ rawDataStringEmpty: No string output yet (logged on value change)
 rawDataDirectionAll: All
 rawDataDirectionRx: RX
 rawDataDirectionTx: TX
+rawDataWrappedContinuation: Wrapped continuation (row limit)
 rawDataSearchPlaceholder: Search…
 displayOptions: Display
 terminalOptions: Terminal

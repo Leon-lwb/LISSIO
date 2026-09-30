@@ -10,7 +10,9 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
-const root = new URL('..', import.meta.url).pathname;
+// import.meta.dirname 是平台原生路径; new URL(...).pathname 在 Windows 上会得到
+// "/C:/..." 形式的路径, existsSync 判为不存在, 使本检查在 Windows 上必然失败
+const root = join(import.meta.dirname, '..');
 const committedDir = join(root, 'src', 'types', 'generated');
 
 if (!existsSync(committedDir)) {
@@ -39,13 +41,20 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1);
 }
 
+/// 比较前统一换行符 — 工作区文件的行尾由 git 检出决定 (core.autocrlf 下 Windows 为 CRLF),
+/// 而 ts-rs 恒写 LF。行尾不属于 wire 合同内容, 归一后再比; Linux/macOS 检出本来即 LF,
+/// 归一为无操作, 因此该比较保持跨平台一致。
+function normalizeEol(content) {
+  return content.replace(/\r\n/g, '\n');
+}
+
 /** 递归收集相对路径 → 内容。 */
 function snapshot(dir) {
   const files = new Map();
   for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith('.ts')) continue;
     const absolute = join(entry.parentPath ?? dir, entry.name);
-    files.set(relative(dir, absolute), readFileSync(absolute, 'utf8'));
+    files.set(relative(dir, absolute), normalizeEol(readFileSync(absolute, 'utf8')));
   }
   return files;
 }

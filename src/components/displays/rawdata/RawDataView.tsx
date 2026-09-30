@@ -206,21 +206,23 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     const isLine = grouping === 'line';
     const lines = selection.selectedSorted.map((i) => (isLine ? buffer.getNewlineLine(i) : buffer.getLine(i)));
     const text = lines
-      .map((line) => {
+      .map((line, index) => {
+        // 折行续行与上一行之间没有 \n, 复制时直接拼接, 保证与原始字节流一致
+        const prefix = index === 0 || (isLine && line.continued) ? '' : '\n';
         const hex = Array.from(line.bytes, (b) => byteToHex(b)).join(' ');
         const ascii = Array.from(line.bytes, (b) => byteToAscii(b)).join('');
         if (repr === 'utf8') {
-          return `${formatTime(line.timestamp)}  ${decodeUtf8(line.bytes)}`;
+          return `${prefix}${formatTime(line.timestamp)}  ${decodeUtf8(line.bytes)}`;
         }
         if (repr === 'ascii') {
-          return `${formatTime(line.timestamp)}  ${ascii}`;
+          return `${prefix}${formatTime(line.timestamp)}  ${ascii}`;
         }
         if (isLine) {
-          return `${formatTime(line.timestamp)}  ${hex}  |${ascii}|`;
+          return `${prefix}${formatTime(line.timestamp)}  ${hex}  |${ascii}|`;
         }
-        return `${formatTime(line.timestamp)} ${line.offset.toString(16).padStart(8, '0').toUpperCase()}  ${hex.padEnd(48, ' ')}  |${ascii}|`;
+        return `${prefix}${formatTime(line.timestamp)} ${line.offset.toString(16).padStart(8, '0').toUpperCase()}  ${hex.padEnd(48, ' ')}  |${ascii}|`;
       })
-      .join('\n');
+      .join('');
     const ok = await writeTextToClipboard(text);
     if (ok) {
       setCopyFeedback(true);

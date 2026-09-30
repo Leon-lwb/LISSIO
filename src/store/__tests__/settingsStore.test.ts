@@ -192,6 +192,25 @@ describe('settingsStore', () => {
     expect(uiFontFamily).not.toContain('Maple Mono CN');
   });
 
+  it('把上一版默认字体栈 (FiraCode/GoMono 内置族) 迁移到当前默认', async () => {
+    // 上一版默认值 — 这两个字体族已随内嵌与许可一并移除, 存档必须升级
+    const previousDefaults = {
+      uiFontFamily:
+        "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'MiSans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', sans-serif",
+      monoFontFamily:
+        "'FiraCode Nerd Font Mono', 'GoMono Nerd Font Mono', 'Maple Mono CN', 'JetBrains Mono', 'Cascadia Code', 'SF Mono', Menlo, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Source Han Sans SC', 'WenQuanYi Micro Hei', monospace",
+    };
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, { appearance: { ...previousDefaults } });
+    expect(previousDefaults.uiFontFamily).not.toBe(DEFAULT_SETTINGS.appearance.uiFontFamily);
+
+    await useSettingsStore.getState().load();
+
+    const { uiFontFamily, monoFontFamily } = useSettingsStore.getState().settings.appearance;
+    expect(uiFontFamily).toBe(DEFAULT_SETTINGS.appearance.uiFontFamily);
+    expect(monoFontFamily).toBe(DEFAULT_SETTINGS.appearance.monoFontFamily);
+    expect(monoFontFamily).not.toContain('Nerd Font');
+  });
+
   it('迁移结果立即落盘, 不必每次启动重复改写', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, {
       appearance: { monoFontFamily: "'Cascadia Code', 'Fira Code', 'SF Mono', Menlo, monospace" },

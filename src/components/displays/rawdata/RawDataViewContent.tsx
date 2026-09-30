@@ -137,6 +137,7 @@ export function RawDataViewContent({
                   hexColorMode={hexColorMode}
                   isSelected={selection.isSelected(virtualRow.index)}
                   version={version}
+                  lang={lang}
                   onMouseDown={onRowMouseDown}
                 />
               ))}

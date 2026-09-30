@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { type RawDataLineSource, RAWDATA_BYTES_PER_ROW } from '../../../lib/buffers/dataBuffer';
 import { decodeUtf8 } from '../../../lib/utils/utf8';
+import { t, type Lang } from '../../../i18n';
 import { ROW_HEIGHT, GROUP_SIZE, formatTime, byteToHex, byteToAscii, isPrintable, hexColorClass, directionColorClass, directionSymbol, EscapedText, type HexColorMode, type RawDataGrouping, type RawDataRepr } from './rawDataViewHelpers';
 
 export interface RowProps {
@@ -14,6 +15,7 @@ export interface RowProps {
   hexColorMode: HexColorMode;
   isSelected: boolean;
   version: number;
+  lang: Lang;
   onMouseDown: (e: React.MouseEvent, filteredIndex: number) => void;
 }
 
@@ -48,10 +50,13 @@ export const Row = memo(function Row({
   showOffset,
   hexColorMode,
   isSelected,
+  lang,
   onMouseDown,
 }: RowProps) {
   const isLine = grouping === 'line';
   const line = isLine ? buffer.getNewlineLine(originalIndex) : buffer.getLine(originalIndex);
+  // 折行续行: 行首不是 0x0A 之后的新行, 行首用 ↳ 标记 (方向仍在 title 中)
+  const continued = isLine && line.continued === true;
 
   const cellCount = isLine ? line.bytes.length : RAWDATA_BYTES_PER_ROW;
   const byteCount = line.bytes.length;
@@ -104,10 +109,10 @@ export const Row = memo(function Row({
       role="presentation"
     >
       <span
-        className={`text-xs font-mono min-w-[14px] text-center ${directionColorClass(line.direction)}`}
-        title={line.direction === 'tx' ? 'TX' : 'RX'}
+        className={`text-xs font-mono min-w-[14px] text-center ${continued ? 'text-text-disabled' : directionColorClass(line.direction)}`}
+        title={`${line.direction === 'tx' ? 'TX' : 'RX'}${continued ? ` · ${t(lang, 'rawDataWrappedContinuation')}` : ''}`}
       >
-        {directionSymbol(line.direction)}
+        {continued ? '↳' : directionSymbol(line.direction)}
       </span>
       {showTimestamp && (
         <span className="text-accent text-xs font-mono min-w-[92px] text-right">
