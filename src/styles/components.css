@@ -11,6 +11,36 @@
   animation-iteration-count: 1 !important;
 }
 
+/* ============ 层级工具类 (z-index) ============ */
+/* Tailwind v4 没有 z-index 命名空间 —— z-modal / z-tour 这类命名类不会被生成, 引导遮罩
+   与弹窗拿不到 z-index (退化为 auto), 于是顶栏 (z-50)、控件分类的 sticky 标题 (z-10)
+   等带 z-index 的局部元素会盖在遮罩之上。这里把 theme.css :root 的层级令牌显式桥接成类
+   (与令牌一一对应, 新代码直接取用); 本文件是未分层 CSS, 优先于 Tailwind utilities 层
+   (见下方 search-input 注释)。 */
+.z-dropdown {
+  z-index: var(--z-dropdown);
+}
+
+.z-tooltip {
+  z-index: var(--z-tooltip);
+}
+
+.z-context-menu {
+  z-index: var(--z-context-menu);
+}
+
+.z-modal {
+  z-index: var(--z-modal);
+}
+
+.z-toast {
+  z-index: var(--z-toast);
+}
+
+.z-tour {
+  z-index: var(--z-tour);
+}
+
 /* ============ 滚动条样式 ============ */
 ::-webkit-scrollbar {
   width: 10px;

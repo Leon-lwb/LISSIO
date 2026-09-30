@@ -249,14 +249,6 @@
   --spacing-6: 24px;
   --spacing-8: 32px;
 
-  /* ---------- z-index ---------- */
-  --z-dropdown: 10;
-  --z-tooltip: 50;
-  --z-context-menu: 60;
-  --z-modal: 100;
-  --z-toast: 200;
-  --z-tour: 300;
-
   /* ---------- 阴影 ---------- */
   --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.65);
 
@@ -284,6 +276,28 @@
   /* 缓动: ease-out-cubic 工具类 + var(--ease-*) 直接引用 */
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============ 层级令牌 (z-index) ============ */
+/* 不能写在 @theme 里: Tailwind v4 的 z-* 工具类只接受数值/任意值, 没有 z-index 命名空间,
+   所以 @theme 中的 --z-* 既不会生成 z-modal / z-tour 这类类名, 自身也不会输出
+   (未被使用的主题变量会被裁剪) —— 引导遮罩与弹窗的 z-index 会整体退化成 auto,
+   于任何带 z-index 的局部元素 (顶栏 z-50、控件分类的 sticky 标题 z-10、ContextMenu
+   的 var(--z-context-menu) 等) 都会盖住遮罩。
+   因此改在 :root 里作为普通自定义属性声明 (始终输出), 由 components.css 的 .z-* 桥接类
+   与 inline zIndex 消费。新增层级别忘了同步这三处。
+
+   --z-tour 特意高于 1000: @xyflow/react 会把选中节点抬到 SELECTED_NODE_Z=1000、连线抬到
+   1001 (zIndexMode 默认 'basic'), 而亚克力默认关闭 (appearance.acrylicBackground=false),
+   dock 卡片没有 backdrop-filter 也就没有层叠上下文, 画布内的节点会直接参与根层叠 ——
+   取值 ≤1000 时被选中的卡片会穿透引导遮罩。 */
+:root {
+  --z-dropdown: 10;
+  --z-tooltip: 50;
+  --z-context-menu: 60;
+  --z-modal: 100;
+  --z-toast: 200;
+  --z-tour: 1100;
 }
 
 /* ============ 主题变体 (data-theme 仅用于 CSS 选择器) ============ */
