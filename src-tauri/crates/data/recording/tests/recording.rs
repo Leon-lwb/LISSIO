@@ -221,6 +221,48 @@ fn rejects_domain_mismatch_before_acceptance() {
 }
 
 #[test]
+fn unavailable_database_is_reported_but_is_not_a_writer_fault() {
+    // 采集门控回归: 数据库打不开 (Windows 上另一实例持有强制文件锁) 曾是
+    // `fault`, 于是读任务每批字节后都把工作区停回 Stopped — 用户每点一次
+    // "开始" 只有几字节进收集器。契约: 没有 writer 就没有可违反的写入契约。
+    let base = std::env::temp_dir().join(format!(
+        "lissio-recording-unavailable-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&base);
+    std::fs::create_dir_all(&base).unwrap();
+    // 父路径是普通文件 → 建库/打开必然失败 (跨平台确定)
+    let blocker = base.join("not-a-directory");
+    std::fs::write(&blocker, b"blocker").unwrap();
+    let path = blocker.join("acquisition.duckdb");
+
+    let hub = RecordingHub::default();
+    let bindings = vec![binding("float", Domain::Float)];
+    let limits = RecordingLimits::default();
+    let outcome = hub.start(&path, bindings, limits, SessionState::Paused);
+    assert!(outcome.is_err());
+
+    assert!(
+        hub.fault().is_none(),
+        "录制不可用不得算作写入故障: {:?}",
+        hub.fault()
+    );
+    assert!(
+        hub.health().failed.is_some(),
+        "录制不可用必须保持可见 (健康报告)"
+    );
+
+    // 没有 recorder 时 hub 是惰性的: 生产者照常运行, 运行态切换不报错
+    let port = PortIdentity::new("source", "float");
+    let payload = BatchPayload::Float { values: vec![1.0] };
+    assert!(!hub.record(&port, 2, 0, vec![10], payload).unwrap());
+    hub.set_state(SessionState::Running).unwrap();
+    hub.stop().unwrap();
+
+    let _ = std::fs::remove_dir_all(&base);
+}
+
+#[test]
 fn analytical_query_can_be_cancelled() {
     let path = std::env::temp_dir().join(format!(
         "lissio-recording-cancel-{}.duckdb",

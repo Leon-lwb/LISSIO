@@ -188,7 +188,23 @@ async fn shutdown_signal(supervised_stdio: bool) {
         () = terminate => {}
         () = supervised => {}
     }
+    // 受监督进程: 关闭请求已到达, 进程必须在有界时间内退出。收尾若卡在某个
+    // 后台线程上, 残留进程会一直持有录制数据库句柄 — Windows 的文件锁是强制的,
+    // 下一次启动就会打不开数据库 (录制静默丢失)。受监督进程不能比关闭请求活得久。
+    if supervised_stdio {
+        let _watchdog = std::thread::spawn(|| {
+            std::thread::sleep(TEARDOWN_DEADLINE);
+            log::error!("收尾超时 ({}s), 强制退出进程", TEARDOWN_DEADLINE.as_secs());
+            let _ = std::io::stdout().flush();
+            let _ = std::io::stderr().flush();
+            std::process::exit(1);
+        });
+    }
 }
+
+/// 受监督进程收尾的宽限时间 — 正常收尾 (停录制 + 工作区落盘) 远快于此,
+/// 超时说明有线程卡住, 此时必须放弃收尾以保证进程退出。
+const TEARDOWN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(10);
 
 /// 默认监听地址 — 供二进制入口复用。
 pub const DEFAULT_BIND: IpAddr = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);

@@ -348,6 +348,9 @@ pub(super) async fn read_task(
             },
         )
         .await;
+        // 录制失败 (已受理的绑定批次写不下去) 停止采集 — 录制契约优先于预览。
+        // 录制"不可用"(数据库打不开) 不在此列: 那时没有 writer 也就没有契约,
+        // 采集必须继续 (否则每次启动都会被立刻停回停止态)。
         if plane.eval.recording.fault().is_some() {
             drop(boundary);
             plane.stop_for_recording_fault().await;

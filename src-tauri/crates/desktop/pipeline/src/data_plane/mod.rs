@@ -366,6 +366,10 @@ impl DataPlaneState {
     /// A durable-recording failure invalidates the acquisition contract: once a
     /// producer cannot enqueue a bound batch, stop the run at the same execution
     /// boundary used by normal Pause/Stop transitions.
+    ///
+    /// 只在**在册 writer** 的写入失败时触发 (见 `recording::RecordingHub::fault`):
+    /// 录制数据库打不开 (文件被别的实例占用等) 时没有绑定批次, 采集必须照常运行 —
+    /// 否则每次"开始"都会被立刻停回停止态, 界面只能看到零星几字节。
     pub(crate) async fn stop_for_recording_fault(&self) -> bool {
         let Some(error) = self.eval.recording.fault() else {
             return false;

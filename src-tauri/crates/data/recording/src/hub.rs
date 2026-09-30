@@ -27,7 +27,13 @@ struct HubState {
     recorder: Option<Arc<Recorder>>,
     active: HashMap<PortIdentity, DisplayBinding>,
     sequences: HashMap<PortIdentity, u64>,
+    /// 在册 writer 的写入故障 — 绑定批次已受理却写不下去, 录制契约被破坏
+    /// ([`RecordingHub::fault`] 据此让采集停止)。
     fault: Option<String>,
+    /// 录制不可用 — 未能建立 recorder (数据库打开/建库失败, 例如 Windows 上
+    /// 另一个实例持有该文件的强制锁)。此时没有任何绑定批次, 因此**不是**
+    /// 写入故障: 采集照常运行, 只是没有录制 (见 [`RecordingHub::fault`])。
+    unavailable: Option<String>,
     database: Option<HubDatabase>,
 }
 
@@ -45,6 +51,11 @@ impl RecordingHub {
     /// [`RecordingStore::resumable_empty_session`]), so restarts without any
     /// recorded data keep writing into one session instead of accumulating
     /// empty ones; otherwise a brand-new session is created.
+    ///
+    /// Failure to open the database leaves the hub without a recorder: recording
+    /// stays unavailable ([`Self::health`]) and producers keep running — an
+    /// unusable database must never be reported as a writer fault
+    /// ([`Self::fault`]).
     pub fn start(
         &self,
         path: impl AsRef<Path>,
@@ -130,6 +141,10 @@ impl RecordingHub {
     /// each other, silently erasing committed writes. While the recorder is
     /// absent no batches are produced, so this window must only be entered
     /// while the run is paused.
+    ///
+    /// A swap that cannot open the database leaves recording *unavailable*
+    /// ([`Self::health`] reports it) without raising a writer fault — nothing
+    /// is bound, so the acquisition contract is intact.
     fn replace_recording(
         &self,
         path: &Path,
@@ -152,6 +167,7 @@ impl RecordingHub {
                 state.active = active;
                 state.sequences.clear();
                 state.fault = None;
+                state.unavailable = None;
                 state.database = Some(HubDatabase {
                     path: path.to_path_buf(),
                     limits,
@@ -159,7 +175,13 @@ impl RecordingHub {
                 Ok(session)
             }
             Err(error) => {
-                self.state.write().fault = Some(error.to_string());
+                let message = error.to_string();
+                let mut state = self.state.write();
+                state.recorder = None;
+                // 数据库打不开 = 没有录制, 不是录制写入失败: 记入 unavailable,
+                // 让 fault 只描述在册 writer 的失败 (否则采集会被永久挡住)。
+                state.fault = None;
+                state.unavailable = Some(message);
                 Err(error)
             }
         }
@@ -375,9 +397,20 @@ impl RecordingHub {
         if health.failed.is_none() {
             health.failed.clone_from(&state.fault);
         }
+        // 录制不可用 (数据库打不开) 不停止采集, 但必须保持可见 — 否则用户以为
+        // 数据在被录制, 实际什么都没落盘。
+        if health.failed.is_none() {
+            health.failed.clone_from(&state.unavailable);
+        }
         health
     }
 
+    /// 采集门控依据 — 只有在册 writer 的写入故障才算录制契约被破坏。
+    ///
+    /// 建立 recorder 失败 (数据库打不开 / 文件被别的实例锁住) 由
+    /// [`Self::health`] 的 `failed` 上报, 但**不**在此返回: 那时没有任何绑定
+    /// 批次, 采集必须照常运行 (只是没有录制)。返回 `Some` 表示已受理的批次
+    /// 无法落盘, 调用方据此停止采集。
     #[must_use]
     pub fn fault(&self) -> Option<String> {
         let state = self.state.read();
