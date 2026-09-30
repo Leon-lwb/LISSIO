@@ -168,7 +168,7 @@ export interface ChunkEntry {
 /// 原始数据行读取接口 — RawDataView 渲染所需的最小契约
 /// RawDataBuffer (全量) 与 FilteredRawDataBuffer (方向/搜索过滤) 均实现
 export interface RawDataLineSource {
-  /// 网格模式行数 (每 16 字节一行)
+  /// 网格模式行数 (每 16 字节一行, 行边界与绝对字节流 16 字节对齐)
   readonly lineCount: number;
   /// 换行模式行数 (0x0A 分隔)
   readonly newlineLineCount: number;
@@ -284,20 +284,33 @@ export class RawDataBuffer {
     return this.chunks;
   }
 
-  /// 总行数 (每 16 字节一行)
+  /// 网格视图行起点 — 绝对字节流上按 RAWDATA_BYTES_PER_ROW 对齐 (保留窗口起点向上取整)。
+  /// 必须按绝对流对齐, 不能直接用保留窗口起点: 环形回绕后每写入 1 字节窗口起点就前移
+  /// 1 字节, 未对齐时分列会把所有可见行整体错位一列 —— 同一个绝对字节在相邻两帧落在
+  /// 不同列上, 视口内容看起来就在闪烁。对齐后行内容是绝对的, 只在整行被淘汰时变化。
+  get gridBaseOffset(): number {
+    const retainedBase = Math.max(0, this.totalWritten - this.storedBytes);
+    const aligned = Math.ceil(retainedBase / RAWDATA_BYTES_PER_ROW) * RAWDATA_BYTES_PER_ROW;
+    // 保留窗口不足一整行 (容量 < 行宽) 时无对齐可谈: 退回窗口起点, 否则什么都显示不出来
+    return aligned < this.totalWritten ? aligned : retainedBase;
+  }
+
+  /// 总行数 (每 16 字节一行, 自对齐后的行起点起算)
   get lineCount(): number {
-    return Math.ceil(this.storedBytes / RAWDATA_BYTES_PER_ROW);
+    return Math.max(0, Math.ceil((this.totalWritten - this.gridBaseOffset) / RAWDATA_BYTES_PER_ROW));
   }
 
   /// 获取指定行视图 (不复制底层字节)
   getLine(rowIndex: number): RawDataLineView {
     const stored = this.storedBytes;
+    // 保留窗口起点 (未对齐) — 仅用于绝对偏移到环形物理位置的换算
     const baseOffset = Math.max(0, this.totalWritten - stored);
-    const lineStart = baseOffset + rowIndex * RAWDATA_BYTES_PER_ROW;
+    const lineStart = this.gridBaseOffset + rowIndex * RAWDATA_BYTES_PER_ROW;
     const lineEnd = Math.min(lineStart + RAWDATA_BYTES_PER_ROW, this.totalWritten);
     const length = Math.max(0, lineEnd - lineStart);
 
-    const startPos = (this.writePos - stored + rowIndex * RAWDATA_BYTES_PER_ROW + this.capacity) % this.capacity;
+    // 对齐行起点最多比窗口起点大 RAWDATA_BYTES_PER_ROW - 1 字节, 仍落在窗口内
+    const startPos = (this.writePos - stored + (lineStart - baseOffset) + this.capacity) % this.capacity;
     const bytes = new Uint8Array(length);
     for (let i = 0; i < length; i++) {
       bytes[i] = this.buf[(startPos + i) % this.capacity];

@@ -6,9 +6,10 @@
 // 防滞后: 剩余距离超过 2 屏时瞬间跳转, 不做无限追赶。
 // 用户接管: 动画期间滚动位置偏离程序化写入值 (拖滚动条/滚轮/触摸) 立即取消
 // 动画并按既有 <30px 视为在底部 的语义归属 userScrolledRef。
+// 脱离状态 (detached) 同时以 state 暴露, 供视口右下角"回到最新"按钮显示。
 // prefers-reduced-motion: 回退为瞬时跳底。
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /// 距底部不足该值视为仍在底部 (与旧版判定一致)
 const AT_BOTTOM_PX = 30;
@@ -36,12 +37,17 @@ function isAtBottom(el: ScrollTarget): boolean {
 export interface AutoScrollBottomControl {
   /// Header 自动滚动按钮的激活态依据 (用户上滚后熄灭)
   userScrolledRef: React.MutableRefObject<boolean>;
+  /// 已脱离最新数据的响应式副本 — 供"回到最新"按钮显示 (ref 本身不触发重渲染,
+  /// 数据停流时按钮会来不及消失)
+  detached: boolean;
   /// 数据帧到来时调用: 必要时启动/维持追底动画
   scheduleToBottom: () => void;
   /// 滚动容器 onScroll — 归属用户滚动 / 中断动画
   handleScroll: () => void;
   /// 用户主动回到底部语义: 清除上滚标记并停掉动画 (清空数据/切通道/点自动滚动按钮)
   resetUserScroll: () => void;
+  /// "回到最新": 清除脱离标记并瞬时跳到最新数据 (距离可能有数十万行, 不做平滑动画)
+  jumpToLatest: () => void;
 }
 
 /// getEl 返回当前通道对应的滚动容器 (字节/数值/字符串三容器二选一)
@@ -50,11 +56,19 @@ export function useAutoScrollBottom(
   getEl: () => ScrollTarget | null
 ): AutoScrollBottomControl {
   const userScrolledRef = useRef(false);
+  // 脱离状态的响应式镜像 — 与 userScrolledRef 同步写入, 保证两者语义永不分离
+  const [detached, setDetached] = useState(false);
   const rafRef = useRef<number | null>(null);
   const animatingRef = useRef(false);
   // 最近一次程序化写入的 scrollTop — 动画期间 scroll 事件偏差超容差 = 用户接管
   const lastProgrammaticRef = useRef(0);
   const enabledRef = useRef(enabled);
+
+  /// 同步 ref 与 state: 同值 setState 会被 React 忽略, 故高频 scroll 事件无额外渲染
+  const markUserScroll = useCallback((value: boolean) => {
+    userScrolledRef.current = value;
+    setDetached(value);
+  }, []);
 
   useEffect(() => {
     enabledRef.current = enabled;
@@ -124,17 +138,27 @@ export function useAutoScrollBottom(
       // 自身写入的 scroll 事件偏差在容差内; 超出 = 用户正在接管
       if (Math.abs(el.scrollTop - lastProgrammaticRef.current) > 1) {
         stopLoop();
-        userScrolledRef.current = !isAtBottom(el);
+        markUserScroll(!isAtBottom(el));
       }
       return;
     }
-    userScrolledRef.current = !isAtBottom(el);
-  }, [getEl, stopLoop]);
+    markUserScroll(!isAtBottom(el));
+  }, [getEl, stopLoop, markUserScroll]);
 
   const resetUserScroll = useCallback(() => {
     stopLoop();
-    userScrolledRef.current = false;
-  }, [stopLoop]);
+    markUserScroll(false);
+  }, [stopLoop, markUserScroll]);
 
-  return { userScrolledRef, scheduleToBottom, handleScroll, resetUserScroll };
+  const jumpToLatest = useCallback(() => {
+    stopLoop();
+    markUserScroll(false);
+    const el = getEl();
+    if (!el) return;
+    // 一次写完 scrollTop 而非分帧追赶: 脱离读数可能跨整个环形缓冲 (数十万行),
+    // 指数逼近在途中会不断被新数据推远, 用户永远到不了最新
+    snapTo(el, Math.max(0, el.scrollHeight - el.clientHeight));
+  }, [getEl, markUserScroll, snapTo, stopLoop]);
+
+  return { userScrolledRef, detached, scheduleToBottom, handleScroll, resetUserScroll, jumpToLatest };
 }

@@ -66,7 +66,8 @@ interface Props {
   connState: RawDataConnState | null;
   selectionCount: number;
   copyFeedback: boolean;
-  userScrolledRef: React.MutableRefObject<boolean>;
+  /// 已脱离最新数据 (用户上滚) — 响应式标记, 自动滚动按钮据此显示非激活态
+  detached: boolean;
   lang: Lang;
   sourceLabel: (id: string) => string;
   // setters
@@ -76,6 +77,8 @@ interface Props {
   onSearchTermChange: (v: string) => void;
   onChannelChange: (v: string) => void;
   onAutoScrollChange: (v: boolean) => void;
+  /// 用户主动回到底部语义 (点自动滚动按钮时清除脱离标记)
+  onResetUserScroll: () => void;
   onShowTimestampChange: (v: boolean) => void;
   onShowSettingsChange: (v: boolean) => void;
   onClear: () => void;
@@ -104,7 +107,7 @@ export function RawDataViewHeader({
   connState,
   selectionCount,
   copyFeedback,
-  userScrolledRef,
+  detached,
   lang,
   sourceLabel,
   onGroupingChange,
@@ -113,6 +116,7 @@ export function RawDataViewHeader({
   onSearchTermChange,
   onChannelChange,
   onAutoScrollChange,
+  onResetUserScroll,
   onShowTimestampChange,
   onShowSettingsChange,
   onClear,
@@ -278,11 +282,13 @@ export function RawDataViewHeader({
           <Clock size={14} />
         </button>
         <button
-          className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer ${autoScroll && !userScrolledRef.current ? 'text-text-bright bg-bg-hover' : ''}`}
+          className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer ${autoScroll && !detached ? 'text-text-bright bg-bg-hover' : ''}`}
           title={t(lang, 'autoScroll')}
           onClick={() => {
-            onAutoScrollChange(!autoScroll);
-            userScrolledRef.current = false;
+            const next = !autoScroll;
+            onAutoScrollChange(next);
+            // 打开自动滚动即恢复跟随; 关闭时保留脱离状态 — 视口仍不在最新, 按钮应继续显示
+            if (next) onResetUserScroll();
           }}
         >
           <ArrowDown size={14} />

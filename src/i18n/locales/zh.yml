@@ -308,6 +308,7 @@ rawDataDirectionRx: 接收
 rawDataDirectionTx: 发送
 rawDataWrappedContinuation: 折行续行 (超过单行上限)
 rawDataSearchPlaceholder: 搜索…
+rawDataBackToLatest: 回到最新数据
 displayOptions: 显示选项
 terminalOptions: 终端
 localEcho: 发送后本地回显

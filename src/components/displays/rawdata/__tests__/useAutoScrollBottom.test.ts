@@ -177,4 +177,84 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
     rerender({ enabled: false });
     expect(pendingCount()).toBe(0);
   });
+
+  it('detached 是上滚标记的响应式镜像 (供"回到最新"按钮显示)', () => {
+    const el = fakeEl(400, 500, 100); // 恰在底部
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    expect(result.current.detached).toBe(false);
+
+    act(() => {
+      el.scrollTop = 100;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(true);
+    expect(result.current.userScrolledRef.current).toBe(true);
+
+    // 用户自己滚回底部 → 标记与按钮同时熄灭
+    act(() => {
+      el.scrollTop = 400;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(false);
+    expect(result.current.userScrolledRef.current).toBe(false);
+
+    // 主动复位 (清空/切通道) 同样清掉按钮
+    act(() => {
+      el.scrollTop = 0;
+      result.current.handleScroll();
+    });
+    expect(result.current.detached).toBe(true);
+    act(() => {
+      result.current.resetUserScroll();
+    });
+    expect(result.current.detached).toBe(false);
+  });
+
+  it('jumpToLatest: 瞬时跳回最新并恢复跟随 (脱离期间不追赶)', () => {
+    const el = fakeEl(0, 100_000, 100);
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+
+    act(() => {
+      result.current.handleScroll(); // 远离底部 → 脱离
+    });
+    expect(result.current.detached).toBe(true);
+
+    // 脱离状态下数据帧不得把视口拽走
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(0);
+    expect(el.scrollTop).toBe(0);
+
+    act(() => {
+      result.current.jumpToLatest();
+    });
+    // 跨十万像素一次写完: 分帧追赶会被持续到达的新数据不断推远
+    expect(el.scrollTop).toBe(99_900);
+    expect(result.current.detached).toBe(false);
+    expect(result.current.userScrolledRef.current).toBe(false);
+    expect(pendingCount()).toBe(0);
+
+    // 恢复跟随后新数据可再次追底
+    el.scrollHeight = 100_200;
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(1);
+  });
+
+  it('jumpToLatest 取消进行中的追底动画', () => {
+    const el = fakeEl(0, 250, 100);
+    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    act(() => {
+      result.current.scheduleToBottom();
+    });
+    expect(pendingCount()).toBe(1);
+
+    act(() => {
+      result.current.jumpToLatest();
+    });
+    expect(pendingCount()).toBe(0);
+    expect(el.scrollTop).toBe(150);
+  });
 });

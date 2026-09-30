@@ -20,6 +20,7 @@ import { RawDataViewTerminal } from './RawDataViewTerminal';
 import { RawDataViewNumericContent } from './RawDataViewNumericContent';
 import { RawDataViewSendPanel } from './RawDataViewSendPanel';
 import { RawDataViewSettings } from './RawDataViewSettings';
+import { RawDataBackToLatest } from './RawDataBackToLatest';
 import { getRawDataViewPrefs } from '../../../lib/buffers/rawDataViewStore';
 /// 原始数据显示 — Grid/Line/终端 × HEX/ASCII 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
 /// 纯端口制: 每张卡片独立的输入选择 (存 RawDataConfig.selectedInput), 选择器只列该卡片
@@ -148,7 +149,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     if (isStr) return strScrollRef.current;
     return parentRef.current;
   }, [isNum, isStr]);
-  const { userScrolledRef, scheduleToBottom, handleScroll, resetUserScroll } = useAutoScrollBottom(autoScroll, getScrollEl);
+  const { detached, scheduleToBottom, handleScroll, resetUserScroll, jumpToLatest } =
+    useAutoScrollBottom(autoScroll, getScrollEl);
 
   useEffect(() => {
     clearSelection();
@@ -166,8 +168,11 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         : modeCount;
   useEffect(() => {
     if (activeCount === 0) return;
+    // 不跟随时容器不滚动 → 没有 scroll 事件, 新数据把视口推离最新后需主动刷新脱离状态
+    // (跟随中不重算: 追底动画尚未收敛时会被误判为用户上滚, 反而打断跟随)
+    if (!autoScroll) handleScroll();
     scheduleToBottom();
-  }, [activeCount, termVersion, scheduleToBottom]);
+  }, [activeCount, termVersion, autoScroll, handleScroll, scheduleToBottom]);
 
   const handleClear = () => {
     if (isStr) {
@@ -330,6 +335,14 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       ? renderValueContent(strScrollRef, filteredStringRows)
       : renderByteContent;
 
+  // 内容视口 — 相对定位容器承载右下角"回到最新"浮层 (相对内容区而非整卡, 不被发送面板挤走)
+  const contentViewport = (
+    <div className="relative flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+      {channelContent}
+      {detached && <RawDataBackToLatest lang={lang} onClick={jumpToLatest} />}
+    </div>
+  );
+
   // 视图内设置表单 (hex 颜色/发送面板位置/时间戳/偏移/终端选项), 外层容器随布局不同
   const settingsForm = (
     <RawDataViewSettings
@@ -384,7 +397,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         channelOptions={channelOptions}
         selectionCount={selection.selected.size}
         copyFeedback={copyFeedback}
-        userScrolledRef={userScrolledRef}
+        detached={detached}
         lang={lang}
         sourceLabel={sourceLabel}
         connState={viewConnState}
@@ -394,6 +407,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         onSearchTermChange={setSearchTerm}
         onChannelChange={onChannelChange}
         onAutoScrollChange={setAutoScroll}
+        onResetUserScroll={resetUserScroll}
         onShowTimestampChange={setShowTimestamp}
         onShowSettingsChange={setShowSettings}
         onClear={handleClear}
@@ -404,7 +418,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       <div className="flex-1 flex overflow-hidden min-h-0">
         {sendPanelMode === 'separate' ? (
           <>
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">{channelContent}</div>
+            {contentViewport}
             <div className="w-[220px] shrink-0 border-l border-border bg-bg-sidebar flex flex-col overflow-hidden">
               {showSettings && <div className="flex-1 overflow-y-auto p-3">{settingsForm}</div>}
               <div className="border-t border-border p-2 flex flex-col gap-1.5">{sendForm(true)}</div>
@@ -412,7 +426,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
           </>
         ) : (
           <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {channelContent}
+            {contentViewport}
             {showSettings && (
               <div className="border-t border-border p-3 bg-bg-sidebar overflow-y-auto max-h-[180px]">
                 {settingsForm}

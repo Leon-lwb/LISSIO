@@ -308,6 +308,7 @@ rawDataDirectionRx: RX
 rawDataDirectionTx: TX
 rawDataWrappedContinuation: Wrapped continuation (row limit)
 rawDataSearchPlaceholder: Search…
+rawDataBackToLatest: Back to latest
 displayOptions: Display
 terminalOptions: Terminal
 localEcho: Local echo after send

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { RawDataBuffer, RAWDATA_LINE_MAX_BYTES } from '../dataBuffer';
+import { RAWDATA_BYTES_PER_ROW, RawDataBuffer, RAWDATA_LINE_MAX_BYTES } from '../dataBuffer';
 import type { RawDataBatch } from '../../../types';
 
 vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
@@ -49,6 +49,81 @@ function isCompleteUtf8(bytes: readonly number[]): boolean {
   }
   return remaining === 0;
 }
+
+describe('RawDataBuffer 网格行 (绝对流 16 字节对齐)', () => {
+  it('未回绕时行起点仍从 0 开始 (逐字节语义不变)', () => {
+    const buffer = push([Array.from({ length: 20 }, (_, i) => i)]);
+
+    expect(buffer.lineCount).toBe(2);
+    expect(buffer.getLine(0).offset).toBe(0);
+    expect(Array.from(buffer.getLine(0).bytes)).toEqual(
+      Array.from({ length: RAWDATA_BYTES_PER_ROW }, (_, i) => i)
+    );
+    expect(buffer.getLine(1).offset).toBe(RAWDATA_BYTES_PER_ROW);
+    expect(Array.from(buffer.getLine(1).bytes)).toEqual([16, 17, 18, 19]);
+  });
+
+  it('回绕后行边界对齐绝对流, 逐字节推进时已写满的行内容不再变化', () => {
+    const capacity = 256;
+    const stream = Array.from({ length: 400 }, (_, i) => i & 0xff);
+    const buffer = new RawDataBuffer(capacity);
+    const seen = new Map<number, number[]>();
+
+    for (const byte of stream) {
+      buffer.pushBatch(batch([byte]));
+      const retainedBase = buffer.writtenTotal - buffer.storedBytes;
+
+      // 容量为行宽整数倍: 回绕后行数恒定, 视口高度不随每字节抖动
+      if (buffer.writtenTotal >= capacity) {
+        expect(buffer.lineCount).toBe(capacity / RAWDATA_BYTES_PER_ROW);
+      }
+
+      for (let i = 0; i < buffer.lineCount; i++) {
+        const row = buffer.getLine(i);
+        // hexdump 语义: 行起点在绝对流上对齐, 否则每写入 1 字节整屏分列都会错位一列
+        expect(row.offset % RAWDATA_BYTES_PER_ROW).toBe(0);
+        // 行内容就是该绝对偏移处的真实字节 (越窗读取会在这里暴露)
+        expect(Array.from(row.bytes)).toEqual(stream.slice(row.offset, row.offset + row.bytes.length));
+        // 行窗口必须落在保留区间内
+        expect(row.offset).toBeGreaterThanOrEqual(retainedBase);
+        expect(row.offset + row.bytes.length).toBeLessThanOrEqual(buffer.writtenTotal);
+        // 已写满的行是最终内容, 后续写入不得改变它 (末行仍在增长)
+        if (row.bytes.length === RAWDATA_BYTES_PER_ROW) {
+          const previous = seen.get(row.offset);
+          if (previous) expect(Array.from(row.bytes)).toEqual(previous);
+          seen.set(row.offset, Array.from(row.bytes));
+        }
+      }
+    }
+  });
+
+  it('容量不足一整行时退回窗口起点, 保留字节仍然可见', () => {
+    const buffer = new RawDataBuffer(8);
+    // 15 字节落在同一个 16 字节块内: 对齐点 (16) 超出已写入区间, 不能因此什么都不显示
+    buffer.pushBatch(batch(Array.from({ length: 15 }, (_, i) => i + 1)));
+
+    expect(buffer.lineCount).toBe(1);
+    const row = buffer.getLine(0);
+    expect(row.offset).toBe(7);
+    expect(Array.from(row.bytes)).toEqual([8, 9, 10, 11, 12, 13, 14, 15]);
+  });
+
+  it('行起点对齐时仍保留完整的尾部行 (数据不丢)', () => {
+    const capacity = 48;
+    const buffer = new RawDataBuffer(capacity);
+    const stream = Array.from({ length: 120 }, (_, i) => (i * 7) & 0xff);
+    for (const byte of stream) buffer.pushBatch(batch([byte]));
+
+    const rows = Array.from({ length: buffer.lineCount }, (_, i) => buffer.getLine(i));
+    // 覆盖 [gridBaseOffset, writtenTotal): 除窗口起点到对齐点之间的残字节外无空洞
+    expect(rows[0].offset).toBe(buffer.gridBaseOffset);
+    const tail = rows[rows.length - 1];
+    expect(tail.offset + tail.bytes.length).toBe(buffer.writtenTotal);
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].offset).toBe(rows[i - 1].offset + rows[i - 1].bytes.length);
+    }
+  });
+});
 
 describe('RawDataBuffer 行索引 (换行切分)', () => {
   it('splits on 0x0A with the newline kept at the end of the row', () => {
