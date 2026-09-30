@@ -2,7 +2,7 @@
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 约定。
 
-## [Unreleased]
+## [0.7.2] - 2026-10-01 (pre-release)
 
 ### 变更
 
