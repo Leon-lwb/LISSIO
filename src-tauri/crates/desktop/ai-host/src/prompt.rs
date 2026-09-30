@@ -141,19 +141,11 @@ pub fn compose_system_prompt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    fn temp_dir() -> PathBuf {
-        let suffix = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("当前时间")
-            .as_nanos();
-        std::env::temp_dir().join(format!("lissio-ai-prompt-{}-{suffix}", std::process::id()))
-    }
+    use crate::test_support::unique_temp_path;
 
     #[test]
     fn creates_once_and_reads_edits_on_each_turn() {
-        let dir = temp_dir();
+        let dir = unique_temp_path("lissio-ai-prompt");
         let path = prompt_path(&dir);
         let initial = load_prompt(&dir).expect("首次创建并读取");
         assert!(initial.contains("行动范式"));
@@ -167,7 +159,7 @@ mod tests {
 
     #[test]
     fn read_error_names_the_prompt_file() {
-        let dir = temp_dir();
+        let dir = unique_temp_path("lissio-ai-prompt");
         fs::create_dir_all(&dir).unwrap();
         fs::write(prompt_path(&dir), [0xff]).unwrap();
         let error = load_prompt(&dir).expect_err("非 UTF-8 文件应报错");
@@ -177,7 +169,7 @@ mod tests {
 
     #[test]
     fn whitespace_only_prompt_is_visible_error() {
-        let dir = temp_dir();
+        let dir = unique_temp_path("lissio-ai-prompt");
         fs::create_dir_all(&dir).unwrap();
         fs::write(prompt_path(&dir), " \n\t ").unwrap();
         let error = load_prompt(&dir).expect_err("空提示词不能发送");

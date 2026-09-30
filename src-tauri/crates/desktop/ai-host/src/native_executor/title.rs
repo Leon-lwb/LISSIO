@@ -105,17 +105,11 @@ impl ToolExecutor for ConversationTitleExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::unique_temp_path;
 
     #[tokio::test]
     async fn title_tool_is_first_turn_only_and_preserves_manual_rename() {
-        let dir = std::env::temp_dir().join(format!(
-            "lissio-title-tool-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        let dir = unique_temp_path("lissio-title-tool");
         let sessions = Arc::new(SessionStore::empty(&dir));
         let first = sessions.create("新会话").unwrap();
         let executor = ConversationTitleExecutor::new(

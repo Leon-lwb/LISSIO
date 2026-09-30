@@ -369,14 +369,7 @@ mod tests {
     #[cfg(debug_assertions)]
     #[test]
     fn debug_env_reads_provider_key_without_keyring_and_is_read_only() {
-        let path = std::env::temp_dir().join(format!(
-            "lissio-dev-secret-{}-{}",
-            std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
-        ));
+        let path = crate::test_support::unique_temp_path("lissio-dev-secret");
         std::fs::write(
             &path,
             "# local keys\nexport LISSIO_AI_API_KEY_OPENAI='test-key'\nLISSIO_AI_API_KEY_ANTHROPIC=other\n",

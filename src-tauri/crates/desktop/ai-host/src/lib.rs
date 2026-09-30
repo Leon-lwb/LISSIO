@@ -5,6 +5,8 @@ mod prompt;
 #[cfg(test)]
 mod prompt_integration_tests;
 mod secret;
+#[cfg(test)]
+mod test_support;
 
 use std::path::PathBuf;
 use std::sync::Arc;

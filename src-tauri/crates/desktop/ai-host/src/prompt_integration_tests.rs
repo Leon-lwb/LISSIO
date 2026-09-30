@@ -1,18 +1,11 @@
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::*;
+use crate::test_support::unique_temp_path;
 
 #[tokio::test]
 async fn invalid_prompt_does_not_append_user_turn() {
-    let suffix = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("当前时间")
-        .as_nanos();
-    let dir = std::env::temp_dir().join(format!(
-        "lissio-ai-turn-prompt-{}-{suffix}",
-        std::process::id()
-    ));
+    let dir = unique_temp_path("lissio-ai-turn-prompt");
     let host = AiHost::new(
         dir.clone(),
         Toolbox::from_state(&app::AppState::new()),
