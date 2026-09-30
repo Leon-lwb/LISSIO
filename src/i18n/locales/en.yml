@@ -1659,6 +1659,7 @@ deviceTreeRemove: Delete subtree
 deviceTreeConfigure: Node configuration
 deviceTreeSelect: Select a node to edit its configuration
 schemaUnsupported: This schema uses unsupported form fields. Use the JSON editor instead.
+schemaValueUnset: Not set
 deviceTreeReconnect: Changing configuration or topology closes the device. Reconnect to apply your changes.
 deviceTreeCanvasNode: This node belongs to the device through a canvas connection. Use the button below to edit it.
 deviceTreeEditCanvas: Open canvas node properties

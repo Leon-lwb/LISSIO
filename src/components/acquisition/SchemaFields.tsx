@@ -86,17 +86,25 @@ export function SchemaFields(props: SchemaFieldsProps) {
   }
 
   if (schema.enum) {
+    // 当前值不在候选里 (配置缺字段/形状不符) 时**显式**渲染未设置项:
+    // 否则浏览器静默回落到第一个 option — 用户看到的值与真实配置不符,
+    // 且「选中当前显示值」不触发 change (必须先选别的再选回来)。
+    const current = optionText(value);
+    const matched = schema.enum.some((candidate) => optionText(candidate) === current);
     return (
       <select
         id={path}
         className="form-select"
         disabled={disabled}
-        value={optionText(value)}
+        value={matched ? current : ''}
         onChange={(event) => {
           const selected = schema.enum?.find((candidate) => optionText(candidate) === event.target.value);
           onChange(selected);
         }}
       >
+        {!matched && (
+          <option value="" disabled>{t(lang, 'schemaValueUnset')}</option>
+        )}
         {schema.enum.map((option) => {
           const raw = optionText(option);
           return <option key={raw} value={raw}>{schemaEnumLabel(lang, raw) ?? raw}</option>;
@@ -128,6 +136,8 @@ export function SchemaFields(props: SchemaFieldsProps) {
         min={schema.minimum}
         max={schema.maximum}
         value={typeof value === 'number' ? value : null}
+        // 配置缺该字段时输入框为空 — 用 schema 默认值做占位提示, 不静默写入
+        placeholder={scalarPlaceholder(schema.default)}
         onCommit={onChange}
       />
     );
@@ -140,9 +150,16 @@ export function SchemaFields(props: SchemaFieldsProps) {
       className="form-input"
       disabled={disabled}
       value={typeof value === 'string' ? value : ''}
+      placeholder={scalarPlaceholder(schema.default)}
       onCommit={onChange}
     />
   );
+}
+
+/// schema 默认值的占位提示 — 仅标量有意义 (对象/数组/空值返回 undefined)
+function scalarPlaceholder(value: JsonValue | undefined): string | undefined {
+  if (value == null || typeof value === 'object') return undefined;
+  return String(value);
 }
 
 function asHints(value: JsonValue | undefined): Record<string, Record<string, unknown>> | undefined {

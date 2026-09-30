@@ -85,6 +85,26 @@ export function tryNodeDocument(node: Node): NodeDocumentOutcome {
   }
 }
 
+/// 设备节点配置负载 — 当前格式是**扁平驱动参数** (`{ port_name, baud_rate, … }`),
+/// 与能力面板消费的 `configSchema` 属性名、驱动 `validate` 收到的 payload 同层。
+///
+/// v0.7.0 的 prepare 曾把整份 `TransportConfig` 信封 (`{ kind, params }`) 写进
+/// `NodeDecl.config`: 属性面板按 schema 属性名读不到任何字段 (整页空值/首选项,
+/// 且「选中当前显示值」不触发 change — 必须先选别的再选回来), 驱动 `validate`
+/// 也因缺 `port_name`/`baud_rate` 等字段失败 (设备连不上)。
+///
+/// 这类文档的负载有两处来源: `params` (默认值) 与信封顶层 (发现到的端口补丁、
+/// 以及面板按扁平 schema 写回的用户编辑)。这里在唯一的 wire→画布入口合成一次,
+/// 顶层键覆盖 `params` — 保留用户已改的值与发现的端口; 首次图同步即把修正后的
+/// 负载写回持久化文档 (同一格式内的纠错, 不是旧版本格式迁移)。
+function devicePayload(config: unknown): unknown {
+  if (typeof config !== 'object' || config === null || Array.isArray(config)) return config;
+  const { kind, params, ...topLevel } = config as { kind?: unknown; params?: unknown };
+  if (typeof kind !== 'string') return config;
+  if (params === null || typeof params !== 'object' || Array.isArray(params)) return config;
+  return { ...params as Record<string, unknown>, ...topLevel };
+}
+
 export function canvasNode(doc: NodeDocument, previous?: Node): Node {
   const base = {
     id: doc.id,
@@ -100,7 +120,7 @@ export function canvasNode(doc: NodeDocument, previous?: Node): Node {
       type: 'acquisition',
       data: {
         ...base.data,
-        node: { ...doc.config.node, id: doc.id, name: doc.label },
+        node: { ...doc.config.node, id: doc.id, name: doc.label, config: devicePayload(doc.config.node.config) },
         card: previous?.data.card,
         ports: previous?.data.ports,
       },

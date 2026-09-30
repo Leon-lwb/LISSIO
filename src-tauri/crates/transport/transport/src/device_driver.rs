@@ -101,10 +101,17 @@ impl NodeDriver for ByteDeviceDriver {
         self.factory.manifest().display_name.clone()
     }
 
-    /// 创建默认配置 — TransportConfig 序列化为 { kind, params }。
+    /// 创建默认配置 — 驱动负载, 即 `TransportConfig` 的 `params` 子对象 (扁平参数)。
     /// 后端工厂在 prepare 时按 driver 选择, 不从前端白名单查表。
+    ///
+    /// 文档里的 `NodeDecl.config`、面板消费的 `config_schema` 属性名,
+    /// 以及 [`ByteDeviceFactory::config`] 收到的 payload 是同一层 (扁平参数)。
+    /// 这里若下发 `{ kind, params }` 信封, 属性面板按 schema 属性名读不到任何字段
+    /// (整页显示空值/首选项), 且 `validate` 因缺 `port_name`/`baud_rate` 等字段
+    /// 失败 —— 设备无法连接。
     fn default_config(&self, _node_id: &str) -> Option<Value> {
-        serde_json::to_value(self.factory.defaults()).ok()
+        let envelope = serde_json::to_value(self.factory.defaults()).ok()?;
+        envelope.get("params").cloned()
     }
 
     fn child_policy(&self) -> ChildPolicy {
