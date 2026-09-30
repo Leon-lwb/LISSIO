@@ -156,7 +156,14 @@ pub fn spawn(
                 // 但不改变已经生成的相位历史。
                 sample_time_sec += sample_dt - previous_dt;
             }
+            // 链路热更新必须优先于本轮发送: 截止时刻与更新同时就绪时, 非偏置的
+            // select 会随机选分支, 可能用旧 link 再发一批数据, 订阅方就会先看到
+            // 旧格式 (例如协议子节点已声明 FireWater 却先收到 RawData 二进制)。
             tokio::select! {
+                biased;
+                changed = runtime_rx.changed() => {
+                    if changed.is_err() { break; }
+                }
                 () = tokio::time::sleep_until(next_deadline) => {
                     // 每轮恒定批量；保留截止时间使迟到批次逐轮补齐。
                     next_deadline += msg_interval;
@@ -176,9 +183,6 @@ pub fn spawn(
                     generated_messages += 1;
                     generated_bytes = generated_bytes.saturating_add(data.len() as u64);
                     let _ = data_tx_gen.send(ByteMessage::from_device(data));
-                }
-                changed = runtime_rx.changed() => {
-                    if changed.is_err() { break; }
                 }
                 data = write_rx.recv() => {
                     // 写入由 TransportHandle::send 统一回环到 data_tx 广播,
