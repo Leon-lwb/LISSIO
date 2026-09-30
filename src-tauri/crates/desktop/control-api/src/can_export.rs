@@ -9,11 +9,11 @@
 use can::CanLoadSnapshot;
 
 /// 将 UNIX 秒数转换为本地时间组件 (年月日时分秒)
-/// 简化实现, 不依赖 chrono — 假设本地时区为系统设置的时区
+/// 简化实现, 不依赖 chrono — 时区取自操作系统当前设置
 #[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)] // unix 秒值域远小于 c_long 上限, tm 字段均为非负小整数
 #[must_use]
 pub fn secs_to_local_components(secs: u64) -> (u32, u32, u32, u32, u32, u32) {
-    // 用 libc localtime_r 获取本地时间 (跨平台)
+    // 用 libc localtime_r 获取本地时间
     #[cfg(unix)]
     {
         use std::os::raw::{c_char, c_int, c_long};
@@ -62,51 +62,128 @@ pub fn secs_to_local_components(secs: u64) -> (u32, u32, u32, u32, u32, u32) {
             )
         }
     }
-    #[cfg(not(unix))]
+    // Windows 没有 localtime_r, 用 Win32 时区 API 求含夏令时的本地时间
+    #[cfg(target_os = "windows")]
     {
-        // 非 Unix 简化回退: 用 UTC
-        let days = secs / 86400;
-        let sec_of_day = secs % 86400;
-        let hh = (sec_of_day / 3600) as u32;
-        let min = ((sec_of_day % 3600) / 60) as u32;
-        let ss = (sec_of_day % 60) as u32;
-        // 简化日期计算 (从 1970-01-01 开始)
-        let mut year = 1970u32;
-        let mut remaining_days = days as u32;
-        loop {
-            let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-            let days_in_year = if leap { 366 } else { 365 };
-            if remaining_days < days_in_year {
-                break;
-            }
-            remaining_days -= days_in_year;
-            year += 1;
-        }
-        let leap = (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
-        let days_per_month = [
-            31,
-            if leap { 29 } else { 28 },
-            31,
-            30,
-            31,
-            30,
-            31,
-            31,
-            30,
-            31,
-            30,
-            31,
-        ];
-        let mut month = 1u32;
-        for &dim in &days_per_month {
-            if remaining_days < dim {
-                break;
-            }
-            remaining_days -= dim;
-            month += 1;
-        }
-        (year, month, remaining_days + 1, hh, min, ss)
+        windows_local_components(secs).unwrap_or_else(|| utc_components(secs))
     }
+    // 其余平台既无 localtime_r 也无 Win32 API, 退回 UTC
+    #[cfg(not(any(unix, target_os = "windows")))]
+    {
+        utc_components(secs)
+    }
+}
+
+/// Windows: 用 Win32 时区 API 把 UNIX 秒数换算成**本地**时间 (含夏令时)。
+///
+/// `FileTimeToSystemTime` 先把 FILETIME 拆成 UTC 的 `SYSTEMTIME`,
+/// `SystemTimeToTzSpecificLocalTime` 再按当前系统时区转成本地时间。
+/// 任一步失败返回 `None`, 由调用方退回 UTC 计算。
+#[cfg(target_os = "windows")]
+fn windows_local_components(secs: u64) -> Option<(u32, u32, u32, u32, u32, u32)> {
+    use windows_sys::Win32::Foundation::FILETIME;
+    use windows_sys::Win32::System::Time::{FileTimeToSystemTime, SystemTimeToTzSpecificLocalTime};
+
+    /// 1601-01-01 到 1970-01-01 的秒数 (FILETIME 与 UNIX 的纪元差)。
+    const EPOCH_DIFF_SECS: u64 = 11_644_473_600;
+    /// FILETIME 以 100ns 为单位。
+    const TICKS_PER_SEC: u64 = 10_000_000;
+
+    let ticks = secs
+        .checked_add(EPOCH_DIFF_SECS)?
+        .checked_mul(TICKS_PER_SEC)?;
+    let utc_file_time = FILETIME {
+        dwLowDateTime: u32::try_from(ticks & 0xffff_ffff).ok()?,
+        dwHighDateTime: u32::try_from(ticks >> 32).ok()?,
+    };
+
+    let mut utc = zeroed_system_time();
+    // SAFETY: 两个参数都指向本函数内已初始化的有效结构。
+    if unsafe { FileTimeToSystemTime(&raw const utc_file_time, &raw mut utc) } == 0 {
+        return None;
+    }
+
+    let mut local = zeroed_system_time();
+    // SAFETY: null 表示使用当前系统时区; utc/local 均为本函数内的有效结构。
+    if unsafe { SystemTimeToTzSpecificLocalTime(std::ptr::null(), &raw const utc, &raw mut local) }
+        == 0
+    {
+        return None;
+    }
+
+    Some((
+        u32::from(local.wYear),
+        u32::from(local.wMonth),
+        u32::from(local.wDay),
+        u32::from(local.wHour),
+        u32::from(local.wMinute),
+        u32::from(local.wSecond),
+    ))
+}
+
+/// `SYSTEMTIME` 的零值起点 — Win32 只用它写出结果。
+#[cfg(target_os = "windows")]
+const fn zeroed_system_time() -> windows_sys::Win32::Foundation::SYSTEMTIME {
+    windows_sys::Win32::Foundation::SYSTEMTIME {
+        wYear: 0,
+        wMonth: 0,
+        wDayOfWeek: 0,
+        wDay: 0,
+        wHour: 0,
+        wMinute: 0,
+        wSecond: 0,
+        wMilliseconds: 0,
+    }
+}
+
+/// 无时区 API 可用时的 UTC 回退 (Win32 换算失败也走这里)。
+#[cfg(not(unix))]
+#[allow(clippy::cast_possible_truncation)] // 日/时/分/秒均为有界小整数, 不会截断
+fn utc_components(secs: u64) -> (u32, u32, u32, u32, u32, u32) {
+    let days = secs / 86_400;
+    let sec_of_day = secs % 86_400;
+    let hour = (sec_of_day / 3_600) as u32;
+    let minute = ((sec_of_day % 3_600) / 60) as u32;
+    let second = (sec_of_day % 60) as u32;
+    // 简化日期计算 (从 1970-01-01 开始)
+    let mut year = 1970u32;
+    let mut remaining_days = days as u32;
+    loop {
+        let days_in_year = if is_leap_year(year) { 366 } else { 365 };
+        if remaining_days < days_in_year {
+            break;
+        }
+        remaining_days -= days_in_year;
+        year += 1;
+    }
+    let days_per_month = [
+        31,
+        if is_leap_year(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    let mut month = 1u32;
+    for &days_in_month in &days_per_month {
+        if remaining_days < days_in_month {
+            break;
+        }
+        remaining_days -= days_in_month;
+        month += 1;
+    }
+    (year, month, remaining_days + 1, hour, minute, second)
+}
+
+#[cfg(not(unix))]
+const fn is_leap_year(year: u32) -> bool {
+    (year.is_multiple_of(4) && !year.is_multiple_of(100)) || year.is_multiple_of(400)
 }
 
 /// 默认导出文件名 `vofa-can-load-YYYYMMDD-HHMMSS.csv`。

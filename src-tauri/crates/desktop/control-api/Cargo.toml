@@ -43,6 +43,10 @@ petgraph = { workspace = true }
 # graph_hir 测试构造 Transport 节点 (dev-only, 架构门禁要求非生产依赖)
 graph_testkit = { workspace = true }
 
+# CAN 导出时间戳在 Windows 上没有 localtime_r, 改用 Win32 时区 API 求本地时间
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true }
+
 [package.metadata.lissio]
 domain = "desktop"
 layer = 3
