@@ -3335,7 +3335,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "lissio"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "getrandom 0.3.4",
  "lissio-app",
@@ -3369,7 +3369,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-acquisition"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-data-model",
@@ -3387,7 +3387,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-ai-host"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "keyring",
@@ -3411,7 +3411,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-app"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "criterion",
@@ -3448,7 +3448,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-automotive"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -3469,7 +3469,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-automotive-diag"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "libautomotive",
@@ -3491,7 +3491,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-automotive-isotp"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -3512,7 +3512,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-backend-cli"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "clap",
  "env_logger",
@@ -3533,7 +3533,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-backend-host"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-acquisition",
  "lissio-ai-host",
@@ -3563,7 +3563,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-backend-server"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "axum",
  "clap",
@@ -3588,7 +3588,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-buffer-graph"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-data-model",
@@ -3598,7 +3598,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-bus"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "log",
  "parking_lot",
@@ -3608,7 +3608,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-can"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "serde",
@@ -3617,7 +3617,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-can-transport"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -3635,7 +3635,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-chat"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "futures",
@@ -3651,7 +3651,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-chat-session"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-error",
  "lissio-llm",
@@ -3663,7 +3663,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-control-api"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-acquisition",
  "lissio-app",
@@ -3693,7 +3693,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-data-model"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-error",
@@ -3705,7 +3705,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-device-tree"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -3727,7 +3727,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-diagnostic"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -3738,7 +3738,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-error"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3747,7 +3747,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-eval"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-buffer-graph",
@@ -3766,7 +3766,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-evaluator"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -3785,7 +3785,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-events"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "serde",
@@ -3794,7 +3794,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-filter"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -3803,7 +3803,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-flow"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "bytes",
  "serde",
@@ -3813,7 +3813,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-frame-decoder"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-schema-types",
@@ -3822,7 +3822,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-gpu"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "bytemuck",
  "criterion",
@@ -3835,7 +3835,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-graph"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-buffer-graph",
@@ -3855,7 +3855,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-graph-ops"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-acquisition",
@@ -3880,7 +3880,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-graph-testkit"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-buffer-graph",
  "lissio-data-model",
@@ -3894,7 +3894,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-hir"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-buffer-graph",
  "lissio-data-model",
@@ -3908,7 +3908,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-kind"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "lissio-filter",
@@ -3922,7 +3922,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-llm"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "futures",
  "genai",
@@ -3933,7 +3933,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-logic"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "serde",
@@ -3943,7 +3943,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-logic-decoder"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "lissio-logic",
@@ -3952,7 +3952,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-lower"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-filter",
  "lissio-graph-testkit",
@@ -3965,7 +3965,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-mcp-client"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "futures",
  "lissio-error",
@@ -3979,7 +3979,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-mcp-server"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "axum",
  "lissio-app",
@@ -3994,7 +3994,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-measurement"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-spectrum",
  "serde",
@@ -4002,7 +4002,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-menu-shell"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "log",
  "serde",
@@ -4012,7 +4012,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-modbus-adapter"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "criterion",
@@ -4034,7 +4034,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-network"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -4048,7 +4048,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-pipeline"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "criterion",
@@ -4094,7 +4094,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-plane"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-graph-testkit",
  "lissio-hir",
@@ -4105,7 +4105,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-points"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-flow",
  "serde",
@@ -4115,7 +4115,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-protocol"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -4125,7 +4125,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-protocol-can-bridge"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -4134,7 +4134,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-protocol-float"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-data-model",
  "lissio-protocol",
@@ -4142,7 +4142,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-raw-data"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "base64 0.22.1",
  "serde",
@@ -4151,7 +4151,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-recording"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "duckdb",
@@ -4164,7 +4164,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-rpc-api"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-acquisition",
  "lissio-ai-host",
@@ -4203,7 +4203,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-s7-adapter"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -4221,7 +4221,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-schema"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -4237,7 +4237,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-schema-types"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -4250,7 +4250,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-serial"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "core-foundation 0.10.1",
@@ -4269,7 +4269,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-spectrum"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "realfft",
  "rustfft",
@@ -4279,7 +4279,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-stream"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-can",
  "lissio-data-model",
@@ -4297,7 +4297,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-subscription"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "parking_lot",
  "tokio",
@@ -4305,7 +4305,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-transport"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "async-trait",
  "lissio-acquisition",
@@ -4325,7 +4325,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-trigger"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "glob",
@@ -4337,7 +4337,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-update-flow"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "lissio-error",
  "reqwest",
@@ -4349,7 +4349,7 @@ dependencies = [
 
 [[package]]
 name = "lissio-waveform"
-version = "0.7.1"
+version = "0.7.2"
 dependencies = [
  "criterion",
  "lissio-data-model",
