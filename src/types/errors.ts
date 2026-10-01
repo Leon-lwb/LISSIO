@@ -44,6 +44,28 @@ function kindFromMessage(message: string): NodeErrorKind | null {
     : null;
 }
 
+/// 面向用户的错误文案 — `RpcError { kind, message }` / Error / 字符串 统一取 message。
+///
+/// 出口拒绝的是**普通对象**而不是 Error (`lib/rpc/httpTransport.ts` 的 `rpcFailure`
+/// 直接构造 `{ kind, message }`), 因此 `String(e)` 会把结构化错误渲染成
+/// `[object Object]`; 对象分支必须先取 `message`, 缺失才退化为 JSON。
+export function errorText(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object') {
+    const message = (e as { message?: unknown }).message;
+    if (typeof message === 'string') return message;
+  }
+  try {
+    const json = JSON.stringify(e);
+    // JSON.stringify(undefined) 返回 undefined — 不能当成文案
+    if (typeof json === 'string') return json;
+  } catch {
+    // 循环引用等不可序列化的值 — 退化到 String
+  }
+  return String(e);
+}
+
 /// 将 IPC 错误值解析为 NodeError — 任何输入都不抛异常
 export function parseNodeError(e: unknown): NodeError {
   if (e instanceof Error) return { kind: NodeErrorKind.Unknown, message: e.message };
@@ -60,9 +82,5 @@ export function parseNodeError(e: unknown): NodeError {
       return { kind, message: o.message };
     }
   }
-  try {
-    return { kind: NodeErrorKind.Unknown, message: JSON.stringify(e) };
-  } catch {
-    return { kind: NodeErrorKind.Unknown, message: String(e) };
-  }
+  return { kind: NodeErrorKind.Unknown, message: errorText(e) };
 }

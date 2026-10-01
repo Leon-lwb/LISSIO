@@ -9,6 +9,7 @@ import {
   type RecordingHistoryPage,
   type RecordingSessionSummary,
 } from '../lib/tauri/tauri';
+import { errorText } from '../types/errors';
 
 export const RECORDING_HISTORY_PAGE_SIZE = 200;
 const MAX_CACHE_ENTRIES = 24;
@@ -71,6 +72,8 @@ interface RecordingDatabaseState {
   loading: boolean;
   error: string | null;
   warning: string | null;
+  /** 后端健康报告里的非故障提示 (打开时自动重建过数据库) */
+  healthWarning: string | null;
   loadOverview: () => Promise<void>;
   selectSession: (sessionId: string, bindingId?: string | null) => Promise<void>;
   selectBinding: (bindingId: string | null) => void;
@@ -83,6 +86,7 @@ interface RecordingDatabaseState {
   setActiveSession: (sessionId: string) => Promise<void>;
   clearError: () => void;
   clearWarning: () => void;
+  clearHealthWarning: () => void;
 }
 
 export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
@@ -98,6 +102,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
       loading: false,
       error: null,
       warning: null,
+      healthWarning: null,
 
       loadOverview: async () => {
         try {
@@ -105,7 +110,9 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
             api.listRecordingSessionSummaries(),
             api.getRecordingDatabaseInfo(),
           ]);
-          set({ sessions, databaseInfo, error: null });
+          // 健康提示单独取: 查询失败不该让整个面板加载失败
+          const health = await api.getRecordingHealth().catch(() => null);
+          set({ sessions, databaseInfo, healthWarning: health?.warning ?? null, error: null });
           const current = get().selectedSessionId;
           const selected = current && sessions.some((item) => item.session.id === current)
             ? current
@@ -116,7 +123,10 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
             set({ selectedSessionId: null, selectedBindingId: null, bindings: [], history: [] });
           }
         } catch (error) {
-          set({ error: String(error) });
+          // 打不开 / writer 已死时读路径只报「录制不可用」, DuckDB 的原始报错存在
+          // 健康报告里 — 优先展示它, 用户才修得动。
+          const health = await api.getRecordingHealth().catch(() => null);
+          set({ error: health?.failed ?? errorText(error) });
         }
       },
 
@@ -136,7 +146,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
           set({ bindings, selectedBindingId: nextBinding, loading: false });
           await get().loadHistory(true);
         } catch (error) {
-          set({ error: String(error), loading: false });
+          set({ error: errorText(error), loading: false });
         }
       },
 
@@ -183,7 +193,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
             error: null,
           }));
         } catch (error) {
-          set({ error: String(error), loading: false });
+          set({ error: errorText(error), loading: false });
         }
       },
 
@@ -201,7 +211,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
           await get().loadOverview();
           return result;
         } catch (error) {
-          set({ error: String(error) });
+          set({ error: errorText(error) });
           throw error;
         }
       },
@@ -211,7 +221,7 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
           await api.createRecordingSession();
           await get().loadOverview();
         } catch (error) {
-          set({ error: String(error) });
+          set({ error: errorText(error) });
           throw error;
         }
       },
@@ -221,12 +231,14 @@ export const useRecordingDatabaseStore = create<RecordingDatabaseState>()(
           await api.setActiveRecordingSession(sessionId);
           await get().loadOverview();
         } catch (error) {
-          set({ error: String(error) });
+          set({ error: errorText(error) });
           throw error;
         }
       },
 
       clearWarning: () => set({ warning: null }),
+
+      clearHealthWarning: () => set({ healthWarning: null }),
 
       clearError: () => set({ error: null }),
     }),

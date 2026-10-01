@@ -438,6 +438,11 @@ settingsData: 数据
 settingsSerial: 串口默认值
 settingsNotifications: 通知
 settingsPerformance: 性能
+settingRecEnabled: 启用录制数据库
+settingRecEnabledDesc: 关闭后完全不再打开或写入 DuckDB，采集与运行控制不受影响；可随时热更新，已有录制文件与历史一律保留
+recordingDisabledNotice: 录制数据库已在设置中关闭：不写入新数据，关闭期间也不读取历史（文件与历史都已保留），重新开启后即可继续查看。
+recordingDisabledShort: 录制数据库已关闭，不会写入新数据。
+recordingDisabledOpenSettings: 去设置
 settingRecDatabaseDir: 录制数据库目录
 settingRecDatabaseDirDesc: 采集数据 DuckDB 的保存目录（空 = 默认位置）；运行中修改在暂停或下次启动时生效，旧文件保留
 settingRecDefaultDir: 默认位置
@@ -1222,6 +1227,7 @@ recordingDatabaseIncludePayload: 解析数据内容
 recordingDatabaseExport: 导出
 recordingDatabaseExporting: 导出中
 recordingDatabaseDismiss: 关闭
+recordingDatabaseRecovered: 数据库曾损坏, 已自动恢复并继续录制 (原件已保留备份, 悬停查看路径)
 recordingDatabaseSessions: 录制会话
 recordingDatabaseBatches: 批次
 recordingDatabaseChannels: 通道
@@ -1545,6 +1551,10 @@ runPauseHint: 暂停工作区 (保持连接与采集, 数据继续入缓存与�
 runStopHint: 停止工作区 (在途数据直接丢弃且不入缓存; 清空待发送任务, 已有缓存保留)
 runRecordingActive: 录制中
 runRecordingActiveHint: 工作区已暂停, 采集与录制仍在继续写入数据库
+runRecordingDisabled: 录制已关闭
+runRecordingDisabledHint: 录制数据库已在设置中关闭, 采集与运行控制不受影响; 可在「设置 → 数据」重新开启
+runRecordingDropped: 录制丢批 {{count}}
+runRecordingDroppedHint: 磁盘/checkpoint 一时跟不上, 写线程队列打满已丢弃部分批次 — 采集与运行控制不受影响, 但这段录制不完整
 displayFrozen: 非实时
 displayFrozenHint: 工作区未运行, 或该面板已离开最新 — 从暂停恢复时会自动跳到最新
 cmdSendRequiresRun: 工作区未运行 — 手动发送要求运行态, 请先在状态栏启动

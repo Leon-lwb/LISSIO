@@ -221,15 +221,21 @@ export function toCleanupPolicy(d: AppSettings['data']): RecordingCleanupPolicy 
 }
 
 /// 推送录制存储设置到后端并执行一次自动清理 — 启动回放与设置变更共用。
-/// 位置/续写开关在运行中被后端拒绝 (下次启动回放时生效); 清理只作用于
-/// 终态会话 (当前活跃会话始终保留), 与运行状态无冲突。
+/// 总开关 (`recordingEnabled`) 任意运行态都可热更新; 改数据库目录在运行中被
+/// 后端拒绝 (下次暂停/启动生效); 清理只作用于终态会话 (当前活跃会话始终保留)。
 async function runRecordingApply(settings: AppSettings) {
   const data = settings.data;
   try {
-    await api.applyRecordingSettings(data.recordingDatabaseDir, data.continueEmptySession);
+    await api.applyRecordingSettings(
+      data.recordingDatabaseDir,
+      data.continueEmptySession,
+      data.recordingEnabled
+    );
   } catch (e: unknown) {
     console.warn('[settings] 应用录制存储设置失败:', e);
   }
+  // 总开关关闭时没有连接可用, 清理必然失败且没有意义
+  if (!data.recordingEnabled) return;
   const policy = toCleanupPolicy(data);
   const enabled =
     policy.delete_stopped ||

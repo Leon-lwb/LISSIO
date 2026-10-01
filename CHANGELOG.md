@@ -64,6 +64,34 @@
 
 ### 修复
 
+- **工作区运行时右键菜单完全不出**:`ContextMenu` 在捕获阶段监听 window 的 `scroll` 关闭菜单,而运行中的数据面板 (原始数据/CAN/逻辑) 每帧写 `scrollTop` 追随最新 —— 菜单刚打开就被同一帧的滚动事件关掉 (未及绘制),同时 `preventDefault` 已经挡掉原生菜单,表现为"点了右键什么都没发生"
+  - 只有**视口自身**滚动才关闭菜单 (`document` / `documentElement` / `scrollingElement` / `window`);元素级滚动不再影响 — 菜单是 fixed 定位,锚点不随容器滚动移动
+  - 空菜单项的表面不再吃掉右键:原先先 `preventDefault` 再判断列表为空,数据卡片标签栏这类表面右键既不弹自定义菜单、也挡掉原生菜单;现在无菜单项时直接放行,交给父层菜单或原生菜单
+- **历史数据库页面把结构化错误显示成 `[object Object]`**:出口拒绝的是普通对象 `RpcError { kind, message }` 而不是 Error,`recordingDatabaseStore` 用 `String(error)` 格式化后直接渲染到面板错误条
+  - 新增 `errorText`(types/errors) 作为错误文案唯一入口:Error / 字符串 / `{ kind, message }` 统一取 message,无 message 才退化为 JSON;`formatError` 复用同一实现
+  - 同类 `String(error)` 与 `instanceof Error ? message : String(...)` 收敛到 `errorText`:updateStore / aiChatStore / modelCatalogStore / recordingDatabaseStore、BackendConnectionGate、CanFrameList、CanSender、FrameDecoder、波形 detail 缓冲、dataClient、节点文档、AI 工具宿主、AI 错误视图与 RPC 出口兜底
+- **录制背压被当成写入故障,一次瞬态打满就永久停住采集**:写线程队列满时 `Recorder::append` 返回的是 `Backpressure`(正常背压),但 `RecordingHub` 对**任何** append 错误都置 `fault`,而 `data_plane` 每个评估批次后都读 `fault` 并把工作区强制切回 `Stopped`;`fault` 又只在换 recorder 时清除 —— 于是一次队列打满之后,用户每次点「开始」都在一批数据内被打回,界面表现为「只输出几个字符、暂停也解不开,epoch 一路飙升」(实测 Windows 日志 94 次 `recording failure stopped acquisition ... recording queue is full`,epoch 12 → 193)
+  - 新增 `hub::fault` 故障分类:只有**已受理批次落不了盘**(Database/Io/Corrupt/Failed/Closed)才算契约故障;队列打满(`Backpressure`)与图编辑竞态(`Invalid`)返回 `Ok(false)` 并计数,不再冒泡成错误;writer 应答超时(`Timeout`)归「录制不可用」,同样不中断采集
+  - **故障自动恢复**:任一次成功写入即清除 `fault`,瞬态故障不再需要重启应用才能恢复;`RecordingHub::fault()` 返回类型化的 `RecordingFault` 而不是裸 `String`
+  - 写线程队列 256 → 4096 条、DuckDB `checkpoint_threshold` 256 MiB → 1 GiB:256 条缓冲不足一秒突发,Windows 上杀毒扫描或 checkpoint 停顿必然打满
+  - 新增 `RecordingHealth.enabled` / `dropped_batches` / `rejected_batches`;状态栏在暂停态区分「录制中 / 录制丢批 N / 录制已关闭」,丢批不再静默
+  - `hub` 拆出 `fault` / `ingest` / `query` / `state` 四个子模块(原 527 行超出 500 行门禁)
+- **writer 卡住会把调用方永久挂住**(潜在冻结):`Recorder` 的 `set_state` / `flush` / `delete_sessions` / `shutdown` 都是无界 `recv()`/`join()`,而 `hub` 又在持有状态锁时调用它们 —— 一次卡在 DuckDB 调用里的写线程会同时堵死采集热路径(`is_bound`)与运行控制(`apply_run_action`);`rpc-api` 还持 `execution.boundary` 写锁跨 `spawn_blocking` 打开数据库
+  - writer 往返统一有界:投递(`try_send` 重试到截止时刻)与应答(`recv_timeout`)共享一份预算 —— 控制往返 5s、关停 10s、维护(flush / 删除会话)120s;超时返回 `RecordingError::Timeout`,摘除 recorder 并报「不可用」,线程 detach 而不 `join`(句柄随进程回收)
+  - **投递也必须有限**:队列满时原 `send` 会永远阻塞,只给应答加超时仍会在 writer 卡死时把「暂停」挂住 —— 这是冻结症状的最后一条无界路径
+  - `set_state` / `flush` / `sync_bindings` 改为锁外往返:只从锁内取 `Arc<Recorder>`,释放 guard 后再等待 writer,最坏等待有界且不再波及采集
+  - 换 recorder 的 `execution.boundary` 写锁统一走 `control_api::recording::swap_with_boundary`:30s 后必然释放写锁并报错,不再让读锁(评估 / 发送 / 路由)全堵在「打开数据库」上
+  - 新增 `hub::wedge` 回归测试(仅 `cfg(test)` 编译,不新增生产 API):注入永不应答的 writer,断言 `is_bound`/`record` 仍是微秒级、`set_state`/`stop`/`flush` 都在预算内返回 `Timeout`,且只报「不可用」、不置故障
+- **录制数据库被并发实例与阻塞式打开损坏/卡住**:查询、导出、会话检查、历史分页各自 `Connection::open` 一个新实例 —— 多个实例会各自 checkpoint 并互相覆盖,静默抹掉已提交写入;而 `Connection::open` 在 Windows 强制锁下会**阻塞**而不是报错
+  - **单连接纪律**:读路径统一挂在写线程的通道上 (`writer::RecordingReader`,含预算 120s 与 SQL 取消槽),查询 / 导出 / `session_is_empty` / 历史分页 / 库信息 / 绑定列表 / 只读 SQL 全部在**同一个** DuckDB 连接上执行,不再各开实例;写线程自己拿的是**不带读句柄**的副本,结构上不可能自锁;只有构造期与「库已关闭」的维护路径才独占打开
+  - **有界打开**:打开前先对已存在的库文件做 `File::try_lock` 可写性探测(带 50/200/500ms 退避重试),打开本身放进独立线程等 30s —— 被别的进程强制锁住或打开不返回时,启动在有限时间内归「录制不可用」而不是挂住调用方
+  - **打开即校验**:建表后**真读**一遍三张表(`repair::verify_catalog`),catalog 损坏时走既有 `repair::rebuild_database` 自动重建并继续录制;「已重建」经 `RecordingHealth.warning` 这一**非故障**通道外显(绝不进 `failed`/`fault` —— 那会被当成录制契约破坏而停掉采集),录制面板给出提示条
+  - 实例守卫随打开线程存活:即使打开卡住,守卫也持有到该线程结束,窗口内别的实例不会接管同一个文件
+- **新增录制数据库总开关**(`AppSettings.data.recordingEnabled`,默认开,可任意运行态热更新):关闭后不建立任何 DuckDB 连接、不写盘、不读历史(文件与历史一律保留),采集与运行控制完全不受影响 —— Windows 上数据库卡死时的逃生舱
+  - 后端 `RecordingHub::disable` / `disable_at` / `enable`;`is_bound` 在关闭时恒为 false,全部写入热路径无需改动
+  - `settings.json` 读取上移到 `backend-host`(原 `backend-server::settings` 上移并共用),桌面 / server / CLI 三出口启动时回放同一份开关
+  - `apply_recording_settings` 增加 `enabled`:总开关任意运行态可改,只有**改数据库目录**仍要求暂停/停止
+  - 前端设置新增开关、录制面板/视图在关闭时保留入口并给出原因与一键跳转,状态栏显示「录制已关闭」
 - **RawData 面板刷新新数据时整屏闪烁**:自动滚动 (跟随最新) 只在数据帧到达时推进视口,且"落后超过两屏就瞬间跳底"——内置模拟源等高速流下每批新增行数本就超过两屏,于是每次刷新都整屏替换可见内容(实测约 100ms 一次、一次平移 1650–3388px,其间画面完全静止),看起来就是反复闪烁、行内容逐屏跳动
   - 跟随过程一律逐帧连续追赶,只在"追赶已无意义"(落后超过 20000px,即长时间上滚后回到实时)时才瞬时跳底;`回到最新` 仍是一次写完
   - scroll 事件在 WebKit 上异步派发,滞后事件会带着若干帧前的程序化写入值到达:改为比对最近若干次写入历史,不再把自身写入误判成"用户接管"而让跟随半途停住

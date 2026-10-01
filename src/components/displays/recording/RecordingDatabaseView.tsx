@@ -3,9 +3,11 @@ import { Database, Download, FileText, RefreshCw } from 'lucide-react';
 import clsx from 'clsx';
 import { platform } from '../../../lib/platform';
 import { useAppStore } from '../../../store/appStore';
+import { useSettingsStore } from '../../../store/settingsStore';
 import { useRecordingDatabaseStore } from '../../../store/recordingDatabaseStore';
 import { api, type RecordingExportFormat } from '../../../lib/tauri/tauri';
 import { t } from '../../../i18n';
+import { RecordingDisabledNotice } from './RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs, payloadPreview } from './recordingFormat';
 
 const exportFormats: { value: RecordingExportFormat; label: string; extension: string }[] = [
@@ -29,6 +31,8 @@ function stateClass(state: string): string {
 
 export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
   const lang = useAppStore((s) => s.lang);
+  // 数据库总开关 (设置项): 关闭时视图保留, 但明确说明数据为何读不出来
+  const recordingEnabled = useSettingsStore((s) => s.settings.data.recordingEnabled);
   const sessions = useRecordingDatabaseStore((s) => s.sessions);
   const databaseInfo = useRecordingDatabaseStore((s) => s.databaseInfo);
   const selectedSessionId = useRecordingDatabaseStore((s) => s.selectedSessionId);
@@ -38,6 +42,10 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
   const history = useRecordingDatabaseStore((s) => s.history);
   const loading = useRecordingDatabaseStore((s) => s.loading);
   const error = useRecordingDatabaseStore((s) => s.error);
+  // 打开时触发过自动恢复 (目录重建 / 损坏文件隔离) — 必须在标签页里也看得见,
+  // 否则用户以为历史凭空消失。
+  const healthWarning = useRecordingDatabaseStore((s) => s.healthWarning);
+  const clearHealthWarning = useRecordingDatabaseStore((s) => s.clearHealthWarning);
   const loadOverview = useRecordingDatabaseStore((s) => s.loadOverview);
   const selectSession = useRecordingDatabaseStore((s) => s.selectSession);
   const selectBinding = useRecordingDatabaseStore((s) => s.selectBinding);
@@ -49,10 +57,12 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
+    // 关闭态没有连接可用, 不去撞一条必然失败的查询 (视图已说明数据为何读不出来)。
+    if (!recordingEnabled) return;
     if (sessions.length === 0 && databaseInfo == null) {
       void loadOverview();
     }
-  }, [databaseInfo, loadOverview, sessions.length]);
+  }, [databaseInfo, loadOverview, recordingEnabled, sessions.length]);
 
   const selectedSession = useMemo(
     () => sessions.find((item) => item.session.id === selectedSessionId) ?? null,
@@ -95,6 +105,31 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-bg-panel">
+      {!recordingEnabled && (
+        <div className="border-b border-border-subtle px-3 py-1.5">
+          <RecordingDisabledNotice compact />
+        </div>
+      )}
+      {healthWarning !== null && (
+        <div
+          className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-200"
+          data-testid="recording-recovered-notice-view"
+          title={healthWarning}
+        >
+          <div className="flex items-start gap-1">
+            <span className="min-w-0 flex-1 break-words">
+              {t(lang, 'recordingDatabaseRecovered')}
+            </span>
+            <button
+              type="button"
+              onClick={clearHealthWarning}
+              className="shrink-0 text-amber-100 hover:text-white"
+            >
+              {t(lang, 'recordingDatabaseDismiss')}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex min-h-10 flex-wrap items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-3 py-1.5">
         <Database size={14} className="shrink-0 text-accent" />
         <span className="text-[11px] font-semibold uppercase tracking-wider text-text-primary">

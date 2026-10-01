@@ -1,5 +1,24 @@
 import { describe, expect, test } from 'vitest';
-import { NodeErrorKind, parseNodeError } from '../errors';
+import { NodeErrorKind, errorText, parseNodeError } from '../errors';
+
+describe('errorText', () => {
+  test('RpcError 形状 { kind, message } 取 message — 不是 [object Object]', () => {
+    expect(errorText({ kind: 'Recording', message: '录制数据库已关闭' })).toBe('录制数据库已关闭');
+  });
+
+  test('Error / 字符串原样返回', () => {
+    expect(errorText(new Error('boom'))).toBe('boom');
+    expect(errorText('端口已打开: COM3')).toBe('端口已打开: COM3');
+  });
+
+  test('无 message 的对象退化为 JSON; 不可序列化的值仍返回字符串', () => {
+    expect(errorText({ foo: 1 })).toBe('{"foo":1}');
+    expect(typeof errorText(undefined)).toBe('string');
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    expect(typeof errorText(circular)).toBe('string');
+  });
+});
 
 describe('parseNodeError', () => {
   test('解析后端带标签枚举错误 { kind, message }', () => {

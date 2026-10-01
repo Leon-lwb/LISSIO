@@ -3,6 +3,7 @@
 
 import { createHttpTransport, type HttpTransport, type WebEndpoint } from './httpTransport';
 import { tauriTransport } from './tauriTransport';
+import { errorText } from '../../types/errors';
 import type { SubscribeOptions, Transport } from './types';
 
 const SERVER_STORAGE_KEY = 'lissio.server';
@@ -100,13 +101,13 @@ export const transport: Transport = {
   call: <T>(cmd: string, args?: Record<string, unknown>) => {
     if (hasTauriRuntime() && SHELL_COMMANDS.has(cmd)) return tauriTransport.call<T>(cmd, args);
     try { return current().call<T>(cmd, args); } catch (error) {
-      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      return Promise.reject(error instanceof Error ? error : new Error(errorText(error)));
     }
   },
   listen: <T>(event: string, handler: (payload: T) => void) => {
     if (hasTauriRuntime() && SHELL_EVENTS.has(event)) return tauriTransport.listen(event, handler);
     try { return current().listen(event, handler); } catch (error) {
-      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+      return Promise.reject(error instanceof Error ? error : new Error(errorText(error)));
     }
   },
   eventChannel: <T>() => current().eventChannel<T>(),

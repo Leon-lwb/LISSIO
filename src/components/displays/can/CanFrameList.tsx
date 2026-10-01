@@ -12,6 +12,7 @@ import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelL
 import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
 import type { CanFrame, CanFrameFilter } from '../../../types';
+import { errorText } from '../../../types/errors';
 
 const ROW_HEIGHT = 24;
 
@@ -509,5 +510,5 @@ function parseCanFilterId(input: string): ParsedCanFilterId {
 }
 
 function formatSubscriptionError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return errorText(error);
 }

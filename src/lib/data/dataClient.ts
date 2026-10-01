@@ -1,4 +1,5 @@
 import { transport } from '../rpc';
+import { errorText } from '../../types/errors';
 import { subscribeDisplayTransport } from '../rpc/livePushGate';
 import type { SubscriptionHandle } from '../rpc/types';
 import {
@@ -183,7 +184,7 @@ function dispatchPendingDecode(entry: Entry) {
       updateEntry(
         entry,
         undefined,
-        error instanceof Error ? error.message : String(error),
+        errorText(error),
       );
     }
     return;
@@ -233,7 +234,7 @@ function start(entry: Entry) {
       maxItems: MAX_PREVIEW_ROWS,
       onError: (error) => {
         if (entry.generation === generation) {
-          updateEntry(entry, undefined, String(error));
+          updateEntry(entry, undefined, errorText(error));
         }
       },
     },

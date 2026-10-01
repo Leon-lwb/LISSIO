@@ -94,6 +94,47 @@ and semantic evaluation reference; consumers use that facade rather than
 chaining compiler phases through adjacent-layer helpers. `graph-testkit` is a
 dev-dependency only.
 
+## Recording contract boundary
+
+`recording` owns the DuckDB store behind one writer thread; `pipeline` only ever
+sees `RecordingHub`. The boundary that matters for the whole product:
+
+- **数据库侧的任何问题都不得波及采集。** A database that cannot be opened, a
+  writer that stopped answering, a queue that filled up, or the user turning the
+  switch off are all *"no recording"* — never *"recording failed"*. `pipeline`
+  keeps acquiring in every one of those cases.
+- Only **accepted batches that cannot be persisted** (database / IO / corrupt /
+  writer-failed / writer-closed) may stop the run, and only those set
+  `RecordingHub::fault`. A successful write clears it again, so a transient
+  fault cannot stick for the rest of the session.
+- `AppSettings.data.recordingEnabled` (default on) disables the database
+  entirely and is hot-swappable at any run state; `backend-host` replays it for
+  desktop, server, and CLI from the same `settings.json`.
+- **One connection, owned by the writer thread.** Queries, exports, session
+  checks, history paging, database info, and read-only SQL all travel over
+  `writer::RecordingReader` to the writer's single DuckDB connection; nothing
+  opens a second instance on the same file. Only construction-time and
+  "database already closed" maintenance paths open their own connection. Multiple
+  instances checkpoint over each other and silently erase committed writes, which
+  is what corrupted history before.
+- **Every writer round trip is bounded**, on both the send and the reply side
+  (run control 5 s, shutdown 10 s, maintenance/reads 120 s). A writer that stops
+  answering is detached and reported as *unavailable* instead of blocking
+  acquisition or run control, and the execution-boundary write lock taken while
+  swapping a recorder is released after 30 s.
+- **Opening is bounded and pre-flighted**: an existing database file is probed
+  with `try_lock` (with backoff), the open itself runs on its own thread with a
+  30 s ceiling, and the instance guard lives as long as that thread. A database
+  that cannot be opened within the budget is *unavailable*, never a hang.
+- **Opening validates**: after entering the schema, the three tables are really
+  read; a damaged catalog goes through `repair::rebuild_database` and the rebuild
+  is reported through `RecordingHealth.warning` — a visible, explicitly
+  **non-fault** channel, because `failed` would stop acquisition.
+
+Violating the first rule is what produced "Start shows a few characters and Pause
+never releases": backpressure used to be classified as a writer fault, and the
+fault flag was sticky.
+
 ## Command-name contract
 
 `rpc-api::catalog` is the authority for the public command surface. Its four lists

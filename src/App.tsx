@@ -14,6 +14,8 @@ import { DockDragGhost } from './components/ui/DockDragGhost';
 import { SuspenseFallback } from './components/ui/SuspenseFallback';
 import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
+import { api } from './lib/tauri/tauri';
+import { notify } from './lib/tauri/notifications';
 import { useHistoryStore } from './store/historyStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
@@ -72,6 +74,7 @@ function App() {
   const isCustomEditorOpen = useAppStore((s) => s.customEditorState.open);
   const autoUpdateStartedRef = useRef(false);
   const versionGuideCheckedRef = useRef(false);
+  const recordingRecoveryCheckedRef = useRef(false);
 
   const startupFlow = resolveStartupFlow({
     settingsLoaded,
@@ -192,6 +195,28 @@ function App() {
       clearTimeout(bail);
     };
   }, [settingsLoaded]);
+
+  // 启动页放行后的一次性检查: 数据库在打开时被自动恢复过 (目录重建 / 损坏文件隔离)。
+  // 必须在**启动页展示完成之后**主动提示 — 恢复提示只躺在数据库面板里, 而用户很可能
+  // 根本没打开那个面板, 于是以为历史凭空消失、录制一直不可用。
+  useEffect(() => {
+    if (!settingsLoaded || recordingRecoveryCheckedRef.current) return;
+    recordingRecoveryCheckedRef.current = true;
+    void api
+      .getRecordingHealth()
+      .then((health) => {
+        if (health.warning === null) return;
+        // 严重级别用 error: 它是**持久**提示 (warn 8 秒自动消失), 而「旧库被移走、
+        // 这一段历史读不出来了」必须让用户看见并且来得及看清备份路径。
+        // 这只是提示通道的级别, 不是录制故障 — 故障判定只认 `hub.fault()`。
+        notify.error(
+          t(lang, 'recordingDatabaseRecovered'),
+          health.warning,
+          { source: 'recording-recovered' }
+        );
+      })
+      .catch(() => undefined);
+  }, [lang, settingsLoaded]);
 
   // AI 前端托管工具宿主 — 监听 ai_tool_invoke, 让内置 AI 编辑节点/操作软件 (幂等)
   useEffect(() => {

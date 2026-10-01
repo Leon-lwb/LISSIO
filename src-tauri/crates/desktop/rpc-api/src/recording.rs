@@ -128,7 +128,11 @@ pub async fn switch_session(
     text(recording::switch_session(&host.toolbox, &session_id).await)
 }
 
-/// 应用录制存储设置 (数据库目录 + 空会话续写开关); 运行中拒绝。
+/// 应用录制存储设置 (数据库目录 + 空会话续写开关 + 录制总开关)。
+///
+/// **总开关可任意运行态热更新**: 关闭会立刻有界关闭 writer 并释放 DuckDB 文件
+/// 句柄 (Windows 上是强制锁), 打开则在原库新建会话继续录。只有**改数据库目录**
+/// 仍要求暂停/停止 — 那是换写入目标, 不是开关。
 pub async fn apply_settings(
     host: &BackendHost,
     cmd: &str,
@@ -136,11 +140,7 @@ pub async fn apply_settings(
 ) -> Result<Value, RpcError> {
     let database_dir: Option<String> = optional(args, cmd, "database_dir")?;
     let continue_empty_session: bool = required(args, cmd, "continue_empty_session")?;
-    if host.state.data_plane.eval.execution.snapshot().state == app::RunState::Running {
-        return Err(RpcError::text(
-            "recording storage settings can only be applied while the run is paused or stopped",
-        ));
-    }
+    let enabled: Option<bool> = optional(args, cmd, "enabled")?;
     let path = database_dir
         .as_deref()
         .map(str::trim)
@@ -154,25 +154,34 @@ pub async fn apply_settings(
             |dir| PathBuf::from(dir).join(RECORDING_DATABASE_FILE),
         );
     let recording_hub = host.state.eval_state().recording;
+    if host.state.data_plane.eval.execution.snapshot().state == app::RunState::Running
+        && recording_hub.database_path().as_deref() != Some(path.as_path())
+    {
+        return Err(RpcError::text(
+            "recording storage location can only change while the run is paused or stopped",
+        ));
+    }
     let initial = control_api::recording::session_state_for_run(&host.toolbox);
-    // 暂停期间管道继续喂数据 — 换 recorder 前独占数据链边界
-    let boundary = host
-        .toolbox
-        .data_plane
-        .eval
-        .execution
-        .boundary
-        .write()
-        .await;
-    let outcome = tokio::task::spawn_blocking(move || {
+    // 暂停期间管道继续喂数据 — 换 recorder 前独占数据链边界 (有界: 见
+    // `control_api::recording::swap_with_boundary`)。
+    control_api::recording::swap_with_boundary(&host.toolbox, move || -> Result<(), String> {
+        // 先关: 关闭态下 apply_settings 只登记坐标, 不会打开任何文件。
+        if enabled == Some(false) {
+            recording_hub.disable().map_err(|error| error.to_string())?;
+        }
         recording_hub
             .apply_settings(Some(path), continue_empty_session, initial)
-            .map(|_| ())
-            .map_err(|error| error.to_string())
+            .map_err(|error| error.to_string())?;
+        // 后开: 用刚登记的坐标 (可能已被上一步改过) 建库并新建会话。
+        if enabled == Some(true) && !recording_hub.is_enabled() {
+            recording_hub
+                .enable(initial)
+                .map(|_| ())
+                .map_err(|error| error.to_string())?;
+        }
+        Ok(())
     })
     .await
-    .map_err(|error| RpcError::text(error.to_string()))?;
-    drop(boundary);
-    outcome.map_err(RpcError::text)?;
+    .map_err(RpcError::text)?;
     ok()
 }

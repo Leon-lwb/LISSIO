@@ -36,14 +36,23 @@
 
 ### Fixes
 
+- **Right-click works while the workspace is running.** The context menu closed itself on *any* `scroll` event captured at the window, and a running data panel writes `scrollTop` every frame to follow the latest data — so the menu was torn down in the same frame it opened, before it was ever painted, while `preventDefault` had already suppressed the native menu. Only a scroll of the viewport itself closes the menu now; element-level scrolling no longer affects it, and surfaces that define no menu items no longer swallow the event either (a data card's tab bar used to show nothing at all).
+- **The history database page no longer shows `[object Object]`.** Transport failures reject with a plain `RpcError { kind, message }` object rather than an `Error`, and the recording store formatted it with `String(...)` before rendering it in the panel's error bar. A single `errorText` helper now resolves user-facing text for `Error` / strings / `{ kind, message }` (falling back to JSON only when there is no message), `formatError` reuses it, and the same pattern was collapsed onto it across the stores, connection gate and display panels.
+- **Normal backpressure no longer stops acquisition.** A full writer queue used to be classified as a writer fault, and that flag stuck until the recorder was replaced — so after one transient burst, every *Start* was pushed back to *Stopped* within a batch ("a few characters out, Pause never releases"). Only batches that were accepted but cannot be persisted count as a fault now, a successful write clears it, and the queue is much larger so a checkpoint or antivirus stall is absorbed.
+- **A recording writer that stops answering can no longer freeze the app.** Control round-trips (session state, bindings, flush, maintenance, shutdown) are bounded on both the send and the reply side — 5 s for run control, 10 s for shutdown, 120 s for flush / session deletion. A writer that does not answer is detached and reported as *unavailable* instead of blocking the acquisition hot path or the run controls, and the execution-boundary write lock taken while swapping the recorder is released after 30 s no matter what.
+- **Recording can now be switched off at runtime.** A new **Recording database** switch (Settings → Data, default on) closes the recorder and releases the DuckDB file handle immediately — at any run state — and reopens it when switched back on. Existing database files and history are never deleted. This is the escape hatch when the database is what is hanging on Windows; the recording panel and its views grey out and explain why instead of showing a failure.
+- **Concurrent instances can no longer corrupt recorded history, and opening can no longer hang.** Queries, exports, session checks, history paging and read-only SQL now all run on the writer's single DuckDB connection instead of each opening its own instance — multiple instances checkpoint over each other and silently erase committed writes.
+  - Opening is pre-flighted and bounded: an existing database file is probed for a mandatory lock, and the open itself runs with a 30-second ceiling, so a database held by another process fails fast and is reported as *unavailable* instead of blocking the app.
+  - Opening also validates: if the catalog is damaged the database is rebuilt automatically through the existing repair path and recording continues; the panel says so, and it is reported as a notice rather than a failure (a failure would stop acquisition).
 - **A locked recording database no longer stops acquisition.** When the database cannot be opened (for example another instance holds a mandatory lock on the file on Windows), recording is reported as *unavailable* instead of as a writer fault, so acquisition keeps running without recording instead of being blocked.
+  - A process-level lock file next to the database makes a second instance fail fast instead of letting two DuckDB writers checkpoint over each other and silently erase committed data.
 - **A supervised backend now exits within a bounded time.** A teardown that hangs kept the process holding the recording database handle; the next start then failed to open it and recording was silently lost. A 10-second watchdog force-exits a supervised process so the lock is always released.
 - **Overlays are no longer covered by zero-index UI.** The z-index tokens never produced `z-modal` / `z-tour` classes, so overlays and modals silently fell back to `auto` and the top bar (z-50), the components palette's sticky section headers (z-10) and similar elements drew over them. The tokens are now emitted as plain custom properties plus bridge classes, and the tour layer sits above React Flow's selected-node layers (1000 / 1001).
 
 ### Engineering
 
 - Removed the bundled FiraCode Nerd Font Mono and GoMono Nerd Font Mono families (about 6.7 MiB of woff2) and simplified the default font stacks: UI starts at MiSans, mono starts at JetBrains Mono with Maple Mono CN behind it. The About dialog's attribution list and the settings defaults follow the same change.
-- New regression tests cover the recording gate (a locked database must not raise a writer fault), raw-data grid alignment and line wrapping, scroll-pause binding, display liveness, the panel liveness badge and outline, the recording indicator, and the back-to-latest button.
+- New regression tests cover the recording gate (a locked database must not raise a writer fault, a database locked by another process must fail to open in bounded time, a recording writer that never answers must time out instead of blocking acquisition or run control, and reads must go through the writer rather than opening a second instance), raw-data grid alignment and line wrapping, scroll-pause binding, display liveness, the panel liveness badge and outline, the recording indicator, and the back-to-latest button.
 - Version numbers advance to v0.7.2 (bundle metadata stays `0.7.2`); the beta channel manifest is published by CI from the build artifacts.
 
 ### Distribution
@@ -91,14 +100,23 @@
 
 ### 修复
 
+- **工作区运行时右键恢复正常。** 上下文菜单会在捕获阶段对**任何** `scroll` 事件关闭自己，而运行中的数据面板每帧写 `scrollTop` 追随最新 —— 菜单在同一帧内就被拆掉、还没来得及绘制，而 `preventDefault` 已经挡掉了原生菜单。现在只有**视口自身**滚动才关闭菜单，元素级滚动不再影响；没有定义菜单项的表面也不再吃掉右键（数据卡片标签栏原先什么都不弹）。
+- **历史数据库页面不再显示 `[object Object]`。** 出口失败时拒绝的是普通对象 `RpcError { kind, message }` 而不是 `Error`，录制 store 却用 `String(...)` 格式化后直接渲染进面板错误条。新增统一的 `errorText`：`Error` / 字符串 / `{ kind, message }` 一律取 message（无 message 才退化为 JSON），`formatError` 复用同一实现，各 store、连接页与显示面板的同类写法一并收敛。
+- **正常背压不再中止采集。** 写线程队列打满曾被判成「录制写入故障」，而这个标记会一直粘到换 recorder 为止 —— 于是一次瞬态突发之后，每次「开始」都在一批数据内被打回停止态（表现就是「只出几个字符、暂停也解不开」）。现在只有**已受理却落不了盘**的批次才算故障，任一次成功写入即清除，队列也大幅加长以吸收 checkpoint / 杀毒扫描造成的停顿。
+- **写入线程不应答不再冻结界面。** 控制往返（会话状态、绑定、flush、维护、关停）在**投递**与**应答**两侧都有界：运行控制 5 秒、关停 10 秒、flush / 删除会话 120 秒。不应答的 writer 会被摘除并报「不可用」，而不是堵住采集热路径或运行控制；换 recorder 时独占的执行边界写锁最迟 30 秒释放。
+- **录制现在可以运行期关闭。** 设置 → 数据新增「录制数据库」开关（默认开）：任意运行态下关闭即释放 recorder 与 DuckDB 文件句柄，重新打开即原库续录。已有数据库文件与历史一律保留。这是 Windows 上「数据库本身卡住」时的逃生舱；录制面板与视图会灰化并说明原因，而不是显示成故障。
+- **并发实例不再损坏录制历史，打开数据库也不再卡住。** 查询、导出、会话检查、历史分页与只读 SQL 现在全部走写线程的**同一个** DuckDB 连接，不再各自打开一个实例 —— 多个实例会各自 checkpoint 并互相覆盖，静默抹掉已提交的写入。
+  - 打开前先做强制锁探测，打开本身有 30 秒上限：被别的进程占住的库会快速失败并报「录制不可用」，而不是把界面挂在那里。
+  - 打开时还会校验：catalog 损坏时经既有修复路径自动重建并继续录制，面板会给出提示；它走的是**提示**通道而不是失败通道（失败会停掉采集）。
 - **录制数据库被占用不再中止采集。** 数据库打不开时（例如 Windows 上另一个实例持有该文件的强制锁），现在报「录制不可用」而不是「录制写入故障」，采集照常运行、只是没有录制，不再被永久挡住。
+  - 数据库旁的进程级锁文件让第二个实例快速失败，而不是两个 DuckDB 写入方互相 checkpoint、静默抹掉已提交数据。
 - **受监督后端现在能在有界时间内退出。** 收尾若卡住，残留进程会一直持有录制数据库句柄，下一次启动打不开数据库、录制静默丢失。新增 10 秒看门狗，超时强制退出，确保锁一定释放。
 - **遮罩不再被零层级的界面元素盖住。** 层级令牌此前不会生成 `z-modal` / `z-tour` 类名，遮罩与弹窗的 z-index 静默退化成 `auto`，于是顶栏（z-50）、控件分类的 sticky 标题（z-10）等元素会盖在其上。现在令牌同时输出为普通自定义属性与桥接类，引导层也高于 React Flow 的选中节点层级（1000 / 1001）。
 
 ### 工程改进
 
 - 移除随包分发的 FiraCode Nerd Font Mono 与 GoMono Nerd Font Mono 两族字体（约 6.7 MiB woff2），并简化默认字体栈：UI 首选 MiSans，等宽首选 JetBrains Mono、次选 Maple Mono CN。关于弹窗的字体署名清单与设置默认值同步更新。
-- 新增回归测试覆盖：录制门控（数据库被占用不得报写入故障）、原始数据网格对齐与折行、滚动暂停接线、显示时效派生、面板角标与描边、录制中指示、回到最新按钮。
+- 新增回归测试覆盖：录制门控（数据库被占用不得报写入故障；被别的进程锁住的库必须能在有界时间内打开失败；永不应答的写入线程必须超时返回，而不是堵住采集与运行控制；读必须经写线程而不是另开实例）、原始数据网格对齐与折行、滚动暂停接线、显示时效派生、面板角标与描边、录制中指示、回到最新按钮。
 - 版本号推进到 v0.7.2（打包元数据仍为 `0.7.2`）；beta 通道清单由 CI 从构建产物发布。
 
 ### 分发形式

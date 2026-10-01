@@ -7,6 +7,7 @@
 //! 无 kind 时回退显示后端原始描述。
 
 import { t, type Lang } from '../../i18n';
+import { errorText } from '../../types/errors';
 
 /// 错误展示形态 — summary 为主行,detail 为次要原始信息 (如 provider 返回的 HTTP 错误)
 export interface AiErrorView {
@@ -64,9 +65,5 @@ export function formatAiError(err: unknown, lang: Lang): AiErrorView {
   }
   if (err instanceof Error) return { summary: err.message };
   if (typeof err === 'string') return { summary: err };
-  try {
-    return { summary: JSON.stringify(err) };
-  } catch {
-    return { summary: String(err) };
-  }
+  return { summary: errorText(err) };
 }

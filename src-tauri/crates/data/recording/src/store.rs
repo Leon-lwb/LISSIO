@@ -1,19 +1,33 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use duckdb::types::ValueRef;
 use duckdb::{AccessMode, Config, Connection, params};
 use serde::{Deserialize, Serialize};
 
 use crate::codec;
+use crate::schema::initialize;
+use crate::writer::{QueryCancellation, RecordingReader};
 use crate::{
-    BatchPayload, DisplayBinding, Domain, HistoryQuery, RecordBatch, RecordingError, SessionInfo,
-    SessionState, StoredBatch,
+    DisplayBinding, Domain, RecordBatch, RecordingError, SessionInfo, SessionState, StoredBatch,
 };
 
 #[derive(Debug, Clone)]
 pub struct RecordingStore {
     path: PathBuf,
+    /// 读路径句柄 — 有它时所有读 (查询 / 导出 / 会话检查) 都在写线程的**唯一**
+    /// DuckDB 连接上执行; `None` 表示尚未挂载写线程 (构造期、修复路径、测试直接
+    /// 打开), 读退化为独占打开。
+    reader: Option<RecordingReader>,
 }
+
+/// 写入连接的会话参数。
+///
+/// `checkpoint_threshold` 决定自动 checkpoint 的触发点 — checkpoint 期间 writer
+/// 线程会停顿, 停顿超过队列缓冲就是一次背压。阈值从 256 MiB 提到 1 GiB 是拿
+/// 「单次停顿更长」换「停顿更少」, 配合 4096 条的写线程队列 (见
+/// [`crate::RecordingLimits`]) 足以吸收一次 checkpoint。
+const WRITE_SESSION_PRAGMAS: &str =
+    "SET preserve_insertion_order=false; SET threads=4; SET checkpoint_threshold='1 GiB';";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HistoryPage {
@@ -28,22 +42,74 @@ pub struct SqlResult {
 }
 
 impl RecordingStore {
+    /// Open (creating when needed) the database at `path`.
+    ///
+    /// 打开即校验: 建表后**真读**一遍三张表, 目录损坏时走既有
+    /// [`crate::repair::rebuild_database`] 自动重建 (损坏原件留作 `.corrupt-*`
+    /// 备份)。重建提示由 [`Self::open_checked`] 返回, 由 hub 写进健康报告 —
+    /// 用户看得见「已重建」, 而不是以为历史凭空消失。
     pub fn open(path: impl AsRef<Path>) -> Result<Self, RecordingError> {
+        Self::open_checked(path).map(|(store, _rebuilt)| store)
+    }
+
+    /// [`Self::open`] 的带提示版本 — `Some` 表示这次打开触发了自动恢复:
+    /// 目录损坏时重建 (能读的行搬进新库), 文件级损坏时隔离原件并新建空库。
+    pub(crate) fn open_checked(
+        path: impl AsRef<Path>,
+    ) -> Result<(Self, Option<String>), RecordingError> {
         let path = path.as_ref().to_path_buf();
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        let store = Self { path };
-        let connection = store.connect()?;
+        let store = Self { path, reader: None };
+        // 文件级损坏: 连打开都失败, 没有任何内容可以导出。隔离原件、在干净路径上新建
+        // 空库 — 否则录制会一直不可用, 而用户只看到一句「writer is closed」。
+        let connection = match store.connect() {
+            Ok(connection) => connection,
+            Err(error) if crate::repair::is_unreadable(&error) => {
+                let backup = crate::repair::quarantine_database(store.path())?;
+                let connection = store.connect()?;
+                initialize(&connection)?;
+                mark_orphaned_sessions(&connection)?;
+                return Ok((store, Some(quarantined_note(&backup))));
+            }
+            Err(error) => return Err(error),
+        };
         initialize(&connection)?;
-        // A process crash cannot have committed data after the final transaction.
-        // Mark orphaned sessions explicitly while retaining their last valid commit.
-        connection.execute(
-            "UPDATE recording_sessions SET state='failed', ended_at_us=? \
-             WHERE state IN ('running', 'paused')",
-            params![now_us()],
-        )?;
-        Ok(store)
+        match crate::repair::verify_catalog(&connection) {
+            Ok(()) => {
+                mark_orphaned_sessions(&connection)?;
+                Ok((store, None))
+            }
+            // 目录损坏: 重建要求没有连接打开, 所以先关掉再走既有修复路径。
+            Err(error) if crate::repair::is_catalog_damage(&error) => {
+                drop(connection);
+                let backup = crate::repair::rebuild_database(store.path())?;
+                let connection = store.connect()?;
+                initialize(&connection)?;
+                mark_orphaned_sessions(&connection)?;
+                Ok((store, Some(rebuilt_note(&backup))))
+            }
+            Err(error) => Err(error),
+        }
+    }
+
+    /// 挂上读路径句柄 — 由写线程的 channel 提供。
+    pub(crate) fn with_reader(mut self, reader: RecordingReader) -> Self {
+        self.reader = Some(reader);
+        self
+    }
+
+    /// 去掉读路径句柄 — 写线程自己用的副本。
+    pub(crate) fn without_reader(&self) -> Self {
+        Self {
+            path: self.path.clone(),
+            reader: None,
+        }
+    }
+
+    pub(crate) const fn reader(&self) -> Option<&RecordingReader> {
+        self.reader.as_ref()
     }
 
     #[must_use]
@@ -53,9 +119,7 @@ impl RecordingStore {
 
     pub(crate) fn connect(&self) -> Result<Connection, RecordingError> {
         let connection = Connection::open(&self.path)?;
-        connection.execute_batch(
-            "SET preserve_insertion_order=false; SET threads=4; SET checkpoint_threshold='256 MiB';",
-        )?;
+        connection.execute_batch(WRITE_SESSION_PRAGMAS)?;
         Ok(connection)
     }
 
@@ -98,24 +162,6 @@ impl RecordingStore {
         result
     }
 
-    pub fn list_sessions(&self) -> Result<Vec<SessionInfo>, RecordingError> {
-        let connection = self.connect_read_only()?;
-        let mut statement = connection.prepare(
-            "SELECT id, started_at_us, ended_at_us, state FROM recording_sessions \
-             ORDER BY started_at_us DESC",
-        )?;
-        let rows = statement.query_map([], |row| {
-            let state: String = row.get(3)?;
-            Ok(SessionInfo {
-                id: row.get(0)?,
-                started_at_us: row.get(1)?,
-                ended_at_us: row.get(2)?,
-                state: parse_state(&state),
-            })
-        })?;
-        rows.collect::<Result<Vec<_>, _>>().map_err(Into::into)
-    }
-
     /// Resume a finished session for further writes: clears the end timestamp
     /// and stores `state`. Only explicitly stopped sessions can be resumed.
     pub(crate) fn reopen_session(
@@ -134,7 +180,7 @@ impl RecordingStore {
                 "recording session was not found or is not resumable: {session_id}"
             )));
         }
-        self.list_sessions()?
+        Self::list_sessions_on(&connection)?
             .into_iter()
             .find(|session| session.id == session_id)
             .ok_or_else(|| {
@@ -174,8 +220,21 @@ impl RecordingStore {
         Ok(Some(id))
     }
 
+    /// Delete one session and its children.
+    ///
+    /// 有写线程时经它的**唯一**连接执行; 没有时 (库已关闭 / 测试直接打开) 才
+    /// 独占打开。运行期删除仍优先走 [`crate::RecordingHub::delete_session`]。
     pub fn delete_session(&self, session_id: &str) -> Result<(), RecordingError> {
-        let connection = self.connect()?;
+        if let Some(reader) = self.reader() {
+            return reader.delete_session(session_id);
+        }
+        Self::delete_session_on(&self.connect()?, session_id)
+    }
+
+    pub(crate) fn delete_session_on(
+        connection: &Connection,
+        session_id: &str,
+    ) -> Result<(), RecordingError> {
         let state: String = connection
             .query_row(
                 "SELECT state FROM recording_sessions WHERE id=?",
@@ -211,66 +270,29 @@ impl RecordingStore {
         Ok(())
     }
 
-    pub fn history_page(
-        &self,
-        session_id: &str,
-        binding_id: Option<&str>,
-        after_row_id: i64,
-        limit: usize,
-        include_payload: bool,
-    ) -> Result<HistoryPage, RecordingError> {
-        self.history_page_query(&HistoryQuery {
-            session_id: session_id.to_string(),
-            binding_id: binding_id.map(ToString::to_string),
-            after_row_id,
-            from_us: None,
-            to_us: None,
-            limit,
-            include_payload,
-        })
-    }
-
     /// Run one read-only SELECT and return rows as JSON objects.
+    ///
+    /// 有写线程时走它的**唯一**连接; 没有时 (构造期 / 测试直接打开) 才独占打开。
     pub fn query_sql(&self, sql: &str, max_rows: usize) -> Result<SqlResult, RecordingError> {
-        let connection = self.connect_read_only()?;
-        Self::query_sql_on(&connection, sql, max_rows)
+        self.query_sql_cancellable(sql, max_rows, &Arc::new(QueryCancellation::default()))
     }
 
-    pub(crate) fn query_sql_on(
-        connection: &Connection,
+    /// [`Self::query_sql`] 的带取消槽版本 — hub 用它把 `cancel_query` 接到写线程
+    /// 执行中的查询上。
+    pub(crate) fn query_sql_cancellable(
+        &self,
         sql: &str,
         max_rows: usize,
+        cancellation: &Arc<QueryCancellation>,
     ) -> Result<SqlResult, RecordingError> {
-        let normalized = sql.trim_start().to_ascii_lowercase();
-        if !(normalized.starts_with("select ") || normalized.starts_with("with "))
-            || sql.contains(';')
-        {
-            return Err(RecordingError::Invalid(
-                "historical SQL must be one SELECT or WITH query".into(),
-            ));
+        if let Some(reader) = self.reader() {
+            return reader.sql(sql.to_string(), max_rows, Arc::clone(cancellation));
         }
-        let max_rows = max_rows.clamp(1, 100_000);
-        let wrapped = format!(
-            "SELECT * FROM ({sql}) AS result_row LIMIT {}",
-            max_rows.saturating_add(1)
-        );
-        let mut statement = connection.prepare(&wrapped)?;
-        let mut query = statement.query([])?;
-        let columns = query
-            .as_ref()
-            .expect("query rows retain their statement")
-            .column_names();
-        let mut rows = Vec::new();
-        while let Some(row) = query.next()? {
-            let mut object = serde_json::Map::with_capacity(columns.len());
-            for (index, name) in columns.iter().enumerate() {
-                object.insert(name.clone(), value_json(row.get_ref(index)?));
-            }
-            rows.push(serde_json::Value::Object(object));
-        }
-        let truncated = rows.len() > max_rows;
-        rows.truncate(max_rows);
-        Ok(SqlResult { rows, truncated })
+        let connection = self.connect()?;
+        cancellation.attach(connection.interrupt_handle());
+        let result = Self::query_sql_on(&connection, sql, max_rows);
+        cancellation.detach();
+        result
     }
 
     pub(crate) fn next_row_id(connection: &Connection) -> Result<i64, RecordingError> {
@@ -307,7 +329,7 @@ impl RecordingStore {
         row_id: i64,
         batch: &RecordBatch,
     ) -> Result<usize, RecordingError> {
-        validate_batch(batch)?;
+        crate::model::validate_batch(batch)?;
         let payload = codec::encode(&batch.payload)?;
         let checksum = codec::checksum(&payload);
         let first_timestamp = batch.timestamps_us.first().copied().unwrap_or_default();
@@ -356,25 +378,36 @@ impl RecordingStore {
     }
 }
 
-fn initialize(connection: &Connection) -> Result<(), RecordingError> {
-    connection.execute_batch(
-        "CREATE TABLE IF NOT EXISTS recording_sessions( \
-            id VARCHAR PRIMARY KEY, started_at_us UBIGINT NOT NULL, ended_at_us UBIGINT, state VARCHAR NOT NULL); \
-         CREATE TABLE IF NOT EXISTS display_bindings( \
-            id VARCHAR NOT NULL, session_id VARCHAR NOT NULL REFERENCES recording_sessions(id), \
-            component_id VARCHAR NOT NULL, source_node_id VARCHAR NOT NULL, source_handle VARCHAR NOT NULL, \
-            domain VARCHAR NOT NULL, capability VARCHAR NOT NULL, bound_at_us UBIGINT NOT NULL, unbound_at_us UBIGINT, \
-            PRIMARY KEY(session_id, id)); \
-         CREATE TABLE IF NOT EXISTS recording_batches( \
-            row_id BIGINT PRIMARY KEY, session_id VARCHAR NOT NULL REFERENCES recording_sessions(id), \
-            binding_id VARCHAR NOT NULL, domain VARCHAR NOT NULL, epoch UBIGINT NOT NULL, \
-            sequence_start UBIGINT NOT NULL, sequence_end UBIGINT NOT NULL, \
-            first_timestamp_us UBIGINT NOT NULL, last_timestamp_us UBIGINT NOT NULL, \
-            item_count UBIGINT NOT NULL, effective_bytes UBIGINT NOT NULL, checksum UBIGINT NOT NULL, \
-            payload BLOB NOT NULL, committed_at_us UBIGINT NOT NULL); \
-         CREATE INDEX IF NOT EXISTS recording_time_idx ON recording_batches(session_id, binding_id, first_timestamp_us);",
+/// A process crash cannot have committed data after the final transaction. Mark
+/// orphaned sessions explicitly while retaining their last valid commit.
+fn mark_orphaned_sessions(connection: &Connection) -> Result<(), RecordingError> {
+    connection.execute(
+        "UPDATE recording_sessions SET state='failed', ended_at_us=? \
+         WHERE state IN ('running', 'paused')",
+        params![now_us()],
     )?;
     Ok(())
+}
+
+/// 自动重建后的可见提示 — 走健康报告的 warning 通道, **绝不进 `failed`/故障**:
+/// 重建成功意味着录制已恢复, 把它当故障会立刻停掉采集。
+pub fn rebuilt_note(backup: &Path) -> String {
+    format!(
+        "the recording database catalog was damaged and was rebuilt automatically \
+         (the damaged copy is kept at {})",
+        backup.display()
+    )
+}
+
+/// 文件级损坏被隔离后的可见提示 — 同样走健康报告的 warning 通道。
+///
+/// 说清三件事: 旧文件读不出来、它被完整保留在哪里、录制已经在新的空库里继续。
+pub fn quarantined_note(backup: &Path) -> String {
+    format!(
+        "the recording database file could not be read and was moved aside \
+         (the unreadable copy is kept at {}); recording continues in a new empty database",
+        backup.display()
+    )
 }
 
 fn insert_binding(
@@ -401,27 +434,6 @@ fn insert_binding(
             now_us(),
         ],
     )?;
-    Ok(())
-}
-
-fn validate_batch(batch: &RecordBatch) -> Result<(), RecordingError> {
-    let count = batch.payload.item_count();
-    if count == 0 {
-        return Err(RecordingError::Invalid("empty recording batch".into()));
-    }
-    let valid_timestamps = match &batch.payload {
-        BatchPayload::Bytes { .. } | BatchPayload::Spectrum { .. } => {
-            batch.timestamps_us.len() == 1
-        }
-        BatchPayload::String { .. } | BatchPayload::Float { .. } => {
-            batch.timestamps_us.len() == count
-        }
-    };
-    if !valid_timestamps {
-        return Err(RecordingError::Invalid(
-            "timestamp and payload column lengths differ".into(),
-        ));
-    }
     Ok(())
 }
 
@@ -453,30 +465,4 @@ fn now_us() -> u64 {
 
 pub fn to_duckdb_error(error: impl std::fmt::Display) -> duckdb::Error {
     duckdb::Error::InvalidParameterName(error.to_string())
-}
-
-fn value_json(value: ValueRef<'_>) -> serde_json::Value {
-    match value {
-        ValueRef::Null => serde_json::Value::Null,
-        ValueRef::Boolean(value) => value.into(),
-        ValueRef::TinyInt(value) => value.into(),
-        ValueRef::SmallInt(value) => value.into(),
-        ValueRef::Int(value) => value.into(),
-        ValueRef::BigInt(value) => value.into(),
-        ValueRef::UTinyInt(value) => value.into(),
-        ValueRef::USmallInt(value) => value.into(),
-        ValueRef::UInt(value) => value.into(),
-        ValueRef::UBigInt(value) => value.into(),
-        ValueRef::Float(value) => serde_json::Number::from_f64(f64::from(value))
-            .map_or(serde_json::Value::Null, serde_json::Value::Number),
-        ValueRef::Double(value) => serde_json::Number::from_f64(value)
-            .map_or(serde_json::Value::Null, serde_json::Value::Number),
-        ValueRef::Text(value) => String::from_utf8_lossy(value).into_owned().into(),
-        ValueRef::Blob(value) | ValueRef::Geometry(value) => {
-            format!("<binary:{} bytes>", value.len()).into()
-        }
-        ValueRef::HugeInt(value) => value.to_string().into(),
-        ValueRef::UHugeInt(value) => value.to_string().into(),
-        other => format!("{other:?}").into(),
-    }
 }

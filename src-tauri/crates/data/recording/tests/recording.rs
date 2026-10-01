@@ -1,7 +1,8 @@
 use recording::{
     BatchPayload, BindingCapability, DisplayBinding, Domain, HistoryQuery, PortIdentity,
-    RecordBatch, Recorder, RecordingCleanupPolicy, RecordingExportFormat, RecordingExportRequest,
-    RecordingHub, RecordingLimits, RecordingStore, SessionState, export_recording_data,
+    RecordBatch, Recorder, RecordingCleanupPolicy, RecordingError, RecordingExportFormat,
+    RecordingExportRequest, RecordingHub, RecordingLimits, RecordingStore, SessionState,
+    export_recording_data,
 };
 
 fn binding(id: &str, domain: Domain) -> DisplayBinding {
@@ -868,4 +869,294 @@ fn apply_settings_is_a_noop_when_preferences_match() {
     assert_eq!(summaries[0].session.id, active_id);
     hub.stop().unwrap();
     let _ = std::fs::remove_file(path);
+}
+
+/// 回归 (Windows 「点开始只出几个字符、暂停也解不开」):
+/// 写线程队列打满是**正常背压**, 不是写入故障。
+///
+/// 曾经的链路: `append` 返回 `Backpressure` → `hub` 置 `fault` → 运行控制每个
+/// 评估批次后读 [`RecordingHub::fault`] 并把工作区停回 Stopped; 而 `fault`
+/// 只在换 recorder 时清除, 于是之后每次「开始」都在一批数据内被打回。
+#[test]
+fn backpressure_drops_batches_without_becoming_a_sticky_fault() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-backpressure-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let hub = RecordingHub::default();
+    // 队列只有一格 + 每批都提交: 紧凑循环必然撞上背压。
+    let limits = RecordingLimits {
+        queue_batches: 1,
+        transaction_bytes: 1,
+        commit_interval_ms: 1,
+    };
+    hub.start(
+        &path,
+        vec![binding("bytes", Domain::Bytes)],
+        limits,
+        SessionState::Running,
+    )
+    .unwrap();
+    let port = PortIdentity::new("source", "bytes");
+
+    let mut dropped = 0_u64;
+    for index in 0..4_000_u64 {
+        match hub.record(
+            &port,
+            2,
+            index,
+            vec![index],
+            BatchPayload::Bytes {
+                data: vec![0_u8; 256 * 1024],
+            },
+        ) {
+            // 背压丢弃: 对生产者不是错误, 更不是故障。
+            Ok(false) => dropped += 1,
+            Ok(true) => {}
+            Err(error) => panic!("背压不得冒泡成错误: {error}"),
+        }
+        assert!(
+            hub.fault().is_none(),
+            "队列打满不得置故障 (第 {index} 批): {:?}",
+            hub.fault()
+        );
+    }
+
+    assert!(dropped > 0, "本测试需要真的撞上背压, 否则没有验证力");
+    let health = hub.health();
+    assert_eq!(health.dropped_batches, dropped, "丢弃批次必须计数");
+    assert!(
+        health.failed.is_none(),
+        "背压不得出现在健康报告的 failed 里: {:?}",
+        health.failed
+    );
+
+    // 背压是瞬态的: 停写之后必须重新接受批次, 不需要重启会话。
+    hub.flush().unwrap();
+    let mut accepted = false;
+    for index in 0..4_000_u64 {
+        if hub
+            .record(
+                &port,
+                2,
+                index,
+                vec![index],
+                BatchPayload::Bytes {
+                    data: vec![0_u8; 1024],
+                },
+            )
+            .unwrap()
+        {
+            accepted = true;
+            break;
+        }
+    }
+    assert!(accepted, "背压过后必须能继续录制");
+    assert!(hub.fault().is_none());
+
+    hub.stop().unwrap();
+    let _ = std::fs::remove_file(path);
+}
+
+/// 两个实例同时写同一个 DuckDB 文件会各自 checkpoint 并互相覆盖, 静默抹掉已
+/// 提交写入 — 后启动的实例必须退化为「录制不可用」, 既不损坏数据库, 也不能
+/// 挡住采集。
+#[test]
+fn a_second_instance_cannot_open_a_database_another_instance_holds() {
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-instance-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let bindings = || vec![binding("float", Domain::Float)];
+
+    let first = RecordingHub::default();
+    first
+        .start(
+            &path,
+            bindings(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .unwrap();
+
+    let second = RecordingHub::default();
+    let outcome = second.start(
+        &path,
+        bindings(),
+        RecordingLimits::default(),
+        SessionState::Paused,
+    );
+    assert!(outcome.is_err(), "第二个实例不得同时打开同一个数据库文件");
+    assert!(
+        second.fault().is_none(),
+        "数据库被别的实例占住不是写入故障 (会停采集): {:?}",
+        second.fault()
+    );
+    assert!(
+        second.health().failed.is_some(),
+        "「没有录制」必须对用户可见"
+    );
+    assert!(second.store().is_none());
+    assert!(!second.is_bound(&PortIdentity::new("source", "float")));
+
+    // 第一个实例退出后, 守卫与文件句柄一并释放, 第二个可以接管。
+    first.stop().unwrap();
+    second
+        .start(
+            &path,
+            bindings(),
+            RecordingLimits::default(),
+            SessionState::Paused,
+        )
+        .expect("前一个实例关闭后必须能接管");
+    second.stop().unwrap();
+
+    let _ = std::fs::remove_file(path.with_extension("duckdb.lock"));
+    let _ = std::fs::remove_file(path);
+}
+
+/// 打开必须**有界且不阻塞**: Windows 上别的进程持有强制锁时
+/// `Connection::open` 会一直等下去, 而调用方往往正持着数据链边界锁。
+///
+/// 这里用同进程内的另一个句柄占住数据库文件 (与跨进程一样的强制锁语义),
+/// 断言启动在探测重试窗口内失败、归「录制不可用」而不是故障, 采集不受影响。
+#[test]
+fn opening_a_locked_database_fails_fast_instead_of_blocking() {
+    use std::fs::OpenOptions;
+
+    let path = std::env::temp_dir().join(format!(
+        "lissio-recording-locked-{}.duckdb",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_file(&path);
+    let _ = std::fs::remove_file(path.with_extension("duckdb.lock"));
+    std::fs::write(&path, b"").unwrap();
+
+    let holder = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(&path)
+        .unwrap();
+    holder.try_lock().expect("测试需要先占住数据库文件");
+
+    let hub = RecordingHub::default();
+    let started = std::time::Instant::now();
+    let outcome = hub.start(
+        &path,
+        vec![binding("bytes", Domain::Bytes)],
+        RecordingLimits::default(),
+        SessionState::Paused,
+    );
+    let elapsed = started.elapsed();
+
+    assert!(outcome.is_err(), "被强制锁占住的库不得被当成可用");
+    assert!(
+        elapsed < std::time::Duration::from_secs(5),
+        "打开必须有界 (探测 + 重试窗口), 实际等待 {elapsed:?}"
+    );
+    assert!(
+        hub.fault().is_none(),
+        "打不开是「没有录制」而不是写入故障: {:?}",
+        hub.fault()
+    );
+    assert!(hub.health().failed.is_some(), "「没有录制」必须对用户可见");
+    assert!(hub.store().is_none());
+
+    drop(holder);
+    let _ = std::fs::remove_file(path.with_extension("duckdb.lock"));
+    let _ = std::fs::remove_file(&path);
+}
+
+/// 回归: 一个**打不开**的库文件必须在启动时被隔离并新建空库继续录制。
+///
+/// 修复前这条路径让录制永久不可用, 而用户看到的只是一句
+/// 「recording writer is closed」—— 既真实又不可行动, 真实原因只剩在健康报告里。
+#[test]
+fn an_unreadable_database_is_quarantined_and_recording_continues() {
+    let directory = std::env::temp_dir().join(format!(
+        "lissio-recording-quarantine-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&directory);
+    std::fs::create_dir_all(&directory).unwrap();
+    let path = directory.join("acquisition.duckdb");
+    // 垃圾内容 = DuckDB 打不开的文件 (实测: "not a valid DuckDB database file")。
+    let garbage = vec![0xAB_u8; 8192];
+    std::fs::write(&path, &garbage).unwrap();
+
+    let hub = RecordingHub::default();
+    hub.start(
+        &path,
+        Vec::new(),
+        RecordingLimits::default(),
+        SessionState::Paused,
+    )
+    .expect("打不开的库必须被隔离并新建空库, 而不是让录制一直不可用");
+
+    // 录制真的恢复了。
+    let summaries = hub.list_session_summaries().expect("新库必须可读");
+    assert_eq!(summaries.len(), 1, "新库应当正好有一个会话");
+    // 原件被原样保留, 并留下可见提示。
+    let note = hub.health().warning.expect("隔离必须留下用户可见的提示");
+    assert!(note.contains("could not be read"), "{note}");
+    let backups: Vec<String> = std::fs::read_dir(&directory)
+        .unwrap()
+        .filter_map(std::result::Result::ok)
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.contains(".corrupt-"))
+        .collect();
+    assert_eq!(backups.len(), 1, "隔离件应当只有一个: {backups:?}");
+    assert_eq!(
+        std::fs::read(directory.join(&backups[0])).unwrap(),
+        garbage,
+        "隔离必须逐字节保留原文件"
+    );
+    assert!(note.contains(&backups[0]), "提示必须指出现件在哪: {note}");
+
+    let _ = hub.stop();
+    let _ = std::fs::remove_dir_all(&directory);
+}
+
+/// 回归: 录制不可用时, 读路径必须给出**真实原因**。
+///
+/// 统一退化成 [`RecordingError::Closed`] 会让用户看到
+/// 「recording writer is closed」, 而文件不可写 / 开关关掉这些可行动的信息全被吞掉。
+#[test]
+fn unavailable_reads_report_the_real_reason() {
+    let directory =
+        std::env::temp_dir().join(format!("lissio-recording-reason-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&directory);
+    std::fs::create_dir_all(&directory).unwrap();
+
+    // 用目录占住库文件路径: 探测可写性必然失败 → 「录制不可用」。
+    let blocked = directory.join("blocked.duckdb");
+    std::fs::create_dir_all(&blocked).unwrap();
+    let hub = RecordingHub::default();
+    assert!(
+        hub.start(
+            &blocked,
+            Vec::new(),
+            RecordingLimits::default(),
+            SessionState::Paused
+        )
+        .is_err(),
+        "库文件不可写时应当报「录制不可用」"
+    );
+    let error = hub.list_session_summaries().unwrap_err();
+    let RecordingError::Unavailable(reason) = error else {
+        panic!("读路径必须报真实原因, 而不是 {error:?}");
+    };
+    assert!(reason.contains("not writable"), "{reason}");
+
+    // 总开关关掉是另一种明确状态, 同样不得退化成 Closed。
+    hub.disable_at(directory.join("off.duckdb"), RecordingLimits::default());
+    let error = hub.list_session_summaries().unwrap_err();
+    let RecordingError::Unavailable(reason) = error else {
+        panic!("关闭状态必须有自己的原因, 而不是 {error:?}");
+    };
+    assert!(reason.contains("turned off"), "{reason}");
+
+    let _ = std::fs::remove_dir_all(&directory);
 }

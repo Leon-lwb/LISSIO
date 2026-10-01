@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { WaveformSeriesSelection } from '../../types';
 import { WaveformWindowCache, EMPTY_WAVEFORM_CACHE as EMPTY_BUFFER } from '../buffers/dataBuffer';
 import { api } from '../tauri/tauri';
+import { errorText } from '../../types/errors';
 
 interface WaveformDetailOptions {
   sourceId: string | null;
@@ -120,7 +121,7 @@ export function useWaveformDetailBuffer({
         setSnapshotId(created.snapshot_id);
       })
       .catch((error: unknown) => {
-        if (!released) setSnapshotError(String(error));
+        if (!released) setSnapshotError(errorText(error));
       });
     return () => {
       released = true;
@@ -142,7 +143,7 @@ export function useWaveformDetailBuffer({
       ).then((waveform) => {
         if (generation === generationRef.current) stoppedDetail.set(waveform);
       }).catch((error: unknown) => {
-        if (generation === generationRef.current) setSnapshotError(String(error));
+        if (generation === generationRef.current) setSnapshotError(errorText(error));
       });
     }, 75);
     return () => {

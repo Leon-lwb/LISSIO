@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::RecordingError;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Domain {
@@ -179,7 +181,10 @@ pub struct RecordingLimits {
 impl Default for RecordingLimits {
     fn default() -> Self {
         Self {
-            queue_batches: 256,
+            // 缓冲必须扛得住一次 checkpoint / 杀毒扫描停顿。256 条只够不到一秒
+            // 的突发, Windows 上必然打满, 而打满曾被误判成写入故障 (见
+            // `hub::fault`) — 一次瞬态背压就会把采集永久停住。
+            queue_batches: 4_096,
             transaction_bytes: 8 * 1024 * 1024,
             commit_interval_ms: 250,
         }
@@ -195,6 +200,18 @@ pub struct RecordingHealth {
     pub accepted_sequence: u64,
     pub persisted_sequence: u64,
     pub queued_batches: u64,
+    /// 数据库写入总开关 (设置项)。`false` 是用户主动关闭, 不是故障。
+    pub enabled: bool,
+    /// 写线程队列打满而丢弃的批次数 — 正常背压, 采集与运行控制不受影响。
+    /// 大于零表示磁盘/checkpoint 一时跟不上, 该区间的录制数据不完整。
+    pub dropped_batches: u64,
+    /// 绑定缺失或域不匹配而被拒的批次数 — 图编辑与在途批次的竞态, 同样不影响采集。
+    pub rejected_batches: u64,
+    /// 可见但**非故障**的提示 (例如打开时自动重建过数据库)。
+    ///
+    /// 与 `failed` 严格分开: `failed` 会被 [`crate::RecordingHub::fault`] 当成
+    /// 录制契约破坏而停掉采集, 提示不行。
+    pub warning: Option<String>,
     pub failed: Option<String>,
 }
 
@@ -310,4 +327,29 @@ pub struct HistoryQuery {
     pub to_us: Option<u64>,
     pub limit: usize,
     pub include_payload: bool,
+}
+
+/// 写入前的批次校验 — 空批次与「时间戳数量 / 载荷列数」不一致都会破坏录制契约。
+///
+/// 由唯一连接上的写入路径 ([`crate::store::RecordingStore::write_batch`]) 调用,
+/// 所以放这里而不是散在 store 里: 校验的是模型自身的合法性。
+pub fn validate_batch(batch: &RecordBatch) -> Result<(), RecordingError> {
+    let count = batch.payload.item_count();
+    if count == 0 {
+        return Err(RecordingError::Invalid("empty recording batch".into()));
+    }
+    let valid_timestamps = match &batch.payload {
+        BatchPayload::Bytes { .. } | BatchPayload::Spectrum { .. } => {
+            batch.timestamps_us.len() == 1
+        }
+        BatchPayload::String { .. } | BatchPayload::Float { .. } => {
+            batch.timestamps_us.len() == count
+        }
+    };
+    if !valid_timestamps {
+        return Err(RecordingError::Invalid(
+            "timestamp and payload column lengths differ".into(),
+        ));
+    }
+    Ok(())
 }

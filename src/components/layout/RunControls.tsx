@@ -18,26 +18,40 @@ const STATE_BADGE: Record<RunState, { dot: string; label: string; title: string 
 /// 数据链在运行与暂停态都工作: 暂停保持设备连接, 数据继续写入缓存与录制,
 /// 只停自动发送与设备写; 停止则丢弃在途数据并冻结现有缓存。
 /// 暂停期间录制仍在落库, 因此在按钮旁给出「录制中」指示 (数据库不可用时不显示)。
+///
+/// 数据库问题**不得**影响运行控制: 关闭只显示「录制已关闭」, 背压丢批只显示
+/// 警告, 两者都不改变采集/暂停/恢复的行为。
+type RecordingBadge = 'active' | 'disabled' | 'dropped' | null;
+
 export const RunControls = memo(function RunControls() {
   const lang = useAppStore((s) => s.lang);
   const runState = useAppStore((s) => s.runState);
   const workspaceRun = useAppStore((s) => s.workspaceRun);
-  // 暂停期间是否真的在落库 — 只有 recorder 健康时才指示「录制中」
-  const [recordingActive, setRecordingActive] = useState(false);
+  // 暂停期间录制的真实状态 — 关闭 / 丢批 / 正常落库 / 不可用
+  const [recordingBadge, setRecordingBadge] = useState<RecordingBadge>(null);
+  const [droppedBatches, setDroppedBatches] = useState(0);
 
   useEffect(() => {
     if (runState !== 'paused') {
-      setRecordingActive(false);
+      setRecordingBadge(null);
       return;
     }
     let cancelled = false;
     void api
       .getRecordingHealth()
       .then((health) => {
-        if (!cancelled) setRecordingActive(health.failed === null);
+        if (cancelled) return;
+        setDroppedBatches(health.dropped_batches);
+        if (!health.enabled) {
+          setRecordingBadge('disabled');
+        } else if (health.dropped_batches > 0) {
+          setRecordingBadge('dropped');
+        } else {
+          setRecordingBadge(health.failed === null ? 'active' : null);
+        }
       })
       .catch(() => {
-        if (!cancelled) setRecordingActive(false);
+        if (!cancelled) setRecordingBadge(null);
       });
     return () => {
       cancelled = true;
@@ -92,7 +106,7 @@ export const RunControls = memo(function RunControls() {
       >
         <Square size={10} />
       </button>
-      {recordingActive && (
+      {recordingBadge === 'active' && (
         <span
           className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-red"
           data-testid="run-recording-active"
@@ -100,6 +114,26 @@ export const RunControls = memo(function RunControls() {
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red inline-block" />
           {t(lang, 'runRecordingActive')}
+        </span>
+      )}
+      {recordingBadge === 'disabled' && (
+        <span
+          className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-text-muted"
+          data-testid="run-recording-disabled"
+          title={t(lang, 'runRecordingDisabledHint')}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-text-muted inline-block" />
+          {t(lang, 'runRecordingDisabled')}
+        </span>
+      )}
+      {recordingBadge === 'dropped' && (
+        <span
+          className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-yellow"
+          data-testid="run-recording-dropped"
+          title={t(lang, 'runRecordingDroppedHint')}
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-yellow inline-block" />
+          {t(lang, 'runRecordingDropped').replace('{{count}}', String(droppedBatches))}
         </span>
       )}
     </div>

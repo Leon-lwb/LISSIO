@@ -12,6 +12,10 @@ const HEALTHY: RecordingHealth = {
   accepted_sequence: 0,
   persisted_sequence: 0,
   queued_batches: 0,
+  enabled: true,
+  dropped_batches: 0,
+  rejected_batches: 0,
+  warning: null,
   failed: null,
 };
 
@@ -63,5 +67,23 @@ describe('RunControls 录制中指示', () => {
     await renderWithRunState('stopped');
     expect(screen.queryByTestId('run-recording-active')).toBeNull();
     expect(health).not.toHaveBeenCalled();
+  });
+
+  it('用户在设置里关掉数据库时显示「录制已关闭」而不是失败', async () => {
+    health.mockResolvedValue({ ...HEALTHY, enabled: false });
+    await renderWithRunState('paused');
+
+    expect(screen.getByTestId('run-recording-disabled')).toBeTruthy();
+    expect(screen.queryByTestId('run-recording-active')).toBeNull();
+  });
+
+  it('背压丢批时给出可见告警, 仍然显示为录制中', async () => {
+    health.mockResolvedValue({ ...HEALTHY, dropped_batches: 12 });
+    await renderWithRunState('paused');
+
+    expect(screen.getByTestId('run-recording-dropped')).toBeTruthy();
+    expect(screen.getByText('录制丢批 12')).toBeTruthy();
+    // 丢批是背压而不是故障: 不得退化成「不可用」
+    expect(screen.queryByTestId('run-recording-active')).toBeNull();
   });
 });

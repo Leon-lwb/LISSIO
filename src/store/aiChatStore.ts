@@ -8,6 +8,7 @@ import { checkAiProviderSettings } from '../settings/aiProvider';
 import { useSettingsStore } from './settingsStore';
 import { useAppStore } from './appStore';
 import { t } from '../i18n';
+import { errorText } from '../types/errors';
 import type {
   AiAttachment,
   AiChatEvent,
@@ -102,7 +103,7 @@ function errorItemFromRejection(err: unknown): AiViewItem {
       error_data: e.data,
     };
   }
-  return { role: 'assistant', text: err instanceof Error ? err.message : String(err), error: true };
+  return { role: 'assistant', text: errorText(err), error: true };
 }
 
 /** 构造对话事件通道 — 出口不支持 AI 命令时上报一次本地失败并返回 null */

@@ -279,6 +279,26 @@ const SETTING_FIELDS: SettingFieldDef[] = [
   // Data — 录制存储与启动行为 (与上面的数据缓存同分类: 统一缓存/保存/浏览)
   {
     category: 'data',
+    field: 'recordingEnabled',
+    labelKey: 'settingRecEnabled',
+    descKey: 'settingRecEnabledDesc',
+    control: { kind: 'toggle' },
+    keywords: [
+      'recording',
+      'database',
+      'duckdb',
+      'disable',
+      'freeze',
+      'windows',
+      '录制',
+      '数据库',
+      '开关',
+      '禁用',
+      '卡死',
+    ],
+  },
+  {
+    category: 'data',
     field: 'recordingDatabaseDir',
     labelKey: 'settingRecDatabaseDir',
     descKey: 'settingRecDatabaseDirDesc',

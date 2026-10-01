@@ -5,13 +5,15 @@
 //! 点位投影、工作区恢复与收尾行为完全一致。
 //!
 //! 本 crate 不含 Tauri: 配置目录按平台语义解析 (与 `app_config_dir()` 一致),
-//! 事件经 [`events::BackendEventSink`] 端口注入。
+//! 事件经 [`events::BackendEventSink`] 端口注入。用户设置的持久化文件
+//! (`settings.json`) 也由本 crate 统一读写, 桌面 / server / CLI 三出口回放同一份。
 
 mod artifacts;
 mod assembly;
 mod config;
 mod host;
 mod lifecycle;
+mod settings;
 
 pub use artifacts::{ARTIFACT_TTL, ArtifactStaging, sanitize_file_name};
 pub use assembly::{
@@ -21,3 +23,4 @@ pub use assembly::{
 pub use config::{APP_IDENTIFIER, CONFIG_DIR_ENV, platform_config_dir, resolve_config_dir};
 pub use host::{BackendHost, assemble, teardown};
 pub use lifecycle::{restore_workspace, shutdown};
+pub use settings::{RECORDING_ENABLED_DEFAULT, SETTINGS_FILE_NAME, SETTINGS_KEY, SettingsStore};

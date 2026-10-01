@@ -66,6 +66,9 @@ export interface AppSettings {
     rawDataBufferBytes: number;
     canBufferFrames: number;
     logicBufferSamples: number;
+    /// 录制数据库总开关 (默认开)。关闭后不建立任何 DuckDB 连接、不写盘:
+    /// 数据库在 Windows 上卡死时的逃生舱, 且任意运行态都可热更新
+    recordingEnabled: boolean;
     /// 录制数据库目录 (空 = 默认: 应用配置目录下 recordings/); 修改后旧文件保留
     recordingDatabaseDir: string;
     /// 启动时上次会话为空则继续写同一会话 (避免空会话堆积, 含崩溃遗留)
@@ -173,6 +176,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     rawDataBufferBytes: 1_048_576,
     canBufferFrames: 100_000,
     logicBufferSamples: 20_000,
+    recordingEnabled: true,
     recordingDatabaseDir: '',
     continueEmptySession: true,
     cleanupDeleteFailed: false,

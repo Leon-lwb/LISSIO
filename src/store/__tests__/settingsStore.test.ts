@@ -115,6 +115,7 @@ describe('settingsStore', () => {
     expect(invokeCalls('apply_recording_settings')[0]).toEqual({
       databaseDir: '/tmp/rec-storage',
       continueEmptySession: true,
+      enabled: true,
     });
     await vi.waitFor(() => {
       expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(1);
@@ -134,6 +135,29 @@ describe('settingsStore', () => {
     await vi.waitFor(() => {
       expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
     });
+    expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(0);
+  });
+
+  it('关闭录制数据库时只推开关, 不做必然失败的清理', async () => {
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, {
+      data: {
+        recordingEnabled: false,
+        cleanupDeleteFailed: true,
+        cleanupKeepLatest: 5,
+      },
+    });
+
+    await useSettingsStore.getState().load();
+
+    await vi.waitFor(() => {
+      expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
+    });
+    expect(invokeCalls('apply_recording_settings')[0]).toEqual({
+      databaseDir: '',
+      continueEmptySession: true,
+      enabled: false,
+    });
+    // 没有连接可用, 清理必然失败: 必须直接跳过
     expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(0);
   });
 

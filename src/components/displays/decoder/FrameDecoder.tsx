@@ -17,6 +17,7 @@ import type {
   FrameDecoderManualResult,
 } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
+import { errorText } from '../../../types/errors';
 import { api } from '../../../lib/tauri/tauri';
 import { t } from '../../../i18n';
 import { nanoid } from 'nanoid';
@@ -215,7 +216,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
         });
       }
     } catch (e) {
-      setResult({ outputs: {}, valid: false, consumedBytes: 0, error: String(e) });
+      setResult({ outputs: {}, valid: false, consumedBytes: 0, error: errorText(e) });
     } finally {
       setLoading(false);
     }

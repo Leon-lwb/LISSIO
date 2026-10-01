@@ -7,6 +7,8 @@
 /// - 最多显示 5 条, 超出折叠为 "还有 N 条"
 /// - 同一 source 的连续错误折叠为一条 (累计计数)
 
+import { errorText } from '../../types/errors';
+
 export type Severity = 'error' | 'warn' | 'info';
 
 export interface NotificationAction {
@@ -159,13 +161,7 @@ class NotificationManager {
 
 export const notify = new NotificationManager();
 
-/** 将 Error 对象格式化为简洁消息 */
+/** 将任意抛出物格式化为简洁消息 (RpcError 的 `{ kind, message }` 取 message) */
 export function formatError(e: unknown): string {
-  if (e instanceof Error) return e.message;
-  if (typeof e === 'string') return e;
-  try {
-    return JSON.stringify(e);
-  } catch {
-    return String(e);
-  }
+  return errorText(e);
 }

@@ -438,6 +438,11 @@ settingsData: Data
 settingsSerial: Serial Defaults
 settingsNotifications: Notifications
 settingsPerformance: Performance
+settingRecEnabled: Enable recording database
+settingRecEnabledDesc: When off, DuckDB is never opened or written; acquisition and run control stay unaffected. Hot-swappable at any time, and existing files and history are always kept
+recordingDisabledNotice: 'The recording database is disabled in settings: no new data is written, and history is not readable while it is off (files and history are kept). Re-enable it to browse again.'
+recordingDisabledShort: Recording database is off — no new data is written.
+recordingDisabledOpenSettings: Settings
 settingRecDatabaseDir: Recording database directory
 settingRecDatabaseDirDesc: DuckDB storage directory for acquisition data (empty = default location); changes apply while paused/stopped or on next launch, the old file is kept
 settingRecDefaultDir: Default location
@@ -1221,6 +1226,7 @@ recordingDatabaseIncludePayload: Decode payload
 recordingDatabaseExport: Export
 recordingDatabaseExporting: Exporting
 recordingDatabaseDismiss: Dismiss
+recordingDatabaseRecovered: The recording database was damaged and has been recovered automatically; recording continued (the original file is kept as a backup — hover for its path)
 recordingDatabaseSessions: Sessions
 recordingDatabaseBatches: batches
 recordingDatabaseChannels: channels
@@ -1545,6 +1551,10 @@ runPauseHint: Pause workspace (keeps connection and acquisition; data keeps fill
 runStopHint: Stop workspace (drops in-flight data without caching; clears pending send tasks, keeps existing caches)
 runRecordingActive: Recording
 runRecordingActiveHint: Workspace is paused — acquisition and recording keep writing to the database
+runRecordingDisabled: Recording off
+runRecordingDisabledHint: The recording database is disabled in settings; acquisition and run control are unaffected. Re-enable it under Settings → Data
+runRecordingDropped: Recording dropped {{count}}
+runRecordingDroppedHint: Disk/checkpoint could not keep up and the writer queue overflowed, so some batches were dropped — acquisition and run control are unaffected, but this recording is incomplete
 displayFrozen: Not live
 displayFrozenHint: The workspace is not running, or this panel left the latest — resuming from pause jumps back to the latest
 cmdSendRequiresRun: Workspace is not running — manual send requires running state, start it from the status bar

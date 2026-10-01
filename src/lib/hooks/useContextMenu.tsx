@@ -49,19 +49,21 @@ export function useContextMenu(items: ContextMenuEntry[] | (() => ContextMenuEnt
         return;
       }
 
+      const resolved = typeof items === 'function' ? items() : items;
+      const finalItems = withInspectElementIfDebug(resolved, lang);
+
+      // 没有菜单项时**不吃掉右键**: 既不 preventDefault 也不 stopPropagation,
+      // 让事件照常冒泡 (父层菜单或原生菜单)。否则该区域右键「什么都不弹」——
+      // 数据卡片标签栏就是这种空菜单表面。
+      if (finalItems.length === 0) return;
+
       e.preventDefault();
       e.stopPropagation();
 
-      const resolved = typeof items === 'function' ? items() : items;
-
       if (debug) {
         // 输出调试数据到控制台
-        console.info('[context-menu]', resolved);
+        console.info('[context-menu]', finalItems);
       }
-
-      const finalItems = withInspectElementIfDebug(resolved, lang);
-
-      if (finalItems.length === 0) return;
 
       open(e.clientX, e.clientY, finalItems);
     },

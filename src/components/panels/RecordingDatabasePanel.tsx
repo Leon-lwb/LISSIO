@@ -3,12 +3,14 @@ import { CornerUpLeft, Database, Eraser, ExternalLink, FilePlus2, Pause, Play, R
 import { platform } from '../../lib/platform';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
+import { useSettingsStore } from '../../store/settingsStore';
 import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 import { showContextMenu } from '../../lib/hooks/useContextMenu';
 import { t } from '../../i18n';
 import type { RecordingSessionSummary } from '../../lib/tauri/tauri';
 import type { RunState } from '../../types';
+import { RecordingDisabledNotice } from '../displays/recording/RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs } from '../displays/recording/recordingFormat';
 
 /// 与 RunControls 一致的运行状态配色 + 标签
@@ -36,6 +38,10 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   const addRecordingDatabaseTab = useAppStore((s) => s.addRecordingDatabaseTab);
   const runState = useAppStore((s) => s.runState);
   const workspaceRun = useAppStore((s) => s.workspaceRun);
+  // 数据库总开关 (设置项): 关闭时入口保留但写操作禁用, 并说明原因
+  const recordingEnabled = useSettingsStore((s) => s.settings.data.recordingEnabled);
+  const healthWarning = useRecordingDatabaseStore((s) => s.healthWarning);
+  const clearHealthWarning = useRecordingDatabaseStore((s) => s.clearHealthWarning);
   const sessions = useRecordingDatabaseStore((s) => s.sessions);
   const databaseInfo = useRecordingDatabaseStore((s) => s.databaseInfo);
   const selectedSessionId = useRecordingDatabaseStore((s) => s.selectedSessionId);
@@ -57,8 +63,11 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   const hintTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    // 总开关关闭时后端不建任何连接, 查询必然失败 — 这里只显示「已关闭」说明,
+    // 不再去撞一条读不出来的错误。
+    if (!recordingEnabled) return;
     void loadOverview();
-  }, [loadOverview, runState]);
+  }, [loadOverview, recordingEnabled, runState]);
 
   useEffect(() => () => {
     if (hintTimer.current !== null) window.clearTimeout(hintTimer.current);
@@ -308,7 +317,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
       <div className="flex flex-wrap gap-1">
         <button
           type="button"
-          disabled={!paused || busy}
+          disabled={!recordingEnabled || !paused || busy}
           onClick={() => void handleCreateSession()}
           className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
           title={paused ? t(lang, 'recordingDatabaseNewSession') : t(lang, 'recordingDatabasePausedOnlyHint')}
@@ -318,7 +327,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         </button>
         <button
           type="button"
-          disabled={busy || terminalCount === 0}
+          disabled={!recordingEnabled || busy || terminalCount === 0}
           onClick={() => void cleanupStopped()}
           className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
         >
@@ -337,7 +346,12 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           />
           <button
             type="button"
-            disabled={busy || terminalCount === 0 || terminalCount <= Math.max(0, keepLatest)}
+            disabled={
+              !recordingEnabled ||
+              busy ||
+              terminalCount === 0 ||
+              terminalCount <= Math.max(0, keepLatest)
+            }
             onClick={() => void cleanupKept()}
             className="h-full border-l border-border-subtle px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
           >
@@ -345,6 +359,29 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           </button>
         </div>
       </div>
+
+      {!recordingEnabled && <RecordingDisabledNotice />}
+
+      {warning === null && healthWarning !== null && (
+        <div
+          className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200"
+          data-testid="recording-recovered-notice"
+          title={healthWarning}
+        >
+          <div className="flex items-start gap-1">
+            <span className="min-w-0 flex-1 break-words">
+              {t(lang, 'recordingDatabaseRecovered')}
+            </span>
+            <button
+              type="button"
+              onClick={clearHealthWarning}
+              className="shrink-0 text-amber-100 hover:text-white"
+            >
+              {t(lang, 'recordingDatabaseDismiss')}
+            </button>
+          </div>
+        </div>
+      )}
 
       {warning !== null && (
         <div className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">

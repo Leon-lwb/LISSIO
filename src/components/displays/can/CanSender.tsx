@@ -4,6 +4,7 @@ import { sendCanFrame } from '../../../lib/buffers/canSubscription';
 import { t } from '../../../i18n';
 import { Send, Clock, AlertCircle } from 'lucide-react';
 import type { CanFrame } from '../../../types';
+import { errorText } from '../../../types/errors';
 
 /// 格式化数据为 HEX 字符串
 function formatDataHex(data: readonly number[]): string {
@@ -67,7 +68,7 @@ export function CanSender() {
       await sendCanFrame(targetId, frame);
       setHistory((prev) => [...prev.slice(-9), frame]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(errorText(e));
     }
   };
 

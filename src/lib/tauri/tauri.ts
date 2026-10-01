@@ -137,6 +137,14 @@ export interface RecordingHealth {
   accepted_sequence: number;
   persisted_sequence: number;
   queued_batches: number;
+  /** 数据库写入总开关 (设置项)。false = 用户主动关闭, 不是故障。 */
+  enabled: boolean;
+  /** 写线程队列打满而丢弃的批次数 — 正常背压, 采集不受影响但这段录制不完整。 */
+  dropped_batches: number;
+  /** 绑定竞态被拒的批次数 — 同样不影响采集。 */
+  rejected_batches: number;
+  /** 可见但非故障的提示 (例如打开时自动重建过数据库)。 */
+  warning: string | null;
   failed: string | null;
 }
 
@@ -698,10 +706,18 @@ export const api = {
   /// 暂停时把写入目标切换到指定的已停止会话
   setActiveRecordingSession: (sessionId: string) =>
     transport.call<RecordingSession>('set_active_recording_session', { sessionId }),
-  /// 应用录制存储设置 (数据库目录 + 空会话续写开关); 空目录 = 默认位置。
-  /// 运行中被后端拒绝, 下次启动设置回放时生效
-  applyRecordingSettings: (databaseDir: string, continueEmptySession: boolean) =>
-    transport.call<void>('apply_recording_settings', { databaseDir, continueEmptySession }),
+  /// 应用录制存储设置 (数据库目录 + 空会话续写开关 + 录制总开关); 空目录 = 默认位置。
+  /// 总开关任意运行态都可热更新; 改数据库目录仍要求暂停/停止
+  applyRecordingSettings: (
+    databaseDir: string,
+    continueEmptySession: boolean,
+    enabled: boolean,
+  ) =>
+    transport.call<void>('apply_recording_settings', {
+      databaseDir,
+      continueEmptySession,
+      enabled,
+    }),
 
   // ===== AI 对话 + MCP =====
   /// 发起一次对话 (可含多轮工具调用); 增量事件经 onEvent 推送, 返回 task_id。

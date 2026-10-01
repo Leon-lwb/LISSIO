@@ -190,8 +190,11 @@ async fn put_settings(State(state): State<Arc<ServerState>>, body: Bytes) -> Res
 }
 
 /// 设置存储 — 落在已装配宿主的配置目录 (与桌面壳同一位置)。
-fn settings_store(state: &ServerState) -> crate::settings::SettingsStore {
-    crate::settings::SettingsStore::new(&state.host.config_dir)
+///
+/// 读写实现由 `backend-host` 拥有: 装配期回放设置 (录制总开关) 走的是同一份
+/// 解析, 出口之间不会漂移。
+fn settings_store(state: &ServerState) -> backend_host::SettingsStore {
+    backend_host::SettingsStore::new(&state.host.config_dir)
 }
 
 /// HTTP-RPC — 单条或数组 (数组用于启动时的并发突发, 减少往返)。

@@ -22,28 +22,35 @@ pub type TaskSpawner = dyn Fn(Pin<Box<dyn Future<Output = ()> + Send + 'static>>
 /// ticker / 自动发送调度。
 ///
 /// `config_dir`: workspace.json 与 recordings/ 所在目录 (app config dir)。
+/// `recording_enabled`: 用户设置里的录制总开关 (默认开)。关闭时**不建立任何
+/// DuckDB 连接** — 只登记坐标, 采集与其它后台任务照常。
 pub fn spawn_backend_tasks(
     state: &AppState,
     sink: EventSinkHandle,
     config_dir: PathBuf,
+    recording_enabled: bool,
     spawn: &TaskSpawner,
 ) {
-    start_recording(state, &config_dir);
+    start_recording(state, &config_dir, recording_enabled);
     spawn_workspace_autosave(state, config_dir, spawn);
     spawn_push_tickers(state, sink, spawn);
 }
 
 /// 启动录制会话 (工作区尚未启动, 会话以 paused 开局 = recorder 就绪但未写入)。
-pub fn start_recording(state: &AppState, config_dir: &Path) {
+///
+/// 开关关闭时只调用 [`recording::RecordingHub::disable_at`]: 不建目录、不打开
+/// 数据库文件, 用户可以在设置里随时打开。
+pub fn start_recording(state: &AppState, config_dir: &Path, enabled: bool) {
     let path = config_dir.join("recordings").join("acquisition.duckdb");
     let recording = state.eval_state().recording;
+    let limits = recording::RecordingLimits::default();
+    if !enabled {
+        recording.disable_at(path, limits);
+        log::info!("recording disabled by settings: no database connection opened");
+        return;
+    }
     // 上次会话没有写入任何数据时继续写同一会话, 避免每次启动都新增空会话
-    match recording.start(
-        path,
-        Vec::new(),
-        recording::RecordingLimits::default(),
-        recording::SessionState::Paused,
-    ) {
+    match recording.start(path, Vec::new(), limits, recording::SessionState::Paused) {
         Ok(session) => log::info!("recording session started: {}", session.id),
         Err(error) => log::error!("recording unavailable: {error}"),
     }

@@ -3,6 +3,7 @@ import type { DeviceTreeNodeDecl, ProtocolConfig, ProtocolSchema, WidgetConfig }
 import type { AcquisitionNodeData } from '../acquisition/acquisitionNodes';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
 import { customWidgetPortDeclaration } from '../utils/nodeDef';
+import { errorText } from '../../types/errors';
 import { schemaPortNames } from '../utils/protocolSchema';
 
 type Business =
@@ -79,7 +80,7 @@ export function tryNodeDocument(node: Node): NodeDocumentOutcome {
     return {
       failure: {
         nodeId: node.id,
-        message: error instanceof Error ? error.message : String(error),
+        message: errorText(error),
       },
     };
   }

@@ -4,15 +4,25 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
+use crate::writer::QueryCancellation;
 use crate::{
-    BatchPayload, BindingInfo, DisplayBinding, PortIdentity, RecordBatch, Recorder,
-    RecordingCleanupPolicy, RecordingCleanupResult, RecordingDatabaseInfo, RecordingError,
-    RecordingHealth, RecordingLimits, RecordingStore, SessionInfo, SessionState, SessionSummary,
+    DisplayBinding, PortIdentity, Recorder, RecordingCleanupPolicy, RecordingError,
+    RecordingLimits, SessionInfo, SessionState,
 };
 
+mod fault;
+mod guard;
+mod ingest;
+mod query;
 mod spawn;
+mod state;
+#[cfg(test)]
+mod wedge;
 
-use spawn::{RecordingTarget, spawn_recorder};
+use guard::InstanceGuard;
+use spawn::{RecordingTarget, open_recorder};
+
+pub use fault::RecordingFault;
 
 /// Database coordinates captured at `start` so creating or resuming a session
 /// reuses the same store without the caller supplying them again.
@@ -22,26 +32,53 @@ struct HubDatabase {
     limits: RecordingLimits,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct HubState {
     recorder: Option<Arc<Recorder>>,
     active: HashMap<PortIdentity, DisplayBinding>,
     sequences: HashMap<PortIdentity, u64>,
     /// 在册 writer 的写入故障 — 绑定批次已受理却写不下去, 录制契约被破坏
-    /// ([`RecordingHub::fault`] 据此让采集停止)。
-    fault: Option<String>,
-    /// 录制不可用 — 未能建立 recorder (数据库打开/建库失败, 例如 Windows 上
-    /// 另一个实例持有该文件的强制锁)。此时没有任何绑定批次, 因此**不是**
-    /// 写入故障: 采集照常运行, 只是没有录制 (见 [`RecordingHub::fault`])。
+    /// ([`RecordingHub::fault`] 据此让采集停止)。**只有**这一种情况会置位。
+    fault: Option<RecordingFault>,
+    /// 录制不可用 — 未能建立 recorder (数据库打开/建库失败, 或数据库文件正被
+    /// 另一个实例独占), 或 writer 失去响应。此时没有任何绑定批次, 因此**不是**
+    /// 写入故障: 采集照常运行, 只是没有录制。
     unavailable: Option<String>,
+    /// 打开时自动重建过数据库 — **可见但非故障**的消息 (走健康报告的 warning,
+    /// 绝不进 `failed`: 那会被当成录制契约破坏而停掉采集)。
+    recovered: Option<String>,
+    /// 数据库写入总开关 (设置项, 默认开)。`false` 时不建任何 DuckDB 连接,
+    /// 所有生产者看到未绑定, 采集与运行控制完全不受影响。
+    enabled: bool,
+    /// 数据库文件的进程级独占守卫 — 两个实例同时写一个 DuckDB 文件会互相
+    /// checkpoint 覆盖, 静默抹掉已提交写入。
+    guard: Option<InstanceGuard>,
     database: Option<HubDatabase>,
+}
+
+impl Default for HubState {
+    fn default() -> Self {
+        Self {
+            recorder: None,
+            active: HashMap::new(),
+            sequences: HashMap::new(),
+            fault: None,
+            unavailable: None,
+            recovered: None,
+            // 默认开启: 关闭是用户显式选择, 不是默认行为。
+            enabled: true,
+            guard: None,
+            database: None,
+        }
+    }
 }
 
 /// Cloneable recording port shared by producers in all four domains.
 #[derive(Clone, Default)]
 pub struct RecordingHub {
     state: Arc<RwLock<HubState>>,
-    queries: Arc<RwLock<HashMap<String, Arc<duckdb::InterruptHandle>>>>,
+    /// 进行中的只读 SQL — 查询在写线程的唯一连接上执行, 取消经这里的中断槽。
+    queries: Arc<RwLock<HashMap<String, Arc<QueryCancellation>>>>,
 }
 
 impl RecordingHub {
@@ -95,7 +132,7 @@ impl RecordingHub {
             ));
         }
         {
-            let store = self.store().ok_or(RecordingError::Closed)?;
+            let store = self.store().ok_or_else(|| self.unavailable_error())?;
             let target = store
                 .list_sessions()?
                 .into_iter()
@@ -146,6 +183,9 @@ impl RecordingHub {
     /// A swap that cannot open the database leaves recording *unavailable*
     /// ([`Self::health`] reports it) without raising a writer fault — nothing
     /// is bound, so the acquisition contract is intact.
+    ///
+    /// 打开前先取数据库文件的进程级独占守卫: 两个实例同时写一个 DuckDB 文件
+    /// 会各自 checkpoint 并互相覆盖。拿不到守卫同样是「不可用」而不是故障。
     fn replace_recording(
         &self,
         path: &Path,
@@ -156,12 +196,32 @@ impl RecordingHub {
     ) -> Result<SessionInfo, RecordingError> {
         let shutdown = self.take_recorder().map(|recorder| recorder.shutdown());
         if let Some(Err(error)) = shutdown {
-            self.state.write().fault = Some(error.to_string());
+            // 旧的 writer 关不掉 = 已受理批次可能没落盘, 这是真故障; 但卡死的
+            // writer 只算不可用 — 继续持有它只会把换库路径一起拖死。
+            self.note_failure(&error);
             return Err(error);
         }
-        let outcome = spawn_recorder(path, limits, active.clone(), target, initial);
+        // 换库/重开前先交出旧守卫, 否则同一进程重开会把自己挡住。
+        self.state.write().guard = None;
+        let guard = match InstanceGuard::acquire(path) {
+            Ok(Some(guard)) => guard,
+            Ok(None) => {
+                let message = format!(
+                    "recording database is held by another instance: {}",
+                    path.display()
+                );
+                self.mark_unavailable(path, limits, message.clone());
+                return Err(RecordingError::Failed(message));
+            }
+            Err(error) => {
+                let message = format!("recording database guard failed: {error}");
+                self.mark_unavailable(path, limits, message.clone());
+                return Err(RecordingError::Failed(message));
+            }
+        };
+        let outcome = open_recorder(path, limits, active.clone(), target, initial, guard);
         match outcome {
-            Ok(recorder) => {
+            Ok((recorder, guard, recovered)) => {
                 let session = recorder.session().clone();
                 let mut state = self.state.write();
                 state.recorder = Some(recorder);
@@ -169,6 +229,9 @@ impl RecordingHub {
                 state.sequences.clear();
                 state.fault = None;
                 state.unavailable = None;
+                state.recovered = recovered;
+                state.enabled = true;
+                state.guard = Some(guard);
                 state.database = Some(HubDatabase {
                     path: path.to_path_buf(),
                     limits,
@@ -177,15 +240,28 @@ impl RecordingHub {
             }
             Err(error) => {
                 let message = error.to_string();
-                let mut state = self.state.write();
-                state.recorder = None;
-                // 数据库打不开 = 没有录制, 不是录制写入失败: 记入 unavailable,
-                // 让 fault 只描述在册 writer 的失败 (否则采集会被永久挡住)。
-                state.fault = None;
-                state.unavailable = Some(message);
+                self.mark_unavailable(path, limits, message);
                 Err(error)
             }
         }
+    }
+
+    /// 记「录制不可用」并登记坐标 — 采集照常, 但用户必须看得见没有录制。
+    fn mark_unavailable(&self, path: &Path, limits: RecordingLimits, message: String) {
+        let mut state = self.state.write();
+        state.recorder = None;
+        state.guard = None;
+        // 打不开 = 没有录制, 不是录制写入失败: 记入 unavailable, 让 fault 只描述
+        // 在册 writer 的失败 (否则采集会被永久挡住)。
+        state.fault = None;
+        state.unavailable = Some(message);
+        state.recovered = None;
+        // 打开失败不算「关闭」: 开关仍是开的, 只是这一次没打开。
+        state.enabled = true;
+        state.database = Some(HubDatabase {
+            path: path.to_path_buf(),
+            limits,
+        });
     }
 
     fn database_and_bindings(
@@ -198,9 +274,12 @@ impl RecordingHub {
         ),
         RecordingError,
     > {
-        let state = self.state.read();
-        let database = state.database.as_ref().ok_or(RecordingError::Closed)?;
-        Ok((database.path.clone(), database.limits, state.active.clone()))
+        let (database, active) = {
+            let state = self.state.read();
+            (state.database.clone(), state.active.clone())
+        };
+        let database = database.ok_or_else(|| self.unavailable_error())?;
+        Ok((database.path, database.limits, active))
     }
 
     fn take_recorder(&self) -> Option<Arc<Recorder>> {
@@ -218,250 +297,44 @@ impl RecordingHub {
 
     /// Replace active display bindings. Existing rows stay queryable; a removed
     /// binding immediately stops accepting new batches.
+    ///
+    /// The writer round-trips run **不持状态锁** — 一次卡住的 writer 会让
+    /// `bind`/`unbind` 最坏等待 [`Recorder`] 的应答上限, 持锁等待会连带堵死
+    /// 采集热路径。
     pub fn sync_bindings(&self, bindings: Vec<DisplayBinding>) -> Result<(), RecordingError> {
         let next = unique_bindings(bindings);
-        let mut state = self.state.write();
-        if let Some(recorder) = &state.recorder {
-            for (port, binding) in &state.active {
+        let (recorder, current) = {
+            let state = self.state.read();
+            (state.recorder.clone(), state.active.clone())
+        };
+        if let Some(recorder) = recorder {
+            for (port, binding) in &current {
                 if !next.contains_key(port)
                     && let Err(error) = recorder.unbind(&binding.id)
                 {
-                    state.fault = Some(error.to_string());
+                    self.note_failure(&error);
                     return Err(error);
                 }
             }
             for (port, binding) in &next {
-                if !state.active.contains_key(port)
+                if !current.contains_key(port)
                     && let Err(error) = recorder.bind(binding.clone())
                 {
-                    state.fault = Some(error.to_string());
+                    self.note_failure(&error);
                     return Err(error);
                 }
             }
         }
-        state.active = next;
+        self.state.write().active = next;
         Ok(())
     }
 
     #[must_use]
     pub fn is_bound(&self, port: &PortIdentity) -> bool {
-        self.state.read().active.contains_key(port)
-    }
-
-    pub fn record(
-        &self,
-        port: &PortIdentity,
-        epoch: u64,
-        sequence_start: u64,
-        timestamps_us: Vec<u64>,
-        payload: BatchPayload,
-    ) -> Result<bool, RecordingError> {
-        let mut state = self.state.write();
-        let Some(binding) = state.active.get(port) else {
-            return Ok(false);
-        };
-        let Some(recorder) = &state.recorder else {
-            return Ok(false);
-        };
-        if let Err(error) = recorder.append(RecordBatch {
-            binding_id: binding.id.clone(),
-            epoch,
-            sequence_start,
-            timestamps_us,
-            payload,
-        }) {
-            state.fault = Some(error.to_string());
-            return Err(error);
-        }
-        Ok(true)
-    }
-
-    pub fn record_next(
-        &self,
-        port: &PortIdentity,
-        epoch: u64,
-        timestamps_us: Vec<u64>,
-        payload: BatchPayload,
-    ) -> Result<bool, RecordingError> {
-        let mut state = self.state.write();
-        let Some(binding) = state.active.get(port) else {
-            return Ok(false);
-        };
-        let binding_id = binding.id.clone();
-        let Some(recorder) = state.recorder.clone() else {
-            return Ok(false);
-        };
-        let sequence = state.sequences.get(port).copied().unwrap_or_default();
-        let count = payload.item_count() as u64;
-        if let Err(error) = recorder.append(RecordBatch {
-            binding_id,
-            epoch,
-            sequence_start: sequence,
-            timestamps_us,
-            payload,
-        }) {
-            state.fault = Some(error.to_string());
-            return Err(error);
-        }
-        state
-            .sequences
-            .insert(port.clone(), sequence.saturating_add(count));
-        Ok(true)
-    }
-
-    pub fn set_state(&self, state: SessionState) -> Result<(), RecordingError> {
-        let mut hub = self.state.write();
-        if let Some(recorder) = &hub.recorder
-            && let Err(error) = recorder.set_state(state)
-        {
-            hub.fault = Some(error.to_string());
-            return Err(error);
-        }
-        Ok(())
-    }
-
-    pub fn flush(&self) -> Result<(), RecordingError> {
-        let mut state = self.state.write();
-        if let Some(recorder) = &state.recorder
-            && let Err(error) = recorder.flush()
-        {
-            state.fault = Some(error.to_string());
-            return Err(error);
-        }
-        Ok(())
-    }
-
-    pub fn stop(&self) -> Result<(), RecordingError> {
-        let recorder = self.state.write().recorder.take();
-        if let Some(recorder) = recorder {
-            recorder.shutdown()?;
-        }
-        Ok(())
-    }
-
-    pub fn delete_session(&self, session_id: &str) -> Result<(), RecordingError> {
-        self.cleanup_sessions(RecordingCleanupPolicy {
-            session_ids: Vec::from([session_id.to_string()]),
-            ..RecordingCleanupPolicy::default()
-        })
-        .map(|_| ())
-    }
-
-    pub fn list_bindings(&self, session_id: &str) -> Result<Vec<BindingInfo>, RecordingError> {
-        let store = self.store().ok_or(RecordingError::Closed)?;
-        store.list_bindings(session_id)
-    }
-
-    pub fn list_session_summaries(&self) -> Result<Vec<SessionSummary>, RecordingError> {
-        let store = self.store().ok_or(RecordingError::Closed)?;
-        let mut summaries = store.list_session_summaries()?;
-        if let Some(current_id) = self.current_session_id() {
-            for summary in &mut summaries {
-                if summary.session.id == current_id {
-                    summary.active = true;
-                }
-            }
-        }
-        Ok(summaries)
-    }
-
-    pub fn database_info(&self) -> Result<RecordingDatabaseInfo, RecordingError> {
-        let store = self.store().ok_or(RecordingError::Closed)?;
-        store.database_info()
-    }
-
-    pub fn cleanup_sessions(
-        &self,
-        policy: RecordingCleanupPolicy,
-    ) -> Result<RecordingCleanupResult, RecordingError> {
-        let store = self.store().ok_or(RecordingError::Closed)?;
-        let sessions = store.list_sessions()?;
-        let recorder = {
-            let state = self.state.read();
-            state.recorder.clone().ok_or(RecordingError::Closed)?
-        };
-        let current_id = recorder.session().id.clone();
-        let session_ids = cleanup_session_ids(&sessions, &current_id, &policy)?;
-        if session_ids.is_empty() {
-            return Ok(RecordingCleanupResult::default());
-        }
-        recorder.delete_sessions(session_ids)
-    }
-
-    #[must_use]
-    pub fn health(&self) -> RecordingHealth {
         let state = self.state.read();
-        let mut health = state
-            .recorder
-            .as_ref()
-            .map_or_else(RecordingHealth::default, |recorder| recorder.health());
-        if health.failed.is_none() {
-            health.failed.clone_from(&state.fault);
-        }
-        // 录制不可用 (数据库打不开) 不停止采集, 但必须保持可见 — 否则用户以为
-        // 数据在被录制, 实际什么都没落盘。
-        if health.failed.is_none() {
-            health.failed.clone_from(&state.unavailable);
-        }
-        health
-    }
-
-    /// 采集门控依据 — 只有在册 writer 的写入故障才算录制契约被破坏。
-    ///
-    /// 建立 recorder 失败 (数据库打不开 / 文件被别的实例锁住) 由
-    /// [`Self::health`] 的 `failed` 上报, 但**不**在此返回: 那时没有任何绑定
-    /// 批次, 采集必须照常运行 (只是没有录制)。返回 `Some` 表示已受理的批次
-    /// 无法落盘, 调用方据此停止采集。
-    #[must_use]
-    pub fn fault(&self) -> Option<String> {
-        let state = self.state.read();
-        state.fault.clone().or_else(|| {
-            state
-                .recorder
-                .as_ref()
-                .and_then(|recorder| recorder.health().failed)
-        })
-    }
-
-    #[must_use]
-    pub fn store(&self) -> Option<RecordingStore> {
-        self.state
-            .read()
-            .recorder
-            .as_ref()
-            .map(|recorder| recorder.store().clone())
-    }
-
-    pub fn query_sql(
-        &self,
-        query_id: &str,
-        sql: &str,
-        max_rows: usize,
-    ) -> Result<crate::SqlResult, RecordingError> {
-        if query_id.is_empty() {
-            return Err(RecordingError::Invalid("query id is empty".into()));
-        }
-        let store = self.store().ok_or(RecordingError::Closed)?;
-        let connection = store.connect()?;
-        let interrupt = connection.interrupt_handle();
-        {
-            let mut queries = self.queries.write();
-            if queries.contains_key(query_id) {
-                return Err(RecordingError::Invalid("query id is already active".into()));
-            }
-            queries.insert(query_id.to_string(), interrupt);
-        }
-        let result = RecordingStore::query_sql_on(&connection, sql, max_rows);
-        self.queries.write().remove(query_id);
-        result
-    }
-
-    pub fn cancel_query(&self, query_id: &str) -> bool {
-        let handle = self.queries.read().get(query_id).cloned();
-        handle.is_some_and(|handle| {
-            handle.interrupt();
-            true
-        })
+        // 关闭、打不开、被别的实例占住时生产者都看到未绑定, 于是所有热路径自然
+        // 停录 (连批次载荷都不必构造) — 不需要改任何写入方。
+        state.enabled && state.recorder.is_some() && state.active.contains_key(port)
     }
 }
 

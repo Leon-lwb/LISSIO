@@ -56,6 +56,15 @@ impl WriterStorage {
         self.connection = Some(store.connect()?);
         outcome
     }
+
+    /// 在唯一连接上执行一次读 — 连接暂时不可用时把原因回报给调用方, **不**结束
+    /// 写线程 (读失败不该让正在进行的录制一起停)。
+    fn read<T>(
+        &self,
+        run: impl FnOnce(&Connection) -> Result<T, RecordingError>,
+    ) -> Result<T, RecordingError> {
+        run(self.connection()?)
+    }
 }
 
 /// Delete sessions, rebuilding the database file once when its catalog is damaged.
@@ -195,6 +204,78 @@ fn run_writer_inner(
                 transaction_open = false;
                 let _ = reply.send(result);
                 last_commit = Instant::now();
+            }
+            // 读命令 — 全部落在**同一个**连接上, 因此读不会开第二个 DuckDB 实例。
+            Ok(Command::ListSessions(reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(RecordingStore::list_sessions_on)
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::SessionSummaries(reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(RecordingStore::list_session_summaries_on)
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::DatabaseInfo(reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(|connection| RecordingStore::database_info_on(store, connection))
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::Bindings(session_id, reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(|connection| {
+                            RecordingStore::list_bindings_on(connection, &session_id)
+                        })
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::SessionIsEmpty(session_id, reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(|connection| {
+                            RecordingStore::session_is_empty_on(connection, &session_id)
+                        })
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::DeleteSession(session_id, reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(|connection| {
+                            RecordingStore::delete_session_on(connection, &session_id)
+                        })
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::HistoryPage(query, reply)) => {
+                let _ = reply.send(
+                    storage
+                        .read(|connection| {
+                            RecordingStore::history_page_query_on(connection, &query)
+                        })
+                        .map_err(|error| error.to_string()),
+                );
+            }
+            Ok(Command::Sql {
+                sql,
+                max_rows,
+                cancellation,
+                reply,
+            }) => {
+                let result = storage.read(|connection| {
+                    cancellation.attach(connection.interrupt_handle());
+                    let result = RecordingStore::query_sql_on(connection, &sql, max_rows);
+                    cancellation.detach();
+                    result
+                });
+                let _ = reply.send(result.map_err(|error| error.to_string()));
             }
             Ok(Command::Shutdown(reply)) => {
                 let result = (|| {

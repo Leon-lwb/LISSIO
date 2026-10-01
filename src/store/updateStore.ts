@@ -11,6 +11,7 @@ import { create } from 'zustand';
 import { platform } from '../lib/platform';
 import { transport } from '../lib/rpc';
 import { useSettingsStore } from './settingsStore';
+import { errorText } from '../types/errors';
 
 export type UpdateStatus =
   | 'idle'
@@ -71,10 +72,6 @@ export async function resolveUpdateChannel(): Promise<UpdateChannel> {
   }
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export const useUpdateStore = create<UpdateStore>((set, get) => ({
   status: 'idle',
   lastTrigger: 'manual',
@@ -109,7 +106,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
       }
     } catch (e) {
       // auto 失败不打断用户 — 仅记录状态, UI 层对 auto 失败保持静默
-      set({ status: 'error', error: errorMessage(e) });
+      set({ status: 'error', error: errorText(e) });
     }
   },
 
@@ -132,7 +129,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
         set({ status: 'ready', progress: 100 });
       }
     } catch (e) {
-      set({ status: 'error', error: errorMessage(e) });
+      set({ status: 'error', error: errorText(e) });
     } finally {
       unlisten?.();
     }

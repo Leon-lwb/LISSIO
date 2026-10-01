@@ -11,6 +11,7 @@
 //! 事件收敛 (见 appStoreHelpers.adoptSourceGraph)。
 
 import { transport } from '../rpc';
+import { errorText } from '../../types/errors';
 import { useAppStore } from '../../store/appStore';
 import { useModelCatalogStore } from '../../store/modelCatalogStore';
 import type { Node } from '@xyflow/react';
@@ -351,7 +352,7 @@ export function initAiToolHost(): void {
         await transport.call('ai_tool_resolve', {
           callId: call_id,
           ok: false,
-          result: e instanceof Error ? e.message : String(e),
+          result: errorText(e),
         });
       }
     })();

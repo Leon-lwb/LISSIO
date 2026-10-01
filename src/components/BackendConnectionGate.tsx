@@ -10,6 +10,7 @@ import {
   saveWebEndpoint,
   transport,
 } from '../lib/rpc';
+import { errorText } from '../types/errors';
 
 type ConnectionState =
   | 'starting' | 'checking' | 'connected' | 'unreachable'
@@ -100,7 +101,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       setState('connected');
     } catch (error) {
       setState('unreachable');
-      setDetail(error instanceof Error ? error.message : String(error));
+      setDetail(errorText(error));
       showWindow();
     }
   }, [desktop, showWindow]);
@@ -132,7 +133,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       await connect(info.base, info.token, info.version);
     } catch (error) {
       setState('crashed');
-      setDetail(error instanceof Error ? error.message : String(error));
+      setDetail(errorText(error));
       showWindow();
     }
   }, [base, connect, desktop, showWindow, token]);
@@ -184,7 +185,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       await start();
     } catch (error) {
       setState('crashed');
-      setDetail(error instanceof Error ? error.message : String(error));
+      setDetail(errorText(error));
     }
   };
 

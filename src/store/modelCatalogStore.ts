@@ -10,6 +10,7 @@ import type { ModelCatalog } from '../types/generated/ModelCatalog';
 import type { ModelDescriptor } from '../types/generated/ModelDescriptor';
 import type { PanelDescriptor } from '../types/generated/PanelDescriptor';
 import { api } from '../lib/tauri/tauri';
+import { errorText } from '../types/errors';
 
 // 与后端 data_model::model_descriptor::MODEL_CATALOG_CONTRACT_VERSION 同步。
 // v2: ModelCatalog 增加 panels (数据面板契约) — 与 models 同一次下发、同一版本号。
@@ -130,7 +131,7 @@ export const useModelCatalogStore = create<ModelCatalogState>((set, get) => ({
       });
     } catch (error) {
       if (generation !== get().generation) return;
-      set({ status: 'error', error: error instanceof Error ? error.message : String(error) });
+      set({ status: 'error', error: errorText(error) });
     }
   },
 
