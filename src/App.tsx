@@ -1,6 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import { platform } from './lib/platform';
 import { transport } from './lib/rpc';
 import { Settings, Info, RefreshCw, PanelLeft } from 'lucide-react';
 import { ActivityBar } from './components/layout/ActivityBar';
@@ -12,70 +11,61 @@ import { NotificationToasts } from './components/NotificationToasts';
 import { ContextMenu } from './components/ui/ContextMenu';
 import { DockDragGhost } from './components/ui/DockDragGhost';
 import { SuspenseFallback } from './components/ui/SuspenseFallback';
+import { DialogHost } from './components/lazy/DialogHost';
 import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
-import { api } from './lib/tauri/tauri';
-import { notify } from './lib/tauri/notifications';
 import { useHistoryStore } from './store/historyStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
 import { useLayoutStore, AI_FLOAT_MIN_W, AI_FLOAT_MIN_H } from './store/layoutStore';
-import { AiChatPanel } from './components/ai/AiChatPanel';
 import { useUpdateStore } from './store/updateStore';
 import { t } from './i18n';
 import { openDataPanelAndReveal } from './lib/utils/revealDataTab';
-import { seedStartupWorkspace } from './lib/models/startupSeed';
-import { initAiToolHost } from './lib/ai/toolHost';
-import { startDescribeSync, stopDescribeSync } from './lib/models/describeStore';
 import { useCanFrameSubscription } from './lib/buffers/useCanFrameSubscription';
-import { resolveStartupFlow, shouldShowGuideAfterUpdate } from './lib/startupFlow';
-
-// 重型弹窗 — 懒加载 (各模块仅含 named export, 经 *.lazy.tsx 包装为 default)
-const SettingsModal = lazy(() => import('./components/SettingsModal.lazy'));
-const AboutModal = lazy(() => import('./components/AboutModal.lazy'));
-const CustomWidgetEditorContainer = lazy(() => import('./components/CustomWidgetEditorContainer.lazy'));
-const OnboardingWizard = lazy(() => import('./components/onboarding/OnboardingWizard.lazy'));
-const HelpCenterModal = lazy(() => import('./components/onboarding/HelpCenterModal.lazy'));
-const UpdateDialog = lazy(() => import('./components/UpdateDialog.lazy'));
-const KeychainPermissionDialog = lazy(
-  () => import('./components/KeychainPermissionDialog.lazy')
-);
+import { resolveStartupFlow } from './lib/startup/phases';
+import { useBootstrap } from './lib/startup/useBootstrap';
+import { useWorkspaceSeed } from './lib/startup/useWorkspaceSeed';
+import { useFirstFrameReveal } from './lib/startup/useFirstFrameReveal';
+import { useStartupDialogs } from './lib/startup/useStartupDialogs';
+import {
+  LazyAboutModal,
+  LazyAiChatPanel,
+  LazyCustomWidgetEditorContainer,
+  LazyHelpCenterModal,
+  LazyKeychainPermissionDialog,
+  LazyOnboardingWizard,
+  LazySettingsModal,
+  LazyUpdateDialog,
+} from './components/lazy/lazyComponents';
 
 function App() {
   useCanFrameSubscription();
-  const initEventListeners = useAppStore((s) => s.initEventListeners);
-  const refreshPorts = useAppStore((s) => s.refreshPorts);
   const sidebarView = useAppStore((s) => s.sidebarView);
   const sidebarVisible = useAppStore((s) => s.sidebarVisible);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const lang = useAppStore((s) => s.lang);
-  const workspaceReady = useAppStore((s) => s.workspaceReady);
-  const workspaceRestored = useAppStore((s) => s.workspaceRestored);
 
-  const loadSettings = useSettingsStore((s) => s.load);
+  const refreshPorts = useAppStore((s) => s.refreshPorts);
   const openSettings = useSettingsStore((s) => s.open);
   const openAbout = useSettingsStore((s) => s.openAbout);
   const isAboutOpen = useSettingsStore((s) => s.isAboutOpen);
   const closeAbout = useSettingsStore((s) => s.closeAbout);
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
-  const keychainPermissionPromptOpen = useSettingsStore(
-    (s) => s.keychainPermissionPromptOpen
-  );
 
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const showOnboarding = useSettingsStore((s) => s.settings.general.showOnboarding);
   const autoCheckUpdate = useSettingsStore((s) => s.settings.general.autoCheckUpdate);
+  const keychainPermissionPromptOpen = useSettingsStore(
+    (s) => s.keychainPermissionPromptOpen
+  );
   const updateDialogOpen = useUpdateStore((s) => s.dialogOpen);
   const statusBarVisible = useSettingsStore((s) => s.settings.appearance.statusBarVisible);
   const hasOpenedOnboarding = useOnboardingStore((s) => s.hasOpenedThisSession);
-  const openOnboarding = useOnboardingStore((s) => s.openWizard);
   const isWizardOpen = useOnboardingStore((s) => s.isWizardOpen);
   const isHelpOpen = useOnboardingStore((s) => s.isHelpOpen);
   const isCustomEditorOpen = useAppStore((s) => s.customEditorState.open);
-  const autoUpdateStartedRef = useRef(false);
-  const versionGuideCheckedRef = useRef(false);
-  const recordingRecoveryCheckedRef = useRef(false);
 
+  // 启动弹窗串行闸门 (首次引导 → 钥匙串提醒 → 自动更新) — 见 lib/startup/phases
   const startupFlow = resolveStartupFlow({
     settingsLoaded,
     showOnboarding,
@@ -139,134 +129,11 @@ function App() {
   );
   const onAppContextMenu = useContextMenu(defaultMenuItems);
 
-  // 启动: 加载设置 + 初始化事件监听 + 刷新端口
-  // 依赖均为 store 动作 (引用稳定), 只需挂载时执行一次
-  useEffect(() => {
-    void loadSettings();
-    const cleanupRef: { fn: (() => void) | null } = { fn: null };
-    let cancelled = false;
-    void initEventListeners().then((fn) => {
-      if (cancelled) {
-        fn();
-      } else {
-        cleanupRef.fn = fn;
-      }
-    }).catch((error: unknown) => console.error('Failed to initialize event listeners:', error));
-    void refreshPorts();
-
-    return () => {
-      cancelled = true;
-      cleanupRef.fn?.();
-    };
-  }, [initEventListeners, loadSettings, refreshPorts]);
-
-  // 首次启动种子: 工作区由后端持久化, 仅在"无持久化工作区且画布为空"时
-  // 经目录创建服务 prepare 一次 RawData (目录由启动屏障保证就绪)。
-  // 启动屏障完成 → 描述同步启动 (端口表来自 describe_node_documents)。
-  useEffect(() => {
-    if (!workspaceReady) return undefined;
-    startDescribeSync();
-    if (!workspaceRestored) void seedStartupWorkspace();
-    return () => stopDescribeSync();
-  }, [workspaceReady, workspaceRestored]);
-
-  // 设置加载完成后: 显示主窗口, 待首帧真正绘制后再关启动页。
-  // 顺序很重要 — 主窗口一直隐藏 (visible:false), 隐藏窗口的渲染被系统节流,
-  // 先 show() 解除节流, 再等 2 次 rAF (保证至少一帧已合成) 才关启动页,
-  // 消除"主窗口已显示但内容未绘制完成"的透明空白期; 超时兜底防 rAF 异常卡住启动页
-  useEffect(() => {
-    if (!settingsLoaded) return;
-    // 桌面专有 (窗口可见性/启动页时序): Web 出口未接入, 失败静默
-    void transport.call('show_main_window').catch(() => undefined);
-    let closed = false;
-    const closeSplash = () => {
-      if (closed) return;
-      closed = true;
-      void transport.call('close_splashscreen').catch(() => undefined);
-    };
-    let raf2 = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(closeSplash);
-    });
-    const bail = setTimeout(closeSplash, 1500);
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(bail);
-    };
-  }, [settingsLoaded]);
-
-  // 启动页放行后的一次性检查: 数据库在打开时被自动恢复过 (目录重建 / 损坏文件隔离)。
-  // 必须在**启动页展示完成之后**主动提示 — 恢复提示只躺在数据库面板里, 而用户很可能
-  // 根本没打开那个面板, 于是以为历史凭空消失、录制一直不可用。
-  useEffect(() => {
-    if (!settingsLoaded || recordingRecoveryCheckedRef.current) return;
-    recordingRecoveryCheckedRef.current = true;
-    void api
-      .getRecordingHealth()
-      .then((health) => {
-        if (health.warning === null) return;
-        // 严重级别用 error: 它是**持久**提示 (warn 8 秒自动消失), 而「旧库被移走、
-        // 这一段历史读不出来了」必须让用户看见并且来得及看清备份路径。
-        // 这只是提示通道的级别, 不是录制故障 — 故障判定只认 `hub.fault()`。
-        notify.error(
-          t(lang, 'recordingDatabaseRecovered'),
-          health.warning,
-          { source: 'recording-recovered' }
-        );
-      })
-      .catch(() => undefined);
-  }, [lang, settingsLoaded]);
-
-  // AI 前端托管工具宿主 — 监听 ai_tool_invoke, 让内置 AI 编辑节点/操作软件 (幂等)
-  useEffect(() => {
-    initAiToolHost();
-  }, [openSettings]);
-
-  // 设置加载完成后，根据 showOnboarding 自动弹出首次引导（仅一次）
-  useEffect(() => {
-    if (settingsLoaded && showOnboarding && !hasOpenedOnboarding) {
-      openOnboarding();
-    }
-  }, [settingsLoaded, showOnboarding, hasOpenedOnboarding, openOnboarding]);
-
-  // 设置加载完成后: 版本更新检测 (每会话一次) — 版本变化则弹出一次操作指南,
-  // 并立即持久化新版本号 (中途关闭向导也不会重复弹; getAppVersion 失败 = 非 Tauri 环境, 跳过)
-  useEffect(() => {
-    if (!settingsLoaded || versionGuideCheckedRef.current) return;
-    versionGuideCheckedRef.current = true;
-    void (async () => {
-      let current: string;
-      try {
-        current = await platform.getAppVersion();
-      } catch {
-        return;
-      }
-      const settings = useSettingsStore.getState();
-      const lastSeen = settings.settings.general.lastSeenVersion;
-      if (
-        shouldShowGuideAfterUpdate(lastSeen, current) &&
-        !useOnboardingStore.getState().hasOpenedThisSession
-      ) {
-        useOnboardingStore.getState().openWizard();
-      }
-      if (lastSeen !== current) {
-        settings.update('general', 'lastSeenVersion', current);
-      }
-    })();
-  }, [settingsLoaded]);
-
-  // 设置加载完成后: 自动检查更新 (仅一次; auto 失败不打断用户)
-  useEffect(() => {
-    if (
-      !startupFlow.canCheckForUpdates ||
-      autoUpdateStartedRef.current
-    ) {
-      return;
-    }
-    autoUpdateStartedRef.current = true;
-    void useUpdateStore.getState().check('auto');
-  }, [startupFlow.canCheckForUpdates]);
+  // 启动阶段 (bootstrap → workspace → first-frame → dialogs) — 见 lib/startup/*
+  useBootstrap();
+  useWorkspaceSeed();
+  useFirstFrameReveal();
+  useStartupDialogs();
 
   // 监听原生菜单事件 (menu:about / menu:settings / menu:new-tab / menu:close-tab / menu:toggle-sidebar)
   // 事件处理器内通过 getState() 读取最新状态, 避免订阅易变字段导致反复重订阅
@@ -387,7 +254,9 @@ function App() {
   const aiPanelNode = (ord: number) => (
     <Panel key="ai-panel" id="ai-panel" order={ord} defaultSize={24} minSize={14} maxSize={55}>
       <div className={`module-card dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
-        <AiChatPanel />
+        <Suspense fallback={<SuspenseFallback />}>
+          <LazyAiChatPanel />
+        </Suspense>
       </div>
     </Panel>
   );
@@ -431,7 +300,9 @@ function App() {
           <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
           <Panel order={2} defaultSize={34} minSize={15} maxSize={70} className="min-h-0">
             <div className={`module-card dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
-              <AiChatPanel />
+              <Suspense fallback={<SuspenseFallback />}>
+                <LazyAiChatPanel />
+              </Suspense>
             </div>
           </Panel>
         </PanelGroup>
@@ -445,7 +316,9 @@ function App() {
           style={{ left: floatPos.x, top: floatPos.y, width: aiFloatRect.w, height: aiFloatRect.h }}
         >
           <div className={`module-card dock-card-acrylic h-full w-full shadow-2xl ${aiPanelAnimClass}`}>
-            <AiChatPanel />
+            <Suspense fallback={<SuspenseFallback />}>
+              <LazyAiChatPanel />
+            </Suspense>
           </div>
           <div
             className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 cursor-nwse-resize rounded-sm hover:bg-accent/60"
@@ -537,42 +410,23 @@ function App() {
       <ContextMenu />
       <DockDragGhost />
       <NotificationToasts />
-      {/* 弹窗按需挂载:打开时才触发懒加载,避免启动时多个 lazy chunk 并发加载导致全屏遮罩闪烁 */}
-      {isSettingsOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <SettingsModal />
-        </Suspense>
-      )}
-      {isAboutOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <AboutModal isOpen={isAboutOpen} onClose={closeAbout} />
-        </Suspense>
-      )}
-      {isCustomEditorOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <CustomWidgetEditorContainer />
-        </Suspense>
-      )}
-      {isWizardOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <OnboardingWizard />
-        </Suspense>
-      )}
-      {startupFlow.showKeychainPermissionPrompt && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <KeychainPermissionDialog />
-        </Suspense>
-      )}
-      {isHelpOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <HelpCenterModal />
-        </Suspense>
-      )}
-      {updateDialogOpen && (
-        <Suspense fallback={<SuspenseFallback overlay />}>
-          <UpdateDialog />
-        </Suspense>
-      )}
+      {/* 弹窗按需挂载: 打开时才触发懒加载 (清单见 components/lazy/lazyComponents.ts),
+          避免启动时多个 lazy chunk 并发加载导致全屏遮罩闪烁 */}
+      <DialogHost
+        dialogs={[
+          { key: 'settings', open: isSettingsOpen, element: <LazySettingsModal /> },
+          {
+            key: 'about',
+            open: isAboutOpen,
+            element: <LazyAboutModal isOpen={isAboutOpen} onClose={closeAbout} />,
+          },
+          { key: 'custom-editor', open: isCustomEditorOpen, element: <LazyCustomWidgetEditorContainer /> },
+          { key: 'onboarding', open: isWizardOpen, element: <LazyOnboardingWizard /> },
+          { key: 'keychain', open: startupFlow.showKeychainPermissionPrompt, element: <LazyKeychainPermissionDialog /> },
+          { key: 'help', open: isHelpOpen, element: <LazyHelpCenterModal /> },
+          { key: 'update', open: updateDialogOpen, element: <LazyUpdateDialog /> },
+        ]}
+      />
     </div>
   );
 }

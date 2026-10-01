@@ -358,3 +358,6 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
     </div>
   );
 }
+
+/// 懒加载入口 — 见 `components/lazy/lazyComponents.ts` (全仓唯一 React.lazy 清单)。
+export default Model3DWidget;

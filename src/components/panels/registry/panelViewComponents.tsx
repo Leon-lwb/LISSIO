@@ -34,7 +34,8 @@ import type { WidgetConfig } from '../../../types';
 import type { PanelTabViewProps } from './panelTypes';
 
 // 重型 3D 控件 (Three.js) — 懒加载, 首次切到 model3d Tab 时才拉取
-const Model3DWidget = lazy(() => import('../../widgets/model3d/Model3DWidget.lazy'));
+// (清单见 components/lazy/lazyComponents.ts — 全仓唯一 React.lazy 声明点)
+const Model3DWidget = lazy(() => import('../../widgets/model3d/Model3DWidget'));
 
 /// 宿主控件已被删除 (或 tab 的 widgetId 失效) 的占位 — 不静默空白。
 export const PanelHostMissing = memo(function PanelHostMissing() {

@@ -78,11 +78,6 @@ export const WIDGET_REGISTRY: { readonly [K in WidgetKind]: WidgetDef<K> } = {
 /// 全部控件定义 (registry 顺序 = palette 展示顺序的缺省)
 export const WIDGET_DEFS: readonly WidgetDef<WidgetKind>[] = Object.values(WIDGET_REGISTRY) as readonly WidgetDef<WidgetKind>[];
 
-/// 取控件定义 (未知 kind 抛错 — 调用方应先经 normalizeWidgetConfig 保证 kind 合法)
-export function getWidgetDef<K extends WidgetKind>(kind: K): WidgetDef<K> {
-  return WIDGET_REGISTRY[kind];
-}
-
 /// 运行时渲染入口 — 擦除泛型后的组件类型 (WidgetNode / 数据窗口宿主用)
 export function widgetComponent(kind: WidgetKind): ComponentType<WidgetComponentProps> {
   return WIDGET_REGISTRY[kind].Component as ComponentType<WidgetComponentProps>;

@@ -46,6 +46,4 @@ export interface WidgetDef<K extends WidgetKind = WidgetKind> {
   icon: LucideIcon;
   /// i18n key (widget.<labelKey>) — palette 与窗口标题共用
   labelKey: string;
-  /// 节点头部 ⚙ 编辑入口 (如 Custom JS 编辑器)
-  customEditor?: 'custom-js';
 }

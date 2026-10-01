@@ -84,3 +84,6 @@ export function CodeEditor({ value, onChange, readOnly = false, height = '100%' 
 
   return <div ref={containerRef} style={{ height, width: '100%', overflow: 'hidden' }} />;
 }
+
+/// 懒加载入口 — 见 `components/lazy/lazyComponents.ts` (全仓唯一 React.lazy 清单)。
+export default CodeEditor;

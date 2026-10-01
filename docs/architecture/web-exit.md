@@ -305,7 +305,7 @@ export interface Transport {
 `src/lib/tauri/tauri.ts` 的业务调用面保持原有调用方式，内部 `invoke(...)` 换成
 `transport.call(...)`; `subscribeDisplay` /
 `subscribeWaveform` / 各 `*Subscription.ts` 走 `transport.subscribe`。事件监听
-(`events.ts` / `App.tsx` / `toolHost` / `updateStore`) 走 `transport.listen`, 因此
+(`events.ts` / `lib/startup/*` / `toolHost` / `updateStore`) 走 `transport.listen`, 因此
 handler 收到的是 payload 本身而不是 Tauri 的 `Event` 包装。
 
 ### 5.1 Desktop 与 Web 的统一语义
@@ -386,6 +386,37 @@ index.ts    hasTauriRuntime() ? tauriPlatform : webPlatform
 
 因此浏览器端设置可持久化 (首次引导向导不再每次加载都弹), 文件选择 / 导出走浏览器
 等价路径, 更新器与窗口控制在 Web 端隐藏或 no-op。
+
+### 5.6 前端启动阶段与懒加载约定
+
+启动是一条严格有序的阶段链, 每段只回答「上一段是否已就绪」; 判定是纯函数
+(`src/lib/startup/phases.ts`), 副作用挂在同目录的四个 hook 上, 由 `App` 依序编排:
+
+```text
+bootstrap   useBootstrap      设置 load + 事件监听 (含清理) + 端口刷新 + AI 工具宿主
+backend     BackendConnectionGate  握手通过才挂载业务树 (失败即诊断页, 立即放行窗口)
+catalog     CatalogGate       模型目录 ready 才恢复工作区 (不 ready 不写空工作区)
+workspace   useWorkspaceSeed  workspaceReady → describe 同步; 未水合才补启动种子
+first-frame useFirstFrameReveal  show_main_window → 双 rAF → close_splashscreen (1500ms 兜底)
+dialogs     useStartupDialogs 录制恢复提示 / 首次引导 / 版本指南 / 自动更新 (串行闸门)
+```
+
+**放行唯一入口**: `show_main_window` 与 `close_splashscreen` 只经
+`src/lib/startup/reveal.ts` 发出 (幂等闩), 连接诊断页与业务树共用 —— 全仓不得
+散落第二个放行点; Rust 侧另有 10 秒强制兜底 (`shell::spawn_splashscreen_fallback`)
+互为防线。
+
+**懒加载约定** (`src/components/lazy/lazyComponents.ts` 是全仓唯一 `React.lazy`
+声明点, 由 `eslint.config.js` 的 `no-restricted-syntax` 强制):
+
+- 弹窗 (设置/关于/引导/帮助/更新/钥匙串/自定义控件编辑器) 打开才加载, 由
+  `components/lazy/DialogHost.tsx` 表驱动渲染 — 避免启动时多个 lazy chunk 并发
+  加载导致全屏遮罩闪烁;
+- AI 面板与 CodeMirror 只在首次可见/渲染时拉取, 使首屏 entry 不含
+  react-markdown / @ant-design/x / codemirror / three;
+- dock 派发表 (`panelViews.tsx` / `panelViewComponents.tsx`) 保持 eager —
+  `DataTabContent` 依赖常量元素引用相等做 memo bailout, 改懒加载会破坏兄弟 Tab
+  隔离; 唯一例外是重型 3D 视图 (three.js chunk 首次切到 model3d Tab 才拉取)。
 
 ## 6. CLI 设计
 

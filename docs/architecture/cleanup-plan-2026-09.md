@@ -22,7 +22,7 @@
 | 让 `check:architecture` 拒绝占位职责 | 占位元数据可以继续流入 CI | 改回占位串时检查必须失败；同时校验 responsibility 非空且长度足够 |
 | 评估拆分 `pipeline` | 该 crate 同时承担字节路由、记录、求值调度、点位投影、录制绑定和指标 | 只有当变更频率、测试隔离或基准收益明确时才拆；禁止为减少依赖数建立 facade |
 | 统一 `automotive*` 层级语义 | `automotive-diag` 为 L2，`automotive` / `automotive-isotp` 为 L4 | 同一适配器族的层义一致，或文档明确不同层级的原因 |
-| 收敛前端大文件 | transport、store、AI 和图表边界容易重新混合 | 按职责拆分 `tauri.ts` / `httpTransport.ts` / `ThemeEditor.tsx` / `AiChatPanel.tsx` / `dockStore.ts` / `WaveformChart.tsx`，不改变公共行为 |
+| 收敛前端大文件 | transport、store、AI 和图表边界容易重新混合 | 按职责拆分 `tauri.ts` / `httpTransport.ts` / `ThemeEditor.tsx` / `AiChatPanel.tsx` / `dockStore.ts` / `WaveformChart.tsx`，不改变公共行为。`App.tsx` 已完成: 启动副作用下沉 `src/lib/startup/*`（阶段链 + 单测 21 例），懒加载收敛到 `src/components/lazy/`（唯一 `React.lazy` 清单, lint 强制） |
 | 补集中性能实验记录（可选） | 有基准源码但缺少跨版本硬件/原始结果记录 | 如需趋势比较，再记录机器、版本、原始输出、统计方法和复现命令 |
 
 ## 验证命令

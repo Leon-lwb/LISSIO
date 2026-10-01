@@ -3,7 +3,7 @@ import {
   resolveStartupFlow,
   shouldShowGuideAfterUpdate,
   type StartupFlowState,
-} from '../startupFlow';
+} from '../phases';
 
 const READY: StartupFlowState = {
   settingsLoaded: true,

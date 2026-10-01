@@ -45,6 +45,23 @@ const tauriMock = vi.hoisted(() => {
           models: [],
         });
       }
+      if (cmd === 'list_ports') {
+        // 端口刷新 (bootstrap 阶段) 的最小合法响应 — 否则 undefined 会被展开成
+        // 非数组, 走进失败分支产生噪声通知
+        return Promise.resolve([]);
+      }
+      if (cmd === 'get_recording_health') {
+        // 录制健康 (dialogs 阶段) — 只读取 warning 字段, 这里给最小合法响应;
+        // 需要特定 warning 的用例自行 spy 覆盖 (RunControls.recording 同款)
+        return Promise.resolve({
+          warning: null,
+          failed: null,
+          accepted_batches: 0, accepted_bytes: 0, persisted_batches: 0,
+          persisted_bytes: 0, accepted_sequence: 0, persisted_sequence: 0,
+          queued_batches: 0, dropped_batches: 0, rejected_batches: 0,
+          enabled: true,
+        });
+      }
       if (cmd === 'describe_node_documents') {
         const request = (args ?? {}) as { requestRevision?: number };
         return Promise.resolve({ requestRevision: request.requestRevision ?? 0, nodes: [] });

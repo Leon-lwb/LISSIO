@@ -1,6 +1,5 @@
 import { memo, useCallback } from 'react';
 import type { NodeProps } from '@xyflow/react';
-import { Settings2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useDockStore } from '../../store/dockStore';
 import { widgetMinSize } from '../../lib/utils/widgetSize';
@@ -27,7 +26,6 @@ export const WidgetNode = memo(function WidgetNode({ id, data, selected }: NodeP
   const widget = data.widget as WidgetConfig | undefined;
   const remove = useAppStore((s) => s.removeWidget);
   const update = useAppStore((s) => s.updateWidget);
-  const edit = useAppStore((s) => s.openCustomEditor);
   const description = useDescribeEntry(id).description;
   const onOpen = useCallback(() => {
     if (!widget) return;
@@ -58,7 +56,7 @@ export const WidgetNode = memo(function WidgetNode({ id, data, selected }: NodeP
     minWidth={limits.minW} minHeight={limits.minH} onRemove={() => remove(id)}
     onRename={(label) => update(id, { ...widget, params: { ...widget.params, label } } as WidgetConfig)}
     onOpen={widgetToTab(widget) ? onOpen : undefined}
-    actions={WIDGET_REGISTRY[widget.kind]?.customEditor ? <button className="nodrag" title="Edit" onClick={(event) => { event.stopPropagation(); edit(id); }}><Settings2 size={10} /></button> : undefined}>
+>
     <Content widget={widget} />
   </NodeFrame>;
 });

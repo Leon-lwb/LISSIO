@@ -1,9 +1,8 @@
 import type { ComponentType } from 'react';
 import type { Node, NodeProps } from '@xyflow/react';
-import type { DomainType, WidgetConfig } from '../../types';
+import type { DomainType } from '../../types';
 import type { DerivedPort, NodePortTable, PortInfo } from '../../lib/utils/connectionRules';
 import { getDescribeEntry, describeDomainToUi } from '../../lib/models/describeStore';
-import { widgetMinSize, type WidgetSizeLimits } from '../../lib/utils/widgetSize';
 import type { AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
 import { WidgetNode } from './WidgetNode';
 import { AcquisitionNode } from './AcquisitionNode';
@@ -20,11 +19,14 @@ interface PortContext {
   detectedChannels?: Record<string, number | null>;
 }
 
+/// 节点类型的三个消费者: React Flow 渲染 (renderer)、属性面板 (properties)、
+/// 连线校验/AI 端口暴露 (ports)。尺寸限制统一走 `widgetMinSize` (WidgetNode
+/// 自取), 本表不再重复声明 — 曾经的 `size()` 与 `NODE_REGISTRY` 导出无消费者,
+/// 已随本次加载面规范化删除。
 export interface NodeDefinition {
   renderer: ComponentType<NodeProps>;
   properties: ComponentType<PropertyProps>;
   ports(node: Node, context: PortContext): NodePortTable;
-  size(node: Node): WidgetSizeLimits;
 }
 
 const domain = (value: string): DomainType =>
@@ -51,7 +53,6 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
         outputs: ports.filter(port => port.direction !== 'input').map(map),
       };
     },
-    size: () => ({ minW: 180, minH: 90 }),
   },
   'point-selector': {
     renderer: PointSelectorNode,
@@ -60,7 +61,6 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
       inputs: [{ id: 'points', domain: 'points' }],
       outputs: (node.data.points as string[]).map(id => ({ id, domain: 'time' })),
     }),
-    size: () => ({ minW: 180, minH: 90 }),
   },
   protocol: {
     renderer: ProtocolNode,
@@ -74,17 +74,13 @@ const definitions: Record<CanvasNodeType, NodeDefinition> = {
         : describePorts(node.id).outputs;
       return { inputs: [{ id: 'in', domain: 'bytes' }], outputs: [{ id: 'out', domain: 'bytes' }, ...names] };
     },
-    size: () => ({ minW: 180, minH: 90 }),
   },
   widget: {
     renderer: WidgetNode,
     properties: WidgetProperties,
     ports: node => describePorts(node.id),
-    size: node => widgetMinSize((node.data.widget as WidgetConfig).kind),
   },
 };
-
-export const NODE_REGISTRY = definitions;
 
 export function nodeDefinition(node: Node): NodeDefinition {
   const definition = node.type && definitions[node.type as CanvasNodeType];

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { invalidateDescriptions } from '../lib/models/describeStore';
+import { revealMainWindow } from '../lib/startup/reveal';
 import {
   configureBackend,
   disconnectBackend,
@@ -44,10 +45,12 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
   const [copyStatus, setCopyStatus] = useState('');
   const initialCheckStarted = useRef(false);
 
+  // 连接诊断页本身就是首屏的一部分 — 各失败分支立即放行主窗口/关闭启动页。
+  // 放行实现全仓唯一 (`lib/startup/reveal`), 与业务树 (设置加载完成) 共用幂等闩;
+  // Web 出口未接入窗口命令, reveal 内部对两个命令的失败静默。
   const showWindow = useCallback(() => {
     if (!desktop) return;
-    void transport.call('show_main_window').catch(() => undefined);
-    void transport.call('close_splashscreen').catch(() => undefined);
+    revealMainWindow();
   }, [desktop]);
 
   const connect = useCallback(async (candidateBase: string, candidateToken: string, expectedVersion?: string) => {

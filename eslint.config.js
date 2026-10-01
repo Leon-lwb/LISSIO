@@ -217,4 +217,24 @@ export default tseslint.config(
       ],
     },
   },
+  // 9. 加载/懒加载规范 — 首屏模块必须来自入口或清单, 懒加载只允许声明在
+  //    `src/components/lazy/` (全仓唯一 React.lazy 清单) 与面板视图表 (dock 派发)。
+  //    见 `src/components/lazy/lazyComponents.ts` 头注与 `docs/architecture/web-exit.md`。
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: [
+      'src/components/lazy/**',
+      'src/components/panels/registry/panelViewComponents.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.name='lazy']",
+          message:
+            'React.lazy 只能声明在 src/components/lazy/lazyComponents.ts (全仓唯一懒加载清单)。',
+        },
+      ],
+    },
+  },
 );
