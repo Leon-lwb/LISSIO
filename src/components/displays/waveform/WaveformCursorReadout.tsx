@@ -28,7 +28,7 @@ export function WaveformCursorReadout({
   return (
     <div
       ref={tooltipRef}
-      className="flex flex-col gap-0.5 px-1.5 py-1 min-w-[80px] bg-bg-editor/95 text-text-primary border border-border/30 rounded font-mono text-xs leading-tight shadow-lg select-none"
+      className="flex flex-col gap-0.5 px-1.5 py-1 min-w-[80px] float-popover text-text-primary font-mono text-xs leading-tight select-none"
       style={{
         position: 'absolute',
         left: tooltipPos ? tooltipPos.left : readout.leftPx + 12,

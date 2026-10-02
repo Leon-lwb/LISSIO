@@ -607,7 +607,13 @@ settingActivityBarVisibleDesc: 在窗口左侧显示活动栏
 settingAcrylicBackground: 亚克力背景
 settingAcrylicBackgroundDesc: 使用系统毛玻璃效果作为窗口背景，面板将变为半透明
 settingAcrylicOpacity: 毛玻璃透明度
-settingAcrylicOpacityDesc: 调整亚克力背景下面板的透明度，0.6 为默认观感，越小越透明
+settingAcrylicOpacityDesc: 拖动滑块或输入数值调整面板透明度，越小越透明（0.6 为默认观感）
+settingFloatingGlass: 二级卡片磨砂
+settingFloatingGlassDesc: 设置界面和各面板打开的二级卡片使用磨砂效果；与亚克力背景相互独立
+settingFloatingGlassOpacity: 二级卡片透明度
+settingFloatingGlassOpacityDesc: 调整二级卡片的透明度，越小越透明（0.72 为默认观感）
+settingWindowOpacity: 整窗透明度
+settingWindowOpacityDesc: 调节整个窗口的透明度，越小越透明；与亚克力背景相互独立
 settingReducedMotion: 减少动画效果
 settingReducedMotionDesc: 禁用界面中的动画和过渡效果，提升性能
 

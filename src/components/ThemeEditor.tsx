@@ -352,19 +352,19 @@ export function ThemeEditor({
 
   return (
     <div
-      className="fixed inset-0 bg-bg-overlay z-[9100] flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 float-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <div
-        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] bg-bg-sidebar border border-border rounded-lg shadow-modal flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         role="dialog"
         aria-modal="true"
       >
         {/* 顶部 */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-bg-panel-header flex-shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border float-chrome flex-shrink-0">
           <div className="flex items-center gap-1.5 text-text-primary text-base font-semibold flex-shrink-0">
             <Palette size={16} />
             <span>{t(lang, 'themeEditor')}</span>
@@ -407,7 +407,7 @@ export function ThemeEditor({
           {activeTab === 'color' ? (
             <>
               {/* 左侧颜色主题列表 */}
-              <div className="w-56 bg-bg-sidebar border-r border-border flex flex-col flex-shrink-0">
+              <div className="w-56 float-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
                     {t(lang, 'themeList')}
@@ -564,7 +564,7 @@ export function ThemeEditor({
                 </div>
 
                 {/* 底部操作 */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-bg-panel-header flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-border float-chrome flex-shrink-0">
                   <div className="flex items-center gap-3">
                     <div
                       className="w-8 h-8 rounded border border-border"
@@ -603,7 +603,7 @@ export function ThemeEditor({
           ) : (
             <>
               {/* 左侧CSS主题列表 */}
-              <div className="w-56 bg-bg-sidebar border-r border-border flex flex-col flex-shrink-0">
+              <div className="w-56 float-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
                     {t(lang, 'cssThemeList')}
@@ -741,7 +741,7 @@ export function ThemeEditor({
                 </div>
 
                 {/* 底部操作 */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border bg-bg-panel-header flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-t border-border float-chrome flex-shrink-0">
                   <div className="text-xs text-text-secondary">
                     {selectedCssThemeId === activeCssThemeId
                       ? t(lang, 'cssThemeActive')

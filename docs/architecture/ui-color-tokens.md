@@ -9,7 +9,8 @@
 | 层 | 内容 | 归属 |
 | --- | --- | --- |
 | **文字符号层** | `text-*` 文字色、`opacity` 档位、`fill/stroke` 图标色、`state-*` 徽标 | 本文档 |
-| 面/边框/阴影层 | box-shadow 的 rgba、非徽标的整块背景色 | 各自组件内的既有定义 |
+| 浮层/磨砂层 | 窗口、弹窗、菜单的表面、遮罩、阴影和 backdrop-filter | 本文档 `--frost-*` / `--shadow-*` |
+| 面/边框/阴影层 | 非浮层 box-shadow 的 rgba、非徽标的整块背景色 | 各自组件内的既有定义 |
 | 画布/终端 | `ctx.fillStyle`、ANSI 16 色 | `src/lib/ui/colorAlpha.ts` 与 `--term-*` |
 
 ## 透明度档位 (`--alpha-*`, 全仓唯一白名单)
@@ -34,6 +35,37 @@
 
 新增档位须同步三处: theme.css `--alpha-*` + `--opacity-*` 桥接、
 `src/lib/ui/textTone.ts` 的 `TEXT_TONE_ALPHA`、`scripts/check-ui-tokens.mjs` 注释。
+
+## 浮层与磨砂 Token
+
+设置、面板二级卡片、对话框、弹出菜单和悬浮读数必须使用统一基类，不在组件内拼装
+`background + border + shadow + backdrop-filter`：
+
+| 基类 | 用途 | 磨砂状态 |
+| --- | --- | --- |
+| `float-overlay` | Modal/Dialog 全屏遮罩 | 不磨砂 |
+| `float-card` | 窗口、二级卡片、引导卡片 | `appearance.floatingGlass` |
+| `float-popover` | 菜单、Popover、拖拽悬浮物、读数 | `appearance.floatingGlass` |
+| `float-chrome` | 浮层标题栏/底栏 | 半透明 chrome |
+| `float-chrome-muted` | 浮层侧栏/弱化区域 | 半透明 chrome |
+| `frost-surface` | 面板内始终磨砂的表面 | 始终生效 |
+
+核心 token：
+
+| token | 默认值 | 用途 |
+| --- | --- | --- |
+| `--frost-blur` | `18px` | 所有磨砂表面共享的模糊基线 |
+| `--frost-saturate` | `180%` | 所有磨砂表面共享的饱和度基线 |
+| `--frost-alpha-floating` | `72%` | 二级卡片/弹窗背景强度，由 `floatingGlassOpacity` 注入 |
+| `--frost-alpha-widget` | `47%` | Widget 亚克力背景强度，由 `acrylicOpacity` 注入 |
+| `--frost-border` / `--frost-highlight` | 派生色 | 统一玻璃边缘与顶部高光 |
+| `--frost-shadow` | 统一阴影 | 磨砂表面的玻璃阴影 |
+| `--shadow-float` / `--shadow-popover` | 统一阴影 | 关闭磨砂时的窗口/弹窗阴影 |
+
+`floatingGlass` 与 `acrylicBackground` 是两个独立开关；前者只控制浮层基类，后者控制窗口
+背景和 Widget 亚克力。关闭磨砂时 `float-card` / `float-popover` 必须回退到实色且不保留
+`backdrop-filter`。浮层底色使用 `--color-float-*` 的主题原色出口，不能直接引用会被
+亚克力模式二次半透明化的 `--color-bg-*` 运行时值。
 
 ## 文字色档位 (`--color-text-*`)
 
@@ -127,6 +159,8 @@ TEXT_TONE_ALPHA                     // 档位白名单 {faint:.15, subtle:.4, di
 | 调色板色阶 | `{text,bg,border,ring,fill,stroke,divide}-<色相>-<NN>` | `text-text-*` 语义角色 / `state-*` / token+修饰 |
 | 白色文字 | `text-white` | `text-text-inverse` / `text-text-bright` |
 | CSS 裸透明度 | `opacity: 0.NN` (@keyframes 除外) | `opacity: var(--alpha-*)` |
+| 裸磨砂 | TS/TSX 中 `backdrop-blur-*` / `backdrop-filter` | `float-card` / `float-popover` / `frost-surface` |
+| 磨砂参数 | CSS 中非 `--frost-*` 的 blur/saturate | `--frost-blur*` / `--frost-saturate*` |
 | 四处同步 | `--alpha-*` ↔ `TEXT_TONE_ALPHA` ↔ `--opacity-*` ↔ 类名/token/别名 | — |
 
 裸色相 (`text-green` / `bg-blue`) 经 `@theme` token 解析, **允许**; 禁的是带色阶的

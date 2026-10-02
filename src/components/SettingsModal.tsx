@@ -46,7 +46,7 @@ import { formatError, notify } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
 import { SearchInput } from './ui/SearchInput';
-import { DraftInput, DraftNumberInput } from './ui/fields';
+import { DraftInput, DraftNumberInput, OpacitySliderControl } from './ui/fields';
 import { AiMcpSettings } from './ai/AiMcpSettings';
 
 const CATEGORY_ICONS: Record<keyof AppSettings, React.ReactNode> = {
@@ -266,6 +266,17 @@ export function SettingsModal() {
             onCommit={(n) => handleChange(n)}
           />
         );
+      case 'slider':
+        return (
+          <OpacitySliderControl
+            value={typeof value === 'number' ? value : ctrl.min}
+            min={ctrl.min}
+            max={ctrl.max}
+            step={ctrl.step}
+            label={t(lang, def.labelKey)}
+            onCommit={(n) => handleChange(n)}
+          />
+        );
       case 'text':
         return (
           <DraftInput
@@ -360,19 +371,19 @@ export function SettingsModal() {
 
   return (
     <div
-      className="fixed inset-0 bg-bg-overlay z-[9000] flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 float-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <div
-        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] bg-bg-sidebar border border-border rounded-lg shadow-modal flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         role="dialog"
         aria-modal="true"
       >
         {/* 顶部 — 标题 + 搜索框 + 关闭 */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-bg-panel-header flex-shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border float-chrome flex-shrink-0">
           <div className="flex items-center gap-1.5 text-text-bright text-base font-semibold flex-shrink-0">
             <Type size={16} />
             <span>{t(lang, 'settingsTitle')}</span>
@@ -393,7 +404,7 @@ export function SettingsModal() {
 
         {/* 主体 — 左侧分类 + 右侧表单 */}
         <div className="flex-1 flex min-h-0">
-          <div className="w-50 bg-bg-sidebar border-r border-border py-2 flex flex-col flex-shrink-0 overflow-y-auto">
+          <div className="w-50 float-chrome-muted border-r border-border py-2 flex flex-col flex-shrink-0 overflow-y-auto">
             {(Object.keys(CATEGORY_LABEL_KEY) as (keyof AppSettings)[]).map((cat) => {
               const isActive =
                 !searchQuery.trim() && activeCategory === cat;
@@ -587,7 +598,7 @@ export function SettingsModal() {
         </div>
 
         {/* 底部 — 完成按钮 */}
-        <div className="flex items-center px-4 py-2.5 border-t border-border bg-bg-panel-header flex-shrink-0">
+        <div className="flex items-center px-4 py-2.5 border-t border-border float-chrome flex-shrink-0">
           <div className="flex-1" />
           <form action={saveAction}>
             <button
@@ -644,7 +655,7 @@ export function SettingsModal() {
       {/* 更新通道切换确认 — select 为受控值, 取消即自动回原值 */}
       {pendingChannel && (
         <div
-          className="fixed inset-0 bg-bg-overlay z-[9500] flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+          className="fixed inset-0 float-overlay z-modal-secondary flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
           onClick={(e) => {
             // 阻止冒泡到设置弹窗遮罩 (避免整个设置弹窗被关闭)
             e.stopPropagation();
@@ -655,7 +666,7 @@ export function SettingsModal() {
           tabIndex={0}
         >
           <div
-            className="w-[360px] max-w-[90vw] bg-bg-sidebar border border-border rounded-lg shadow-modal p-5 flex flex-col gap-3 animate-[settings-slide-in_0.2s_ease-out]"
+            className="w-[360px] max-w-[90vw] float-card p-5 flex flex-col gap-3 animate-[settings-slide-in_0.2s_ease-out]"
             role="dialog"
             aria-modal="true"
           >

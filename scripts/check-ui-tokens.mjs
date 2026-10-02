@@ -15,7 +15,8 @@
 //      text-black / bg-white / bg-black 是固定中性色 (经 --color-black/white), 允许。
 //   4. CSS 组件规则内 opacity: 必须引用 var(--alpha-*) 档位; @keyframes 动画插值
 //      (0/1/0.85 之类) 与显隐语义不属 token 层, 放行。
-//   5. 同步校验 — 四处单一来源必须对齐:
+//   5. 磨砂表面 — TS/TSX 不写 backdrop-* 工具类; CSS 只能通过 --frost-* token 组合 blur/saturate。
+//   6. 同步校验 — 四处单一来源必须对齐:
 //        theme.css --alpha-*        ↔ textTone.ts TEXT_TONE_ALPHA (名与值)
 //        theme.css --alpha-*        ↔ theme.css --opacity-* 桥接 (每个档位可成工具类)
 //        textTone.ts 类名           ↔ theme.css 对应 --color-text-* token / state-* utility
@@ -37,6 +38,8 @@ const PALETTE_SHADE = new RegExp(`\\b(?:text|bg|border|ring|fill|stroke|divide)-
 const RAW_OPACITY = /(?<![-\w])opacity-(?!0\b|100\b)\d/;
 const ARBITRARY_OPACITY = /(?<![-\w])opacity-\[/;
 const TEXT_WHITE = /(?<![\w-])text-white(?![\w-])/;
+const RAW_FROST = /\bbackdrop-(?:blur(?:-|\[)|filter\s*:)/;
+const LEGACY_FROST_TOKEN = /--(?:widget-acrylic|blur-acrylic|saturate-acrylic|shadow-modal)-?/;
 
 /** 递归收集 src 下指定后缀的文件 */
 function collect(dir, out = []) {
@@ -99,6 +102,9 @@ for (const file of collect(path.join(root, 'src'))) {
       if (TEXT_WHITE.test(code)) {
         errors.push(`${at}  text-white 不随主题联动 — 用 text-text-inverse / text-text-bright`);
       }
+      if (RAW_FROST.test(code)) {
+        errors.push(`${at}  裸 backdrop-* — 磨砂统一使用 float-card / frost-surface 与 --frost-* token`);
+      }
     }
   });
 
@@ -112,6 +118,14 @@ for (const file of collect(path.join(root, 'src'))) {
       const line = css.slice(0, m.index).split('\n').length;
       errors.push(`${rel}:${line}  裸 opacity: ${value} — 用 var(--alpha-*) 档位 (@keyframes 动画插值除外)`);
     }
+    for (const m of css.matchAll(/(?:^|[;{\s])-?backdrop-filter:\s*([^;]+);/g)) {
+      const value = m[1].trim();
+      if (value === 'none') continue;
+      if (!value.includes('blur(var(--frost-blur') || !value.includes('saturate(var(--frost-saturate')) {
+        const line = css.slice(0, m.index).split('\n').length;
+        errors.push(`${rel}:${line}  backdrop-filter 未统一走 --frost-blur/--frost-saturate token`);
+      }
+    }
   }
 }
 
@@ -120,6 +134,29 @@ for (const file of collect(path.join(root, 'src'))) {
 const themeCss = fs.readFileSync(path.join(root, 'src/styles/theme.css'), 'utf8');
 const textTone = fs.readFileSync(path.join(root, 'src/lib/ui/textTone.ts'), 'utf8');
 const themeTs = fs.readFileSync(path.join(root, 'src/settings/theme.ts'), 'utf8');
+
+for (const token of [
+  '--color-float-surface',
+  '--color-float-chrome',
+  '--color-float-chrome-muted',
+  '--shadow-float',
+  '--shadow-popover',
+  '--frost-blur',
+  '--frost-saturate',
+  '--frost-alpha-widget',
+  '--frost-alpha-floating',
+  '--frost-alpha-chrome',
+  '--frost-border',
+  '--frost-highlight',
+  '--frost-shadow',
+]) {
+  if (!themeCss.includes(`${token}:`)) {
+    errors.push(`同步: theme.css 缺少磨砂 token ${token}`);
+  }
+}
+if (LEGACY_FROST_TOKEN.test(themeCss)) {
+  errors.push('同步: theme.css 仍有旧磨砂 token — 统一使用 --frost-*');
+}
 
 /// theme.css 的 --alpha-* 档位 (名 -> 百分比数值)
 const alphaTiers = {};

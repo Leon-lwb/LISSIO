@@ -419,8 +419,8 @@ export const CompileResultsView = memo(function CompileResultsView() {
 
       {/* Add / Modify Edge 模态框 */}
       {modal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-bg-panel border border-border rounded-lg shadow-lg w-[420px] p-4">
+        <div className="fixed inset-0 z-modal float-overlay flex items-center justify-center">
+          <div className="float-card w-[420px] p-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-sm font-semibold text-text-primary">
                 {modal.mode === 'add'

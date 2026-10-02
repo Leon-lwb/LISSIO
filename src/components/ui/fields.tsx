@@ -295,3 +295,54 @@ export function DraftNumberInput({
     />
   );
 }
+
+/// 透明度滑动调节模块 — 滑动条 + 双向百分比数值输入, 拖动/键入即时生效。
+/// 值为 0.1-1.0 浮点 (与 settings.appearance 的透明度设置同构),
+/// 显示为 10-100 整数百分比。滑动条复用 .slider-input 现成样式, 不另写 CSS。
+export function OpacitySliderControl({
+  value,
+  min,
+  max,
+  step,
+  onCommit,
+  label,
+  className = '',
+}: {
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onCommit: (value: number) => void;
+  label: string;
+  className?: string;
+}) {
+  const clamp = (v: number) => Math.min(max, Math.max(min, v));
+  const toPct = (v: number) => Math.round(clamp(v) * 100);
+  const pct = toPct(value);
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <input
+        type="range"
+        className="slider-input flex-1 min-w-[80px]"
+        min={Math.round(min * 100)}
+        max={Math.round(max * 100)}
+        step={Math.max(1, Math.round(step * 100))}
+        value={pct}
+        aria-label={label}
+        onChange={(e) => onCommit(clamp(Number(e.target.value) / 100))}
+      />
+      <div className="flex items-center gap-1 flex-shrink-0">
+        <DraftNumberInput
+          value={pct}
+          min={Math.round(min * 100)}
+          max={Math.round(max * 100)}
+          integer
+          onCommit={(n) => onCommit(clamp(n / 100))}
+          className="w-[52px] px-1.5 py-0.5 bg-bg-input text-text-primary border border-border rounded text-xs font-mono text-right focus:outline-none focus:border-accent transition-colors"
+          aria-label={label}
+        />
+        <span className="text-xs text-text-secondary">%</span>
+      </div>
+    </div>
+  );
+}

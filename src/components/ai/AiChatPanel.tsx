@@ -152,7 +152,7 @@ function SessionMenu() {
             className="fixed inset-0 z-20 border-0 bg-transparent"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute left-0 top-6 z-30 w-56 max-w-[80vw] rounded-lg border border-border-subtle bg-bg-panel-header shadow-lg py-1 flex flex-col animate-ai-menu-in">
+          <div className="absolute left-0 top-6 z-30 w-56 max-w-[80vw] float-popover py-1 flex flex-col animate-ai-menu-in">
             <div className="max-h-56 overflow-y-auto">
               {sorted.length === 0 && (
                 <div className="px-2 py-1.5 text-[11px] text-text-secondary">{t(lang, 'aiSessionEmpty')}</div>
@@ -543,7 +543,7 @@ export function AiChatPanel() {
 
       {/* 输入区 — 支持拖放文本文件作为附件 (拖入时高亮) */}
       <div
-        className={`shrink-0 bg-bg-editor/90 backdrop-blur-md ${dragOver ? 'ring-1 ring-inset ring-accent' : ''}`}
+        className={`shrink-0 frost-surface ${dragOver ? 'ring-1 ring-inset ring-accent' : ''}`}
         onDragEnter={(e) => {
           if (!e.dataTransfer.types.includes('Files')) return;
           e.preventDefault();

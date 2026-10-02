@@ -138,6 +138,9 @@
   --color-success: var(--color-green);
   --color-info: var(--color-blue);
   --color-danger-surface: var(--color-bg-danger);
+  --color-float-surface: var(--color-bg-elevated);
+  --color-float-chrome: var(--color-bg-panel-header);
+  --color-float-chrome-muted: var(--color-bg-elevated);
 
   /* ---------- 透明度档位 (--alpha-*, 全仓唯一白名单) ---------- */
   /* 组件不写裸 `opacity: 0.NN` / `opacity-NN`, 一律引用档位; --opacity-* 是
@@ -255,20 +258,26 @@
   --spacing-6: 24px;
   --spacing-8: 32px;
 
-  /* ---------- 阴影 ---------- */
-  --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.65);
+  /* ---------- 浮层与磨砂 ---------- */
+  --shadow-float: 0 24px 70px rgba(0, 0, 0, 0.65);
+  --shadow-popover: 0 10px 32px rgba(0, 0, 0, 0.5);
+  --frost-blur: 18px;
+  --frost-saturate: 180%;
+  --frost-border: color-mix(in srgb, var(--color-text-bright) 18%, transparent);
+  --frost-highlight: color-mix(in srgb, var(--color-text-bright) 20%, transparent);
+  --frost-shadow:
+    inset 0 1px 0 var(--frost-highlight),
+    inset 0 -1px 0 color-mix(in srgb, var(--color-bg-window) 20%, transparent),
+    0 2px 12px color-mix(in srgb, var(--color-bg-window) 30%, transparent);
 
-  /* ---------- 亚克力 (Frosted Glass) — Widget 卡片 + 窗口共用基线参数 ---------- */
-  /* 实际 alpha/blur 由 applyAppearance() 根据 acrylicOpacity 在 :root 上动态注入
-     --widget-acrylic-alpha / --widget-acrylic-blur / --widget-acrylic-saturate,
-     以下为缺省值 (acrylicOpacity = 0.6 时). 注意: 这些变量只在 :root[data-acrylic='true']
-     下生效 (acrilic 关闭时 .widget-card-acrylic 直接回退到实色 bg-bg-elevated) */
-  --blur-acrylic: 14px;
-  --saturate-acrylic: 180%;
-  /* 卡片 alpha 基线 47% (acrylicOpacity=0.6), 范围 [25%, 65%] — 半透才能看见背后 */
-  --widget-acrylic-alpha: 47%;
-  --widget-acrylic-blur: var(--blur-acrylic);
-  --widget-acrylic-saturate: var(--saturate-acrylic);
+  /* Widget 与二级卡片共享基础磨砂 token; alpha 和 Widget 模糊强度由 applyAppearance()
+     按各自设置注入。关闭对应开关时组件直接回退到实色, 不保留 backdrop-filter。 */
+  --frost-alpha-widget: 47%;
+  --frost-alpha-floating: 72%;
+  --frost-alpha-chrome: 55%;
+  --frost-alpha-surface: 90%;
+  --frost-blur-widget: var(--frost-blur);
+  --frost-saturate-widget: var(--frost-saturate);
 
   /* ---------- 动效 (Motion tokens) ---------- */
   /* 语义时长别名 — components.css 原生 CSS 直接引用 var(--transition-*) */
@@ -302,6 +311,7 @@
   --z-tooltip: 50;
   --z-context-menu: 60;
   --z-modal: 100;
+  --z-modal-secondary: 110;
   --z-toast: 200;
   --z-tour: 1100;
 }

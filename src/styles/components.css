@@ -33,6 +33,10 @@
   z-index: var(--z-modal);
 }
 
+.z-modal-secondary {
+  z-index: var(--z-modal-secondary);
+}
+
 .z-toast {
   z-index: var(--z-toast);
 }
@@ -280,7 +284,7 @@ body.dragging-dock * {
    状态切换跟随 :root[data-acrylic='true'] — 由 applyAppearance() 根据
    appearance.acrylicBackground 写入. 关闭时 = 旧版纯色实底 (与 bg-bg-elevated
    视觉一致); 开启时叠加 backdrop-filter 模糊 + 半透明背景 + 顶部高光 + 饱和度增强,
-   与窗口 OS vibrancy 共享同一组参数 (alpha/blur/saturate 随 acrylicOpacity 滑块联动).
+   与浮动卡片共享磨砂边缘和色彩增强 token, alpha/blur 随 acrylicOpacity 滑块联动.
 
    视觉强度设计 — 亚克力必须明显才能被识别为"玻璃", 因此:
    - 开启态 alpha 基线 45% (acrylicOpacity=0.6), 透出背后内容
@@ -311,18 +315,15 @@ body.dragging-dock * {
 [data-acrylic='true'] .widget-card-acrylic {
   background-color: color-mix(
     in srgb,
-    var(--color-bg-elevated) var(--widget-acrylic-alpha),
+    var(--color-bg-elevated) var(--frost-alpha-widget),
     transparent
   );
   /* 同时使用 backdrop-filter + -webkit-backdrop-filter 兼容 macOS Safari (WKWebView) */
-  backdrop-filter: blur(var(--widget-acrylic-blur)) saturate(var(--widget-acrylic-saturate));
-  -webkit-backdrop-filter: blur(var(--widget-acrylic-blur)) saturate(var(--widget-acrylic-saturate));
+  backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  -webkit-backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
   /* 玻璃边缘: 加亮边框 + 顶部白色高光, 强化 "玻璃面板" 视觉 */
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
-    0 2px 8px rgba(0, 0, 0, 0.25);
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
 }
 
 /* 嵌入式 (节点内) 模式 — 卡片本身没有外框, 内容需要继承亚克力色调 */
@@ -342,7 +343,7 @@ body.dragging-dock * {
    因此 dock 卡片主体在亚克力模式下也要变成半透明, 让更外层的编辑器画布
    (含 React Flow 节点 / 网格 / 曲线) 透出来, widget 卡片才有东西可模糊.
 
-   alpha 取 widget-acrylic 的 1.6 倍 (更实), 保证 dock 主体仍清晰可辨;
+   alpha 取 Widget 磨砂的 1.6 倍 (更实), 保证 dock 主体仍清晰可辨;
    blur 与 saturate 共享同一组变量, 与 widget 卡片视觉一致. */
 .dock-card-acrylic {
   /* 默认: 实色 (与 .module-card 默认一致) */
@@ -357,18 +358,79 @@ body.dragging-dock * {
   background-color: color-mix(
     in srgb,
     var(--color-bg-surface)
-      /* alpha = widget-alpha * 1.6, clamp 到 [40%, 92%], 比 widget 卡片更实 */
-      calc(min(92, max(40, var(--widget-acrylic-alpha) * 1.6)) * 1%),
+      /* alpha = Widget alpha * 1.6, clamp 到 [40%, 92%], 比 Widget 卡片更实 */
+      clamp(40%, calc(var(--frost-alpha-widget) * 1.6), 92%),
     transparent
   );
-  backdrop-filter: blur(var(--widget-acrylic-blur)) saturate(var(--widget-acrylic-saturate));
-  -webkit-backdrop-filter: blur(var(--widget-acrylic-blur)) saturate(var(--widget-acrylic-saturate));
+  backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  -webkit-backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
   /* 边框在亚克力模式下加亮 + 顶部高光, 玻璃面板质感 */
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.20),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.20),
-    0 2px 12px rgba(0, 0, 0, 0.30);
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}
+
+/* ============ 统一浮层 (设置与面板二级卡片) ============ */
+/* 浮层遮罩与卡片 chrome 统一走 token; 卡片磨砂跟随 :root[data-floating-glass='true'],
+   与窗口亚克力开关相互独立。布局、尺寸和内边距仍由各组件的 utility 控制。 */
+.float-overlay {
+  background: var(--color-bg-overlay);
+}
+
+.float-card,
+.float-popover,
+.context-menu,
+.prompt-card {
+  background: var(--color-float-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+}
+
+.float-popover {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
+
+.float-chrome,
+.float-chrome-muted {
+  background-color: color-mix(
+    in srgb,
+    var(--color-float-chrome) var(--frost-alpha-chrome),
+    transparent
+  );
+}
+
+.float-chrome-muted {
+  background-color: color-mix(
+    in srgb,
+    var(--color-float-chrome-muted) var(--frost-alpha-chrome),
+    transparent
+  );
+}
+
+[data-floating-glass='true'] .float-card,
+[data-floating-glass='true'] .float-popover,
+[data-floating-glass='true'] .context-menu {
+  background-color: color-mix(
+    in srgb,
+    var(--color-float-surface) var(--frost-alpha-floating),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}
+
+/* 面板内无需开关状态的磨砂表面, 与浮层/Widget 共用同一组磨砂处理 token。 */
+.frost-surface {
+  background-color: color-mix(
+    in srgb,
+    var(--color-bg-editor) var(--frost-alpha-surface),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
 }
 
 /* ============ AI 面板 ============ */
@@ -469,10 +531,6 @@ body.dragging-dock * {
 
 /* ============ Context Menu 右键菜单 ============ */
 .context-menu {
-  background: var(--color-bg-sidebar);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-default);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
   padding: var(--spacing-1) 0;
   display: flex;
   flex-direction: column;
@@ -1117,13 +1175,6 @@ body.dragging-dock * {
    只定义卡片 chrome 与排版, 布局 (flex/padding/gap) 由使用方用 utility 组合,
    避免 unlayered 类覆盖 utility 布局。供通知 Toast / 内联提示 / 弹层共用,
    使全软件提示样式统一到首次引导风格。 */
-.prompt-card {
-  background: var(--color-bg-sidebar);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-modal);
-}
-
 /* 内联提示条变体 — 用于嵌在面板内的提示条, 去掉投影并收敛圆角 */
 .prompt-card--bar {
   border-radius: var(--radius-md);

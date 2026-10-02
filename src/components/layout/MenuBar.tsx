@@ -337,7 +337,7 @@ export const MenuBar = memo(function MenuBar() {
               {menu.label}
             </button>
             {open && (
-              <div role="menu" data-menu-panel className="context-menu absolute left-0 top-full">
+              <div role="menu" data-menu-panel className="context-menu float-popover absolute left-0 top-full">
                 {menu.entries.map((entry, idx) => {
                   if (entry.kind === 'separator') {
                     return <div key={`sep-${idx}`} className="context-menu-separator" />;

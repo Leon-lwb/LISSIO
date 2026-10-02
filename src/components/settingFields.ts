@@ -9,6 +9,7 @@ export type ControlType =
   | { kind: 'select'; options: { value: string | number; label: string }[] }
   | { kind: 'toggle' }
   | { kind: 'number'; min?: number; max?: number; step?: number }
+  | { kind: 'slider'; min: number; max: number; step: number; unit?: 'percent' }
   | { kind: 'text' }
   | { kind: 'path' }
   | { kind: 'theme' }
@@ -126,7 +127,32 @@ const SETTING_FIELDS: SettingFieldDef[] = [
     field: 'acrylicOpacity',
     labelKey: 'settingAcrylicOpacity',
     descKey: 'settingAcrylicOpacityDesc',
-    control: { kind: 'number', min: 0.1, max: 1, step: 0.05 },
+    control: { kind: 'slider', min: 0.1, max: 1, step: 0.01, unit: 'percent' },
+    keywords: ['opacity', 'transparency', '透明', '透明度', '毛玻璃', 'acrylic'],
+  },
+  {
+    category: 'appearance',
+    field: 'floatingGlass',
+    labelKey: 'settingFloatingGlass',
+    descKey: 'settingFloatingGlassDesc',
+    control: { kind: 'toggle' },
+    keywords: ['glass', 'frosted', 'floating', 'modal', '毛玻璃', '磨砂', '浮层', '弹窗'],
+  },
+  {
+    category: 'appearance',
+    field: 'floatingGlassOpacity',
+    labelKey: 'settingFloatingGlassOpacity',
+    descKey: 'settingFloatingGlassOpacityDesc',
+    control: { kind: 'slider', min: 0.5, max: 1, step: 0.01, unit: 'percent' },
+    keywords: ['opacity', 'transparency', 'glass', 'floating', '透明', '透明度', '磨砂', '浮层'],
+  },
+  {
+    category: 'appearance',
+    field: 'windowOpacity',
+    labelKey: 'settingWindowOpacity',
+    descKey: 'settingWindowOpacityDesc',
+    control: { kind: 'slider', min: 0.1, max: 1, step: 0.01, unit: 'percent' },
+    keywords: ['opacity', 'transparency', 'window', '透明', '透明度', '窗口'],
   },
   {
     category: 'appearance',

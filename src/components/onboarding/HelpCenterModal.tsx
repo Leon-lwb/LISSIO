@@ -19,17 +19,17 @@ export function HelpCenterModal() {
 
   return (
     <div
-      className="fixed inset-0 bg-bg-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 float-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <div
-        className="flex flex-col bg-bg-sidebar border border-border rounded-lg overflow-hidden shadow-modal animate-[settings-slide-in_0.2s_ease-out]"
+        className="flex flex-col float-card overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         style={{ width: '80vw', height: '85vh', maxWidth: 1000, maxHeight: 800 }}
       >
-        <div className="flex items-center gap-2 px-3 py-2 bg-bg-panel-header border-b border-border text-text-primary font-semibold">
+        <div className="flex items-center gap-2 px-3 py-2 float-chrome border-b border-border text-text-primary font-semibold">
           <HelpCircle size={16} />
           <span>{t(lang, 'helpCenterTitle')}</span>
           <button
@@ -65,7 +65,7 @@ export function HelpCenterModal() {
           })}
         </div>
 
-        <div className="px-3 py-2 flex justify-end bg-bg-panel-header border-t border-border">
+        <div className="px-3 py-2 flex justify-end float-chrome border-t border-border">
           <button
             className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover"
             onClick={close}

@@ -44,6 +44,12 @@ export interface AppSettings {
     acrylicBackground: boolean;
     /// 毛玻璃面板透明度 0.1-1.0, 0.6 为基准观感
     acrylicOpacity: number;
+    /// 二级卡片磨砂开关, 与亚克力背景相互独立
+    floatingGlass: boolean;
+    /// 二级卡片磨砂透明度 0.5-1.0, 0.72 为默认观感
+    floatingGlassOpacity: number;
+    /// 整窗透明度 0.1-1.0, 1.0 为不透明; 与亚克力开关无关的独立维度 (CSS 层生效)
+    windowOpacity: number;
   };
   editor: {
     waveformFps: number;
@@ -159,6 +165,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     activityBarVisible: true,
     acrylicBackground: false,
     acrylicOpacity: 0.6,
+    floatingGlass: true,
+    floatingGlassOpacity: 0.72,
+    windowOpacity: 1,
   },
   editor: {
     waveformFps: 30,

@@ -102,6 +102,59 @@ describe('settingsStore', () => {
     expect(pipelineConfigCalls()).toHaveLength(0);
   });
 
+  it('整窗透明度经 appearance 更新后写入 body 与 :root 变量', () => {
+    useSettingsStore.getState().update('appearance', 'windowOpacity', 0.5);
+
+    expect(useSettingsStore.getState().settings.appearance.windowOpacity).toBe(0.5);
+    expect(document.body.style.opacity).toBe('0.5');
+    expect(document.documentElement.style.getPropertyValue('--window-opacity')).toBe('0.5');
+  });
+
+  it('resetCategory(apppearance) 把整窗透明度还原为 1 并清除内联样式', () => {
+    useSettingsStore.getState().update('appearance', 'windowOpacity', 0.5);
+    expect(document.body.style.opacity).toBe('0.5');
+
+    useSettingsStore.getState().resetCategory('appearance');
+
+    expect(useSettingsStore.getState().settings.appearance.windowOpacity).toBe(1);
+    expect(document.body.style.opacity).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--window-opacity')).toBe('');
+  });
+
+  it('整窗透明度与亚克力开关相互独立', () => {
+    useSettingsStore.getState().update('appearance', 'acrylicBackground', true);
+    useSettingsStore.getState().update('appearance', 'windowOpacity', 0.7);
+
+    expect(useSettingsStore.getState().settings.appearance.acrylicBackground).toBe(true);
+    expect(useSettingsStore.getState().settings.appearance.windowOpacity).toBe(0.7);
+    expect(document.documentElement.dataset.acrylic).toBe('true');
+    expect(document.body.style.opacity).toBe('0.7');
+  });
+
+  it('二级卡片磨砂与亚克力背景相互独立', () => {
+    useSettingsStore.getState().update('appearance', 'acrylicBackground', true);
+    useSettingsStore.getState().update('appearance', 'floatingGlass', true);
+    useSettingsStore.getState().update('appearance', 'floatingGlassOpacity', 0.72);
+
+    expect(document.documentElement.dataset.acrylic).toBe('true');
+    expect(document.documentElement.dataset.floatingGlass).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--frost-alpha-floating')).toBe('72%');
+    expect(document.documentElement.style.getPropertyValue('--color-float-surface')).toBe('#1b1f26');
+    expect(document.documentElement.style.getPropertyValue('--color-bg-sidebar')).not.toBe('#1b1f26');
+  });
+
+  it('resetCategory(apppearance) 恢复二级卡片磨砂默认值', () => {
+    useSettingsStore.getState().update('appearance', 'floatingGlass', false);
+    useSettingsStore.getState().update('appearance', 'floatingGlassOpacity', 0.5);
+
+    useSettingsStore.getState().resetCategory('appearance');
+
+    expect(useSettingsStore.getState().settings.appearance.floatingGlass).toBe(true);
+    expect(useSettingsStore.getState().settings.appearance.floatingGlassOpacity).toBe(0.72);
+    expect(document.documentElement.dataset.floatingGlass).toBe('true');
+    expect(document.documentElement.style.getPropertyValue('--frost-alpha-floating')).toBe('72%');
+  });
+
   it('replays recording storage settings and runs enabled cleanup rules on load', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, {
       data: { recordingDatabaseDir: '/tmp/rec-storage', cleanupDeleteFailed: true },

@@ -1,6 +1,6 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { DraftInput, DraftNumberInput, parseDraftNumber } from '../fields';
+import { DraftInput, DraftNumberInput, OpacitySliderControl, parseDraftNumber } from '../fields';
 
 describe('parseDraftNumber', () => {
   it('空串/非法/越界返回 null', () => {
@@ -136,5 +136,54 @@ describe('DraftNumberInput', () => {
     fireEvent.blur(input);
     expect(onCommit).not.toHaveBeenCalled();
     expect(input.getAttribute('aria-invalid')).toBe('false');
+  });
+});
+
+describe('OpacitySliderControl', () => {
+  const base = { min: 0.1, max: 1, step: 0.01, label: '透明度' };
+
+  it('滑动条即时回调, 百分比换算为浮点', () => {
+    const onCommit = vi.fn();
+    const { container } = render(
+      <OpacitySliderControl {...base} value={0.6} onCommit={onCommit} />
+    );
+    const range = container.querySelector('input[type="range"]')!;
+    fireEvent.change(range, { target: { value: '80' } });
+    expect(onCommit).toHaveBeenCalledWith(0.8);
+  });
+
+  it('数值框输入提交换算为浮点', () => {
+    const onCommit = vi.fn();
+    const { container } = render(
+      <OpacitySliderControl {...base} value={0.6} onCommit={onCommit} />
+    );
+    const numberInput = container.querySelector('input[type="number"]')!;
+    fireEvent.focus(numberInput);
+    fireEvent.change(numberInput, { target: { value: '45' } });
+    fireEvent.blur(numberInput);
+    expect(onCommit).toHaveBeenCalledWith(0.45);
+  });
+
+  it('显示值为百分比整数', () => {
+    const { container } = render(
+      <OpacitySliderControl {...base} value={0.455} onCommit={() => undefined} />
+    );
+    const range = container.querySelector('input[type="range"]')!;
+    const numberInput = container.querySelector('input[type="number"]')!;
+    expect(range.getAttribute('value')).toBe('46');
+    expect((numberInput as HTMLInputElement).value).toBe('46');
+  });
+
+  it('越界输入被拒绝', () => {
+    const onCommit = vi.fn();
+    const { container } = render(
+      <OpacitySliderControl {...base} value={0.5} onCommit={onCommit} />
+    );
+    const numberInput = container.querySelector('input[type="number"]')!;
+    fireEvent.focus(numberInput);
+    fireEvent.change(numberInput, { target: { value: '200' } });
+    fireEvent.blur(numberInput);
+    // 数值框只提交合法范围, 越界草稿保留待修正
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });

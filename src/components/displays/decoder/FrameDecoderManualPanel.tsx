@@ -59,7 +59,7 @@ export function ManualModePanel({
             <ChevronDown size={9} />
           </button>
           {showExamples && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto bg-bg-panel-header border border-border rounded shadow-lg">
+            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto float-popover">
               {FRAME_EXAMPLES.map((ex, i) => (
                 <button
                   key={i}
@@ -86,7 +86,7 @@ export function ManualModePanel({
             <ChevronDown size={9} />
           </button>
           {showHistory && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto bg-bg-panel-header border border-border rounded shadow-lg">
+            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto float-popover">
               {history.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-text-secondary italic">{t(lang, 'fdHistoryEmpty')}</div>
               ) : (
