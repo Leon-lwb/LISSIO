@@ -34,7 +34,7 @@ export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query:
       <div className="flex items-center justify-between px-1">
         <span className="text-[11px] font-medium text-text-secondary">{t(lang, 'devicePanelDevices')} <span className="ml-1 text-text-muted tabular-nums">{visible.length}</span></span>
         <button type="button" disabled={pending} onClick={() => { void refresh(); }} aria-label={t(lang, 'refresh')}
-          title={t(lang, 'refresh')} className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-40">
+          title={t(lang, 'refresh')} className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-disabled">
           {pending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         </button>
       </div>
@@ -59,7 +59,7 @@ export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query:
               if (dockDrag.consumeClick()) return;
               void addAcquisitionNode(card).catch(() => undefined);
               setAdded(adapterLabel(card));
-            }} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-xs text-text-secondary hover:bg-bg-hover disabled:opacity-40">
+            }} className="flex items-center gap-2 rounded-md px-2 py-2 text-left text-xs text-text-secondary hover:bg-bg-hover disabled:opacity-disabled">
             <Cable size={13} /><span className="min-w-0 flex-1 truncate">{adapterLabel(card)}</span><Plus size={12} />
           </button>)}
         </div>
@@ -88,7 +88,7 @@ function DeviceRow({ device, disabled, onAdd }: { device: PanelDevice; disabled:
         }}
         onClick={() => { if (!dockDrag.consumeClick()) onAdd(option); }}
         title={`${t(lang, 'devicePanelAdd')}: ${endpoint.displayName}\n${endpoint.discoveryId}`}
-        className="group cursor-grab active:cursor-grabbing select-none flex w-full items-start gap-2 px-2.5 py-3 text-left transition-colors hover:bg-bg-hover focus-visible:outline-accent disabled:opacity-40">
+        className="group cursor-grab active:cursor-grabbing select-none flex w-full items-start gap-2 px-2.5 py-3 text-left transition-colors hover:bg-bg-hover focus-visible:outline-accent disabled:opacity-disabled">
         <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-yellow/15 text-yellow"><Icon size={15} /></span>
         <span className="min-w-0 flex-1 space-y-1">
           <span className="block truncate text-xs font-medium text-text-primary" title={endpoint.displayName}>{endpoint.displayName}</span>

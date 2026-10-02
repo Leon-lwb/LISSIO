@@ -106,7 +106,7 @@ function CommandFrameTabBar({
             )}
             {frames.length > 1 && (
               <button
-                className="p-0.5 opacity-60 hover:opacity-100 hover:text-red shrink-0"
+                className="p-0.5 opacity-muted hover:opacity-100 hover:text-red shrink-0"
                 title={t(lang, 'cmdRemoveFrame')}
                 onClick={(e) => {
                   e.stopPropagation();

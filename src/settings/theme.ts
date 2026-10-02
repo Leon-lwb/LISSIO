@@ -194,6 +194,8 @@ export function getCssVariableName(token: ThemeToken): string {
 
 /// 语义 token 别名: 语义 CSS 变量名 -> 其对应的原始 token。
 /// 与 index.css @theme 中的语义层保持一致; 纯增量, 不改动 THEME_TOKENS 可编辑集合。
+/// 透明度档位 (--alpha-*) 与 color-mix() 派生档位不在此列 —— 它们经 var() 引用下列
+/// 原始 token, 主题切换时自动联动, 无需运行时重新注入。
 export const SEMANTIC_TOKEN_ALIASES: Readonly<Record<string, ThemeToken>> = {
   '--color-bg-surface': 'bgEditor',
   '--color-bg-elevated': 'bgSidebar',
@@ -207,6 +209,14 @@ export const SEMANTIC_TOKEN_ALIASES: Readonly<Record<string, ThemeToken>> = {
   '--color-success': 'green',
   '--color-info': 'blue',
   '--color-danger-surface': 'bgDanger',
+  // 语义状态文字色 (替代裸调色板 text-red-NNN 等) — 基色随主题联动
+  '--color-text-danger': 'red',
+  '--color-text-success': 'green',
+  '--color-text-warning': 'yellow',
+  '--color-text-info': 'blue',
+  '--color-text-accent': 'accent',
+  '--color-text-neutral': 'textSecondary',
+  '--color-text-special': 'purple',
 };
 
 /// 暗色主题 — 当前项目默认 (现代冷调深色)

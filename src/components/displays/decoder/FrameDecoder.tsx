@@ -279,7 +279,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
           }}
         >
           {blocks.length === 0 && (
-            <div className="text-xs text-text-secondary opacity-60 italic py-4 text-center">
+            <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">
               {t(lang, 'fdBlocksEmpty')}
             </div>
           )}
@@ -292,7 +292,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               <div
                 key={block.id}
                 data-block-id={block.id}
-                className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-40' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
+                className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
                 onDragOver={handleDragOver(block.id)}
                 onDrop={handleDrop(block.id)}
               >

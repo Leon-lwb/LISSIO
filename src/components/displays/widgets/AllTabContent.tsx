@@ -75,7 +75,7 @@ export function AllTabContent({
           <span>{config.running ? t(lang, 'stop') : t(lang, 'run')}</span>
         </button>
         <button
-          className="inline-flex items-center gap-1 px-2 h-7 bg-bg-input text-text-primary border border-border rounded text-xs cursor-pointer transition-all duration-150 hover:bg-bg-hover hover:text-text-bright disabled:opacity-50 disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1 px-2 h-7 bg-bg-input text-text-primary border border-border rounded text-xs cursor-pointer transition-all duration-150 hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
           onClick={() => onAutoSet?.()}
           title={t(lang, 'autoSet')}
           disabled={!onAutoSet}
@@ -302,7 +302,7 @@ function ChannelVisibilityRow({
     <div className="flex flex-col gap-0.5 py-1 border-t border-border/50 first:border-t-0">
       <div className="flex items-center gap-1.5">
         <button
-          className={`inline-flex items-center gap-1 border rounded px-1.5 h-6 text-[10px] font-mono cursor-pointer transition-all duration-150 flex-1 min-w-0 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-60'} hover:bg-bg-hover`}
+          className={`inline-flex items-center gap-1 border rounded px-1.5 h-6 text-[10px] font-mono cursor-pointer transition-all duration-150 flex-1 min-w-0 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-muted'} hover:bg-bg-hover`}
           onClick={() => onPatchChannel(idx, { show: !ch.show })}
           title={`CH${idx}`}
         >

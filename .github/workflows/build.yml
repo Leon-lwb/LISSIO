@@ -129,6 +129,7 @@ jobs:
           pnpm check:web-contract
           pnpm check:contracts
           pnpm check:model-catalog
+          pnpm check:tokens
           pnpm typecheck
           pnpm lint:ci
           pnpm test

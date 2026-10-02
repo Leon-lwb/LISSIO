@@ -111,7 +111,7 @@ export function IdLoadDistribution({
                   isSelected
                     ? 'bg-accent/20 border border-accent'
                     : 'border border-transparent hover:bg-bg-hover'
-                } ${selectedId && !isSelected ? 'opacity-50' : ''}`}
+                } ${selectedId && !isSelected ? 'opacity-disabled' : ''}`}
                 onClick={() => onSelectId(s.id, s.extended)}
                 onKeyDown={activateOnKeyboard}
                 role="button"

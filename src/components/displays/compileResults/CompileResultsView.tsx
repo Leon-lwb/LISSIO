@@ -45,22 +45,22 @@ const EMPTY_MODAL: EdgeModalState = {
 
 /// 端口域 chip 颜色 (按域)
 const DOMAIN_CHIP_CLASS: Record<PortDomain, string> = {
-  F32: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
-  Bytes: 'bg-green-500/20 text-green-300 border-green-500/40',
-  String: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+  F32: 'state-info',
+  Bytes: 'state-success',
+  String: 'state-warning',
 };
 
 /// 边分类 badge 颜色
 function edgeClassChipClass(c: EdgeClass): string {
   switch (c.kind) {
     case 'byte':
-      return 'bg-green-500/20 text-green-300 border-green-500/40';
+      return 'state-success';
     case 'f32':
-      return 'bg-blue-500/20 text-blue-300 border-blue-500/40';
+      return 'state-info';
     case 'str':
-      return 'bg-amber-500/20 text-amber-300 border-amber-500/40';
+      return 'state-warning';
     case 'raw_data_marker':
-      return 'bg-zinc-500/30 text-zinc-300 border-zinc-500/40';
+      return 'state-neutral';
   }
 }
 
@@ -247,14 +247,14 @@ export const CompileResultsView = memo(function CompileResultsView() {
         </h2>
         <div className="flex gap-2 flex-wrap">
           <button
-            className="flex items-center gap-1 px-2 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs disabled:opacity-disabled"
             onClick={handleAdd}
             disabled={hirLoading || !hir || (hir.nodes?.length ?? 0) < 2}
           >
             <PlusIcon size={14} /> {t(lang, 'addConnection')}
           </button>
           <button
-            className="flex items-center gap-1 px-2 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs disabled:opacity-50"
+            className="flex items-center gap-1 px-2 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs disabled:opacity-disabled"
             onClick={() => { void handlePaste(); }}
             disabled={!clipboardEdge || hirLoading}
           >
@@ -293,7 +293,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                 const targetDual = targetNode ? isDualRole(targetNode) : false;
                 const isDual = sourceDual || targetDual;
                 // 复用 compileStatus tabErrorEdges / tabErrorNodes 高亮 — 与 NodeEditor
-                // 画布红框 + CanvasErrorTooltip  ring-2  ring-red-500 一致
+                // 画布红框与行高亮的危险色描边同色相, CanvasErrorTooltip 同源
                 const isErroredEdge = erroredEdgeIds.has(edge.edgeId);
                 const isErroredSource = erroredNodeIds.has(edge.sourceNode);
                 const isErroredTarget = erroredNodeIds.has(edge.targetNode);
@@ -304,9 +304,9 @@ export const CompileResultsView = memo(function CompileResultsView() {
                 const isHighlightedTarget = highlightedNodeId === edge.targetNode;
                 const isHighlighted = isHighlightedSource || isHighlightedTarget;
                 const rowClass = isErrored
-                  ? 'bg-red-500/10 ring-1 ring-red-500/60'
+                  ? 'bg-danger/10 ring-1 ring-danger/60'
                   : isHighlighted
-                    ? 'bg-blue-500/15 ring-1 ring-blue-500/60'
+                    ? 'bg-info/15 ring-1 ring-info/60'
                     : 'hover:bg-bg-sidebar';
                 return (
                   <tr
@@ -318,7 +318,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                         <button
                           type="button"
                           className={`font-medium cursor-pointer hover:underline ${
-                            isErroredSource ? 'text-red-400' : 'text-text-primary'
+                            isErroredSource ? 'text-text-danger' : 'text-text-primary'
                           }`}
                           onClick={() => handleHighlight(edge.sourceNode)}
                           onKeyDown={activateOnKeyboard}
@@ -335,7 +335,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                         <button
                           type="button"
                           className={`font-medium cursor-pointer hover:underline ${
-                            isErroredTarget ? 'text-red-400' : 'text-text-primary'
+                            isErroredTarget ? 'text-text-danger' : 'text-text-primary'
                           }`}
                           onClick={() => handleHighlight(edge.targetNode)}
                           onKeyDown={activateOnKeyboard}
@@ -365,7 +365,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
                           isErroredEdge
-                            ? 'bg-red-500/20 text-red-300 border-red-500/60'
+                            ? 'state-danger'
                             : edgeClassChipClass(edge.class)
                         }`}
                       >
@@ -374,7 +374,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                     </td>
                     <td className="px-4 py-2">
                       {isDual ? (
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono border bg-purple-500/20 text-purple-300 border-purple-500/40">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono border state-special">
                           {t(lang, 'dualRoleMarker')}
                         </span>
                       ) : (
@@ -400,7 +400,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                           <CopyIcon size={14} />
                         </button>
                         <button
-                          className="p-1 text-red-500 hover:text-red-400 transition-colors"
+                          className="p-1 text-text-danger hover:text-text-danger-strong transition-colors"
                           title={t(lang, 'contextMenuDelete')}
                           onClick={() => { void handleDelete(edge.edgeId); }}
                           disabled={hirLoading}
@@ -500,7 +500,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                 {t(lang, 'cancel')}
               </button>
               <button
-                className="px-3 py-1 bg-accent-primary hover:opacity-80 text-text-primary rounded text-xs disabled:opacity-50"
+                className="px-3 py-1 bg-accent-primary hover:opacity-secondary text-text-primary rounded text-xs disabled:opacity-disabled"
                 onClick={() => { void submitModal(); }}
                 disabled={
                   !modal.sourceNode ||

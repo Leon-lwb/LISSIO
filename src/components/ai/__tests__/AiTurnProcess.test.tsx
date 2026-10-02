@@ -90,4 +90,37 @@ describe('AiTurnProcess', () => {
     expect(toolActivityKind('mcp_browser_open')).toBe('web');
     expect(toolActivityKind('mcp_local_probe')).toBe('tool');
   });
+
+  // 折行契约: 思考文本与工具 JSON 只纵向限高, 长 token 折行而非横向滚动
+  it('wraps reasoning text and tool JSON instead of scrolling horizontally', () => {
+    useAppStore.setState({ lang: 'en' });
+    const long = `https://example.com/${'segment-'.repeat(40)}`;
+    const { container } = render(
+      <AiTurnProcess
+        steps={[
+          { kind: 'reasoning', text: long },
+          { kind: 'tool', run: {
+            id: 'call-wrap',
+            name: 'mcp_local_read_status',
+            arguments: { url: long },
+            text_offset: 0,
+            content: long,
+            is_error: false,
+            done: true,
+          } },
+        ]}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'View process' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reasoning' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Read read_status' }));
+
+    const pres = Array.from(container.querySelectorAll('pre'));
+    expect(pres).toHaveLength(2);
+    for (const pre of pres) {
+      expect(pre).toHaveClass('whitespace-pre-wrap', '[overflow-wrap:anywhere]');
+      expect(pre).not.toHaveClass('overflow-auto', 'overflow-x-auto');
+    }
+    expect(container.querySelector('.ant-think-content.overflow-x-hidden')).toBeInTheDocument();
+  });
 });

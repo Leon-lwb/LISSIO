@@ -117,7 +117,7 @@ export function SearchInput({
   return (
     <div
       className={`search-box flex items-center bg-bg-input border border-border transition-colors focus-within:border-accent ${
-        disabled ? 'opacity-40 pointer-events-none' : ''
+        disabled ? 'opacity-subtle pointer-events-none' : ''
       } ${sizeCls} ${className ?? ''}`}
     >
       <Search size={iconSize} className="text-text-secondary shrink-0 pointer-events-none" />

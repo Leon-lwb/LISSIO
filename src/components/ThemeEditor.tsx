@@ -108,7 +108,7 @@ function ColorField({
             value={colorValue ?? '#000000'}
             disabled={disabled ?? !colorValue}
             onChange={(e) => onChange(e.target.value)}
-            className="w-7 h-7 p-0 border-0 rounded cursor-pointer bg-transparent disabled:opacity-50"
+            className="w-7 h-7 p-0 border-0 rounded cursor-pointer bg-transparent disabled:opacity-disabled"
             title={token}
           />
           <input
@@ -116,7 +116,7 @@ function ColorField({
             value={value}
             disabled={disabled}
             onChange={(e) => onChange(e.target.value)}
-            className="flex-1 min-w-0 px-1.5 py-0.5 bg-bg-input text-text-primary border border-border rounded text-[11px] font-mono focus:outline-none focus:border-accent disabled:opacity-50"
+            className="flex-1 min-w-0 px-1.5 py-0.5 bg-bg-input text-text-primary border border-border rounded text-[11px] font-mono focus:outline-none focus:border-accent disabled:opacity-disabled"
           />
         </div>
       </div>

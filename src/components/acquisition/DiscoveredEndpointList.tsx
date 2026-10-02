@@ -32,7 +32,7 @@ export function DiscoveredEndpointList({
           onClick={onRefresh}
           title={t(lang, 'refresh')}
           aria-label={t(lang, 'refresh')}
-          className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-50"
+          className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
         >
           {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
         </button>
@@ -78,7 +78,7 @@ function DiscoveredEndpointCard({
       disabled={disabled}
       aria-pressed={applied}
       onClick={() => onSelect(endpoint)}
-      className={`flex flex-col gap-0.5 rounded border px-2 py-1.5 text-left transition-colors disabled:opacity-50 ${
+      className={`flex flex-col gap-0.5 rounded border px-2 py-1.5 text-left transition-colors disabled:opacity-disabled ${
         applied
           ? 'border-accent bg-bg-active'
           : 'border-border bg-bg-inset hover:bg-bg-hover'

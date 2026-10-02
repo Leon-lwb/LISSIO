@@ -162,7 +162,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
               }
             }}
             title={t(lang, confirmClear ? 'opHistoryClearConfirm' : 'opHistoryClear')}
-            className={clsx(iconBtnCls, confirmClear && 'text-red-400 hover:text-red-300')}
+            className={clsx(iconBtnCls, confirmClear && 'text-text-danger hover:text-text-danger-strong')}
           >
             <Trash2 size={14} />
           </button>
@@ -196,7 +196,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
                       isCurrent
                         ? 'bg-bg-hover ring-1 ring-accent/60 text-text-bright'
                         : isFuture
-                          ? 'opacity-45 hover:opacity-75'
+                          ? 'opacity-disabled hover:opacity-secondary'
                           : 'hover:bg-bg-input/70 text-text-secondary'
                     )}
                   >
@@ -217,7 +217,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
                       {badge.dots ? (
                         <>
                           <i className={clsx('block size-1.5 rounded-full', badge.dots[0])} />
-                          <MoveRight size={9} className="shrink-0 opacity-70" />
+                          <MoveRight size={9} className="shrink-0 opacity-secondary" />
                           <i className={clsx('block size-1.5 rounded-full', badge.dots[1])} />
                         </>
                       ) : (
@@ -253,4 +253,4 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
 });
 
 const iconBtnCls =
-  'flex items-center justify-center size-6 rounded text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-bright disabled:opacity-35 disabled:hover:bg-transparent disabled:hover:text-text-secondary disabled:cursor-not-allowed';
+  'flex items-center justify-center size-6 rounded text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:hover:bg-transparent disabled:hover:text-text-secondary disabled:cursor-not-allowed';

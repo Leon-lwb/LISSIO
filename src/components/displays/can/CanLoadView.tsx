@@ -187,7 +187,7 @@ export function CanLoadView() {
         </div>
 
         <button
-          className="flex items-center gap-1 px-2 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors disabled:opacity-50"
+          className="flex items-center gap-1 px-2 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors disabled:opacity-disabled"
           onClick={() => { void handleExport(); }}
           disabled={exporting || !snapshot}
           title={t(lang, 'canLoadExport')}

@@ -35,7 +35,7 @@ export const CompileErrorGroup = memo(function CompileErrorGroup({
       >
         <div className="flex items-center gap-2 min-w-0">
           {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-          <AlertTriangle size={14} className="text-red-500 shrink-0" />
+          <AlertTriangle size={14} className="text-text-danger shrink-0" />
           <span className="text-sm font-semibold truncate text-text-primary">
             {tabName}
           </span>

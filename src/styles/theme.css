@@ -125,7 +125,7 @@
 
   /* ---------- 语义层 (ADDITIVE — 映射到原始色板, 运行时随原始 token 动态解析) ---------- */
   /* 新增工具类 (bg-bg-surface / text-text-muted / border-border-subtle ...) 可用,
-     原始工具类 (bg-bg-editor 等) 保持原样. 供 T4b/T4c 消费. */
+     原始工具类 (bg-bg-editor 等) 保持原样, 两者并存. */
   --color-bg-surface: var(--color-bg-editor);
   --color-bg-elevated: var(--color-bg-sidebar);
   --color-bg-inset: var(--color-bg-input);
@@ -138,6 +138,64 @@
   --color-success: var(--color-green);
   --color-info: var(--color-blue);
   --color-danger-surface: var(--color-bg-danger);
+
+  /* ---------- 透明度档位 (--alpha-*, 全仓唯一白名单) ---------- */
+  /* 组件不写裸 `opacity: 0.NN` / `opacity-NN`, 一律引用档位; --opacity-* 是
+     工具类桥接 (opacity-faint 等), 数值表与语义见 docs/architecture/ui-color-tokens.md。 */
+  --alpha-faint: 15%;
+  --alpha-subtle: 40%;
+  --alpha-disabled: 45%;
+  --alpha-muted: 60%;
+  --alpha-secondary: 75%;
+  --opacity-faint: var(--alpha-faint);
+  --opacity-subtle: var(--alpha-subtle);
+  --opacity-disabled: var(--alpha-disabled);
+  --opacity-muted: var(--alpha-muted);
+  --opacity-secondary: var(--alpha-secondary);
+
+  /* ---------- 次级文字透明度档位 ---------- */
+  /* color-mix 从基色派生: 只淡化文字本身, 不连带淡化同元素的图标/边框/背景,
+     且随主题切换自动联动 (基色 token 由 applyTheme 运行时注入)。 */
+  --color-text-primary-hint: color-mix(in srgb, var(--color-text-primary) 75%, transparent);
+  --color-text-secondary-hint: color-mix(in srgb, var(--color-text-secondary) 75%, transparent);
+  --color-text-secondary-muted: color-mix(in srgb, var(--color-text-secondary) 60%, transparent);
+  --color-text-secondary-disabled: color-mix(in srgb, var(--color-text-secondary) 45%, transparent);
+  --color-text-secondary-faint: color-mix(in srgb, var(--color-text-secondary) 15%, transparent);
+  --color-text-muted-hint: color-mix(in srgb, var(--color-text-muted) 75%, transparent);
+  --color-text-muted-faint: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
+  --color-text-inverse-hover: color-mix(in srgb, var(--color-text-inverse) 75%, transparent);
+
+  /* ---------- 语义状态文字色 (7 角色 × base / faint / muted / strong) ---------- */
+  /* 替代裸调色板 `text-red-400` 之类: 基色取语义 token, 随主题联动。
+     faint 15% (底纹说明) / muted 60% (降级) / strong 混 30% 白 (悬停提亮或亮底上的浅色文字)。 */
+  --color-text-danger: var(--color-red);
+  --color-text-danger-faint: color-mix(in srgb, var(--color-text-danger) 15%, transparent);
+  --color-text-danger-muted: color-mix(in srgb, var(--color-text-danger) 60%, transparent);
+  --color-text-danger-strong: color-mix(in srgb, var(--color-text-danger) 70%, white 30%);
+  --color-text-success: var(--color-green);
+  --color-text-success-faint: color-mix(in srgb, var(--color-text-success) 15%, transparent);
+  --color-text-success-muted: color-mix(in srgb, var(--color-text-success) 60%, transparent);
+  --color-text-success-strong: color-mix(in srgb, var(--color-text-success) 70%, white 30%);
+  --color-text-warning: var(--color-yellow);
+  --color-text-warning-faint: color-mix(in srgb, var(--color-text-warning) 15%, transparent);
+  --color-text-warning-muted: color-mix(in srgb, var(--color-text-warning) 60%, transparent);
+  --color-text-warning-strong: color-mix(in srgb, var(--color-text-warning) 70%, white 30%);
+  --color-text-info: var(--color-blue);
+  --color-text-info-faint: color-mix(in srgb, var(--color-text-info) 15%, transparent);
+  --color-text-info-muted: color-mix(in srgb, var(--color-text-info) 60%, transparent);
+  --color-text-info-strong: color-mix(in srgb, var(--color-text-info) 70%, white 30%);
+  --color-text-accent: var(--color-accent);
+  --color-text-accent-faint: color-mix(in srgb, var(--color-text-accent) 15%, transparent);
+  --color-text-accent-muted: color-mix(in srgb, var(--color-text-accent) 60%, transparent);
+  --color-text-accent-strong: color-mix(in srgb, var(--color-text-accent) 70%, white 30%);
+  --color-text-neutral: var(--color-text-secondary);
+  --color-text-neutral-faint: color-mix(in srgb, var(--color-text-neutral) 15%, transparent);
+  --color-text-neutral-muted: color-mix(in srgb, var(--color-text-neutral) 60%, transparent);
+  --color-text-neutral-strong: color-mix(in srgb, var(--color-text-neutral) 70%, white 30%);
+  --color-text-special: var(--color-purple);
+  --color-text-special-faint: color-mix(in srgb, var(--color-text-special) 15%, transparent);
+  --color-text-special-muted: color-mix(in srgb, var(--color-text-special) 60%, transparent);
+  --color-text-special-strong: color-mix(in srgb, var(--color-text-special) 70%, white 30%);
 
   /* ---------- 终端 16 色 (ANSI, RawData 终端模式用) ---------- */
   /* 标准 ANSI 序号 0-15; 0-7 中可映射主题 token 的走 var() 以随主题联动,
@@ -246,6 +304,47 @@
   --z-modal: 100;
   --z-toast: 200;
   --z-tour: 1100;
+}
+
+/* ============ 语义徽标 (@utility state-*) ============ */
+/* 文字 + 10% 底 + 40% 边框一套, 替代成片的 `bg-red-500/10 text-red-300 border-red-500/40`
+   裸调色板拼装。底/边框用 color-mix 从 currentColor 派生 — 文字色定则底边自动跟随。
+   必须注册成工具类 (而非普通 `.state-x` 规则): 只有工具类能带 hover:/focus: 等变体前缀。
+   用法与边界见 docs/architecture/ui-color-tokens.md。 */
+@utility state-danger {
+  color: var(--color-text-danger);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-success {
+  color: var(--color-text-success);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-warning {
+  color: var(--color-text-warning);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-info {
+  color: var(--color-text-info);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-accent {
+  color: var(--color-text-accent);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-neutral {
+  color: var(--color-text-neutral);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+@utility state-special {
+  color: var(--color-text-special);
+  border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+  background: color-mix(in srgb, currentColor 10%, transparent);
 }
 
 /* ============ 主题变体 (data-theme 仅用于 CSS 选择器) ============ */

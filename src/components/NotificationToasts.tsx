@@ -153,7 +153,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
       {/* 悬停时显示进度条 (info/warn 自动消失) */}
       {notif.severity !== 'error' && (
         <div
-          className={`absolute left-0 bottom-0 h-0.5 opacity-40 notif-progress ${progressColorClass} ${hovered ? 'paused' : ''}`}
+          className={`absolute left-0 bottom-0 h-0.5 opacity-subtle notif-progress ${progressColorClass} ${hovered ? 'paused' : ''}`}
           key={notif.timestamp}
         />
       )}

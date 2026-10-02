@@ -67,7 +67,7 @@ export function CanvasErrorTooltip({ message, children }: CanvasErrorTooltipProp
       {hover && (
         <div
           role="tooltip"
-          className="absolute z-50 left -translate-x bottom-full mb-1 px-2 py-1 bg-red-500 text-white text-xs rounded shadow-lg pointer-events-none max-w-[260px] whitespace-normal leading-tight"
+          className="absolute z-50 left -translate-x bottom-full mb-1 px-2 py-1 bg-danger-surface text-text-inverse text-xs rounded shadow-lg pointer-events-none max-w-[260px] whitespace-normal leading-tight"
         >
           {message}
         </div>

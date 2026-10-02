@@ -95,7 +95,7 @@ export function DeviceTreePanel() {
         {!rootCards.length && <option value="">{t(lang, 'deviceTreeAddRoot')}</option>}
         {rootCards.map(item => <option key={item.key} value={item.key}>{item.adapter.displayName}{item.adapter.endpoints.length > 1 ? ` · ${item.endpoint.displayName}` : ''}</option>)}
       </select>
-      <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-40" title={t(lang, 'deviceTreeAddRoot')}
+      <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-disabled" title={t(lang, 'deviceTreeAddRoot')}
         aria-label={t(lang, 'deviceTreeAddRoot')} disabled={pending || !card} onClick={() => {
           if (!card) return;
           // 目录创建为异步 — 节点就绪后再选中
@@ -103,7 +103,7 @@ export function DeviceTreePanel() {
             .then((node) => select(node.id))
             .catch(() => undefined);
         }}><Plus size={15} /></button>
-      <button type="button" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-40" disabled={pending}
+      <button type="button" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-disabled" disabled={pending}
         title={t(lang, 'refresh')} aria-label={t(lang, 'refresh')} onClick={() => { setAttempt(value => value + 1); void refreshDeviceNodeSnapshots(); }}>
         {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
       </button>
@@ -179,7 +179,7 @@ function DeviceConnection({ rootId, enabled }: { rootId: string; enabled: boolea
   const [pending, setPending] = useState(false);
   const opened = snapshot && !['disabled', 'closed'].includes(snapshot.state.state);
   return <div className="mb-3">
-    <button type="button" className="w-full rounded bg-bg-button py-2 text-xs text-text-inverse disabled:opacity-40"
+    <button type="button" className="w-full rounded bg-bg-button py-2 text-xs text-text-inverse disabled:opacity-disabled"
       disabled={pending || (!opened && !enabled)} onClick={() => {
         setPending(true);
         const store = useAppStore.getState();
@@ -206,7 +206,7 @@ function DeviceTreeRow({ item, depth, selectedId, select, forceExpanded, parentE
       : snapshot && !['closed', 'disabled'].includes(snapshot.state.state) ? 'deviceTreeBusy' : 'deviceTreeClosed';
   const Icon = /simulation|test.data/.test(item.driver) ? FlaskConical : /protocol|decoder/.test(item.driver) ? Binary : Cable;
   return <div role="treeitem" aria-selected={selectedId === item.id} aria-expanded={item.children.length ? open : undefined}>
-    <div className={`flex items-center gap-1 rounded px-1 py-1.5 text-xs ${selectedId === item.id ? 'bg-bg-active text-text-bright' : 'text-text-secondary hover:bg-bg-hover'} ${!active ? 'opacity-50' : ''}`}
+    <div className={`flex items-center gap-1 rounded px-1 py-1.5 text-xs ${selectedId === item.id ? 'bg-bg-active text-text-bright' : 'text-text-secondary hover:bg-bg-hover'} ${!active ? 'opacity-disabled' : ''}`}
       style={{ paddingLeft: 4 + depth * 14 }}>
       {item.children.length ? <button type="button" className="shrink-0 rounded hover:bg-bg-hover" aria-label={t(lang, open ? 'deviceTreeCollapse' : 'deviceTreeExpand')}
         onClick={() => setExpanded(value => !value)}>{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</button> : <span className="w-[13px] shrink-0" />}

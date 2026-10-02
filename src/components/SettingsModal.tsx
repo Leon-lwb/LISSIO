@@ -455,7 +455,7 @@ export function SettingsModal() {
               )}
               <button
                 className={`w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm transition-all duration-150 ${
-                  updateBusy ? 'opacity-60 cursor-wait' : 'cursor-pointer hover:text-text-bright'
+                  updateBusy ? 'opacity-muted cursor-wait' : 'cursor-pointer hover:text-text-bright'
                 }`}
                 onClick={handleUpdateClick}
                 disabled={updateBusy}
@@ -495,7 +495,7 @@ export function SettingsModal() {
                 <div className="text-xs text-text-secondary pb-1">{t(lang, 'updateReady')}</div>
               )}
               {updateStatus === 'error' && updateError && (
-                <div className="text-xs text-red-400 pb-1 break-all">
+                <div className="text-xs text-text-danger pb-1 break-all">
                   {t(lang, 'updateError')}: {updateError}
                 </div>
               )}
@@ -572,14 +572,14 @@ export function SettingsModal() {
               <form action={resetCategoryAction} className="py-4">
                 <button
                   type="submit"
-                  className="px-3 py-1.5 bg-transparent text-text-secondary border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-hover hover:text-text-primary inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-default"
+                  className="px-3 py-1.5 bg-transparent text-text-secondary border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-hover hover:text-text-primary inline-flex items-center gap-1.5 disabled:opacity-disabled disabled:cursor-default"
                   disabled={isResettingCategory}
                 >
                   <RotateCcw size={12} />
                   <span>{t(lang, 'settingsResetCategory')}</span>
                 </button>
                 {resetCategoryState.error && (
-                  <div className="text-xs text-red-400 break-all">{resetCategoryState.error}</div>
+                  <div className="text-xs text-text-danger break-all">{resetCategoryState.error}</div>
                 )}
               </form>
             )}
@@ -592,14 +592,14 @@ export function SettingsModal() {
           <form action={saveAction}>
             <button
               type="submit"
-              className="bg-bg-button text-text-inverse border-none py-1.5 px-4 text-sm font-ui cursor-pointer rounded inline-flex items-center gap-1.5 transition-colors hover:bg-bg-button-hover disabled:opacity-50 disabled:cursor-default"
+              className="bg-bg-button text-text-inverse border-none py-1.5 px-4 text-sm font-ui cursor-pointer rounded inline-flex items-center gap-1.5 transition-colors hover:bg-bg-button-hover disabled:opacity-disabled disabled:cursor-default"
               disabled={isSaving}
             >
               <Check size={14} />
               <span>{t(lang, 'settingsDone')}</span>
             </button>
             {saveState.error && (
-              <div className="text-xs text-red-400 break-all">{saveState.error}</div>
+              <div className="text-xs text-text-danger break-all">{saveState.error}</div>
             )}
           </form>
         </div>

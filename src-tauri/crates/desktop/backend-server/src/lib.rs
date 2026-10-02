@@ -133,12 +133,11 @@ async fn serve_inner(config: ServerConfig, supervised_stdio: bool) -> Result<(),
     });
     diagnostics::spawn(host.clone());
     log::info!("Web 出口已监听: http://{}:{actual_port}", config.bind);
-    println!(
-        "LISSIO_READY={{\"port\":{actual_port},\"protocol\":\"{}\",\"version\":\"{}\"}}",
-        PROTOCOL_VERSION,
-        env!("CARGO_PKG_VERSION")
-    );
-    let _ = std::io::stdout().flush();
+    // stdout 是宿主 (桌面壳) 的握手管道, 不是普通终端: 宿主提前换掉子进程 / 关闭
+    // 读端时写入会拿到 EPIPE, 而 `println!` 遇到写失败直接 panic — 真实事故里
+    // 后端就是带着 "failed printing to stdout: Broken pipe" 整个退出的 (重启风暴
+    // 期间连续两次)。握手信息写不出去只该让宿主判定 ready 超时, 不该带走后端。
+    announce_ready(actual_port);
     if !config.is_loopback() {
         log::info!(
             "非 loopback 绑定 — 客户端需携带访问令牌 (LISSIO_TOKEN 或配置目录的 {})",
@@ -207,3 +206,42 @@ const TEARDOWN_DEADLINE: std::time::Duration = std::time::Duration::from_secs(10
 
 /// 默认监听地址 — 供二进制入口复用。
 pub const DEFAULT_BIND: IpAddr = IpAddr::V4(std::net::Ipv4Addr::LOCALHOST);
+
+/// 宿主握手行 (`LISSIO_READY=<json>`) — 单独成函数以便测试格式。
+fn ready_line(port: u16) -> String {
+    format!(
+        "LISSIO_READY={{\"port\":{port},\"protocol\":\"{}\",\"version\":\"{}\"}}",
+        PROTOCOL_VERSION,
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
+/// 把握手行写进 stdout — 写失败只告警, 不 panic。
+///
+/// `println!` 在写失败时 panic: 宿主关闭管道 (换子进程 / 停止后端) 后后端会在
+/// 握手这一步整个退出, 看起来像"后端自己重启"。这里降级为丢一条握手信息并告警,
+/// 由宿主侧的 ready 超时兜底。
+fn announce_ready(port: u16) {
+    let mut stdout = std::io::stdout();
+    if writeln!(stdout, "{}", ready_line(port)).is_err() {
+        log::warn!("握手信息写入 stdout 失败 (宿主已关闭管道), 后端继续运行");
+    }
+    let _ = stdout.flush();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ready_line_is_a_parseable_handshake_record() {
+        let line = ready_line(64784);
+        let payload = line
+            .strip_prefix("LISSIO_READY=")
+            .expect("握手行必须带 LISSIO_READY= 前缀");
+        let parsed: serde_json::Value = serde_json::from_str(payload).expect("握手行必须是 JSON");
+        assert_eq!(parsed["port"], 64784);
+        assert_eq!(parsed["protocol"], PROTOCOL_VERSION);
+        assert_eq!(parsed["version"], env!("CARGO_PKG_VERSION"));
+    }
+}

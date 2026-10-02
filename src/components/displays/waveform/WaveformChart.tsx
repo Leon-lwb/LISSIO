@@ -539,7 +539,7 @@ export function WaveformChart({
 
         {/* 降载提示: 原始层装不下视图窗口, 由金字塔层提供真实包络 (不变量 2) */}
         {derate && (
-          <div className="absolute top-7 right-2 z-[100] px-2 py-0.5 text-[10px] text-amber-400 bg-bg-editor/95 border border-amber-500/40 rounded pointer-events-none select-none shadow whitespace-nowrap">
+          <div className="absolute top-7 right-2 z-[100] px-2 py-0.5 text-[10px] text-text-warning bg-bg-editor/95 border border-warning/40 rounded pointer-events-none select-none shadow whitespace-nowrap">
             {t(lang, 'waveformDerated')} · tier {derate.tier} · Δ
             {derate.overflow}
           </div>

@@ -52,7 +52,7 @@ export function KeychainPermissionDialog() {
         </p>
 
         {retryError && (
-          <p className="text-xs text-red-400 leading-relaxed m-0" role="alert">
+          <p className="text-xs text-text-danger leading-relaxed m-0" role="alert">
             {t(
               lang,
               retryError === 'denied'
@@ -76,7 +76,7 @@ export function KeychainPermissionDialog() {
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="bg-transparent text-text-primary border border-border px-3 py-1.5 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-transparent text-text-primary border border-border px-3 py-1.5 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
             disabled={retrying}
             onClick={() => dismiss(dontRemind)}
           >
@@ -84,7 +84,7 @@ export function KeychainPermissionDialog() {
           </button>
           <button
             type="button"
-            className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs inline-flex items-center gap-1.5 transition-colors hover:bg-bg-button-hover disabled:opacity-60 disabled:cursor-wait"
+            className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs inline-flex items-center gap-1.5 transition-colors hover:bg-bg-button-hover disabled:opacity-disabled disabled:cursor-wait"
             disabled={retrying}
             onClick={() => void retry()}
           >

@@ -58,10 +58,10 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
       <button
         type="button"
         className={clsx(
-          'flex items-center gap-1 text-green-500',
+          'flex items-center gap-1 text-text-success',
           compact ? 'h-full whitespace-nowrap' : 'h-full whitespace-nowrap px-1',
           interactive &&
-            'cursor-pointer hover:text-green-400 active:text-green-300 rounded transition-colors duration-150',
+            'cursor-pointer hover:text-text-success-strong active:text-text-success-strong rounded transition-colors duration-150',
         )}
         title="Compile errors"
         aria-label={`${scope.count} compile error${scope.count > 1 ? 's' : ''}`}
@@ -79,10 +79,10 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
       <button
         type="button"
         className={clsx(
-          'flex items-center gap-1 text-red-500',
+          'flex items-center gap-1 text-text-danger',
           compact ? 'h-full whitespace-nowrap' : 'h-full whitespace-nowrap px-1',
           interactive &&
-            'cursor-pointer hover:text-red-400 active:text-red-300 rounded transition-colors duration-150',
+            'cursor-pointer hover:text-text-danger-strong active:text-text-danger-strong rounded transition-colors duration-150',
         )}
         title="Compile errors"
         aria-label={`${scope.count} compile error${scope.count > 1 ? 's' : ''}`}
@@ -99,7 +99,7 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
   // pending / compiling
   return (
     <span
-      className="flex items-center gap-1 text-yellow-500 h-full whitespace-nowrap"
+      className="flex items-center gap-1 text-text-warning h-full whitespace-nowrap"
       title="Compiling"
     >
       <Loader2 size={12} className="animate-spin" />
@@ -118,7 +118,7 @@ export function CompileDot({ tabId }: { tabId: string }) {
     return (
       <AlertTriangle
         size={10}
-        className="text-red-500 shrink-0"
+        className="text-text-danger shrink-0"
         aria-label="Compile error"
       />
     );
@@ -127,7 +127,7 @@ export function CompileDot({ tabId }: { tabId: string }) {
     return (
       <Loader2
         size={10}
-        className="text-yellow-500 animate-spin shrink-0"
+        className="text-text-warning animate-spin shrink-0"
         aria-label="Compiling"
       />
     );
@@ -135,7 +135,7 @@ export function CompileDot({ tabId }: { tabId: string }) {
   return (
     <Circle
       size={6}
-      className="text-yellow-500 fill-yellow-500 shrink-0"
+      className="text-text-warning fill-warning shrink-0"
       aria-label="Compile pending"
     />
   );

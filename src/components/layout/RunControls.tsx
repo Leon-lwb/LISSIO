@@ -83,7 +83,7 @@ export const RunControls = memo(function RunControls() {
           runState === 'paused'
             ? 'text-yellow bg-yellow/10'
             : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
-          runState === 'stopped' && 'opacity-40 hover:opacity-40 hover:text-text-secondary'
+          runState === 'stopped' && 'opacity-subtle hover:opacity-subtle hover:text-text-secondary'
         )}
         title={t(lang, 'runPauseHint')}
         aria-label={t(lang, 'runPauseHint')}
@@ -96,7 +96,7 @@ export const RunControls = memo(function RunControls() {
         className={clsx(
           'w-5 h-5 flex items-center justify-center rounded transition-colors duration-150',
           runState === 'stopped'
-            ? 'text-text-secondary opacity-40 hover:opacity-40 hover:text-text-secondary'
+            ? 'text-text-secondary opacity-subtle hover:opacity-subtle hover:text-text-secondary'
             : 'text-text-secondary hover:bg-bg-hover hover:text-red'
         )}
         title={t(lang, 'runStopHint')}

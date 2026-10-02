@@ -59,7 +59,7 @@ export const RangeSection = memo(function RangeSection({ lang, range, widgetId, 
             </span>
           </div>
           <button type="button" disabled={!hasSamples}
-            className="w-full h-7 mb-1 rounded border border-border text-[11px] inline-flex items-center justify-center gap-1.5 hover:bg-bg-hover disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+            className="w-full h-7 mb-1 rounded border border-border text-[11px] inline-flex items-center justify-center gap-1.5 hover:bg-bg-hover disabled:opacity-disabled disabled:hover:bg-transparent transition-colors"
             onClick={() => {
               if (!hasSamples) return;
               onChange({ ...range, mode: 'manual', min: snapshot.range.min, max: snapshot.range.max });

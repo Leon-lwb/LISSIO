@@ -69,6 +69,12 @@ interface AiChatState {
   setServerEnabled: (id: string, enabled: boolean) => Promise<void>;
 }
 
+/// 流式增量合批窗口 (ms) — 约三帧, 兼顾观感与主线程占用。
+const STREAM_FLUSH_MS = 50;
+
+/// 当前流式任务的缓冲冲刷器 — 终态收束前必须先冲刷, 否则聚合会漏掉最后一段文本。
+let flushStreaming: (() => void) | null = null;
+
 function appendTextEvent(timeline: AiTurnEvent[], kind: 'text' | 'reasoning', text: string): AiTurnEvent[] {
   if (!text) return timeline;
   const last = timeline[timeline.length - 1];
@@ -138,21 +144,53 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     // 而不是 Tauri 运行时缺失时的无 kind TypeError。
     const channel = openChatChannel(failLocal);
     if (!channel) return;
+    // 流式增量合批 — 一个窗口内的 delta 合并成一次 store 更新。逐个 token 触发
+    // 全量重渲染会把渲染进程拖垮 (长会话 + 长回复时表现为白屏后自动重载):
+    // 窗口内保持事件顺序, 工具/终态事件先冲刷缓冲再处理, 不丢也不乱序。
+    let pending: { kind: 'text' | 'reasoning'; text: string }[] = [];
+    let flushTimer: ReturnType<typeof setTimeout> | null = null;
+    const flushPending = () => {
+      if (flushTimer !== null) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      if (pending.length === 0) return;
+      const chunks = pending;
+      pending = [];
+      set((s) => {
+        let streamingText = s.streamingText;
+        let reasoningText = s.reasoningText;
+        let timeline = s.timeline;
+        for (const chunk of chunks) {
+          if (chunk.kind === 'text') {
+            streamingText += chunk.text;
+            timeline = appendTextEvent(timeline, 'text', chunk.text);
+          } else {
+            reasoningText += chunk.text;
+            timeline = appendTextEvent(timeline, 'reasoning', chunk.text);
+          }
+        }
+        return { streamingText, reasoningText, timeline };
+      });
+    };
+    const pushDelta = (kind: 'text' | 'reasoning', text: string) => {
+      if (!text) return;
+      const last = pending.length > 0 ? pending[pending.length - 1] : undefined;
+      if (last?.kind === kind) last.text += text;
+      else pending.push({ kind, text });
+      flushTimer ??= setTimeout(flushPending, STREAM_FLUSH_MS);
+    };
+    flushStreaming = flushPending;
     channel.onmessage = (event) => {
       switch (event.type) {
         case 'delta':
-          set((s) => ({
-            streamingText: s.streamingText + event.text,
-            timeline: appendTextEvent(s.timeline, 'text', event.text),
-          }));
+          pushDelta('text', event.text);
           break;
         case 'reasoning_delta':
-          set((s) => ({
-            reasoningText: s.reasoningText + event.text,
-            timeline: appendTextEvent(s.timeline, 'reasoning', event.text),
-          }));
+          pushDelta('reasoning', event.text);
           break;
         case 'tool_call':
+          flushPending();
           set((s) => ({
             timeline: [...s.timeline, { kind: 'tool', id: event.id }],
             toolRuns: [
@@ -162,6 +200,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
           }));
           break;
         case 'tool_result': {
+          flushPending();
           const renamed = !event.is_error && get().toolRuns.some(
             (run) => run.id === event.id && run.name === 'set_conversation_title'
           );
@@ -178,6 +217,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         case 'done':
         case 'cancelled':
         case 'error':
+          flushPending();
           void finishTurn();
           break;
       }
@@ -198,12 +238,16 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       );
       set({ taskId });
     } catch (e) {
+      flushStreaming = null;
       failLocal(e);
     }
   };
 
   /** 回合收束 (done/cancelled/error 共用) — 后端已落盘, 拉取权威视图对账 */
   const finishTurn = async () => {
+    // 收束前先冲刷合批缓冲 — 否则最后一段流式文本会漏进本地聚合
+    flushStreaming?.();
+    flushStreaming = null;
     const s = get();
     const patch = {
       streaming: false,
@@ -256,12 +300,15 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       try {
         const sessions = await api.chatListSessions();
         const { activeSessionId } = get();
+        // 回退到最近活动的会话: 后端按存储顺序返回 (不是时间序), 重载后 store 为空时
+        // 取 sessions[0] 会落回最早建的会话, 用户看到的就是"历史丢了"。
+        const fallback = [...sessions].sort((a, b) => b.updated_at - a.updated_at)[0]?.id ?? null;
         set({
           sessions,
           // 当前会话已被删除 (他端) 时回退到最近一个会话
           activeSessionId: sessions.some((s) => s.id === activeSessionId)
             ? activeSessionId
-            : (sessions[0]?.id ?? null),
+            : fallback,
         });
         if (get().activeSessionId) await get().switchSession(get().activeSessionId!);
       } catch {

@@ -115,7 +115,7 @@ function UnsupportedSection({ panels }: { panels: ReturnType<typeof unsupportedP
             key={panel.panelKind}
             disabled
             title={panel.reason ?? panel.panelKind}
-            className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary opacity-40 cursor-not-allowed text-left"
+            className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary opacity-subtle cursor-not-allowed text-left"
           >
             <AlertTriangle size={14} />
             <span className="truncate">
@@ -151,7 +151,7 @@ function Section({ title, entries, onClick }: SectionProps) {
               key={e.type}
               disabled={!e.available}
               onClick={() => onClick(e)}
-              className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary transition-colors hover:text-text-bright hover:border-accent/50 disabled:opacity-40 disabled:cursor-not-allowed text-left"
+              className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary transition-colors hover:text-text-bright hover:border-accent/50 disabled:opacity-disabled disabled:cursor-not-allowed text-left"
               title={e.available ? t(lang, e.labelKey) : `${t(lang, e.labelKey)} (${t(lang, 'panelOpenNoWidget')})`}
             >
               <Icon size={14} />

@@ -105,14 +105,14 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
           >
             <Github size={14} />
             <span>{t(lang, 'aboutGithub')}</span>
-            <ExternalLink size={10} className="opacity-60" />
+            <ExternalLink size={10} className="opacity-muted" />
           </button>
           <button
             className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
             onClick={() => void platform.openUrl(APP_DOCS)}
           >
             <span>{t(lang, 'aboutDocs')}</span>
-            <ExternalLink size={10} className="opacity-60" />
+            <ExternalLink size={10} className="opacity-muted" />
           </button>
         </div>
 

@@ -74,7 +74,7 @@ export function CommandBlockEditor({
               ))}
             </select>
           </div>
-          <div className="text-[10px] text-text-secondary opacity-70 px-1">
+          <div className="text-[10px] text-text-secondary opacity-secondary px-1">
             {t(lang, 'cmdBlockVarRefHint')}: {String(graphInputs[block.portName ?? 'value'] ?? 0)}
           </div>
         </>
@@ -143,7 +143,7 @@ export function CommandBlockEditor({
               </div>
             </div>
           )}
-          <div className="text-[10px] text-text-secondary opacity-70 px-1">
+          <div className="text-[10px] text-text-secondary opacity-secondary px-1">
             {t(lang, 'cmdBlockChecksumHint')}
           </div>
         </>

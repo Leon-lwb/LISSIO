@@ -141,7 +141,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
                 <th key={i} className="px-2 py-1.5 text-left text-text-secondary font-medium">
                   {col.label}
                   {params.showRawData && col.showRaw !== false && (
-                    <span className="ml-1 text-[10px] opacity-50">(HEX)</span>
+                    <span className="ml-1 text-[10px] opacity-disabled">(HEX)</span>
                   )}
                 </th>
               ))}
@@ -152,7 +152,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
               <tr>
                 <td
                   colSpan={1 + (params.showTimestamp ? 1 : 0) + params.columns.length}
-                  className="px-2 py-6 text-center text-text-secondary opacity-60 italic"
+                  className="px-2 py-6 text-center text-text-secondary opacity-muted italic"
                 >
                   {t(lang, 'tableViewEmpty')}
                 </td>
@@ -182,7 +182,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
                             {Number.isInteger(val) ? val.toFixed(0) : val.toFixed(4)}
                           </span>
                           {params.showRawData && col.showRaw !== false && (
-                            <span className="text-text-secondary font-mono text-[9px] opacity-60">
+                            <span className="text-text-secondary font-mono text-[9px] opacity-muted">
                               {floatToHex(val)}
                             </span>
                           )}

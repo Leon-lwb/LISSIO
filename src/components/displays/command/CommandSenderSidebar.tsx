@@ -64,18 +64,18 @@ export function CommandSenderSidebar({
             <div className="font-mono text-sm text-green break-all leading-relaxed">
               {bytesToHex(computed.bytes)}
             </div>
-            <div className="font-mono text-xs text-text-secondary break-all leading-relaxed opacity-85">
+            <div className="font-mono text-xs text-text-secondary break-all leading-relaxed opacity-secondary">
               {bytesToAscii(computed.bytes)}
             </div>
           </>
         ) : (
-          <div className="text-xs text-text-secondary opacity-60 italic py-1">{t(lang, 'cmdPreviewEmpty')}</div>
+          <div className="text-xs text-text-secondary opacity-muted italic py-1">{t(lang, 'cmdPreviewEmpty')}</div>
         )}
       </div>
 
       {/* 发送 */}
       <button
-        className="justify-center px-4 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-default"
+        className="justify-center px-4 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover font-semibold inline-flex items-center gap-1.5 disabled:opacity-disabled disabled:cursor-default"
         onClick={onSend}
         disabled={sendDisabled}
         title={

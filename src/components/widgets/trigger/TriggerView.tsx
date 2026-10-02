@@ -166,7 +166,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
               />
             </div>
           )}
-          <div className="text-[10px] text-text-secondary opacity-70">{t(lang, cfg.hintKey)}</div>
+          <div className="text-[10px] text-text-secondary opacity-secondary">{t(lang, cfg.hintKey)}</div>
         </div>
       )}
     </div>
@@ -407,7 +407,7 @@ export function Trigger({ widget }: TriggerProps) {
         {/* 规则列表 */}
         <div className="flex flex-col gap-1.5">
           {rules.length === 0 && (
-            <div className="text-xs text-text-secondary opacity-60 italic py-4 text-center">{t(lang, 'triggerRulesEmpty')}</div>
+            <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">{t(lang, 'triggerRulesEmpty')}</div>
           )}
           {rules.map((rule) => (
             <TriggerRuleRow

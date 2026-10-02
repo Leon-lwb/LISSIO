@@ -82,7 +82,7 @@ export function NodeFrame({ id, tabId, label, selected, color, inputs, outputs,
           onBlur={commit} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'Enter') commit(); if (event.key === 'Escape') setRenaming(false); }} />
           : <span className="flex-1 min-w-0 truncate" title={label}>{label}</span>}
         {status}{actions}
-        <button type="button" aria-label={t(lang, 'removeWidget')} className="nodrag w-4 h-4 opacity-60 hover:opacity-100 flex items-center justify-center rounded hover:bg-bg-hover"
+        <button type="button" aria-label={t(lang, 'removeWidget')} className="nodrag w-4 h-4 opacity-muted hover:opacity-100 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={(event) => { event.stopPropagation(); onRemove(); }}><X size={10} /></button>
       </div>
       <div className="flex w-full flex-1 min-h-0">

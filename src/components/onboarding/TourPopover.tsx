@@ -142,7 +142,7 @@ export function TourPopover(props: TourPopoverProps) {
       <div className="flex items-center justify-between gap-2 pt-0.5">
         <button
           type="button"
-          className="cursor-pointer rounded border border-transparent bg-transparent px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          className="cursor-pointer rounded border border-transparent bg-transparent px-2.5 py-1 text-xs text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-disabled"
           onClick={onPrev}
           disabled={stepIndex === 0}
         >
@@ -150,7 +150,7 @@ export function TourPopover(props: TourPopoverProps) {
         </button>
         <button
           type="button"
-          className="cursor-pointer rounded border border-transparent bg-bg-button px-3 py-1 text-xs text-text-inverse transition-colors hover:bg-bg-button-hover disabled:cursor-not-allowed disabled:opacity-45"
+          className="cursor-pointer rounded border border-transparent bg-bg-button px-3 py-1 text-xs text-text-inverse transition-colors hover:bg-bg-button-hover disabled:cursor-not-allowed disabled:opacity-disabled"
           onClick={onNext}
           disabled={nextDisabled}
         >

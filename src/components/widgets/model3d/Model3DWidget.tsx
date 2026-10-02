@@ -224,7 +224,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
         </div>
         {/* [TEMP-DISABLED] 自定义模型导入已禁用, 加载失败 banner 暂时隐藏 — 恢复时取消下方注释
         {loadError && (
-          <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-red-900/60 border border-red-500/50 rounded-sm text-red-200 text-[10px] font-medium pointer-events-none">
+          <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-danger-surface/60 border border-danger/50 rounded-sm text-text-danger-strong text-[10px] font-medium pointer-events-none">
             {t(lang, 'model3dModelLoadError')}
           </div>
         )} */}

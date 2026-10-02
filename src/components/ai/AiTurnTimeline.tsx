@@ -1,6 +1,6 @@
 import { groupTurnSegments, splitTurnContent } from '../../lib/ai/turnTimeline';
 import type { AiToolRun, AiTurnEvent } from '../../types';
-import { AiMarkdown } from './AiMarkdown';
+import { AiMarkdown, AiStreamingMarkdown } from './AiMarkdown';
 import { AiTurnDuration, AiTurnProcess } from './AiTurnProcess';
 
 /** Render text and tool activity in their original stream order. */
@@ -31,8 +31,14 @@ export function AiTurnTimeline({
     <div className="min-w-0 space-y-2">
       <AiTurnDuration durationMs={durationMs} streaming={streaming} />
       {displaySegments.map((segment, index) => {
-        if (segment.kind === 'text') return <AiMarkdown key={`text-${index}`} text={segment.text} />;
-        return <AiTurnProcess key={`process-${index}`} steps={segment.steps} streaming={streaming && index === displaySegments.length - 1} />;
+        const isLast = index === displaySegments.length - 1;
+        if (segment.kind === 'text') {
+          // 只有正在增长的最后一段走增量渲染; 已被工具调用/后续文本截断的段是定稿内容
+          return streaming && isLast
+            ? <AiStreamingMarkdown key={`text-${index}`} text={segment.text} />
+            : <AiMarkdown key={`text-${index}`} text={segment.text} />;
+        }
+        return <AiTurnProcess key={`process-${index}`} steps={segment.steps} streaming={streaming && isLast} />;
       })}
       {showInitialWaiting && <AiTurnProcess streaming />}
     </div>

@@ -64,7 +64,7 @@ export const TextOutWidget = memo(function TextOutWidget({ widget }: TextOutWidg
               ? t(lang, 'textOutSendNow')
               : t(lang, 'textOutNoTarget')
           }
-          className="w-7 flex items-center justify-center rounded-sm bg-bg-button hover:bg-bg-button-hover disabled:opacity-40 text-text-inverse transition-colors"
+          className="w-7 flex items-center justify-center rounded-sm bg-bg-button hover:bg-bg-button-hover disabled:opacity-disabled text-text-inverse transition-colors"
         >
           <Send size={12} />
         </button>

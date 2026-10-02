@@ -26,7 +26,7 @@ export const NumericPortStatus = memo(function NumericPortStatus({
   if (!label || (!state.source && state.latest === null)) return null;
   return (
     <span
-      className="text-[9px] text-text-secondary opacity-70 font-mono"
+      className="text-[9px] text-text-secondary opacity-secondary font-mono"
       title={state.error ?? state.status}
     >
       {label}

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowDown,
@@ -40,7 +40,10 @@ import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiAttachment, AiViewItem } from '../../types';
 
 /// 助手消息气泡 — Markdown 渲染 + 悬停操作 (复制 / 错误重试)
-function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boolean }) {
+///
+/// memo 化: 流式回合刷新的是活跃尾块, 历史条目引用不变时必须跳过重建 —
+/// 否则每个 token 都会把整张消息列表重新渲染一遍 (长会话下直接拖垮渲染进程)。
+const AssistantBubble = memo(function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boolean }) {
   const lang = useAppStore((s) => s.lang);
   const regenerate = useAiChatStore((s) => s.regenerate);
   const [copied, setCopied] = useState(false);
@@ -69,9 +72,9 @@ function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boole
       >
         {errView ? (
           <>
-            <div className="break-words">{errView.summary}</div>
+            <div className="break-words [overflow-wrap:anywhere]">{errView.summary}</div>
             {errView.detail && (
-              <div className="break-all opacity-70 line-clamp-3">{errView.detail}</div>
+              <div className="break-words [overflow-wrap:anywhere] opacity-secondary line-clamp-3">{errView.detail}</div>
             )}
           </>
         ) : <AiTurnTimeline text={item.text} reasoning={item.reasoning} tools={item.tools} timeline={item.timeline} durationMs={item.duration_ms} />}
@@ -92,7 +95,7 @@ function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boole
           )}
           {item.error && canRetry && (
             <button
-              className="p-0.5 rounded text-text-secondary hover:text-text-primary disabled:opacity-40"
+              className="p-0.5 rounded text-text-secondary hover:text-text-primary disabled:opacity-disabled"
               onClick={() => void regenerate()}
               disabled={!canRetry}
               title={t(lang, 'aiRetry')}
@@ -104,7 +107,7 @@ function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boole
       </div>
     </div>
   );
-}
+});
 
 /// 会话下拉 — 列表 (最近活动优先) / 新建 / 行内重命名 / 删除
 function SessionMenu() {
@@ -414,7 +417,7 @@ export function AiChatPanel() {
         <SessionMenu />
         <div className="flex items-center gap-0.5 shrink-0">
           <button
-            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void onImportChat()}
             disabled={streaming}
             title={t(lang, 'aiImportChat')}
@@ -422,7 +425,7 @@ export function AiChatPanel() {
             <Upload size={12} />
           </button>
           <button
-            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void onExportChat()}
             disabled={streaming || viewItems.length === 0}
             title={t(lang, 'aiExportChat')}
@@ -430,7 +433,7 @@ export function AiChatPanel() {
             <Download size={12} />
           </button>
           <button
-            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+            className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void clearSession()}
             disabled={streaming || viewItems.length === 0}
             title={t(lang, 'aiClear')}
@@ -465,7 +468,7 @@ export function AiChatPanel() {
           {viewItems.map((item, i) =>
             item.role === 'user' ? (
               <div key={i} className="flex justify-end animate-ai-msg-in">
-                <div className="max-w-[88%] rounded-2xl px-3 py-2 bg-bg-hover text-text-primary space-y-1.5">
+                <div className="max-w-[88%] min-w-0 rounded-2xl px-3 py-2 bg-bg-hover text-text-primary space-y-1.5">
                   {item.attachments && item.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1">
                       {item.attachments.map((att, j) => (
@@ -480,7 +483,9 @@ export function AiChatPanel() {
                       ))}
                     </div>
                   )}
-                  {item.text && <div className="whitespace-pre-wrap break-words">{item.text}</div>}
+                  {item.text && (
+                    <div className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{item.text}</div>
+                  )}
                 </div>
               </div>
             ) : (
@@ -600,12 +605,12 @@ export function AiChatPanel() {
               placeholder={t(lang, 'inputMessage')}
               aria-label={t(lang, 'inputMessage')}
               rows={1}
-              className="ai-composer-textarea block w-full min-w-0 max-h-32 resize-none overflow-y-auto border-0 bg-transparent px-1.5 pt-1 pb-2 text-xs leading-5 text-text-primary placeholder:text-text-secondary outline-none"
+              className="ai-composer-textarea block w-full min-w-0 max-h-32 resize-none overflow-y-auto border-0 bg-transparent px-1.5 pt-1 pb-2 text-xs leading-5 text-text-primary placeholder:text-text-secondary outline-none [overflow-wrap:anywhere]"
             />
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                className="grid size-8 shrink-0 place-items-center rounded-full text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:opacity-40"
+                className="grid size-8 shrink-0 place-items-center rounded-full text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
                 onClick={() => void onPickAttachments()}
                 disabled={streaming}
                 title={t(lang, 'aiAttach')}
@@ -615,7 +620,7 @@ export function AiChatPanel() {
               </button>
               <button
                 type="button"
-                className={`grid size-8 shrink-0 place-items-center rounded-full text-text-inverse transition-colors disabled:opacity-40 ${streaming ? 'bg-danger hover:bg-bg-danger-hover' : 'bg-accent hover:bg-accent-hover'}`}
+                className={`grid size-8 shrink-0 place-items-center rounded-full text-text-inverse transition-colors disabled:opacity-disabled ${streaming ? 'bg-danger hover:bg-bg-danger-hover' : 'bg-accent hover:bg-accent-hover'}`}
                 onClick={streaming ? () => void cancel() : () => onSend()}
                 disabled={!streaming && ((!input.trim() && attachments.length === 0) || !activeSessionId || !!sendIssue)}
                 title={t(lang, streaming ? 'aiStop' : 'aiSend')}

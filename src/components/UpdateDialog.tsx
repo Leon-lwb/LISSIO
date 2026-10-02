@@ -101,7 +101,7 @@ export function UpdateDialog() {
         )}
 
         {status === 'error' && (
-          <p className="text-xs text-red-400 m-0 mt-2 break-all">
+          <p className="text-xs text-text-danger m-0 mt-2 break-all">
             {t(lang, 'updateError')}: {error}
           </p>
         )}

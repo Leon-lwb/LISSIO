@@ -31,7 +31,7 @@ export const PieChartProperties = memo(function PieChartProperties({ widget, upd
                 onCommit={(next) => patch({ segments: segments.map((item, i) => (i === index ? next : item)) })} />
             </div>
             <button type="button" disabled={segments.length <= 1}
-              className="w-6 h-6 self-end mb-2 flex items-center justify-center rounded hover:bg-bg-hover disabled:opacity-40 flex-shrink-0"
+              className="w-6 h-6 self-end mb-2 flex items-center justify-center rounded hover:bg-bg-hover disabled:opacity-disabled flex-shrink-0"
               onClick={() => patch({ segments: segments.filter((_, i) => i !== index) })}
               aria-label={`${t(lang, 'segmentName')} ${index + 1}`}><Trash2 size={12} /></button>
           </div>

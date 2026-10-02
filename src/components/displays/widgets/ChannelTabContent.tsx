@@ -39,7 +39,7 @@ export function ChannelTabContent({
     <div className="flex flex-col gap-1 px-2.5 py-2 text-text-primary text-xs">
       <div className="flex flex-row items-center justify-between gap-1.5 py-1.5 border-b border-border">
         <button
-          className={`inline-flex items-center gap-1 border rounded px-1.5 py-1 text-[10px] font-mono cursor-pointer transition-all duration-150 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-60'} hover:bg-bg-hover`}
+          className={`inline-flex items-center gap-1 border rounded px-1.5 py-1 text-[10px] font-mono cursor-pointer transition-all duration-150 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-muted'} hover:bg-bg-hover`}
           onClick={() => onPatchChannel(idx, { show: !ch.show })}
           title={`CH${idx}`}
         >

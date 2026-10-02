@@ -120,7 +120,7 @@ export function AiMcpSettings() {
             />
           )}
           <button
-            className="px-2 py-0.5 rounded bg-accent text-accent-foreground disabled:opacity-40 flex items-center gap-1"
+            className="px-2 py-0.5 rounded bg-accent text-accent-foreground disabled:opacity-disabled flex items-center gap-1"
             disabled={!canAdd}
             onClick={() => { void onAdd(); }}
           >

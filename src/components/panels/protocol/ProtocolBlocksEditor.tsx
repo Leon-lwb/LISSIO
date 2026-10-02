@@ -73,7 +73,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
   return (
     <div className="flex flex-col gap-1.5">
       {blocks.length === 0 && (
-        <div className="text-xs text-text-secondary opacity-60 italic py-2 text-center">
+        <div className="text-xs text-text-secondary opacity-muted italic py-2 text-center">
           {t(lang, 'fdBlocksEmpty')}
         </div>
       )}
@@ -98,7 +98,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
                 {blockSummary(block)}
               </span>
               <button
-                className="text-text-secondary hover:text-text-primary flex-shrink-0 p-0.5 disabled:opacity-30"
+                className="text-text-secondary hover:text-text-primary flex-shrink-0 p-0.5 disabled:opacity-disabled"
                 onClick={(e) => { e.stopPropagation(); moveBlock(idx, -1); }}
                 disabled={idx === 0}
                 title="↑"
@@ -106,7 +106,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
                 <ArrowUp size={10} />
               </button>
               <button
-                className="text-text-secondary hover:text-text-primary flex-shrink-0 p-0.5 disabled:opacity-30"
+                className="text-text-secondary hover:text-text-primary flex-shrink-0 p-0.5 disabled:opacity-disabled"
                 onClick={(e) => { e.stopPropagation(); moveBlock(idx, 1); }}
                 disabled={idx === blocks.length - 1}
                 title="↓"

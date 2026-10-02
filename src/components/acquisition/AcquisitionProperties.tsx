@@ -67,7 +67,7 @@ export function AcquisitionProperties({ node }: { node: Node }) {
           type="button"
           disabled={pending || (!hasSession && (card.endpoint.status.state === 'unavailable' || card.adapter.contractVersion !== CAPABILITY_CONTRACT_VERSION))}
           onClick={() => { void (hasSession ? disconnect() : connect()); }}
-          className={`w-full px-3 h-8 border-none rounded text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-50 ${hasSession ? 'bg-bg-danger text-text-bright hover:bg-bg-danger-hover' : 'bg-bg-button text-text-inverse hover:bg-bg-button-hover'}`}
+          className={`w-full px-3 h-8 border-none rounded text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-disabled ${hasSession ? 'bg-bg-danger text-text-bright hover:bg-bg-danger-hover' : 'bg-bg-button text-text-inverse hover:bg-bg-button-hover'}`}
         >
           {hasSession ? <PlugZap size={14} /> : <Plug size={14} />}
           {t(lang, pending ? 'connecting' : hasSession ? 'disconnect' : 'connect')}

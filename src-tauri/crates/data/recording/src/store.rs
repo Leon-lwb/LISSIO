@@ -255,19 +255,28 @@ impl RecordingStore {
                 "an active recording session cannot be deleted".into(),
             ));
         }
-        connection.execute(
-            "DELETE FROM recording_batches WHERE session_id=?",
-            params![session_id],
-        )?;
-        connection.execute(
-            "DELETE FROM display_bindings WHERE session_id=?",
-            params![session_id],
-        )?;
-        connection.execute(
-            "DELETE FROM recording_sessions WHERE id=?",
-            params![session_id],
-        )?;
-        Ok(())
+        // 与 [`crate::maintenance::delete_sessions_on`] 同一条理由: 带索引删批次会把
+        // 「索引与表不一致」升级成整个 DatabaseInstance 失效的致命错误, 之后连补救
+        // 语句都跑不了。所以先摘时间索引再删行, 删完按剩余行重建 — 重建失败不应盖掉
+        // 删除结果, 索引只是查询优化。
+        crate::maintenance::drop_time_index(connection)?;
+        let result = (|| -> Result<(), RecordingError> {
+            connection.execute(
+                "DELETE FROM recording_batches WHERE session_id=?",
+                params![session_id],
+            )?;
+            connection.execute(
+                "DELETE FROM display_bindings WHERE session_id=?",
+                params![session_id],
+            )?;
+            connection.execute(
+                "DELETE FROM recording_sessions WHERE id=?",
+                params![session_id],
+            )?;
+            Ok(())
+        })();
+        let _ = crate::maintenance::create_time_index(connection);
+        result
     }
 
     /// Run one read-only SELECT and return rows as JSON objects.

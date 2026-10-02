@@ -19,11 +19,11 @@ const exportFormats: { value: RecordingExportFormat; label: string; extension: s
 function stateClass(state: string): string {
   switch (state) {
     case 'running':
-      return 'text-emerald-400';
+      return 'text-text-success';
     case 'paused':
-      return 'text-amber-400';
+      return 'text-text-warning';
     case 'failed':
-      return 'text-red-400';
+      return 'text-text-danger';
     default:
       return 'text-text-secondary';
   }
@@ -112,7 +112,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
       )}
       {healthWarning !== null && (
         <div
-          className="border-b border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[10px] text-amber-200"
+          className="border-b border-warning/30 bg-warning/10 px-3 py-1.5 text-[10px] text-text-warning"
           data-testid="recording-recovered-notice-view"
           title={healthWarning}
         >
@@ -123,7 +123,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             <button
               type="button"
               onClick={clearHealthWarning}
-              className="shrink-0 text-amber-100 hover:text-white"
+              className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
               {t(lang, 'recordingDatabaseDismiss')}
             </button>
@@ -170,7 +170,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             type="button"
             disabled={exporting || selectedSessionId == null}
             onClick={() => void handleExport()}
-            className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-[11px] text-text-secondary hover:text-text-bright disabled:opacity-40"
+            className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-[11px] text-text-secondary hover:text-text-bright disabled:opacity-disabled"
           >
             <Download size={12} />
             {exporting ? t(lang, 'recordingDatabaseExporting') : t(lang, 'recordingDatabaseExport')}
@@ -179,9 +179,9 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
       </div>
 
       {error != null && (
-        <div className="flex items-center gap-2 border-b border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] text-red-300">
+        <div className="flex items-center gap-2 border-b border-danger/30 bg-danger/10 px-3 py-1 text-[11px] text-text-danger">
           <span className="truncate">{error}</span>
-          <button type="button" onClick={clearError} className="ml-auto text-red-200 hover:text-white">
+          <button type="button" onClick={clearError} className="ml-auto text-text-danger-strong hover:text-text-inverse">
             {t(lang, 'recordingDatabaseDismiss')}
           </button>
         </div>
@@ -326,7 +326,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
               type="button"
               disabled={loading || currentCache?.nextRowId == null}
               onClick={() => void loadHistory(false)}
-              className="inline-flex h-6 items-center rounded border border-border-subtle bg-bg-input px-2 text-[10px] text-text-secondary hover:text-text-bright disabled:opacity-40"
+              className="inline-flex h-6 items-center rounded border border-border-subtle bg-bg-input px-2 text-[10px] text-text-secondary hover:text-text-bright disabled:opacity-disabled"
             >
               {loading ? t(lang, 'recordingDatabaseLoading') : t(lang, 'recordingDatabaseLoadMore')}
             </button>

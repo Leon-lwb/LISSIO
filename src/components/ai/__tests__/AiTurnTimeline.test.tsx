@@ -79,4 +79,14 @@ describe('AiTurnTimeline', () => {
     fireEvent.click(screen.getAllByRole('button', { name: '查看过程' })[1]);
     expect(children[3].querySelectorAll('.ant-thought-chain-node')).toHaveLength(2);
   });
+
+  it('长流式文本走增量切分渲染, 冻结前缀与活跃尾块都不丢内容', () => {
+    useAppStore.setState({ lang: 'zh' });
+    const first = `第一段。${'内容。'.repeat(400)}`;
+    const second = `第二段。${'内容。'.repeat(400)}`;
+    const { container } = render(<AiTurnTimeline text={`${first}\n\n${second}`} streaming />);
+    const text = container.textContent ?? '';
+    expect(text).toContain('第一段。');
+    expect(text).toContain('第二段。');
+  });
 });

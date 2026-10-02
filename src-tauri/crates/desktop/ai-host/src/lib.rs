@@ -6,7 +6,10 @@ mod prompt;
 mod prompt_integration_tests;
 mod secret;
 #[cfg(test)]
+mod session_store_tests;
+#[cfg(test)]
 mod test_support;
+mod turn;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -15,10 +18,8 @@ use crate::native_executor::{
     CompositeExecutor, ConversationTitleExecutor, McpToolExecutor, NativeToolExecutor,
     PendingCalls, ToolOutcome,
 };
-use chat::{
-    AiChatEvent, ChatPayload, ChatTaskRegistry, EventSink, GenaiTurnProvider, TurnRecorder,
-    run_chat,
-};
+use crate::turn::{TurnPersistence, TurnPipeline};
+use chat::{AiChatEvent, ChatPayload, ChatTaskRegistry, GenaiTurnProvider, run_chat};
 use chat_session::{
     AttachmentDto, ChatSession, SessionMeta, SessionStore, ViewItemDto, ViewRoleDto, derive_history,
 };
@@ -90,10 +91,9 @@ impl AiHost {
             log::warn!("MCP 配置加载失败, 按空配置启动: {e}");
             McpManager::empty(&config_dir)
         });
-        let sessions = SessionStore::load(&config_dir).unwrap_or_else(|e| {
-            log::warn!("AI 会话加载失败, 按空会话启动: {e}");
-            SessionStore::empty(&config_dir)
-        });
+        // 会话文件的损坏路径由 chat-session 决定: 隔离原件后按空会话启动,
+        // 后续落盘不会覆盖唯一副本
+        let sessions = SessionStore::load_or_quarantine(&config_dir);
         Self {
             config_dir,
             registry: Arc::new(CapabilityRegistry::builtin()),
@@ -177,6 +177,13 @@ pub async fn ai_chat_send(
         }
     }
     let session = state.sessions.get(&session_id);
+    // 中途落盘锚点: 没有用户条目的会话只能终态追加一次, 不允许周期性写入
+    let has_user_anchor = session.as_ref().is_some_and(|session| {
+        session
+            .items
+            .iter()
+            .any(|item| item.role == ViewRoleDto::User)
+    });
     let first_turn_title = session.as_ref().is_some_and(|session| {
         matches!(session.title.as_str(), "新会话" | "New chat")
             && session
@@ -218,13 +225,16 @@ pub async fn ai_chat_send(
     let toolbox = state.toolbox.clone();
     let backend_sink = state.sink.clone();
     tokio::spawn(async move {
-        // 事件双路: 转发前端流式渲染 + 记录器聚合 (终态后落盘)
-        let recorder = Arc::new(Mutex::new(TurnRecorder::new()));
-        let recorder_for_sink = Arc::clone(&recorder);
-        let sink: EventSink = Arc::new(move |event| {
-            recorder_for_sink.lock().record(&event);
-            on_event(event);
-        });
+        // 回合汇聚: 前端推送按窗口合并增量, 记录器快照周期性落盘 (中断也留部分回答)
+        let pipeline = TurnPipeline::spawn(
+            on_event,
+            TurnPersistence {
+                sessions: Arc::clone(&sessions),
+                session_id: session_id.clone(),
+                periodic_drafts: has_user_anchor,
+            },
+        );
+        let sink = pipeline.sink();
         let provider = GenaiTurnProvider;
 
         // 内置工具: 注册表派发, toolbox 从 AppState 提取共享句柄, pending 注册表接收前端回执
@@ -252,16 +262,12 @@ pub async fn ai_chat_send(
             system: Some(system_prompt),
             messages: history,
         };
-        if let Err(e) = run_chat(payload, &provider, &executor, cancel_rx, Arc::clone(&sink)).await
-        {
+        if let Err(e) = run_chat(payload, &provider, &executor, cancel_rx, sink).await {
             // 取消/超轮次的专用事件已在循环内发出, 这里只记日志
             log::warn!("AI 对话任务结束 (含错误): {e}");
         }
-        // 回合收束: 取消 / 错误路径同样沉淀部分结果
-        let items = recorder.lock().finish();
-        if let Err(e) = sessions.append_items(&session_id, items) {
-            log::warn!("会话条目落盘失败: {e}");
-        }
+        // 回合收束: 取消 / 错误路径同样沉淀部分结果, 并等落盘真正完成
+        pipeline.finish().await;
         registry_tasks.remove(&spawned_task_id);
     });
     Ok(task_id)

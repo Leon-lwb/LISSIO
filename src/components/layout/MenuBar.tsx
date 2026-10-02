@@ -349,7 +349,7 @@ export const MenuBar = memo(function MenuBar() {
                       role="menuitem"
                       className={clsx(
                         'context-menu-item',
-                        entry.disabled && 'opacity-50 cursor-not-allowed pointer-events-none'
+                        entry.disabled && 'opacity-disabled cursor-not-allowed pointer-events-none'
                       )}
                       style={{ height: 26 }}
                       onClick={handleItemClick(entry)}

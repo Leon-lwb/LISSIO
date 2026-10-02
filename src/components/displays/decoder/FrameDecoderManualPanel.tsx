@@ -125,11 +125,11 @@ export function ManualModePanel({
           if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onParse(); }
         }}
       />
-      <div className="text-[10px] text-text-secondary opacity-70">{t(lang, 'fdShortcutHint')}</div>
+      <div className="text-[10px] text-text-secondary opacity-secondary">{t(lang, 'fdShortcutHint')}</div>
 
       <div className="flex gap-1.5">
         <button
-          className="flex-1 justify-center px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover font-semibold inline-flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-default"
+          className="flex-1 justify-center px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover font-semibold inline-flex items-center gap-1.5 disabled:opacity-disabled disabled:cursor-default"
           onClick={onParse}
           disabled={loading || !input.trim()}
         >
@@ -165,7 +165,7 @@ export function ManualModePanel({
               </div>
               <div className="bg-bg-editor border border-border rounded p-2 flex flex-col gap-1">
                 {Object.keys(result.outputs).length === 0 ? (
-                  <div className="text-xs text-text-secondary opacity-60 italic py-1 text-center">{t(lang, 'fdNoOutputs')}</div>
+                  <div className="text-xs text-text-secondary opacity-muted italic py-1 text-center">{t(lang, 'fdNoOutputs')}</div>
                 ) : (
                   Object.entries(result.outputs).map(([port, val]) => (
                     <div key={port} className="flex items-center justify-between gap-2 px-1.5 py-0.5 bg-bg-editor rounded-sm">

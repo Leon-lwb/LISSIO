@@ -263,7 +263,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                 runState === 'paused'
                   ? 'text-yellow bg-yellow/10'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
-                runState === 'stopped' && 'pointer-events-none opacity-40',
+                runState === 'stopped' && 'pointer-events-none opacity-subtle',
               )}
               title={t(lang, 'runPauseHint')}
               aria-label={t(lang, 'runPauseHint')}
@@ -277,7 +277,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
               className={clsx(
                 'flex h-5 w-5 items-center justify-center rounded transition-colors duration-150',
                 runState === 'stopped'
-                  ? 'text-text-secondary opacity-40'
+                  ? 'text-text-secondary opacity-subtle'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-red',
               )}
               title={t(lang, 'runStopHint')}
@@ -319,7 +319,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           type="button"
           disabled={!recordingEnabled || !paused || busy}
           onClick={() => void handleCreateSession()}
-          className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
+          className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
           title={paused ? t(lang, 'recordingDatabaseNewSession') : t(lang, 'recordingDatabasePausedOnlyHint')}
         >
           <FilePlus2 size={12} />
@@ -329,7 +329,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           type="button"
           disabled={!recordingEnabled || busy || terminalCount === 0}
           onClick={() => void cleanupStopped()}
-          className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
+          className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
         >
           <Eraser size={12} />
           {t(lang, 'recordingDatabaseCleanupStopped')}
@@ -353,7 +353,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
               terminalCount <= Math.max(0, keepLatest)
             }
             onClick={() => void cleanupKept()}
-            className="h-full border-l border-border-subtle px-2 text-text-secondary hover:text-text-bright disabled:opacity-40"
+            className="h-full border-l border-border-subtle px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
           >
             {t(lang, 'recordingDatabaseCleanupKeep')}
           </button>
@@ -364,7 +364,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
 
       {warning === null && healthWarning !== null && (
         <div
-          className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200"
+          className="state-warning px-2 py-1 text-[10px]"
           data-testid="recording-recovered-notice"
           title={healthWarning}
         >
@@ -375,7 +375,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             <button
               type="button"
               onClick={clearHealthWarning}
-              className="shrink-0 text-amber-100 hover:text-white"
+              className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
               {t(lang, 'recordingDatabaseDismiss')}
             </button>
@@ -384,13 +384,13 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
       )}
 
       {warning !== null && (
-        <div className="rounded border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] text-amber-200">
+        <div className="state-warning px-2 py-1 text-[10px]">
           <div className="flex items-start gap-1">
             <span className="min-w-0 flex-1 break-words">{warning}</span>
             <button
               type="button"
               onClick={clearWarning}
-              className="shrink-0 text-amber-100 hover:text-white"
+              className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
               {t(lang, 'recordingDatabaseDismiss')}
             </button>
@@ -398,13 +398,13 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         </div>
       )}
       {error !== null && (
-        <div className="rounded border border-red-500/30 bg-red-500/10 px-2 py-1 text-[10px] text-red-300">
+        <div className="state-danger px-2 py-1 text-[10px]">
           <div className="flex items-start gap-1">
             <span className="min-w-0 flex-1 break-words">{error}</span>
             <button
               type="button"
               onClick={clearError}
-              className="shrink-0 text-red-200 hover:text-white"
+              className="shrink-0 text-text-danger-strong hover:text-text-inverse"
             >
               {t(lang, 'recordingDatabaseDismiss')}
             </button>
@@ -412,7 +412,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         </div>
       )}
       {hint !== null && (
-        <div className="rounded border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] text-blue-200">
+        <div className="state-info px-2 py-1 text-[10px]">
           {hint}
         </div>
       )}
@@ -448,7 +448,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
               <div className="flex items-center gap-1.5">
                 <span className={clsx(
                   'rounded px-1 py-0.5 text-[9px] font-semibold uppercase',
-                  active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-bg-input text-text-secondary',
+                  active ? 'bg-success/15 text-text-success' : 'bg-bg-input text-text-secondary',
                 )}>
                   {t(lang, stateLabelKey(summary.session.state))}
                 </span>
@@ -492,7 +492,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                       event.stopPropagation();
                       attemptSelect(summary);
                     }}
-                    className="inline-flex items-center gap-1 text-[9px] text-text-secondary hover:text-accent disabled:opacity-30"
+                    className="inline-flex items-center gap-1 text-[9px] text-text-secondary hover:text-accent disabled:opacity-disabled"
                     title={paused ? t(lang, 'recordingDatabaseSetActive') : t(lang, 'recordingDatabasePausedOnlyHint')}
                   >
                     <CornerUpLeft size={10} />
@@ -506,7 +506,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                     event.stopPropagation();
                     requestDelete(summary);
                   }}
-                  className="inline-flex items-center gap-1 text-[9px] text-red-300/80 hover:text-red-200 disabled:opacity-30"
+                  className="inline-flex items-center gap-1 text-[9px] text-text-danger hover:text-text-danger-strong disabled:opacity-disabled"
                   title={t(lang, 'recordingDatabaseDelete')}
                 >
                   <Trash2 size={10} />

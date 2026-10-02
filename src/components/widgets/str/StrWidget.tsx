@@ -76,7 +76,7 @@ export const StrWidget = memo(function StrWidget({ widget }: StrWidgetProps) {
       )}
 
       {!anyConnected && (
-        <div className="flex items-center gap-1 justify-center p-1 text-[10px] text-text-secondary opacity-70">
+        <div className="flex items-center gap-1 justify-center p-1 text-[10px] text-text-secondary opacity-secondary">
           <Plus size={10} />
           <span>连接输入</span>
         </div>

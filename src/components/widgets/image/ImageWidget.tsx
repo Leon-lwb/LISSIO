@@ -44,7 +44,7 @@ export const ImageViewer = memo(function ImageViewer({ widget, full = false }: I
               <canvas width={width} height={height} />
             ) : (
               <div className="flex flex-col gap-1 items-center">
-                <ImageIcon size={32} className="opacity-40" />
+                <ImageIcon size={32} className="opacity-subtle" />
                 {infoBlock}
               </div>
             )}
@@ -82,7 +82,7 @@ export const ImageViewer = memo(function ImageViewer({ widget, full = false }: I
         <canvas width={width} height={height} />
       ) : (
         <div className="flex flex-col gap-1 items-center">
-          <ImageIcon size={24} className="opacity-40" />
+          <ImageIcon size={24} className="opacity-subtle" />
           <span>
             {width}×{height} {format}
           </span>

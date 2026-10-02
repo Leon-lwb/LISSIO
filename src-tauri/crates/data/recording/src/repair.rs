@@ -5,6 +5,12 @@
 //! then fails with a catalog error that names the missing table, which made
 //! history cleanup - and with it the recording panel - unusable.
 //!
+//! A second, worse failure mode lands here too (see [`is_index_damage`]): when the
+//! time index no longer matches `recording_batches`, DuckDB escalates the failed
+//! index deletion to a fatal error and invalidates the whole database instance, so
+//! every later statement fails until the database is restarted. The file itself is
+//! still readable, and rebuilding it re-creates the index from the table.
+//!
 //! The stale entry cannot be removed with SQL, so recovery exports every table
 //! into a fresh database file and swaps it in. The damaged file is kept next to
 //! the database so nothing is destroyed before the replacement is verified.
@@ -25,6 +31,23 @@ const TABLES: [&str; 3] = [
 pub fn is_catalog_damage(error: &RecordingError) -> bool {
     let message = error.to_string();
     message.contains("Catalog Error") && message.contains("does not exist")
+}
+
+/// 索引与表不一致 — DuckDB 发现「要删的行在索引里找不到」时会先抛
+/// `Invalid Input Error: Failed to delete all rows from index. Only deleted 0 out of N rows.`,
+/// 随即由 commit 阶段的 `IndexDataRemover::Flush` **主动升级成 `FatalException`**,
+/// 整个 `DatabaseInstance` 就此失效: 之后任何语句只报
+/// `FATAL Error: Failed: database has been invalidated because of a previous fatal error.`
+/// (原文里带着第一段错误)。
+///
+/// 库文件本身是**读得动**的, 导出重建 (顺带按表重建索引) 就能修好, 所以这两段文案
+/// 必须和 catalog 损坏一样被认出来 — 否则 writer 会带着一个死掉的实例继续跑, 已受理
+/// 的批次再也写不进去。真实库上撞到的就是这条: 索引停在 4695 行的旧快照, 之后 81480
+/// 行都没进索引。
+pub fn is_index_damage(error: &RecordingError) -> bool {
+    let message = error.to_string();
+    message.contains("Failed to delete all rows from index")
+        || message.contains("database has been invalidated")
 }
 
 /// 文件级损坏 — 连打开都做不到: DuckDB 反序列化不了自己的元数据块, 或者文件被截断 /
@@ -304,6 +327,36 @@ mod tests {
         assert!(!is_catalog_damage(&RecordingError::Invalid("boom".into())));
         assert!(!is_catalog_damage(&RecordingError::Failed(
             "Constraint Error: Violates foreign key constraint".into()
+        )));
+    }
+
+    /// 回归: 真实库上撞到的两种文案都必须被判成「可重建」。
+    /// ① commit 阶段删索引条目对不上 (库还是活的); ② 实例因此失效后, 后续语句拿到的 FATAL。
+    #[test]
+    fn recognizes_index_damage_in_both_stages() {
+        let failed_delete = RecordingError::Failed(
+            "database error: FATAL Error: Invalid Input Error: Failed to delete all rows from \
+             index. Only deleted 0 out of 1449 rows.\nChunk: Chunk - [14 Columns]\n- FLAT BIGINT: \
+             1449 = [ 4696, 4697, ...]"
+                .into(),
+        );
+        assert!(is_index_damage(&failed_delete), "①必须认出来");
+        let invalidated = RecordingError::Failed(
+            "database error: FATAL Error: Failed: database has been invalidated because of a \
+             previous fatal error. The database must be restarted prior to being used again.\n\
+             Original error: \"Invalid Input Error: Failed to delete all rows from index. Only \
+             deleted 0 out of 1449 rows.\""
+                .into(),
+        );
+        assert!(is_index_damage(&invalidated), "②必须认出来");
+        // 不许误判: 把普通失败当索引损坏会让一次清理白白重建整库。
+        assert!(!is_index_damage(&RecordingError::Invalid("boom".into())));
+        assert!(!is_index_damage(&RecordingError::Failed(
+            "Constraint Error: Violates foreign key constraint".into()
+        )));
+        assert!(!is_index_damage(&RecordingError::Failed(
+            "database error: Catalog Error: Table with name recording_batches does not exist!"
+                .into()
         )));
     }
 

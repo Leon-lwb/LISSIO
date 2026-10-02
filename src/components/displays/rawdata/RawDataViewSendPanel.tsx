@@ -62,7 +62,7 @@ export function RawDataViewSendPanel({
 
   const renderSendButton = () => (
     <button
-      className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover disabled:opacity-50 disabled:cursor-default"
+      className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover disabled:opacity-disabled disabled:cursor-default"
       onClick={onSend}
       disabled={!targetTransportLabel}
       title={!targetTransportLabel ? t(lang, 'noTransportNode') : undefined}

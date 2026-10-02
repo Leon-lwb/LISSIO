@@ -188,6 +188,26 @@ mod tests {
         assert_eq!(history[0].role, ChatRoleDto::User);
     }
 
+    /// 流式中途落盘的空文本助手条目不产生历史消息 — 部分快照不会污染 LLM 上下文。
+    #[test]
+    fn empty_assistant_placeholder_is_harmless() {
+        let history = derive_history(&[user("你好"), assistant("")]);
+        assert_eq!(history.len(), 1);
+    }
+
+    /// 中断回合里已被收束的工具调用仍与结果成对, 不产生悬空 `tool_calls`。
+    #[test]
+    fn finalized_partial_tool_call_stays_paired() {
+        let mut interrupted = assistant("");
+        interrupted.tools = Some(vec![run("c1", true)]);
+        let history = derive_history(&[user("执行"), interrupted]);
+        assert_eq!(history.len(), 3);
+        assert_eq!(history[1].role, ChatRoleDto::Assistant);
+        assert_eq!(history[1].tool_calls.as_ref().map(Vec::len), Some(1));
+        assert_eq!(history[2].role, ChatRoleDto::Tool);
+        assert_eq!(history[2].tool_call_id.as_deref(), Some("c1"));
+    }
+
     #[test]
     fn finished_tool_calls_pair_with_results() {
         let items = vec![

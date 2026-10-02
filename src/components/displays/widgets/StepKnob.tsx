@@ -120,7 +120,7 @@ export const StepKnob = memo(function StepKnob({
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col items-center gap-0.5 select-none ${disabled ? 'opacity-40 pointer-events-none' : ''}`}
+      className={`flex flex-col items-center gap-0.5 select-none ${disabled ? 'opacity-subtle pointer-events-none' : ''}`}
       style={{ minWidth: size }}
     >
       <div

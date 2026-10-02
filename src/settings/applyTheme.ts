@@ -5,6 +5,7 @@
 //! 并通知原生窗口启用系统毛玻璃效果。
 
 import { transport } from '../lib/rpc';
+import { withAlpha } from '../lib/ui/colorAlpha';
 import type { AppSettings } from './defaults';
 import { applyTheme, getCssVariableName, resolveActiveTheme, getBuiltInCssTheme, type ThemeToken } from './theme';
 import { loadCssTheme } from './css-theme-loader';
@@ -23,20 +24,6 @@ const ACRYLIC_TOKEN_ALPHA: Partial<Record<ThemeToken, number>> = {
 
 /// 基准透明度对应的 acrylicOpacity 设置值
 const ACRYLIC_BASE_OPACITY = 0.6;
-
-/// 将 #rgb / #rrggbb 颜色转为带透明度的 rgba; 非 hex 输入原样返回
-function withAlpha(color: string, alpha: number): string {
-  const m = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.exec(color.trim());
-  if (!m) return color;
-  let hex = m[1];
-  if (hex.length === 3) {
-    hex = hex.split('').map((c) => c + c).join('');
-  }
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 export function applyAppearance(appearance: AppSettings['appearance']): void {
   const root = document.documentElement;

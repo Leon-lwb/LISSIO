@@ -206,7 +206,7 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
       <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
         <div>
           <h1 className="m-0 text-xl font-semibold">无法连接 Lissio 后端</h1>
-          <p className="mt-2 text-sm opacity-75">{detail}</p>
+          <p className="mt-2 text-sm opacity-secondary">{detail}</p>
         </div>
         <label className="block text-sm">
           服务器地址
@@ -247,9 +247,9 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
             </button>
           )}
         </div>
-        {copyStatus && <p className="text-xs opacity-75">{copyStatus}</p>}
-        {logPath && <p className="break-all text-xs opacity-60">日志：{logPath}</p>}
-        <p className="text-xs opacity-60">状态：{state}</p>
+        {copyStatus && <p className="text-xs opacity-secondary">{copyStatus}</p>}
+        {logPath && <p className="break-all text-xs opacity-muted">日志：{logPath}</p>}
+        <p className="text-xs opacity-muted">状态：{state}</p>
       </section>
     </main>
   );
@@ -281,7 +281,7 @@ export function CatalogGate({ children }: { children: ReactNode }) {
       <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
         <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
           <h1 className="m-0 text-xl font-semibold">模型目录版本不兼容</h1>
-          <p className="mt-2 text-sm opacity-75">
+          <p className="mt-2 text-sm opacity-secondary">
             前端契约版本为 1，后端报告 {contractVersion}。请升级前端或后端后重试。
           </p>
           <button className="rounded bg-accent px-4 py-2" onClick={retry}>重新加载目录</button>
@@ -295,8 +295,8 @@ export function CatalogGate({ children }: { children: ReactNode }) {
       <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
         <section className="module-card w-full max-w-lg space-y-4 p-6" aria-live="polite">
           <h1 className="m-0 text-xl font-semibold">模型目录加载失败</h1>
-          <p className="mt-2 text-sm opacity-75">{error ?? '未知错误'}</p>
-          <p className="text-xs opacity-60">工作区保持原样，未做任何写入。</p>
+          <p className="mt-2 text-sm opacity-secondary">{error ?? '未知错误'}</p>
+          <p className="text-xs opacity-muted">工作区保持原样，未做任何写入。</p>
           <button className="rounded bg-accent px-4 py-2" onClick={retry}>重试</button>
         </section>
       </main>
@@ -307,7 +307,7 @@ export function CatalogGate({ children }: { children: ReactNode }) {
     <main className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
       <section className="module-card w-full max-w-lg space-y-3 p-6" aria-live="polite" aria-busy="true">
         <h1 className="m-0 text-xl font-semibold">正在加载模型目录…</h1>
-        <p className="mt-2 text-sm opacity-75">目录就绪后才会恢复工作区。</p>
+        <p className="mt-2 text-sm opacity-secondary">目录就绪后才会恢复工作区。</p>
       </section>
     </main>
   );

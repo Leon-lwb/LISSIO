@@ -132,7 +132,7 @@ export function RawDataViewHeader({
             <button
               key={opt.value}
               disabled={isNum || isStr}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40 ${grouping === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${grouping === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => onGroupingChange(opt.value)}
             >
               {t(lang, opt.label)}
@@ -145,7 +145,7 @@ export function RawDataViewHeader({
               key={opt.value}
               disabled={isNum || isStr || grouping === 'terminal'}
               title={grouping === 'terminal' ? t(lang, 'terminalReprDisabled') : undefined}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40 ${repr === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${repr === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => onReprChange(opt.value)}
             >
               {t(lang, opt.label)}
@@ -159,7 +159,7 @@ export function RawDataViewHeader({
               key={opt.value}
               disabled={isNum || isStr}
               title={t(lang, opt.label)}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40 ${directionFilter === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${directionFilter === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => onDirectionFilterChange(opt.value)}
             >
               <span className={`mr-1 ${directionFilter === opt.value ? 'text-text-inverse' : opt.value === 'all' ? 'text-text-secondary' : directionColorClass(opt.value)}`}>
@@ -225,7 +225,7 @@ export function RawDataViewHeader({
             <span>{(stringRowCount ?? 0).toLocaleString()} rows</span>
           ) : (
             <>
-              <span className={isNum ? 'opacity-40' : ''}>
+              <span className={isNum ? 'opacity-subtle' : ''}>
                 {totalBytes.toLocaleString()} B
               </span>
               {!isNum && isFiltered && (
@@ -257,7 +257,7 @@ export function RawDataViewHeader({
             <span className="text-text-secondary text-xs">{selectionCount}</span>
             <button
               disabled={isNum}
-              className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40 ${copyFeedback ? 'text-green' : ''}`}
+              className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${copyFeedback ? 'text-green' : ''}`}
               title={t(lang, 'copySelected')}
               onClick={onCopySelected}
             >
@@ -265,7 +265,7 @@ export function RawDataViewHeader({
             </button>
             <button
               disabled={isNum}
-              className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-40"
+              className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled"
               title={t(lang, 'clearSelection')}
               onClick={onClearSelection}
             >

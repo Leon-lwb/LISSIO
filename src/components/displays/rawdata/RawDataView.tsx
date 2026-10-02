@@ -289,9 +289,9 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   if (!selectedChannel) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-text-secondary">
-        <Unplug size={22} className="opacity-50" />
+        <Unplug size={22} className="opacity-disabled" />
         <span className="text-xs">{t(lang, 'rawDataNoInputTitle')}</span>
-        <span className="text-[10px] opacity-70 px-6 text-center break-all">
+        <span className="text-[10px] opacity-secondary px-6 text-center break-all">
           {t(lang, 'rawDataNoInputHint')}
         </span>
       </div>

@@ -29,4 +29,24 @@ describe('AiMarkdown', () => {
     fireEvent.click(screen.getByText('官网'));
     expect(tauriMock.openUrl).toHaveBeenCalledWith('https://example.com');
   });
+
+  // 折行契约: 面板内一列到底, 任何内容都不创建横向滚动容器
+  it('代码块保留缩进但折行, 不横向滚动', () => {
+    const long = `fn main() { let url = "https://example.com/${'segment/'.repeat(40)}"; }`;
+    const { container } = render(<AiMarkdown text={`\`\`\`rust\n${long}\n\`\`\``} />);
+    const pre = container.querySelector('pre');
+    expect(pre).toHaveClass('whitespace-pre-wrap');
+    expect(pre?.textContent).toContain('segment/');
+    expect(pre).not.toHaveClass('overflow-x-auto');
+  });
+
+  it('表格按内容取宽且单元格折行, 不横向滚动', () => {
+    const cell = 'https://example.com/' + 'x'.repeat(120);
+    const { container } = render(<AiMarkdown text={`| 字段 | 值 |\n|---|---|\n| url | ${cell} |`} />);
+    const table = container.querySelector('table');
+    expect(table).toHaveClass('max-w-full');
+    expect(table?.parentElement).not.toHaveClass('overflow-x-auto');
+    expect(table?.querySelector('td')).toHaveClass('break-words');
+    expect(table?.querySelector('th')).toHaveClass('align-top');
+  });
 });

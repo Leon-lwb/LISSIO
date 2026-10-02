@@ -69,7 +69,11 @@ function ReasoningStep({ reasoning, streaming }: { reasoning?: string; streaming
       expanded={expanded}
       onExpand={setExpanded}
       className="min-w-0"
-      classNames={{ status: 'text-text-secondary!', content: 'max-h-72 overflow-auto whitespace-pre-wrap break-words text-text-secondary!' }}
+      classNames={{
+        status: 'text-text-secondary!',
+        // 思考过程只限高, 长句/长 token 在面板宽度内折行 (不出现横向滚动)
+        content: 'max-h-72 overflow-y-auto overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere] text-text-secondary!',
+      }}
     >
       {reasoning?.trim() ? reasoning : streaming ? '…' : ''}
     </Think>
@@ -93,11 +97,15 @@ function toolItem(run: AiToolRun, expanded: boolean, lang: Lang): ThoughtChainIt
     content: (
       <div className="min-w-0 space-y-1 text-xs">
         <div>{t(lang, 'aiToolInput')}</div>
-        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all">{JSON.stringify(run.arguments, null, 2)}</pre>
+        <pre className="max-h-64 overflow-y-auto overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere]">
+          {JSON.stringify(run.arguments, null, 2)}
+        </pre>
         {run.content && (
           <>
             <div>{t(lang, 'aiToolOutput')}</div>
-            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all">{run.content}</pre>
+            <pre className="max-h-64 overflow-y-auto overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {run.content}
+            </pre>
           </>
         )}
       </div>
@@ -147,14 +155,22 @@ export function AiTurnProcess({
         expanded={expanded}
         onExpand={setExpanded}
         className="ai-activity min-w-0 max-w-full text-xs"
-        classNames={{ status: 'text-text-secondary!', content: 'text-text-secondary!' }}
+        classNames={{
+          status: 'text-text-secondary!',
+          // Think 内容区固定 width:100%, 面板变窄时需可收缩
+          content: 'min-w-0 text-text-secondary!',
+        }}
       >
         <ThoughtChain
           items={items}
           expandedKeys={expandedKeys}
           onExpand={setExpandedKeys}
           className="min-w-0 text-text-secondary!"
-          classNames={{ itemHeader: 'text-text-secondary!', itemContent: 'text-text-secondary!' }}
+          // itemHeader/itemContent 是 flex 后代: min-w-0 让长标题/长 JSON 参与收缩
+          classNames={{
+            itemHeader: 'min-w-0 text-text-secondary!',
+            itemContent: 'min-w-0 text-text-secondary!',
+          }}
         />
       </Think>
     </XProvider>

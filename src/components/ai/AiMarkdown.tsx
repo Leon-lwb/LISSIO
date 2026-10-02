@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Check, Copy } from 'lucide-react';
 import { platform } from '../../lib/platform';
+import { splitStreamingMarkdown } from '../../lib/ai/streamMarkdown';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 
@@ -18,7 +19,7 @@ function hastText(node: unknown): string {
   return '';
 }
 
-/// 代码块 — 语言标签 + 复制按钮 + 横向滚动
+/// 代码块 — 语言标签 + 复制按钮 + 面板内折行 (保留缩进, 不横向滚动)
 function CodeBlock({ lang, raw, children }: { lang: string; raw: string; children: ReactNode }) {
   const lang2 = useAppStore((s) => s.lang);
   const [copied, setCopied] = useState(false);
@@ -43,7 +44,7 @@ function CodeBlock({ lang, raw, children }: { lang: string; raw: string; childre
           {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
         </button>
       </div>
-      <pre className="p-2 overflow-x-auto text-[11px] leading-relaxed">{children}</pre>
+      <pre className="p-2 whitespace-pre-wrap break-words text-[11px] leading-relaxed">{children}</pre>
     </div>
   );
 }
@@ -90,14 +91,18 @@ const components: Components = {
     </blockquote>
   ),
   table: ({ children }) => (
-    <div className="overflow-x-auto my-1.5">
-      <table className="border-collapse text-[11px]">{children}</table>
+    <div className="my-1.5">
+      <table className="max-w-full border-collapse text-[11px]">{children}</table>
     </div>
   ),
   th: ({ children }) => (
-    <th className="border border-border-subtle px-1.5 py-0.5 text-left font-medium">{children}</th>
+    <th className="border border-border-subtle px-1.5 py-0.5 text-left font-medium align-top break-words">
+      {children}
+    </th>
   ),
-  td: ({ children }) => <td className="border border-border-subtle px-1.5 py-0.5">{children}</td>,
+  td: ({ children }) => (
+    <td className="border border-border-subtle px-1.5 py-0.5 align-top break-words">{children}</td>
+  ),
   hr: () => <hr className="border-border-subtle my-1.5" />,
 };
 
@@ -110,5 +115,18 @@ export const AiMarkdown = memo(function AiMarkdown({ text }: { text: string }) {
         {text}
       </ReactMarkdown>
     </div>
+  );
+});
+
+/// 流式文本渲染 — 已完成前缀冻结 (memo 命中, 不再重解析), 只有活跃尾块随 token 重解析。
+///
+/// 切分规则见 `lib/ai/streamMarkdown`; 没有可用边界时退化成整段渲染, 与切分前一致。
+export const AiStreamingMarkdown = memo(function AiStreamingMarkdown({ text }: { text: string }) {
+  const { frozen, active } = splitStreamingMarkdown(text);
+  return (
+    <>
+      {frozen && <AiMarkdown text={frozen} />}
+      {active && <AiMarkdown text={active} />}
+    </>
   );
 });

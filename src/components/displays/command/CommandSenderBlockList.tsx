@@ -70,7 +70,7 @@ export function CommandSenderBlockList({
         }}
       >
         {blocks.length === 0 && (
-          <div className="text-xs text-text-secondary opacity-60 italic py-4 text-center">
+          <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">
             {t(lang, 'cmdBlocksEmpty')}
           </div>
         )}
@@ -84,7 +84,7 @@ export function CommandSenderBlockList({
             <div
               key={block.id}
               data-block-id={block.id}
-              className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-40' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
+              className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
               onDragOver={onDragOver(block.id)}
               onDrop={onDrop(block.id)}
             >
@@ -118,7 +118,7 @@ export function CommandSenderBlockList({
                   {blockSummary(block)}
                 </span>
                 {blockBytes && (
-                  <span className="text-[9px] text-text-secondary font-mono opacity-70 shrink-0">
+                  <span className="text-[9px] text-text-secondary font-mono opacity-secondary shrink-0">
                     [{blockBytes.length}B]
                   </span>
                 )}

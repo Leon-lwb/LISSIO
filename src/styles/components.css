@@ -234,7 +234,8 @@ body.dragging-dock * {
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-  opacity: 0.16;
+  /* 原值 0.16, 取最近档位 --alpha-faint (15%) — 品牌 mark 轨迹刻意压暗 */
+  opacity: var(--alpha-faint);
 }
 
 .animate-led-pulse {
@@ -513,7 +514,7 @@ body.dragging-dock * {
 .context-menu-item:disabled,
 .context-menu-item.disabled {
   cursor: default;
-  opacity: 0.5;
+  opacity: var(--alpha-disabled);
 }
 
 .context-menu-icon {
@@ -801,7 +802,7 @@ body.dragging-dock * {
   bottom: 0;
   height: 2px;
   background: var(--color-text-secondary);
-  opacity: 0.4;
+  opacity: var(--alpha-subtle);
   /* 使用 transform: scaleX() 替代 width 动画，避免触发布局重算 */
   transform-origin: left center;
   animation: notif-progress-shrink 8s linear forwards;
@@ -1171,7 +1172,7 @@ body.dragging-dock * {
 }
 
 .prompt-card-btn:disabled {
-  opacity: 0.4;
+  opacity: var(--alpha-subtle);
   cursor: not-allowed;
 }
 
@@ -1193,7 +1194,7 @@ body.dragging-dock * {
 }
 
 .prompt-card-btn-ghost:disabled {
-  opacity: 0.4;
+  opacity: var(--alpha-subtle);
   cursor: not-allowed;
 }
 
@@ -1210,6 +1211,37 @@ body.dragging-dock * {
   border: 1px solid var(--color-border-subtle);
   border-radius: 4px;
   padding: 0.5px 4px;
+}
+
+/* ---- 折行策略: 回复在面板宽度内自适应折行, 任何内容都不撑出横向滚动条 ----
+   1) 正文/行内代码/单元格用 anywhere: 长 URL、哈希、CJK 混排标识符在
+      任意字符处可断。必须用 anywhere 而非 break-word — 只有前者参与
+      min-content 计算, 表格列与 flex 子项才会真正收缩到面板宽度。
+   2) 代码块保留源码缩进与手动换行 (pre-wrap), 超长行同样折行。
+   3) 表格按内容取宽但不超过气泡 (窄表保持紧凑, 宽表收缩), 单元格顶端对齐。 */
+.ai-md,
+.ai-md p,
+.ai-md li,
+.ai-md blockquote,
+.ai-md th,
+.ai-md td,
+.ai-md :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
+.ai-md pre,
+.ai-md pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-md table {
+  max-width: 100%;
+}
+
+.ai-md th,
+.ai-md td {
+  vertical-align: top;
 }
 
 /* highlight.js 暗色主题 — 仅覆盖常用 token, 配色对齐 app 暗色 token
@@ -1274,3 +1306,16 @@ body.dragging-dock * {
 .ai-md .hljs-strong {
   font-weight: 600;
 }
+
+/* ============ 文字色档位 / 禁用态 / 语义徽标 → 已上移 theme.css ============ */
+/* 统一基础不再在本文件定义, 单一来源在 src/styles/theme.css:
+   - 文字色档位/语义状态色: @theme 的 --color-text-* token → 直接写
+     `text-text-secondary-muted` / `text-text-danger` 等工具类 (或经
+     src/lib/ui/textTone.ts 的 textToneClass() 取名)。
+   - 透明度档位: --alpha-* 经 --opacity-* 桥接成工具类 — 表单禁用态写
+     `disabled:opacity-disabled`, 非表单失活态写 `opacity-disabled`,
+     其余淡化写 opacity-faint/subtle/muted/secondary。
+   - 语义徽标: `@utility state-*` (文字+底+边框一套, 支持 hover: 等变体)。
+   静态检查: scripts/check-ui-tokens.mjs (pnpm check:tokens);
+   token 表: docs/architecture/ui-color-tokens.md。
+   本文件只保留组件级样式 (如 .context-menu-item.disabled 的光标规则)。 */

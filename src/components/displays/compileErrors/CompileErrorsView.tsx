@@ -32,7 +32,7 @@ export const CompileErrorsView = memo(function CompileErrorsView() {
       {/* Header */}
       <div className="shrink-0 px-4 py-2 border-b border-border flex items-center justify-between bg-bg-panel-header/50 select-none">
         <div className="flex items-center gap-2">
-          <AlertTriangle size={14} className="text-yellow-500" />
+          <AlertTriangle size={14} className="text-text-warning" />
           <span className="text-sm font-semibold text-text-primary">
             {t(lang, 'compileErrorsTitle')}
           </span>
@@ -45,7 +45,7 @@ export const CompileErrorsView = memo(function CompileErrorsView() {
             type="button"
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-1 text-text-secondary hover:text-text-primary rounded hover:bg-bg-hover active:bg-accent-active transition-colors flex items-center justify-center cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
+            className="p-1 text-text-secondary hover:text-text-primary rounded hover:bg-bg-hover active:bg-accent-active transition-colors flex items-center justify-center cursor-pointer disabled:opacity-disabled disabled:pointer-events-none"
             title={t(lang, 'refresh')}
             aria-label={t(lang, 'refresh')}
           >

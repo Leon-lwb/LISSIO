@@ -64,7 +64,7 @@ export const ProtocolProperties = memo(function ProtocolProperties({ node }: { n
         </select>
         {/* RawData 预设不产帧: 提示 convert_to 不生效、原文透传 (后端语义) */}
         {isRawDataPreset(data) && (
-          <div className="mt-1 text-[10px] text-text-secondary opacity-80 break-all">
+          <div className="mt-1 text-[10px] text-text-secondary opacity-secondary break-all">
             {t(lang, 'convertRawDataHint')}
           </div>
         )}
