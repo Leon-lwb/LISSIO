@@ -83,14 +83,14 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
 
   return (
     <div
-      className="fixed inset-0 dialog-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay z-modal flex items-center justify-center motion-overlay-in"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
       role="button"
       tabIndex={0}
     >
       <div
-        className="w-[460px] max-w-[92vw] max-h-[88vh] dialog-surface flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[460px] max-w-[92vw] max-h-[88vh] dialog-surface flex flex-col overflow-hidden motion-surface-in"
         role="dialog"
         aria-modal="true"
       >

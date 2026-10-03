@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, cloneElement } from 'react';
+import { useMotionPresence } from '../../lib/motion';
 import { useContextMenuStore } from '../../store/contextMenuStore';
 import type { ContextMenuItem, ContextMenuEntry } from '../../types';
 
@@ -12,6 +13,7 @@ function isSeparator(entry: ContextMenuEntry): entry is { kind: 'separator' } {
 export function ContextMenu() {
   const { visible, x, y, items, close } = useContextMenuStore();
   const menuRef = useRef<HTMLDivElement>(null);
+  useMotionPresence(menuRef, { variant: 'popover', enabled: visible });
   const positionRef = useRef({ x, y });
 
   // 记录最近一次请求的坐标，避免尺寸测量期间 state 已变
@@ -106,7 +108,7 @@ export function ContextMenu() {
   return (
     <div
       ref={menuRef}
-      className="context-menu popover-surface"
+      className="context-menu popover-surface motion-float"
       style={{
         position: 'fixed',
         left: x,
@@ -126,7 +128,7 @@ export function ContextMenu() {
             key={id}
             type="button"
             disabled={disabled}
-            className={`context-menu-item ${disabled ? 'disabled' : ''}`}
+            className={`context-menu-item motion-row ${disabled ? 'disabled' : ''}`}
             style={{ height: MENU_ITEM_HEIGHT }}
             onClick={handleItemClick(entry)}
           >

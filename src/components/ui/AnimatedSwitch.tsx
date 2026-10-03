@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { motionDuration, motionIsReduced } from '../../lib/motion';
 
 interface AnimatedSwitchProps {
   /// 切换标识 — 值变化时播放一次转场动画 (首次挂载不播放)
@@ -12,8 +13,8 @@ interface AnimatedSwitchProps {
   className?: string;
 }
 
-const EASE = 'cubic-bezier(0.2, 0, 0, 1)';
-const DURATION_MS = 180;
+const EASE = 'var(--ease-enter)';
+const DURATION_MS = Math.round(motionDuration('quick') * 1000);
 const SLIDE_X = 16;
 const SLIDE_Y = 10;
 
@@ -34,7 +35,7 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
     if (from === switchKey) return;
     const el = ref.current;
     if (!el) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (motionIsReduced()) return;
 
     // 默认纯淡入淡出; 有序切换按方向滑入 (与旧 WAAPI keyframes 完全一致的视觉)
     let translate = '';
@@ -62,7 +63,7 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
   }, [switchKey]);
 
   return (
-    <div ref={ref} className={className}>
+    <div ref={ref} className={`motion-switch ${className ?? ''}`} data-motion-switch="content">
       {children}
     </div>
   );

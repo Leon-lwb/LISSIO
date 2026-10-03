@@ -32,7 +32,7 @@ export const AssistantBubble = memo(function AssistantBubble({ item, canRetry }:
   };
 
   return (
-    <div className="flex justify-start group animate-ai-msg-in ai-assistant-message">
+    <div className="flex justify-start group motion-message-in ai-assistant-message">
       <div
         className={`max-w-full min-w-0 w-full px-1 py-1 space-y-2 ${
           item.error ? 'text-danger' : ''

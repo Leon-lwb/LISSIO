@@ -53,7 +53,7 @@ export function ToolbarButton({
       title={title}
       aria-label={title}
       className={clsx(
-        'inline-flex items-center justify-center gap-1 rounded text-xs font-medium whitespace-nowrap transition-colors cursor-pointer flex-shrink-0 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled',
+        'motion-control inline-flex items-center justify-center gap-1 rounded text-xs font-medium whitespace-nowrap cursor-pointer flex-shrink-0 disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled',
         dimension,
         variant === 'primary'
           ? 'bg-bg-button text-text-inverse hover:bg-bg-button-hover'

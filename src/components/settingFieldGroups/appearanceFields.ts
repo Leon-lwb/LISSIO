@@ -49,6 +49,21 @@ export const appearanceFields: SettingFieldDef[] = [
   },
   {
     category: 'appearance',
+    field: 'motionSpeed',
+    labelKey: 'settingMotionSpeed',
+    descKey: 'settingMotionSpeedDesc',
+    control: {
+      kind: 'select',
+      options: [
+        { value: 'fast', label: 'Fast' },
+        { value: 'standard', label: 'Standard' },
+        { value: 'relaxed', label: 'Relaxed' },
+      ],
+    },
+    keywords: ['animation', 'motion', 'speed', '动画', '动效', '速度'],
+  },
+  {
+    category: 'appearance',
     field: 'reducedMotion',
     labelKey: 'settingReducedMotion',
     descKey: 'settingReducedMotionDesc',

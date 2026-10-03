@@ -1,3 +1,196 @@
+/* ============ Motion speed profiles ============ */
+/* applyAppearance() writes data-motion-speed; GSAP reads the same profile via
+   motionDuration() so CSS and JavaScript never drift apart. */
+:root[data-motion-speed='fast'] {
+  --motion-duration-micro: 100ms;
+  --motion-duration-quick: 140ms;
+  --motion-duration-base: 200ms;
+  --motion-duration-panel: 280ms;
+  --motion-duration-slow: 360ms;
+}
+
+:root[data-motion-speed='relaxed'] {
+  --motion-duration-micro: 180ms;
+  --motion-duration-quick: 260ms;
+  --motion-duration-base: 360ms;
+  --motion-duration-panel: 480ms;
+  --motion-duration-slow: 640ms;
+}
+
+/* ============ Unified motion primitives ============ */
+/* These classes are the shared interaction vocabulary. They intentionally
+   animate transform/opacity only where movement is needed; color feedback stays
+   in component rules so high-frequency controls do not create extra layers. */
+
+.motion-control,
+.motion-row,
+.motion-surface,
+.motion-float,
+.motion-pill,
+.motion-switch {
+  --motion-ease: var(--ease-standard);
+}
+
+.motion-control {
+  transition:
+    color var(--motion-duration-micro) var(--motion-ease),
+    background-color var(--motion-duration-micro) var(--motion-ease),
+    border-color var(--motion-duration-micro) var(--motion-ease),
+    box-shadow var(--motion-duration-micro) var(--motion-ease),
+    transform var(--motion-duration-micro) var(--ease-settle);
+  transform: translateZ(0);
+}
+
+.motion-control:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+.motion-row {
+  transition:
+    color var(--motion-duration-micro) var(--motion-ease),
+    background-color var(--motion-duration-micro) var(--motion-ease),
+    border-color var(--motion-duration-micro) var(--motion-ease),
+    transform var(--motion-duration-quick) var(--ease-enter);
+}
+
+.motion-row:active:not(:disabled) {
+  transform: scale(0.995);
+}
+
+.motion-surface {
+  transition:
+    background-color var(--motion-duration-base) var(--ease-enter),
+    border-color var(--motion-duration-base) var(--ease-enter),
+    box-shadow var(--motion-duration-base) var(--ease-enter),
+    transform var(--motion-duration-base) var(--ease-enter);
+}
+
+.motion-float {
+  transition:
+    opacity var(--motion-duration-quick) var(--ease-enter),
+    transform var(--motion-duration-base) var(--ease-enter),
+    box-shadow var(--motion-duration-base) var(--ease-enter);
+}
+
+[data-motion-variant='window'] {
+  transform-origin: bottom right;
+}
+
+.motion-pill {
+  transition:
+    left var(--motion-duration-base) var(--ease-standard),
+    top var(--motion-duration-base) var(--ease-standard),
+    width var(--motion-duration-base) var(--ease-standard),
+    height var(--motion-duration-base) var(--ease-standard),
+    background-color var(--motion-duration-base) var(--ease-standard);
+}
+
+.motion-switch {
+  transition:
+    opacity var(--motion-duration-base) var(--ease-enter),
+    transform var(--motion-duration-base) var(--ease-enter);
+}
+
+.motion-icon-pop {
+  animation: motion-icon-pop var(--motion-duration-micro) var(--ease-enter);
+  transform-origin: center;
+}
+
+@keyframes motion-icon-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.motion-overlay-in {
+  animation: motion-overlay-in var(--duration-dialog-fade) var(--ease-enter) both;
+}
+
+.motion-surface-in {
+  animation: motion-surface-in var(--duration-dialog-slide) var(--ease-enter) both;
+}
+
+.motion-pop-in {
+  animation: motion-pop-in var(--duration-toast-enter) var(--ease-enter) both;
+}
+
+.motion-message-in {
+  animation: motion-message-in var(--duration-message-enter) var(--ease-enter) both;
+}
+
+.motion-banner-in {
+  animation: motion-banner-in var(--duration-banner-enter) var(--ease-enter) both;
+}
+
+.motion-tick-in {
+  animation: motion-tick-in var(--duration-dialog-slide) var(--ease-settle) both;
+}
+
+@keyframes motion-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes motion-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-small)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes motion-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-micro));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-distance-micro));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-banner-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--motion-distance-micro) * -1));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motion-tick-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* ============ 低动画模式 (用户设置) ============ */
 /* 通过设置开启，替代 prefers-reduced-motion 系统偏好 */
 .reduced-motion *,

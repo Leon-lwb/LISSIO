@@ -24,12 +24,12 @@
 }
 
 .animate-palette-row {
-  animation: palette-row-enter 150ms ease-out;
+  animation: palette-row-enter var(--duration-palette-enter) var(--ease-enter);
   will-change: transform, opacity;
 }
 
 .animate-palette-row-exit {
-  animation: palette-row-exit 150ms ease-out forwards;
+  animation: palette-row-exit var(--duration-palette-enter) var(--ease-exit) forwards;
   will-change: transform, opacity;
 }
 
@@ -37,7 +37,7 @@
   .animate-rawdata-enter,
   .animate-palette-row,
   .animate-palette-row-exit,
-  .animate-search-clear-in {
+  .motion-icon-pop {
     animation: none;
   }
 }

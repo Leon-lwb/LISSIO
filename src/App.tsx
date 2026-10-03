@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
+import { MotionPresence } from './lib/motion';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { transport } from './lib/rpc';
 import { Settings, Info, RefreshCw, PanelLeft } from 'lucide-react';
@@ -230,7 +231,8 @@ function App() {
   const sidebarSide = sidebarVisible ? sidebarDock : null;
   const bottomDocked = aiPanelVisible && aiDock === 'bottom';
   const handleClass = 'w-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors';
-  // AI 面板入场: 按停靠方向滑入 (浮动缩放入场), 随容器挂载播放一次
+  // AI 面板入场: 停靠面板按方向滑入, 浮动窗口由 MotionPresence 统一驱动
+  // 浮动窗口由 MotionPresence 统一驱动，避免与方向性 CSS 入场重复播放。
   const aiPanelAnimClass =
     aiDock === 'right'
       ? 'animate-ai-in-right'
@@ -238,7 +240,7 @@ function App() {
         ? 'animate-ai-in-left'
         : aiDock === 'bottom'
           ? 'animate-ai-in-bottom'
-          : 'animate-ai-in-float';
+          : '';
 
   const mainGroupItems: ReactNode[] = [];
   let panelOrder = 0;
@@ -248,14 +250,14 @@ function App() {
   );
   const sidebarPanel = (ord: number) => (
     <Panel key="sidebar" id="sidebar" order={ord} defaultSize={18} minSize={12} maxSize={35}>
-      <div className="module-card h-full w-full">
+      <div className="module-card motion-surface h-full w-full">
         <Sidebar view={sidebarView} />
       </div>
     </Panel>
   );
   const aiPanelNode = (ord: number) => (
     <Panel key="ai-panel" id="ai-panel" order={ord} defaultSize={24} minSize={14} maxSize={55}>
-      <div className={`module-card dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
+      <div className={`module-card motion-surface dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
         <Suspense fallback={<SuspenseFallback />}>
           <LazyAiChatPanel />
         </Suspense>
@@ -275,7 +277,7 @@ function App() {
   // 工作台行 — bottom 停靠时被纵向 PanelGroup 包裹, 否则直接占满剩余高度
   const workbench = (
     <div className={`flex min-h-0 gap-2 ${bottomDocked ? 'h-full' : 'flex-1'}`} data-tour="tour-workbench">
-      <div className="module-card w-12 flex-shrink-0">
+      <div className="module-card motion-surface w-12 flex-shrink-0">
         <ActivityBar
           activeView={sidebarVisible ? sidebarView : null}
           onSelect={toggleSidebar}
@@ -301,7 +303,7 @@ function App() {
           </Panel>
           <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
           <Panel order={2} defaultSize={34} minSize={15} maxSize={70} className="min-h-0">
-            <div className={`module-card dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
+            <div className={`module-card motion-surface dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
               <Suspense fallback={<SuspenseFallback />}>
                 <LazyAiChatPanel />
               </Suspense>
@@ -312,17 +314,18 @@ function App() {
         workbench
       )}
       {/* AI 面板浮动 — 标题栏拖动重停靠 (dockDrag), 右下角把手调尺寸 */}
-      {aiPanelVisible && aiDock === 'float' && (
+      <MotionPresence
+        visible={aiPanelVisible && aiDock === 'float'}
+        variant="window"
+        className="absolute z-50"
+        style={{ left: floatPos.x, top: floatPos.y, width: aiFloatRect.w, height: aiFloatRect.h }}
+      >
+        <div className={`module-card motion-surface dock-card-acrylic h-full w-full shadow-2xl ${aiPanelAnimClass}`}>
+          <Suspense fallback={<SuspenseFallback />}>
+            <LazyAiChatPanel />
+          </Suspense>
+        </div>
         <div
-          className="absolute z-50"
-          style={{ left: floatPos.x, top: floatPos.y, width: aiFloatRect.w, height: aiFloatRect.h }}
-        >
-          <div className={`module-card dock-card-acrylic h-full w-full shadow-2xl ${aiPanelAnimClass}`}>
-            <Suspense fallback={<SuspenseFallback />}>
-              <LazyAiChatPanel />
-            </Suspense>
-          </div>
-          <div
             className="absolute -right-0.5 -bottom-0.5 w-3.5 h-3.5 cursor-nwse-resize rounded-sm hover:bg-accent/60"
             onPointerDown={(e) => {
               if (e.button !== 0) return;
@@ -346,10 +349,9 @@ function App() {
               window.addEventListener('pointerup', onUp);
             }}
           />
-        </div>
-      )}
+      </MotionPresence>
       {statusBarVisible && (
-        <div className="module-card flex-shrink-0 mt-2">
+        <div className="module-card motion-surface flex-shrink-0 mt-2">
           <StatusBar />
         </div>
       )}

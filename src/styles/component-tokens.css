@@ -44,16 +44,16 @@
 
   /* Motion aliases used by component-specific animations. */
   --duration-instant: 0.001ms;
-  --duration-search-clear: 120ms;
-  --duration-menu-enter: 120ms;
-  --duration-palette-enter: 150ms;
-  --duration-banner-enter: 150ms;
-  --duration-raw-data-enter: 150ms;
-  --duration-dialog-fade: 150ms;
-  --duration-toast-enter: 180ms;
-  --duration-dialog-slide: 200ms;
-  --duration-message-enter: 160ms;
-  --duration-panel-enter: 220ms;
+  --duration-search-clear: var(--motion-duration-micro);
+  --duration-menu-enter: var(--motion-duration-micro);
+  --duration-palette-enter: var(--motion-duration-quick);
+  --duration-banner-enter: var(--motion-duration-quick);
+  --duration-raw-data-enter: var(--motion-duration-quick);
+  --duration-dialog-fade: var(--motion-duration-quick);
+  --duration-toast-enter: var(--motion-duration-base);
+  --duration-dialog-slide: var(--motion-duration-base);
+  --duration-message-enter: var(--motion-duration-quick);
+  --duration-panel-enter: var(--motion-duration-panel);
   --duration-notification-progress: 8s;
   --duration-led-pulse: 1.5s;
 

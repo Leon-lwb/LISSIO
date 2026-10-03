@@ -8,7 +8,7 @@
   opacity: var(--alpha-subtle);
   /* 使用 transform: scaleX() 替代 width 动画，避免触发布局重算 */
   transform-origin: left center;
-  animation: notif-progress-shrink 8s linear forwards;
+  animation: notif-progress-shrink var(--duration-notification-progress) linear forwards;
   will-change: transform;
 }
 

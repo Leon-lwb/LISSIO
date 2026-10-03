@@ -177,7 +177,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
 
   return (
     <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
@@ -185,7 +185,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
       aria-label={translate('close', lang)}
     >
       <div
-        className="dialog-surface flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="dialog-surface flex flex-col overflow-hidden motion-surface-in"
         style={{ width: '90vw', height: '85vh', maxWidth: 1200, maxHeight: 800 }}
       >
         <div className="flex items-center gap-3 px-4 py-3 dialog-chrome border-b border-border text-text-bright font-semibold flex-shrink-0">

@@ -272,7 +272,7 @@ export function AiChatPanel() {
           )}
           {viewItems.map((item, i) =>
             item.role === 'user' ? (
-              <div key={i} className="flex justify-end animate-ai-msg-in">
+              <div key={i} className="flex justify-end motion-message-in">
                 <div className="max-w-[88%] min-w-0 rounded-2xl px-3 py-2 bg-bg-hover text-text-primary space-y-1.5">
                   {item.attachments && item.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -300,7 +300,7 @@ export function AiChatPanel() {
 
           {/* 流式中的回合 */}
           {showStreaming && (
-            <div className="flex justify-start animate-ai-msg-in">
+            <div className="flex justify-start motion-message-in">
               <div className="w-full min-w-0 px-1 py-1 space-y-2 ai-assistant-message">
                 <AiTurnTimeline text={streamingText} reasoning={reasoningText} tools={toolRuns} timeline={timeline} streaming />
               </div>
@@ -331,7 +331,7 @@ export function AiChatPanel() {
 
       {/* 发送前检查未通过 — 内联横幅 (点击直达设置) */}
       {sendIssue && (
-        <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle bg-warning/10 text-warning text-[11px] shrink-0 animate-ai-banner-in">
+        <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle bg-warning/10 text-warning text-[11px] shrink-0 motion-banner-in">
           <AlertCircle size={11} className="shrink-0" />
           <span className="flex-1 min-w-0 truncate">
             {translate('aiSendBlocked', lang)}

@@ -30,7 +30,7 @@ export function TextField({ value, label, onCommit, allowEmpty = false }: {
   return (
     <FormField label={label} error={invalid ? translate('requiredValue', lang) : null}>
       <input
-        className={`form-input ${invalid ? 'border-red' : ''}`}
+        className={`form-input motion-control ${invalid ? 'border-red' : ''}`}
         value={draft}
         onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
         onBlur={commit}
@@ -63,7 +63,7 @@ export function NumberField({ value, label, onCommit, error }: {
     <FormField label={label} error={invalid ? error ?? 'Invalid value' : null}>
       <input
         type="number"
-        className={`form-input font-mono ${invalid ? 'border-red' : ''}`}
+        className={`form-input motion-control font-mono ${invalid ? 'border-red' : ''}`}
         value={draft}
         onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
         onBlur={commit}
@@ -102,7 +102,7 @@ export function OptionalNumberField({ value, label, placeholder, onCommit }: {
     <FormField label={label} flex>
       <input
         type="number"
-        className={`form-input font-mono ${invalid ? 'border-red' : ''}`}
+        className={`form-input motion-control font-mono ${invalid ? 'border-red' : ''}`}
         value={draft}
         placeholder={placeholder}
         onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
@@ -125,7 +125,7 @@ export function SelectField({ value, label, options, onChange }: {
 }) {
   return (
     <FormField label={label}>
-      <select className="form-select" value={value} onChange={(event) => onChange(event.target.value)}>
+      <select className="form-select motion-control" value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
@@ -216,7 +216,7 @@ export function DraftInput({
   value,
   onCommit,
   validate,
-  className = 'form-input',
+  className = 'form-input motion-control',
   invalidClassName = 'border-red',
   ...rest
 }: {
@@ -245,7 +245,7 @@ export function DraftInput({
 export function DraftTextarea({
   value,
   onCommit,
-  className = 'form-input',
+  className = 'form-input motion-control',
   invalidClassName = 'border-red',
   ...rest
 }: {
@@ -280,7 +280,7 @@ export function DraftNumberInput({
   max,
   integer,
   onCommit,
-  className = 'form-input font-mono',
+  className = 'form-input motion-control font-mono',
   invalidClassName = 'border-red',
   ...rest
 }: {

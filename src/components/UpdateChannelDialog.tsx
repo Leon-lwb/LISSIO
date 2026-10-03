@@ -30,7 +30,7 @@ export function UpdateChannelDialog({
       role="button"
       tabIndex={0}
     >
-      <DialogSurface className="dialog-surface w-[360px] max-w-[90vw] p-5 gap-3 animate-[settings-slide-in_0.2s_ease-out]">
+      <DialogSurface className="dialog-surface w-[360px] max-w-[90vw] p-5 gap-3 motion-surface-in">
         <div className="text-sm font-semibold text-text-bright">
           {translate('updateChannelConfirmTitle', lang)}
         </div>

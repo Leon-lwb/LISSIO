@@ -35,6 +35,8 @@ export interface AppSettings {
     customCssThemes: CssStyleTheme[];
     /** 减少动画效果 */
     reducedMotion: boolean;
+    /** 动画速度档位 */
+    motionSpeed: 'fast' | 'standard' | 'relaxed';
     uiFontFamily: string;
     uiFontSize: number;
     monoFontFamily: string;
@@ -161,6 +163,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     cssTheme: 'default',
     customCssThemes: [],
     reducedMotion: false,
+    motionSpeed: 'standard',
     uiFontFamily: "'MiSans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'WenQuanYi Micro Hei', sans-serif",
     uiFontSize: 13,
     monoFontFamily: "'JetBrains Mono', 'Maple Mono CN', 'Cascadia Code', monospace",

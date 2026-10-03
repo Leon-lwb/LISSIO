@@ -116,7 +116,7 @@ export function SearchInput({
 
   return (
     <div
-      className={`search-box flex items-center bg-bg-input border border-border transition-colors focus-within:border-accent ${
+      className={`search-box motion-control flex items-center bg-bg-input border border-border focus-within:border-accent ${
         disabled ? 'opacity-subtle pointer-events-none' : ''
       } ${sizeCls} ${className ?? ''}`}
     >
@@ -135,7 +135,7 @@ export function SearchInput({
       {display !== '' && !disabled && (
         <button
           type="button"
-          className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform duration-150 motion-safe:active:scale-95 cursor-pointer animate-search-clear-in"
+          className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform duration-150 motion-safe:active:scale-95 cursor-pointer motion-icon-pop"
           title={translate('clearSearch', lang)}
           aria-label={translate('clearSearch', lang)}
           onClick={handleClear}

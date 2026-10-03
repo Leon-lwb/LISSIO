@@ -4,6 +4,7 @@ import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
 import { XCircle, AlertTriangle, Info, X, ChevronDown } from 'lucide-react';
 import { activateOnKeyboard } from '../lib/utils/a11y';
+import { MotionPresence } from '../lib/motion';
 
 const MAX_VISIBLE = 5;
 
@@ -54,8 +55,13 @@ interface ToastItemProps {
 }
 
 function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
+  const [closing, setClosing] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
+
+  const requestDismiss = () => {
+    if (!closing) setClosing(true);
+  };
 
   const Icon =
     notif.severity === 'error'
@@ -88,12 +94,18 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
 
   const handleAction = (run: () => void) => {
     run();
-    onDismiss();
+    requestDismiss();
   };
 
   return (
+    <MotionPresence
+      visible={!closing}
+      variant="toast"
+      className="pointer-events-auto relative w-[360px]"
+      onExitComplete={onDismiss}
+    >
     <div
-      className="prompt-card pointer-events-auto relative w-[360px] p-4 flex flex-col gap-2.5 overflow-hidden animate-[notif-slide-in_0.18s_ease-out]"
+      className="prompt-card motion-float h-full relative w-full p-4 flex flex-col gap-2.5 overflow-hidden"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -117,7 +129,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
         </div>
         <button
           className="shrink-0 bg-transparent border-none text-text-secondary cursor-pointer p-0.5 rounded-sm flex items-center justify-center transition-colors hover:bg-bg-hover hover:text-text-bright"
-          onClick={onDismiss}
+          onClick={requestDismiss}
           title={translate('notifDismiss', lang)}
           aria-label={translate('notifDismiss', lang)}
         >
@@ -158,5 +170,6 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
         />
       )}
     </div>
+    </MotionPresence>
   );
 }

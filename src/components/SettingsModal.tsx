@@ -215,14 +215,14 @@ export function SettingsModal() {
 
   return (
     <DialogOverlay
-      className="animate-[settings-fade-in_0.15s_ease-out]"
+      className="motion-overlay-in"
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <DialogSurface
-        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] motion-surface-in"
         label={translate('settingsTitle', lang)}
       >
         {/* 顶部 — 标题 + 搜索框 + 关闭 */}

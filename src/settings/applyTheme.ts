@@ -112,6 +112,9 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
     document.body.style.opacity = '';
   }
 
+  // 动画速度档位: CSS 过渡和 GSAP 共享同一份节奏
+  root.dataset.motionSpeed = appearance.motionSpeed ?? 'standard';
+
   // 低动画模式
   if (appearance.reducedMotion) {
     root.classList.add('reduced-motion');

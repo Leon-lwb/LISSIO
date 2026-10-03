@@ -44,7 +44,15 @@
   color: var(--color-text-inverse);
   font-size: var(--font-size-xs);
   cursor: pointer;
-  transition: background-color var(--transition-fast) var(--ease-out-cubic);
+  transition:
+    color var(--motion-duration-micro) var(--ease-standard),
+    background-color var(--motion-duration-micro) var(--ease-standard),
+    border-color var(--motion-duration-micro) var(--ease-standard),
+    transform var(--motion-duration-micro) var(--ease-settle);
+}
+
+.dialog-button:active:not(:disabled) {
+  transform: scale(0.985);
 }
 
 .dialog-button--primary {

@@ -190,6 +190,8 @@ settingFloatingGlassOpacity: 二级卡片透明度
 settingFloatingGlassOpacityDesc: 调整二级卡片的透明度，越小越透明（0.72 为默认观感）
 settingWindowOpacity: 整窗透明度
 settingWindowOpacityDesc: 调节整个窗口的透明度，越小越透明；与亚克力背景相互独立
+settingMotionSpeed: 动画速度
+settingMotionSpeedDesc: 调整界面过渡的整体节奏；减少动画效果开启时始终立即完成
 settingReducedMotion: 减少动画效果
 settingReducedMotionDesc: 禁用界面中的动画和过渡效果，提升性能
 

@@ -80,7 +80,7 @@ export function SlidingPill({ pill, variant = 'editor' }: { pill: PillRect; vari
   return (
     <div
       aria-hidden
-      className={`tab-sliding-pill ${variant === 'panel' ? 'tab-sliding-pill--panel' : ''}`}
+      className={`tab-sliding-pill motion-pill ${variant === 'panel' ? 'tab-sliding-pill--panel' : ''}`}
       style={{
         left: pill.left,
         top: pill.top,

@@ -23,7 +23,13 @@
   .animate-rawdata-enter,
   .animate-palette-row,
   .animate-palette-row-exit,
-  .animate-search-clear-in,
+  .motion-icon-pop,
+  .motion-overlay-in,
+  .motion-surface-in,
+  .motion-pop-in,
+  .motion-tick-in,
+  .motion-message-in,
+  .motion-banner-in,
   .animate-led-pulse,
   .notif-progress {
     animation: none;

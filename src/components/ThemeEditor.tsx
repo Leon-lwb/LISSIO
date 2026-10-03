@@ -277,14 +277,14 @@ export function ThemeEditor({
 
   return (
     <DialogOverlay
-      className="animate-[settings-fade-in_0.15s_ease-out]"
+      className="motion-overlay-in"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <DialogSurface
-        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] motion-surface-in"
         label={translate('themeEditor', lang)}
       >
         {/* 顶部 */}

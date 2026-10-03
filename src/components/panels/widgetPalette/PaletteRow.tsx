@@ -50,7 +50,7 @@ export const PaletteRow = memo(function PaletteRow({ entry, category, entering, 
     <div
       className={clsx(
         'group flex items-center gap-2 px-1.5 rounded-sm cursor-grab select-none transition-colors duration-150 active:cursor-grabbing hover:bg-bg-hover',
-        entering && 'animate-palette-row',
+        entering && 'motion-row animate-palette-row',
         exiting && 'animate-palette-row-exit',
       )}
       style={{ height: ROW_SIZE - 2, marginBottom: 2 }}

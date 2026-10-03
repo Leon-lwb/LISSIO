@@ -14,7 +14,7 @@
 /* 一次性入场动画无需常驻合成层: will-change 终身保留会持续占用显存,
    浏览器在 animation 进行期间会自行提升图层 */
 .animate-rawdata-enter {
-  animation: rawdata-enter 150ms ease-out;
+  animation: rawdata-enter var(--duration-raw-data-enter) var(--ease-enter);
 }
 
 /* RawData 单元格 hover 高亮 — 纯 CSS 实现, 替代 cell 级 React state

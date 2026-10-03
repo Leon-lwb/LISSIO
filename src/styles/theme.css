@@ -281,9 +281,9 @@
 
   /* ---------- 动效 (Motion tokens) ---------- */
   /* 语义时长别名 — components.css 原生 CSS 直接引用 var(--transition-*) */
-  --transition-fast: 120ms;
-  --transition-base: 200ms;
-  --transition-slow: 320ms;
+  --transition-fast: var(--motion-duration-micro);
+  --transition-base: var(--motion-duration-base);
+  --transition-slow: var(--motion-duration-slow);
   /* Tailwind v4 命名空间: duration-fast/base/slow 工具类 (transition-duration 属主) */
   --transition-duration-fast: var(--transition-fast);
   --transition-duration-base: var(--transition-base);
@@ -291,6 +291,19 @@
   /* 缓动: ease-out-cubic 工具类 + var(--ease-*) 直接引用 */
   --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-settle: cubic-bezier(0.34, 1.2, 0.64, 1);
+  /* Motion scale: micro = feedback, base = content transitions, panel = spatial moves. */
+  --motion-duration-micro: 140ms;
+  --motion-duration-quick: 180ms;
+  --motion-duration-base: 280ms;
+  --motion-duration-panel: 360ms;
+  --motion-duration-slow: 480ms;
+  --motion-distance-micro: 4px;
+  --motion-distance-small: 8px;
+  --motion-distance-panel: 18px;
 }
 
 /* ============ 层级令牌 (z-index) ============ */

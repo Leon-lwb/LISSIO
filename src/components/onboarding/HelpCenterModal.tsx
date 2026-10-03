@@ -19,14 +19,14 @@ export function HelpCenterModal() {
 
   return (
     <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
       <div
-        className="flex flex-col dialog-surface overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="flex flex-col dialog-surface overflow-hidden motion-surface-in"
         style={{ width: '80vw', height: '85vh', maxWidth: 1000, maxHeight: 800 }}
       >
         <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">

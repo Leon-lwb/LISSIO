@@ -190,6 +190,8 @@ settingFloatingGlassOpacity: Secondary Card Opacity
 settingFloatingGlassOpacityDesc: Adjust secondary-card translucency; lower is more transparent (0.72 is the default look)
 settingWindowOpacity: Window Opacity
 settingWindowOpacityDesc: Adjust the overall window transparency; lower is more transparent. Independent of the acrylic background
+settingMotionSpeed: Motion Speed
+settingMotionSpeedDesc: Adjust the overall pacing of interface transitions; reduced motion always completes immediately
 settingReducedMotion: Reduce Motion
 settingReducedMotionDesc: Disable animations and transitions in the interface to improve performance
 

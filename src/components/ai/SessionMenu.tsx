@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
 import { translate } from '../../i18n';
+import { MotionPresence } from '../../lib/motion';
 
 export function SessionMenu() {
   const lang = useAppStore((s) => s.lang);
@@ -40,14 +41,19 @@ export function SessionMenu() {
         <ChevronDown size={11} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <>
-          <button
-            type="button"
-            aria-label={translate('aiSessionSwitch', lang)}
-            className="fixed inset-0 z-20 border-0 bg-transparent"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute left-0 top-6 z-30 w-56 max-w-[80vw] popover-surface py-1 flex flex-col animate-ai-menu-in">
+        <button
+          type="button"
+          aria-label={translate('aiSessionSwitch', lang)}
+          className="fixed inset-0 z-20 border-0 bg-transparent"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      <MotionPresence
+        visible={open}
+        variant="menu"
+        className="absolute left-0 top-6 z-30 w-56 max-w-[80vw]"
+      >
+        <div className="popover-surface py-1 flex flex-col">
             <div className="max-h-56 overflow-y-auto">
               {sorted.length === 0 && (
                 <div className="px-2 py-1.5 text-[11px] text-text-secondary">{translate('aiSessionEmpty', lang)}</div>
@@ -117,9 +123,8 @@ export function SessionMenu() {
               <Plus size={11} />
               {translate('aiSessionNew', lang)}
             </button>
-          </div>
-        </>
-      )}
+        </div>
+      </MotionPresence>
     </div>
   );
 }
