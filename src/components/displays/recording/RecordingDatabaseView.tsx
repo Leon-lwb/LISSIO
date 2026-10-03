@@ -9,6 +9,7 @@ import { api, type RecordingExportFormat } from '../../../lib/tauri/tauri';
 import { t } from '../../../i18n';
 import { RecordingDisabledNotice } from './RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs, payloadPreview } from './recordingFormat';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 const exportFormats: { value: RecordingExportFormat; label: string; extension: string }[] = [
   { value: 'csv', label: 'CSV', extension: 'csv' },
@@ -130,17 +131,20 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
           </div>
         </div>
       )}
-      <div className="flex min-h-10 flex-wrap items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-3 py-1.5">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex min-h-10 flex-nowrap items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-3 py-1.5"
+      >
         <Database size={14} className="shrink-0 text-accent" />
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-primary">
+        <span className="flex-shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-text-primary">
           {t(lang, 'recordingDatabaseTitle')}
         </span>
         {databaseInfo != null && (
-          <span className="truncate font-mono text-[10px] text-text-secondary" title={databaseInfo.path}>
+          <span className="w-[240px] shrink-0 truncate font-mono text-[10px] text-text-secondary" title={databaseInfo.path}>
             {databaseInfo.path}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => void loadOverview()}
@@ -176,7 +180,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             {exporting ? t(lang, 'recordingDatabaseExporting') : t(lang, 'recordingDatabaseExport')}
           </button>
         </div>
-      </div>
+      </HorizontalScrollArea>
 
       {error != null && (
         <div className="flex items-center gap-2 border-b border-danger/30 bg-danger/10 px-3 py-1 text-[11px] text-text-danger">
@@ -236,14 +240,16 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
 
         <div className="flex min-w-0 flex-1 flex-col">
           {selectedSession != null && (
-            <div className="flex min-h-9 flex-wrap items-center gap-2 border-b border-border-subtle px-2 py-1">
-              <span className="text-[10px] uppercase tracking-wider text-text-secondary">
+            <HorizontalScrollArea
+              className="flex min-h-9 flex-nowrap items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2 py-1"
+            >
+              <span className="flex-shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-text-secondary">
                 {t(lang, 'recordingDatabaseBindings')}
               </span>
               <select
                 value={selectedBindingId ?? ''}
                 onChange={(event) => selectBinding(event.target.value || null)}
-                className="h-7 min-w-[180px] max-w-[340px] rounded border border-border-subtle bg-bg-input px-1.5 text-[11px] text-text-primary"
+                className="h-7 min-w-[180px] max-w-[340px] flex-shrink-0 rounded border border-border-subtle bg-bg-input px-1.5 text-[11px] text-text-primary"
               >
                 <option value="">{t(lang, 'recordingDatabaseAllBindings')}</option>
                 {bindings.map((binding) => (
@@ -252,7 +258,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
                   </option>
                 ))}
               </select>
-              <span className="text-[10px] text-text-secondary">
+              <span className="flex-shrink-0 whitespace-nowrap text-[10px] text-text-secondary">
                 {selectedSession.item_count} {t(lang, 'recordingDatabaseSamples')} ·{' '}
                 {formatDurationUs(
                   selectedSession.first_timestamp_us != null && selectedSession.last_timestamp_us != null
@@ -260,7 +266,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
                     : null,
                 )}
               </span>
-            </div>
+            </HorizontalScrollArea>
           )}
 
           <div className="min-h-0 flex-1 overflow-auto">

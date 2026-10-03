@@ -3,6 +3,7 @@ import { waveformWindow, type WaveformWindowCache } from '../../../lib/buffers/d
 import { TIME_BASES_SEC, formatTimeBase, getEffectiveChannel, type ScopeAxisConfig } from '../../../types';
 import { timeBaseToWindowSec, HORIZONTAL_DIVS, VERTICAL_DIVS, applyCoupling } from '../../../lib/utils/scopeUtils';
 import { TIMELINE_PAD } from './waveformConstants';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { useSettingsStore } from '../../../store/settingsStore';
 import {
   resolveInputArray, type TimelineSeriesSpec,
@@ -442,13 +443,16 @@ export function WaveformTimeline({
 
   return (
     <div className="border-t border-border bg-bg-editor shrink-0">
-      <div className="flex items-center gap-0.5 px-1.5 py-0.5 bg-bg-panel-header border-b border-border">
-        <span className="text-[10px] text-text-primary font-mono px-1">{timeWindowLabel}</span>
-        <div className="flex-1" />
-        <span className="text-[10px] text-text-secondary font-mono px-1">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex flex-nowrap items-center gap-0.5 px-1.5 py-0.5 bg-bg-panel-header border-b border-border"
+      >
+        <span className="flex-shrink-0 whitespace-nowrap text-[10px] text-text-primary font-mono px-1">{timeWindowLabel}</span>
+        <div className="flex-1 min-w-2" />
+        <span className="flex-shrink-0 whitespace-nowrap text-[10px] text-text-secondary font-mono px-1">
           {statusLabel}
         </span>
-      </div>
+      </HorizontalScrollArea>
       <canvas
         ref={canvasRef}
         className="block w-full h-10"

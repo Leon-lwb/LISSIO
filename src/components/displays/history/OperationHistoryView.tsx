@@ -29,6 +29,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useHistoryStore, beginHistoryOp, type HistoryEntry } from '../../../store/historyStore';
 import { NEUTRAL_VISUAL, nodeVisualOf } from '../../../lib/utils/nodeKindVisuals';
 import { t, type Lang } from '../../../i18n';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 /// 清空确认的自动复位时长 (ms)
 const CONFIRM_RESET_MS = 3000;
@@ -130,20 +131,23 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden" data-tour="operation-history">
       {/* 头部: 标题 + 步骤进度 + 撤销/重做/清空 */}
-      <div className="flex items-center gap-2 px-2.5 h-9 border-b border-border-subtle bg-bg-panel-header shrink-0">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex flex-nowrap items-center gap-2 px-2.5 h-9 border-b border-border-subtle bg-bg-panel-header"
+      >
         <HistoryIcon size={13} className="text-text-secondary shrink-0" />
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-text-primary truncate">
+        <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-text-primary">
           {t(lang, 'operationHistoryTitle')}
         </span>
         {entries.length > 0 && (
           <span
             title={t(lang, 'opHistoryCurrentPosition')}
-            className="inline-flex items-center h-5 px-1.5 rounded-full bg-bg-input border border-border-subtle text-[10px] font-mono text-text-secondary tabular-nums"
+            className="inline-flex shrink-0 items-center h-5 px-1.5 rounded-full bg-bg-input border border-border-subtle text-[10px] font-mono text-text-secondary tabular-nums"
           >
             {stepProgress(lang, index, entries.length)}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-0.5">
+        <div className="ml-auto flex flex-shrink-0 items-center gap-0.5">
           <button type="button" disabled={!canUndo} onClick={() => undo()} title={`${t(lang, 'menuUndo')} (Ctrl+Z)`} className={iconBtnCls}>
             <Undo2 size={14} />
           </button>
@@ -167,7 +171,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
             <Trash2 size={14} />
           </button>
         </div>
-      </div>
+      </HorizontalScrollArea>
 
       {/* 列表: 有记录时贴顶铺满滚动; 空状态在面板内水平垂直居中 */}
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
@@ -253,4 +257,4 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
 });
 
 const iconBtnCls =
-  'flex items-center justify-center size-6 rounded text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:hover:bg-transparent disabled:hover:text-text-secondary disabled:cursor-not-allowed';
+  'flex shrink-0 items-center justify-center size-6 rounded text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:hover:bg-transparent disabled:hover:text-text-secondary disabled:cursor-not-allowed';
