@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { SettingsModal } from '../SettingsModal';
 import { tauriMock } from '../../test/setup';
 import { useAppStore } from '../../store/appStore';
@@ -60,5 +60,31 @@ describe('SettingsModal AI prompt folder', () => {
         }),
       ]);
     });
+  });
+
+  it('uses breadcrumbs for separate plugin and MCP second-level screens', () => {
+    render(<SettingsModal />);
+
+    expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('设置');
+    fireEvent.click(screen.getByRole('button', { name: '打开插件设置' }));
+    expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('插件');
+    expect(screen.getByRole('checkbox', { name: '启用软件内置插件' })).toBeEnabled();
+    expect(screen.getByRole('checkbox', { name: '启用 Fetch 网页' })).toBeEnabled();
+
+    const breadcrumb = screen.getByRole('navigation', { name: '设置导航' });
+    fireEvent.click(within(breadcrumb).getByRole('button', { name: 'AI' }));
+    fireEvent.click(screen.getByRole('button', { name: '打开 MCP 设置' }));
+    expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('MCP');
+  });
+
+  it('keeps plugin master switches on the first level and gates plugin details', () => {
+    render(<SettingsModal />);
+
+    fireEvent.click(screen.getByRole('checkbox', { name: '插件' }));
+    fireEvent.click(screen.getByRole('button', { name: '打开插件设置' }));
+
+    expect(screen.getByText('插件总开关已关闭')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: '启用软件内置插件' })).toBeDisabled();
+    expect(screen.getByRole('checkbox', { name: '启用 Fetch 网页' })).toBeDisabled();
   });
 });

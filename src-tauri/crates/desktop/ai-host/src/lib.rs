@@ -10,13 +10,14 @@ mod session_store_tests;
 #[cfg(test)]
 mod test_support;
 mod turn;
+mod web_fetch;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::native_executor::{
     CompositeExecutor, ConversationTitleExecutor, McpToolExecutor, NativeToolExecutor,
-    PendingCalls, ToolOutcome,
+    NativeToolOptions, PendingCalls, ToolOutcome,
 };
 use crate::turn::{TurnPersistence, TurnPipeline};
 use chat::{AiChatEvent, ChatPayload, ChatTaskRegistry, GenaiTurnProvider, run_chat};
@@ -38,9 +39,21 @@ use serde_json::Value;
 #[cfg(debug_assertions)]
 use secret::DevEnvSecretStore;
 pub use secret::{SecretSource, SecretStatus, SecretStore, SystemSecretStore};
+pub use web_fetch::{WebFetchPage, ai_fetch_webpage_html};
 
 /// 流式事件出口。WebSocket 使用连接级实现，旧 Tauri wrapper 可注入 Channel 适配器。
 pub type ChatEventSink = Arc<dyn Fn(AiChatEvent) + Send + Sync>;
+
+/// Independent tool sources enabled for one chat turn.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AiToolToggles {
+    /// External MCP tools.
+    pub mcp: bool,
+    /// Software capabilities and built-in frontend tools.
+    pub builtin: bool,
+    /// Web fetching skill.
+    pub web: bool,
+}
 
 /// AI 功能全局状态 (Tauri managed)。
 pub struct AiHost {
@@ -124,8 +137,8 @@ pub fn ai_list_providers() -> Vec<AdapterInfo> {
 /// 派生, 回合终态后产物落盘。返回 task_id 供 `ai_chat_cancel` 取消。
 /// 错误事件同样走 Channel, 命令本身只在配置/参数非法时失败。
 ///
-/// 工具来源两组独立开关:`use_builtin_tools` 启用内置原生工具 (软件自有能力 +
-/// 知识库, 系统提示词按 `ui_lang` 注入索引);`use_mcp_tools` 启用外部 MCP 工具。
+/// [`AiToolToggles`] 的三个来源互相独立:软件能力与内置前端工具、
+/// `fetch_webpage` Web 技能、外部 MCP 工具。
 ///
 /// # Errors
 /// 配置校验失败、系统提示词文件不可用或会话落盘失败。
@@ -136,8 +149,7 @@ pub async fn ai_chat_send(
     attachments: Option<Vec<AttachmentDto>>,
     regenerate: bool,
     mut config: AiProviderConfig,
-    use_mcp_tools: bool,
-    use_builtin_tools: bool,
+    tools: AiToolToggles,
     ui_lang: Option<String>,
     on_event: ChatEventSink,
     frontend_sink: EventSinkHandle,
@@ -205,7 +217,8 @@ pub async fn ai_chat_send(
         &state.registry,
         lang,
         &prompt_text,
-        use_builtin_tools,
+        tools.builtin,
+        tools.web,
         first_turn_title,
     );
 
@@ -214,7 +227,7 @@ pub async fn ai_chat_send(
     let sessions = Arc::clone(&state.sessions);
     let mcp = Arc::clone(&state.mcp);
     let pending_frontend = Arc::clone(&state.pending_frontend);
-    let mcp_tools = if use_mcp_tools {
+    let mcp_tools = if tools.mcp {
         state.tool_cache.lock().clone()
     } else {
         Vec::new()
@@ -237,8 +250,8 @@ pub async fn ai_chat_send(
         let sink = pipeline.sink();
         let provider = GenaiTurnProvider;
 
-        // 内置工具: 注册表派发, toolbox 从 AppState 提取共享句柄, pending 注册表接收前端回执
-        let native = use_builtin_tools.then(|| {
+        // 软件工具走注册表，内置 UI/Web 技能走前端事件桥；三组开关互相独立。
+        let native = (tools.builtin || tools.web).then(|| {
             NativeToolExecutor::new(
                 registry,
                 toolbox,
@@ -246,6 +259,10 @@ pub async fn ai_chat_send(
                 frontend_sink,
                 pending_frontend,
                 lang,
+                NativeToolOptions {
+                    builtin: tools.builtin,
+                    web: tools.web,
+                },
             )
         });
         let mcp_executor = (!mcp_tools.is_empty()).then(|| McpToolExecutor::new(mcp_tools, mcp));

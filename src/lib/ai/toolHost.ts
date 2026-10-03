@@ -11,6 +11,7 @@
 //! 事件收敛 (见 appStoreHelpers.adoptSourceGraph)。
 
 import { transport } from '../rpc';
+import { api } from '../tauri/tauri';
 import { errorText } from '../../types/errors';
 import { useAppStore } from '../../store/appStore';
 import { useModelCatalogStore } from '../../store/modelCatalogStore';
@@ -28,6 +29,7 @@ import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate, type TemplateApplyMode } from '../quickstart/applyTemplate';
 import { t } from '../../i18n';
 import type { ProtocolConfig, WidgetConfig } from '../../types';
+import { preprocessWebPage } from './webpage';
 
 /// 后端调用载荷 (`cmd_ai::native_executor` 同构)。
 interface AiToolInvoke {
@@ -308,6 +310,11 @@ async function applyTemplateTool(args: Record<string, unknown>): Promise<unknown
   return { ok: true, mode };
 }
 
+/** Fetch a page through the bounded backend transport, then extract clean Markdown. */
+async function fetchWebpage(args: Record<string, unknown>): Promise<unknown> {
+  return preprocessWebPage(await api.aiFetchWebpageHtml(str(args, 'url')));
+}
+
 // ============ 注册与分发 ============
 
 const HANDLERS: Record<string, ToolHandler> = {
@@ -329,6 +336,7 @@ const HANDLERS: Record<string, ToolHandler> = {
   disconnect_device: (args) => disconnectDevice(args),
   list_templates: () => listTemplates(),
   apply_template: (args) => applyTemplateTool(args),
+  fetch_webpage: (args) => fetchWebpage(args),
 };
 
 let started = false;

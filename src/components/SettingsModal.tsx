@@ -13,16 +13,11 @@ import {
   RotateCcw,
   Check,
   Type,
-  Database,
-  Download,
-  Upload,
   RefreshCw,
-  Sparkles,
-  ExternalLink,
+  ChevronRight,
 } from 'lucide-react';
 import { platform } from '../lib/platform';
 import { hasTauriRuntime } from '../lib/rpc';
-import { ORCAROUTER_OFFERS_URL, ORCAROUTER_REFERRAL_URL } from '../settings/defaults';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
@@ -31,16 +26,30 @@ import { ThemeEditor } from './ThemeEditor';
 import type { SettingFieldDef} from './settingFields';
 import { buildSettingFields } from './settingFields';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
-import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
 import { formatError } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
 import { SearchInput } from './ui/SearchInput';
 import { DialogHeader, DialogOverlay, DialogSurface } from './ui/Dialog';
 import { AiMcpSettings } from './ai/AiMcpSettings';
+import { AiPluginSettings, AiSettingsSections } from './ai/AiSettingsSections';
 import { SettingsControl } from './SettingsControl';
 import { UpdateChannelDialog } from './UpdateChannelDialog';
-import { CATEGORY_ICONS, CATEGORY_LABEL_KEY } from './settingsCategories';
+import { CATEGORY_LABEL_KEY } from './settingsCategories';
+import { OrcaRouterPromo } from './OrcaRouterPromo';
+import {
+  SettingsResetButton,
+  SettingsSidebarNavigation,
+} from './SettingsSidebarSections';
+
+type AiSection = 'main' | 'plugins' | 'mcp';
+
+const AI_SECTION_FIELDS: Record<Exclude<AiSection, 'main'>, ReadonlySet<string>> = {
+  plugins: new Set(['builtinToolsEnabled', 'webToolsEnabled']),
+  mcp: new Set(['mcpServerPort']),
+};
+
+const AI_NAV_FIELDS = new Set(['pluginsEnabled', 'mcpToolsEnabled']);
 
 export function SettingsModal() {
   const lang = useAppStore((s) => s.lang);
@@ -57,6 +66,7 @@ export function SettingsModal() {
   const resetCategory = useSettingsStore((s) => s.resetCategory);
   const [themeEditorOpen, setThemeEditorOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
+  const [aiSection, setAiSection] = useState<AiSection>('main');
   const [appVersion, setAppVersion] = useState('');
   /// 更新状态 — 与状态栏/更新弹窗共享 updateStore
   const updateStatus = useUpdateStore((s) => s.status);
@@ -102,9 +112,16 @@ export function SettingsModal() {
 
   // 搜索过滤
   const filteredFields = useMemo(() => {
-    if (!searchQuery.trim()) return settingFields;
+    const searchActive = searchQuery.trim().length > 0;
+    const baseFields = activeCategory === 'ai' && !searchActive
+      ? settingFields.filter((field) =>
+          !AI_NAV_FIELDS.has(field.field)
+          && !Object.values(AI_SECTION_FIELDS).some((fields) => fields.has(field.field))
+        )
+      : settingFields;
+    if (!searchActive) return baseFields;
     const q = searchQuery.toLowerCase();
-    return settingFields.filter((f) => {
+    return baseFields.filter((f) => {
       const label = t(lang, f.labelKey).toLowerCase();
       const desc = t(lang, f.descKey).toLowerCase();
       const category = t(lang, CATEGORY_LABEL_KEY[f.category]).toLowerCase();
@@ -116,7 +133,7 @@ export function SettingsModal() {
         (f.keywords?.some((k) => k.toLowerCase().includes(q)) ?? false)
       );
     });
-  }, [lang, searchQuery, settingFields]);
+  }, [activeCategory, lang, searchQuery, settingFields]);
 
   // 按分类分组
   const groupedFields = useMemo(() => {
@@ -187,6 +204,14 @@ export function SettingsModal() {
       onEditTheme={() => setThemeEditorOpen(true)}
     />
   );
+  const updateAiBoolean = (field: keyof AppSettings['ai'], value: boolean) => {
+    (update as (c: keyof AppSettings, f: string, v: unknown) => void)('ai', field, value);
+  };
+  const aiSectionLabel = aiSection === 'plugins'
+    ? t(lang, 'settingsAiSectionPlugins')
+    : aiSection === 'mcp'
+      ? t(lang, 'settingsAiSectionMcp')
+      : null;
 
   return (
     <DialogOverlay
@@ -213,7 +238,10 @@ export function SettingsModal() {
             inputRef={searchInputRef}
             placeholder={t(lang, 'settingsSearch')}
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={(value) => {
+              setAiSection('main');
+              setSearchQuery(value);
+            }}
           />
           <button className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer" onClick={close} title={t(lang, 'settingsClose')}>
             <X size={16} />
@@ -223,56 +251,16 @@ export function SettingsModal() {
         {/* 主体 — 左侧分类 + 右侧表单 */}
         <div className="flex-1 flex min-h-0">
           <div className="w-50 dialog-chrome-muted border-r border-border py-2 flex flex-col flex-shrink-0 overflow-y-auto">
-            {(Object.keys(CATEGORY_LABEL_KEY) as (keyof AppSettings)[]).map((cat) => {
-              const isActive =
-                !searchQuery.trim() && activeCategory === cat;
-              return (
-                <div
-                  key={cat}
-                  className={`flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer transition-all duration-150 border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary ${isActive ? 'text-text-bright bg-bg-hover border-l-accent' : ''}`}
-                  onClick={() => {
-                    setActiveCategory(cat);
-                    setSearchQuery('');
-                  }}
-                  onKeyDown={activateOnKeyboard}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {CATEGORY_ICONS[cat]}
-                  <span>{t(lang, CATEGORY_LABEL_KEY[cat])}</span>
-                </div>
-              );
-            })}
-            <div className="flex-1" />
-            <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
-              <div className="section-heading mb-1">
-                {t(lang, 'backupCategory')}
-              </div>
-              <button
-                className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
-                onClick={() => void exportAppToFile()}
-                title={t(lang, 'exportConfig')}
-              >
-                <Download size={14} />
-                <span>{t(lang, 'exportConfig')}</span>
-              </button>
-              <button
-                className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
-                onClick={() => void importAppFromFile()}
-                title={t(lang, 'importConfig')}
-              >
-                <Upload size={14} />
-                <span>{t(lang, 'importConfig')}</span>
-              </button>
-              <button
-                className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
-                onClick={() => setBackupModalOpen(true)}
-                title={t(lang, 'backupCustom')}
-              >
-                <Database size={14} />
-                <span>{t(lang, 'backupCustom')}</span>
-              </button>
-            </div>
+            <SettingsSidebarNavigation
+              activeCategory={activeCategory}
+              searchQuery={searchQuery}
+              onSelectCategory={(category) => {
+                setActiveCategory(category);
+                setSearchQuery('');
+                setAiSection('main');
+              }}
+              onOpenBackup={() => setBackupModalOpen(true)}
+            />
             <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
               <div className="section-heading mb-1">
                 {t(lang, 'updateCategory')}
@@ -329,21 +317,46 @@ export function SettingsModal() {
                 </div>
               )}
             </div>
-            <div
-              className="flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer transition-all duration-150 border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary"
-              onClick={reset}
-              onKeyDown={activateOnKeyboard}
-              role="button"
-              tabIndex={0}
-              title={t(lang, 'settingsReset')}
-            >
-              <RotateCcw size={14} />
-              <span>{t(lang, 'settingsReset')}</span>
-            </div>
+            <SettingsResetButton onClick={reset} />
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-4 bg-bg-editor">
-            {(Object.keys(groupedFields) as (keyof AppSettings)[]).map((cat) => {
+            {activeCategory === 'ai' && !searchQuery.trim() && (
+              <nav
+                className="flex items-center gap-1.5 pb-3 text-xs text-text-secondary"
+                aria-label={t(lang, 'settingsBreadcrumb')}
+              >
+                <span>{t(lang, 'settingsTitle')}</span>
+                <ChevronRight size={12} aria-hidden="true" />
+                <button
+                  type="button"
+                  className={aiSection === 'main' ? 'text-text-primary' : 'hover:text-text-primary'}
+                  onClick={() => setAiSection('main')}
+                >
+                  {t(lang, CATEGORY_LABEL_KEY.ai)}
+                </button>
+                {aiSectionLabel && (
+                  <>
+                    <ChevronRight size={12} aria-hidden="true" />
+                    <span className="text-text-primary">{aiSectionLabel}</span>
+                  </>
+                )}
+              </nav>
+            )}
+            {activeCategory === 'ai' && !searchQuery.trim() && aiSection === 'plugins' ? (
+              <AiPluginSettings settings={settings} update={updateAiBoolean} />
+            ) : activeCategory === 'ai' && !searchQuery.trim() && aiSection === 'mcp' ? (
+              <AiMcpSettings
+                port={settings.ai.mcpServerPort}
+                onPortChange={(value) =>
+                  (update as (c: keyof AppSettings, f: string, v: unknown) => void)(
+                    'ai',
+                    'mcpServerPort',
+                    value
+                  )
+                }
+              />
+            ) : (Object.keys(groupedFields) as (keyof AppSettings)[]).map((cat) => {
               const fields = groupedFields[cat]!;
               // 搜索模式下显示分类标题; 非搜索模式只显示当前分类
               if (!searchQuery.trim() && cat !== activeCategory) return null;
@@ -363,37 +376,17 @@ export function SettingsModal() {
                         </div>
                         <div className="flex-shrink-0 min-w-[200px] flex items-center justify-end">{renderControl(def)}</div>
                       </div>
-                      {/* OrcaRouter 重点提示: 命名空间模型名 + 推广链接获取 API Key + 免费模型入口 */}
-                      {cat === 'ai' && def.field === 'apiKey' && settings.ai.adapter === 'orcarouter' && (
-                        <div className="my-2 px-3 py-2 rounded border border-accent/25 bg-accent/5 space-y-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className="flex-1 min-w-0 text-xs text-text-secondary leading-relaxed">
-                              {t(lang, 'settingAiOrcaHint')}
-                            </span>
-                            <button
-                              className="flex-shrink-0 px-2 py-1 rounded bg-accent text-accent-foreground text-xs flex items-center gap-1"
-                              onClick={() => void platform.openUrl(ORCAROUTER_REFERRAL_URL)}
-                            >
-                              <ExternalLink size={11} />
-                              {t(lang, 'settingAiOrcaGetKey')}
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-xs text-text-secondary leading-relaxed">
-                            <Sparkles size={11} className="flex-shrink-0 text-accent" />
-                            <span className="flex-shrink-0">{t(lang, 'settingAiOrcaFreeModels')}</span>
-                            <button
-                              className="text-accent hover:text-accent-hover hover:underline truncate text-left"
-                              onClick={() => void platform.openUrl(ORCAROUTER_OFFERS_URL)}
-                              title={ORCAROUTER_OFFERS_URL}
-                            >
-                              {ORCAROUTER_OFFERS_URL}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                      {cat === 'ai' && def.field === 'apiKey' && settings.ai.adapter === 'orcarouter' && <OrcaRouterPromo />}
                     </Fragment>
                   ))}
-                  {cat === 'ai' && !searchQuery.trim() && <AiMcpSettings />}
+                  {cat === 'ai' && !searchQuery.trim() && aiSection === 'main' && (
+                    <AiSettingsSections
+                      settings={settings}
+                      update={updateAiBoolean}
+                      onOpenPlugins={() => setAiSection('plugins')}
+                      onOpenMcp={() => setAiSection('mcp')}
+                    />
+                  )}
                 </div>
               );
             })}

@@ -25,6 +25,15 @@ export default defineConfig(() => ({
   clearScreen: false,
   optimizeDeps: {
     entries: ['index.html'],
+    // Webpage extraction is loaded through the AI panel code-split boundary.
+    // Prebundle it at startup so dependency discovery cannot invalidate an
+    // already-running dev session with "Outdated Optimize Dep".
+    include: [
+      '@mozilla/readability',
+      'dompurify',
+      'turndown',
+      'turndown-plugin-gfm',
+    ],
   },
 
   // Web 出口读不到 Tauri 的版本注入, 构建期固化 package.json 版本 (platform shim 的来源)

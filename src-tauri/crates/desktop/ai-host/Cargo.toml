@@ -26,6 +26,7 @@ log = { workspace = true }
 mcp-client = { workspace = true }
 mcp-server = { workspace = true }
 parking_lot = { workspace = true }
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

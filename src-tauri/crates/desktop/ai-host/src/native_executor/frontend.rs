@@ -1,4 +1,4 @@
-//! 前端托管工具清单 — 画布/UI 状态操作 (后端无实现, 经事件桥由前端执行)。
+//! 前端托管工具清单 — 画布/UI 状态与网页预处理 (经事件桥由前端执行)。
 //!
 //! 后端能力工具 (数据读取/设备发送/连线/知识库等) 全部来自
 //! [`control_api::capabilities::CapabilityRegistry`], 不在此重复声明;
@@ -23,13 +23,8 @@ fn spec(name: &str, description: &str, properties: Value, required: &[&str]) -> 
     }
 }
 
-/// 是否为前端托管工具。
-pub fn is_frontend_tool(name: &str) -> bool {
-    FRONTEND_TOOLS.contains(&name)
-}
-
-/// 前端托管工具名集合 (与前端 `toolHost.ts` 实现一一对应)。
-pub const FRONTEND_TOOLS: &[&str] = &[
+/// 内置前端托管工具名集合 (与前端 `toolHost.ts` 实现一一对应)。
+pub const BUILTIN_FRONTEND_TOOLS: &[&str] = &[
     "get_workspace",
     "add_node",
     "update_node_config",
@@ -43,8 +38,21 @@ pub const FRONTEND_TOOLS: &[&str] = &[
     "apply_template",
 ];
 
-/// 前端托管工具规格。
-pub fn frontend_tool_specs() -> Vec<ToolSpecDto> {
+/// Web 技能工具名集合。
+pub const WEB_TOOLS: &[&str] = &["fetch_webpage"];
+
+/// 是否为软件内置前端工具。
+pub fn is_builtin_frontend_tool(name: &str) -> bool {
+    BUILTIN_FRONTEND_TOOLS.contains(&name)
+}
+
+/// 是否为 Web 技能工具。
+pub fn is_web_tool(name: &str) -> bool {
+    WEB_TOOLS.contains(&name)
+}
+
+/// 内置前端托管工具规格。
+pub fn builtin_frontend_tool_specs() -> Vec<ToolSpecDto> {
     vec![
         spec(
             "get_workspace",
@@ -127,6 +135,18 @@ pub fn frontend_tool_specs() -> Vec<ToolSpecDto> {
     ]
 }
 
+/// Web 技能工具规格。
+pub fn web_tool_specs() -> Vec<ToolSpecDto> {
+    vec![spec(
+        "fetch_webpage",
+        "抓取 HTTP/HTTPS 网页并提取主要正文；返回标题、最终 URL、发布信息和去除导航/脚本/样式后的 Markdown。适合查询网页资料、文档和文章，不执行页面 JavaScript",
+        json!({
+            "url": {"type": "string", "description": "完整 HTTP/HTTPS 网页 URL"}
+        }),
+        &["url"],
+    )]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,18 +154,25 @@ mod tests {
     /// 前端工具规格完备: 名字集合与规格一一对应, 无重复。
     #[test]
     fn frontend_specs_cover_tool_names() {
-        let specs = frontend_tool_specs();
+        let specs = builtin_frontend_tool_specs();
         let mut seen = std::collections::HashSet::new();
         for t in &specs {
             assert!(seen.insert(t.name.as_str()), "重复工具名: {}", t.name);
             assert!(!t.description.is_empty());
             assert_eq!(t.input_schema["type"], "object");
         }
-        assert_eq!(seen.len(), FRONTEND_TOOLS.len());
-        for name in FRONTEND_TOOLS {
+        assert_eq!(seen.len(), BUILTIN_FRONTEND_TOOLS.len());
+        for name in BUILTIN_FRONTEND_TOOLS {
             assert!(seen.contains(name), "前端工具 {name} 未声明规格");
         }
-        assert!(is_frontend_tool("add_node"));
-        assert!(!is_frontend_tool("send_bytes"));
+        assert!(is_builtin_frontend_tool("add_node"));
+        assert!(!is_builtin_frontend_tool("send_bytes"));
+    }
+
+    #[test]
+    fn web_tool_is_separate_from_builtin_tools() {
+        assert_eq!(web_tool_specs().len(), WEB_TOOLS.len());
+        assert!(is_web_tool("fetch_webpage"));
+        assert!(!is_builtin_frontend_tool("fetch_webpage"));
     }
 }

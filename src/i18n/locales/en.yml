@@ -468,6 +468,7 @@ performanceLastSample: Last sample
 # Settings system
 settings: Settings
 settingsTitle: Settings
+settingsBreadcrumb: Settings breadcrumb
 settingsSearch: Search settings…
 settingsReset: Reset to Defaults
 settingsResetCategory: Reset this category
@@ -743,8 +744,17 @@ settingAiSystemPrompt: System Prompt
 settingAiSystemPromptDesc: Edit ai-system-prompt.md in the app settings folder. Changes take effect with your next AI message.
 settingAiOpenSettingsFolder: Open Settings Folder
 settingAiOpenSettingsFolderFailed: Failed to open settings folder
-settingAiBuiltinTools: Enable Built-in Tools
-settingAiBuiltinToolsDesc: Let the AI edit the node graph, operate the app, read device data, and consult the built-in knowledge base (skills)
+settingAiPlugins: Plugins
+settingAiPluginsDesc: Manage built-in app plugins and Web Fetch
+settingsAiSections: Plugins & Services
+settingsOpenPlugins: Open plugin settings
+settingsOpenMcp: Open MCP settings
+settingAiBuiltinTools: Enable Built-in App Plugins
+settingAiBuiltinToolsDesc: Let the AI use node graph, device data, app operations, and built-in knowledge skills
+settingAiWebTools: Enable Web Fetch
+settingAiWebToolsDesc: Let the AI fetch HTTP/HTTPS pages and read the main content without navigation, scripts, or styles
+settingAiMcp: MCP
+settingAiMcpDesc: Manage the local MCP service and external MCP servers
 settingAiMcpTools: Enable MCP Tools
 settingAiMcpToolsDesc: Expose tools from enabled external MCP servers to the model during chat
 settingAiMcpServerPort: Local MCP Port
@@ -752,6 +762,9 @@ settingAiMcpServerPortDesc: Port of the MCP server exposing this app's capabilit
 settingAiOrcaHint: OrcaRouter gateway — model names need a vendor prefix, e.g. openai/gpt-4o-mini or anthropic/claude-sonnet-4
 settingAiOrcaGetKey: Get an API Key · support the project
 settingAiOrcaFreeModels: "Free models: available once you have an API key"
+settingsAiSectionPlugins: Plugins
+settingsAiSectionMcp: MCP
+settingAiPluginMasterDisabled: The plugin master switch is off
 
 # About dialog
 about: About
@@ -1101,7 +1114,7 @@ tourCanTitle: CAN Frames · Bus Analysis
 tourCanContent: Opened for you already. Switching to Slcan/CandleLight protocol plus hardware shows real bus traffic; the <strong>hint bar</strong> jumps into protocol settings.
 tourActCanTab: Click any sub-tab below to switch views
 tourAiTitle: AI Assistant · Chat to Operate
-tourAiContent: Toggle this panel anytime via the AI icon on the right of the status bar (docks left/right/bottom or floats). After setting a provider and API key in Settings → AI, <strong>the AI can build node graphs, read waveforms and CAN data, and send commands to your device</strong>; the MCP drawer in the title bar connects external tools, and 127.0.0.1:8765/mcp lets external AI clients like Claude Desktop drive this app.
+tourAiContent: Toggle this panel anytime via the AI icon on the right of the status bar (docks left/right/bottom or floats). After setting a provider and API key in Settings → AI, <strong>the AI can build node graphs, read waveforms and CAN data, and send commands to your device</strong>; manage external tools at Settings → AI → MCP, while 127.0.0.1:8765/mcp lets external AI clients like Claude Desktop drive this app.
 tourHelpTitle: Help Center · Come Back Anytime
 tourHelpContent: The question-mark icon reopens this center or replays the tour; Settings disables the first-launch tour and contextual hints.
 tourNoEdgeSkip: Skip
@@ -1193,7 +1206,7 @@ helpAiSteps: |-
   Pick a provider and enter the API key in Settings → AI - the default is the OrcaRouter gateway, whose model names need a vendor prefix (e.g. openai/gpt-4o-mini); keys live in the system keychain, never in the settings file
   Open the AI Chat panel from the AI icon on the right of the status bar - it docks left/right/bottom or floats freely, with multi-session management in the title bar
   With Built-in Tools enabled in settings, the AI can build and edit node graphs, read waveform/CAN/raw data, send data to the device, and consult the bundled usage knowledge base
-  The MCP Servers drawer in the panel title bar adds external MCP servers (stdio command or http URL), exposing their tools to the model
+  Settings → AI → MCP adds external MCP servers (stdio command or http URL), exposing their tools to the model
   The app also serves MCP at 127.0.0.1:8765/mcp (loopback only, port configurable in settings) - point Claude Desktop or other external clients at it to drive this app
 
 # CAN

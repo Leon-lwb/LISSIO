@@ -3,9 +3,15 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { t } from '../../i18n';
+import { DraftNumberInput } from '../ui/fields';
+
+interface AiMcpSettingsProps {
+  port: number;
+  onPortChange: (port: number) => void;
+}
 
 /// AI 设置中的外部 MCP server 与工具管理。
-export function AiMcpSettings() {
+export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
   const lang = useAppStore((s) => s.lang);
   const {
     servers, tools, serverRunning, serverPort, addServer, removeServer, setServerEnabled,
@@ -44,6 +50,24 @@ export function AiMcpSettings() {
 
   return (
     <section className="space-y-3 py-4 text-xs">
+      <div className="space-y-0.5">
+        <h3 className="text-sm font-medium text-text-primary">{t(lang, 'settingsAiSectionMcp')}</h3>
+        <p className="text-xs text-text-secondary">{t(lang, 'settingAiMcpDesc')}</p>
+      </div>
+      <div className="flex items-center justify-between gap-4 border-b border-border pb-3">
+        <div className="min-w-0">
+          <div className="text-text-primary">{t(lang, 'settingAiMcpServerPort')}</div>
+          <div className="mt-0.5 text-text-secondary">{t(lang, 'settingAiMcpServerPortDesc')}</div>
+        </div>
+        <DraftNumberInput
+          className="w-[120px] rounded border border-border bg-bg-input px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
+          value={port}
+          min={1024}
+          max={65535}
+          step={1}
+          onCommit={onPortChange}
+        />
+      </div>
       <div className="space-y-0.5">
         <h3 className="text-sm font-medium text-text-primary">{t(lang, 'aiMcpServers')}</h3>
         <p className="text-xs text-text-secondary">{t(lang, 'aiMcpServersHint')}</p>

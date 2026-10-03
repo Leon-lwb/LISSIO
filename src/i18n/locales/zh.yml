@@ -468,6 +468,7 @@ performanceLastSample: 最近采样
 # 设置系统
 settings: 设置
 settingsTitle: 设置
+settingsBreadcrumb: 设置导航
 settingsSearch: 搜索设置…
 settingsReset: 重置为默认
 settingsResetCategory: 重置此项
@@ -743,8 +744,17 @@ settingAiSystemPrompt: 系统提示词
 settingAiSystemPromptDesc: 在软件设置文件夹中编辑 ai-system-prompt.md，修改将在下一条 AI 消息生效。
 settingAiOpenSettingsFolder: 打开设置文件夹
 settingAiOpenSettingsFolderFailed: 打开设置文件夹失败
-settingAiBuiltinTools: 启用内置工具
-settingAiBuiltinToolsDesc: 对话中允许 AI 编辑节点图、操作软件、读取数据并查询内置知识库 (skills)
+settingAiPlugins: 插件
+settingAiPluginsDesc: 管理软件内置插件与 Fetch 网页
+settingsAiSections: 插件与服务
+settingsOpenPlugins: 打开插件设置
+settingsOpenMcp: 打开 MCP 设置
+settingAiBuiltinTools: 启用软件内置插件
+settingAiBuiltinToolsDesc: 允许 AI 使用节点图、设备数据、软件操作和内置知识库等软件能力
+settingAiWebTools: 启用 Fetch 网页
+settingAiWebToolsDesc: 允许 AI 抓取 HTTP/HTTPS 网页并读取去除导航、脚本和样式后的主要正文
+settingAiMcp: MCP
+settingAiMcpDesc: 管理本地 MCP 服务与外部 MCP 服务器
 settingAiMcpTools: 启用 MCP 工具
 settingAiMcpToolsDesc: 对话时自动把已启用外部 MCP server 的工具提供给模型
 settingAiMcpServerPort: 本地 MCP 端口
@@ -752,6 +762,9 @@ settingAiMcpServerPortDesc: 对外暴露本应用能力的 MCP 服务端口 (仅
 settingAiOrcaHint: OrcaRouter 聚合网关 — 模型名需带厂商前缀, 如 openai/gpt-4o-mini、anthropic/claude-sonnet-4
 settingAiOrcaGetKey: 获取 API Key · 支持项目
 settingAiOrcaFreeModels: 免费模型:获取 API Key 即可访问
+settingsAiSectionPlugins: 插件
+settingsAiSectionMcp: MCP
+settingAiPluginMasterDisabled: 插件总开关已关闭
 
 # About 弹窗
 about: 关于
@@ -1101,7 +1114,7 @@ tourCanTitle: CAN 帧 · 总线分析
 tourCanContent: 已为你自动打开视图。切到 Slcan/CandleLight 协议+硬件即可看真实总线，<strong>顶部提示条</strong>可一键设置协议。
 tourActCanTab: 点击底部任一子页签切换视图
 tourAiTitle: AI 助手 · 对话即操作
-tourAiContent: 状态栏右侧的 AI 图标随时开关此面板（可停靠左/右/下或拖成浮动）。在 设置 → AI 配好服务商与 API Key 后，<strong>AI 可直接搭建节点图、读取波形与 CAN 数据、向设备发送命令</strong>；标题栏的 MCP 抽屉可接入外部工具，本机 127.0.0.1:8765/mcp 也可供 Claude Desktop 等外部 AI 客户端控制本软件。
+tourAiContent: 状态栏右侧的 AI 图标随时开关此面板（可停靠左/右/下或拖成浮动）。在 设置 → AI 配好服务商与 API Key 后，<strong>AI 可直接搭建节点图、读取波形与 CAN 数据、向设备发送命令</strong>；在 设置 → AI → MCP 管理外部工具，本机 127.0.0.1:8765/mcp 也可供 Claude Desktop 等外部 AI 客户端控制本软件。
 tourHelpTitle: 帮助中心 · 随时回来
 tourHelpContent: 问号图标随时回到本中心或重放引导；设置里可关闭首启引导与上下文提示条。
 tourNoEdgeSkip: 跳过
@@ -1193,7 +1206,7 @@ helpAiSteps: |-
   在 设置 → AI 选择模型服务商并填写 API Key——默认 OrcaRouter 聚合网关，模型名需带厂商前缀（如 openai/gpt-4o-mini）；密钥只存系统钥匙串，不写入设置文件
   点击状态栏右侧的 AI 图标打开「AI 对话」面板——可停靠在左/右/下或拖成浮动窗口，标题栏管理多会话
   设置中开启「内置工具」后，AI 能直接搭建与修改节点图、读取波形/CAN/原始数据、向设备发送数据，并可查询内置使用知识库
-  面板标题栏的「MCP 服务器」抽屉可添加外部 MCP server（stdio 命令或 http 地址），其工具随即提供给模型调用
+  设置 → AI → MCP 可添加外部 MCP server（stdio 命令或 http 地址），其工具随即提供给模型调用
   本应用同时在 127.0.0.1:8765/mcp 提供 MCP 服务（仅监听本机回环，端口可在设置中修改），Claude Desktop 等外部客户端接入后即可控制本软件
 
 # CAN

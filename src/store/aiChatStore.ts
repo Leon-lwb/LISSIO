@@ -132,7 +132,8 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
         payload.regenerate,
         providerConfigFromSettings(),
         ai.mcpToolsEnabled,
-        ai.builtinToolsEnabled,
+        ai.pluginsEnabled && ai.builtinToolsEnabled,
+        ai.pluginsEnabled && ai.webToolsEnabled,
         lang,
         channel
       );

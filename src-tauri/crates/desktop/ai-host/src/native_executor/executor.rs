@@ -26,8 +26,8 @@ use super::frontend;
 /// 前端托管工具调用事件名 (前端 `toolHost.ts` 监听)。
 pub const AI_TOOL_INVOKE_EVENT: &str = "ai_tool_invoke";
 
-/// 前端托管工具执行超时。
-const FRONTEND_TOOL_TIMEOUT: Duration = Duration::from_secs(15);
+/// 前端托管工具执行超时 (网页抓取上限 15s, 留出前端解析余量)。
+const FRONTEND_TOOL_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// 前端托管工具调用回执。
 pub enum ToolOutcome {
@@ -39,6 +39,15 @@ pub enum ToolOutcome {
 
 /// pending 前端调用注册表 — call_id → 回执发送端 (`ai_tool_resolve` 消费)。
 pub type PendingCalls = Arc<Mutex<HashMap<String, oneshot::Sender<ToolOutcome>>>>;
+
+/// Independent visibility for software tools and the Web skill.
+#[derive(Debug, Clone, Copy)]
+pub struct NativeToolOptions {
+    /// Software capabilities and built-in frontend tools.
+    pub builtin: bool,
+    /// `fetch_webpage` Web skill.
+    pub web: bool,
+}
 
 /// 构造工具失败错误。
 fn tool_failed(tool: &str, details: impl Into<String>) -> AppError {
@@ -60,6 +69,7 @@ pub struct NativeToolExecutor {
     frontend: EventSinkHandle,
     pending: PendingCalls,
     lang: Lang,
+    options: NativeToolOptions,
 }
 
 impl NativeToolExecutor {
@@ -72,6 +82,7 @@ impl NativeToolExecutor {
         frontend: EventSinkHandle,
         pending: PendingCalls,
         lang: Lang,
+        options: NativeToolOptions,
     ) -> Self {
         Self {
             registry,
@@ -80,13 +91,17 @@ impl NativeToolExecutor {
             frontend,
             pending,
             lang,
+            options,
         }
     }
 
     /// 是否处理该工具 (内置优先于外部 MCP)。
     #[must_use]
     pub fn handles(&self, name: &str) -> bool {
-        self.registry.find_tool(name).is_some() || frontend::is_frontend_tool(name)
+        (self.options.builtin
+            && (self.registry.find_tool(name).is_some()
+                || frontend::is_builtin_frontend_tool(name)))
+            || (self.options.web && frontend::is_web_tool(name))
     }
 
     /// 前端托管调用: 发事件 + 等回执 (超时兜底)。
@@ -126,30 +141,37 @@ impl NativeToolExecutor {
 #[async_trait::async_trait]
 impl ToolExecutor for NativeToolExecutor {
     fn tools(&self) -> Vec<ToolSpecDto> {
-        // 后端能力工具从注册表派生 (与 MCP server 同一 schema/描述), 前端托管工具补充在后
-        let mut specs: Vec<_> = self
-            .registry
-            .tools()
-            .map(|(_, t)| ToolSpecDto {
+        let mut specs = Vec::new();
+        if self.options.builtin {
+            // 后端能力工具从注册表派生 (与 MCP server 同一 schema/描述),
+            // 内置前端托管工具补充在后。
+            specs.extend(self.registry.tools().map(|(_, t)| ToolSpecDto {
                 name: t.name.to_string(),
                 description: t.description.to_string(),
                 input_schema: t.input_schema.clone(),
-            })
-            .collect();
-        specs.extend(frontend::frontend_tool_specs());
+            }));
+            specs.extend(frontend::builtin_frontend_tool_specs());
+        }
+        if self.options.web {
+            specs.extend(frontend::web_tool_specs());
+        }
         specs
     }
 
     async fn call(&self, name: &str, arguments: Value) -> Result<String> {
-        // 注册表后端直连优先, 未命中走前端托管
-        if let Some((_, def)) = self.registry.find_tool(name) {
+        // 注册表后端直连优先, 未命中走对应的前端托管分组。
+        if self.options.builtin
+            && let Some((_, def)) = self.registry.find_tool(name)
+        {
             let out = def
                 .invoke(self.context(), arguments)
                 .await
                 .map_err(|e| tool_failed(name, e.to_string()))?;
             return Ok(out.to_text());
         }
-        if frontend::is_frontend_tool(name) {
+        if (self.options.builtin && frontend::is_builtin_frontend_tool(name))
+            || (self.options.web && frontend::is_web_tool(name))
+        {
             return self.call_frontend(name, arguments).await;
         }
         Err(tool_failed(name, "未知内置工具"))
@@ -169,6 +191,10 @@ mod tests {
             Arc::new(events::NullEventSink),
             Arc::new(Mutex::new(HashMap::new())),
             Lang::Zh,
+            NativeToolOptions {
+                builtin: true,
+                web: true,
+            },
         )
     }
 
@@ -182,9 +208,13 @@ mod tests {
         for t in &specs {
             assert!(seen.insert(t.name.clone()), "重复工具名: {}", t.name);
         }
-        assert_eq!(specs.len(), registry_count + frontend::FRONTEND_TOOLS.len());
+        assert_eq!(
+            specs.len(),
+            registry_count + frontend::BUILTIN_FRONTEND_TOOLS.len() + frontend::WEB_TOOLS.len()
+        );
         assert!(seen.contains("read_skill"));
         assert!(seen.contains("connect_edge"));
+        assert!(seen.contains("fetch_webpage"));
         assert!(
             !seen.contains("connect_nodes"),
             "旧名 connect_nodes 应并入 connect_edge"
@@ -221,6 +251,38 @@ mod tests {
         let executor = executor();
         assert!(executor.handles("send_bytes"));
         assert!(executor.handles("add_node"));
+        assert!(executor.handles("fetch_webpage"));
         assert!(!executor.handles("nope"));
+    }
+
+    #[test]
+    fn builtin_and_web_sources_are_independent() {
+        let make = |builtin, web| {
+            NativeToolExecutor::new(
+                Arc::new(CapabilityRegistry::builtin()),
+                Toolbox::from_state(&app::AppState::new()),
+                Arc::new(events::NullEventSink),
+                Arc::new(events::NullEventSink),
+                Arc::new(Mutex::new(HashMap::new())),
+                Lang::Zh,
+                NativeToolOptions { builtin, web },
+            )
+        };
+        let web_only = make(false, true);
+        assert!(web_only.handles("fetch_webpage"));
+        assert!(!web_only.handles("read_skill"));
+        assert!(!web_only.handles("add_node"));
+        assert_eq!(web_only.tools().len(), 1);
+
+        let builtin_only = make(true, false);
+        assert!(!builtin_only.handles("fetch_webpage"));
+        assert!(builtin_only.handles("read_skill"));
+        assert!(builtin_only.handles("add_node"));
+        assert!(
+            !builtin_only
+                .tools()
+                .iter()
+                .any(|tool| tool.name == "fetch_webpage")
+        );
     }
 }

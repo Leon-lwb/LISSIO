@@ -136,6 +136,7 @@ pub const SUPPORTED: &[&str] = &[
     // AI / sessions / MCP
     "ai_list_providers",
     "ai_chat_send",
+    "ai_fetch_webpage_html",
     "ai_chat_cancel",
     "ai_tool_resolve",
     "ai_secret_status",

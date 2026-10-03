@@ -16,5 +16,5 @@ mod frontend;
 mod title;
 
 pub use composite::{CompositeExecutor, McpToolExecutor};
-pub use executor::{NativeToolExecutor, PendingCalls, ToolOutcome};
+pub use executor::{NativeToolExecutor, NativeToolOptions, PendingCalls, ToolOutcome};
 pub use title::ConversationTitleExecutor;

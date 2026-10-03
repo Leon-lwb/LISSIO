@@ -83,6 +83,7 @@ pub async fn dispatch_with_context(
         // ===== AI / sessions / MCP =====
         "ai_list_providers" => ai::list_providers(),
         "ai_chat_send" => ai::chat_send(host, cmd, &args, context).await,
+        "ai_fetch_webpage_html" => ai::fetch_webpage_html(cmd, &args).await,
         "ai_chat_cancel" => ai::chat_cancel(host, cmd, &args),
         "ai_tool_resolve" => ai::tool_resolve(host, cmd, &args),
         "ai_secret_status" => ai::secret_status(host, cmd, &args),

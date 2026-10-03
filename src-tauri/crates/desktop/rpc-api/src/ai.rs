@@ -31,14 +31,21 @@ pub async fn chat_send(
             optional::<Vec<AttachmentDto>>(args, cmd, "attachments")?,
             required(args, cmd, "regenerate")?,
             required::<AiProviderConfig>(args, cmd, "config")?,
-            required(args, cmd, "use_mcp_tools")?,
-            required(args, cmd, "use_builtin_tools")?,
+            ai_host::AiToolToggles {
+                mcp: required(args, cmd, "use_mcp_tools")?,
+                builtin: required(args, cmd, "use_builtin_tools")?,
+                web: required(args, cmd, "use_web_tools")?,
+            },
             optional(args, cmd, "ui_lang")?,
             events,
             context.frontend_sink.clone(),
         )
         .await,
     )
+}
+
+pub async fn fetch_webpage_html(cmd: &str, args: &Value) -> Result<Value, RpcError> {
+    domain(ai_host::ai_fetch_webpage_html(required(args, cmd, "url")?).await)
 }
 
 pub fn chat_cancel(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {

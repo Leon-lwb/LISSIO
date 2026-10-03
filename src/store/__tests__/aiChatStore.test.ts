@@ -93,7 +93,35 @@ describe('aiChatStore 多会话 (后端持有)', () => {
     expect(args.sessionId).toBe('s1');
     expect(args.text).toBe('你好');
     expect(args.regenerate).toBe(false);
+    expect(args.useBuiltinTools).toBe(true);
+    expect(args.useWebTools).toBe(true);
+    expect(args.useMcpTools).toBe(true);
     expect(args).not.toHaveProperty('system');
+  });
+
+  it('send 由插件总开关约束内置插件与 Fetch 网页', async () => {
+    useAiChatStore.setState({ ...RESET, activeSessionId: 's1' });
+    useSettingsStore.setState({
+      settings: {
+        ...DEFAULT_SETTINGS,
+        ai: {
+          ...DEFAULT_SETTINGS.ai,
+          adapter: 'orcarouter',
+          apiKey: 'sk-test',
+          model: 'openai/gpt-4o-mini',
+          builtinToolsEnabled: true,
+          webToolsEnabled: true,
+          pluginsEnabled: false,
+        },
+      },
+    });
+    mockInvokeReturn('task-web-off');
+
+    await useAiChatStore.getState().send('查资料');
+
+    const args = lastInvokeCall('ai_chat_send');
+    expect(args.useBuiltinTools).toBe(false);
+    expect(args.useWebTools).toBe(false);
   });
 
   it('done 事件后从后端拉取权威视图 (含工具卡片)', async () => {

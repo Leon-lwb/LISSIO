@@ -12,6 +12,26 @@ export interface AiProviderConfig {
   max_tokens?: number | null;
 }
 
+/// Raw HTML acquired by the backend before frontend readability processing.
+export interface AiWebFetchPage {
+  requested_url: string;
+  final_url: string;
+  content_type: string;
+  html: string;
+}
+
+/// Clean, model-facing representation of one fetched web page.
+export interface AiWebPageArticle {
+  url: string;
+  title: string;
+  site_name: string | null;
+  byline: string | null;
+  published_time: string | null;
+  excerpt: string | null;
+  markdown: string;
+  truncated: boolean;
+}
+
 export interface AiSecretStatus {
   configured: boolean;
   source: 'keyring' | 'environment' | null;

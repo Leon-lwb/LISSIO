@@ -1,7 +1,7 @@
 //! 系统提示词文件与运行期能力索引。
 //!
 //! 主提示词从设置目录的 Markdown 文件逐轮读取，用户编辑后无需重启。
-//! 启用内置工具时，再附加当前可用的工具约定和能力注册表知识库索引。
+//! 按独立开关附加内置工具约定/知识库索引与 Web 技能约定。
 
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write as _};
@@ -110,30 +110,39 @@ pub fn compose_system_prompt(
     lang: Lang,
     file_prompt: &str,
     use_builtin_tools: bool,
+    use_web_tools: bool,
     first_turn: bool,
 ) -> String {
     use std::fmt::Write as _;
 
     let out = render_section(file_prompt, TOOLS_START, TOOLS_END, use_builtin_tools);
     let mut out = render_section(&out, TITLE_START, TITLE_END, first_turn);
-    if !use_builtin_tools {
-        return out;
+    if use_builtin_tools {
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(match lang {
+            Lang::Zh => "\n可用知识库 (read_skill 按需读取全文):\n",
+            Lang::En => "\nKnowledge base (read full text via read_skill as needed):\n",
+        });
+        for (_, skill) in registry.skills() {
+            let _ = writeln!(
+                out,
+                "- {}: {} — {}",
+                skill.id,
+                skill.title(lang),
+                skill.summary(lang)
+            );
+        }
     }
-    if !out.ends_with('\n') {
-        out.push('\n');
-    }
-    out.push_str(match lang {
-        Lang::Zh => "\n可用知识库 (read_skill 按需读取全文):\n",
-        Lang::En => "\nKnowledge base (read full text via read_skill as needed):\n",
-    });
-    for (_, skill) in registry.skills() {
-        let _ = writeln!(
-            out,
-            "- {}: {} — {}",
-            skill.id,
-            skill.title(lang),
-            skill.summary(lang)
-        );
+    if use_web_tools {
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(match lang {
+            Lang::Zh => "\n## Web 技能\n\n`fetch_webpage` 可抓取公开 HTTP/HTTPS 网页并返回清洗后的主要正文 Markdown。仅在回答需要网页资料、在线文档或最新信息时调用；引用结果时保留来源 URL。工具不执行 JavaScript，也不代表已绕过登录或付费墙。\n",
+            Lang::En => "\n## Web skill\n\n`fetch_webpage` fetches public HTTP/HTTPS pages and returns cleaned main-content Markdown. Use it only when the answer needs web material, online documentation, or current information, and retain the source URL in citations. It does not execute JavaScript or bypass authentication or paywalls.\n",
+        });
     }
     out
 }
@@ -182,18 +191,23 @@ mod tests {
     fn composition_respects_tool_availability_and_current_registry() {
         let registry = CapabilityRegistry::builtin();
         let base = DEFAULT_PROMPT;
-        let without = compose_system_prompt(&registry, Lang::Zh, base, false, false);
+        let without = compose_system_prompt(&registry, Lang::Zh, base, false, false, false);
         assert!(without.contains("行动范式"));
         assert!(!without.contains("connect_edge"));
         assert!(!without.contains("- overview:"));
         assert!(!without.contains(TOOLS_START));
 
-        let with = compose_system_prompt(&registry, Lang::Zh, base, true, false);
+        let with = compose_system_prompt(&registry, Lang::Zh, base, true, false, false);
         assert!(with.contains("行动范式"));
         assert!(with.contains("connect_edge"));
         assert!(with.contains("query_recording_history"));
         assert!(with.contains("- overview:"));
         assert!(!with.contains("connect_nodes"));
         assert!(!with.contains(TOOLS_START));
+
+        let web_only = compose_system_prompt(&registry, Lang::Zh, base, false, true, false);
+        assert!(web_only.contains("fetch_webpage"));
+        assert!(!web_only.contains("connect_edge"));
+        assert!(!web_only.contains("- overview:"));
     }
 }

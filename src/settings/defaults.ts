@@ -129,6 +129,10 @@ export interface AppSettings {
     maxTokens: number | null;
     /** 对话中是否启用内置原生工具 (软件自有能力 + 知识库) */
     builtinToolsEnabled: boolean;
+    /** 对话中是否启用 fetch_webpage 网页抓取技能 */
+    webToolsEnabled: boolean;
+    /** 插件一级总开关 (关闭时禁用所有软件插件) */
+    pluginsEnabled: boolean;
     /** 对话中是否启用 MCP 工具 */
     mcpToolsEnabled: boolean;
     /** 本地 MCP server 端口 (127.0.0.1, 供外部 AI 客户端连接) */
@@ -223,6 +227,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     temperature: null,
     maxTokens: null,
     builtinToolsEnabled: true,
+    webToolsEnabled: true,
+    pluginsEnabled: true,
     mcpToolsEnabled: true,
     mcpServerPort: 8765,
   },

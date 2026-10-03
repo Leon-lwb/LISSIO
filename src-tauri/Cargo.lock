@@ -3403,6 +3403,7 @@ dependencies = [
  "lissio-mcp-server",
  "log",
  "parking_lot",
+ "reqwest",
  "security-framework 3.7.0",
  "serde",
  "serde_json",

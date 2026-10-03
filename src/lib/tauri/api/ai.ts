@@ -8,6 +8,7 @@ import type {
   AiProviderConfig,
   AiSecretStatus,
   AiSessionMeta,
+  AiWebFetchPage,
   McpServerConfig,
   McpServerStatus,
   McpToolInfo,
@@ -22,6 +23,7 @@ export const aiApi = {
     config: AiProviderConfig,
     useMcpTools: boolean,
     useBuiltinTools: boolean,
+    useWebTools: boolean,
     uiLang: string,
     onEvent: EventChannel<AiChatEvent>,
   ) =>
@@ -33,9 +35,14 @@ export const aiApi = {
       config,
       useMcpTools,
       useBuiltinTools,
+      useWebTools,
       uiLang,
       onEvent,
     }),
+
+  /// Raw HTML for the frontend Readability/Turndown pipeline.
+  aiFetchWebpageHtml: (url: string) =>
+    transport.call<AiWebFetchPage>('ai_fetch_webpage_html', { url }),
 
   /// 取消进行中的对话任务, 返回任务是否存在
   aiChatCancel: (taskId: string) =>
