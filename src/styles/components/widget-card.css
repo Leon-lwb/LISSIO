@@ -1,0 +1,55 @@
+/* ============ 亚克力 Widget 卡片 (统一容器样式) ============ */
+/* 所有 widget 卡片 (WidgetCard / 全屏模式 widget 容器 / 节点标题栏以外的卡片)
+   都应使用本类.
+
+   状态切换跟随 :root[data-acrylic='true'] — 由 applyAppearance() 根据
+   appearance.acrylicBackground 写入. 关闭时 = 旧版纯色实底 (与 bg-bg-elevated
+   视觉一致); 开启时叠加 backdrop-filter 模糊 + 半透明背景 + 顶部高光 + 饱和度增强,
+   与浮动卡片共享磨砂边缘和色彩增强 token, alpha/blur 随 acrylicOpacity 滑块联动.
+
+   视觉强度设计 — 亚克力必须明显才能被识别为"玻璃", 因此:
+   - 开启态 alpha 基线 45% (acrylicOpacity=0.6), 透出背后内容
+   - 模糊基线 20px (acrylicOpacity=0.6), 远大于 CSS 文字尺寸, 模糊感强烈
+   - 顶部 1px 白色高光 + 加亮边框, 强化玻璃边缘反光
+   - 关闭态直接用 var(--color-bg-elevated) 实色, 不写 backdrop-filter (零开销). */
+.widget-card-acrylic {
+  background-color: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-default);
+  box-shadow:
+    var(--shadow-card);
+  transition:
+    border-color var(--transition-fast) var(--ease-out-cubic),
+    box-shadow var(--transition-fast) var(--ease-out-cubic),
+    background-color var(--transition-base) var(--ease-out-cubic);
+}
+
+.widget-card-acrylic:hover {
+  border-color: var(--color-highlight-hover);
+  box-shadow:
+    var(--shadow-card-hover);
+}
+
+/* 开启亚克力后, 切换为半透明 + backdrop-filter 模糊 + 饱和度增强 + 玻璃高光 */
+[data-acrylic='true'] .widget-card-acrylic {
+  background-color: color-mix(
+    in srgb,
+    var(--color-bg-elevated) var(--frost-alpha-widget),
+    transparent
+  );
+  /* 同时使用 backdrop-filter + -webkit-backdrop-filter 兼容 macOS Safari (WKWebView) */
+  backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  -webkit-backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  /* 玻璃边缘: 加亮边框 + 顶部白色高光, 强化 "玻璃面板" 视觉 */
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}
+
+/* 嵌入式 (节点内) 模式 — 卡片本身没有外框, 内容需要继承亚克力色调 */
+.widget-card-acrylic--embedded {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

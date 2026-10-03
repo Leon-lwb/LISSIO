@@ -1,0 +1,72 @@
+import type { SettingFieldDef } from '../settingFields';
+
+export const editorFields: SettingFieldDef[] = [
+{
+    category: 'editor',
+    field: 'waveformFps',
+    labelKey: 'settingWaveformFps',
+    descKey: 'settingWaveformFpsDesc',
+    control: { kind: 'number', min: 5, max: 120, step: 1 },
+  },
+  {
+    category: 'editor',
+    field: 'scopeDefaultTimeBase',
+    labelKey: 'settingScopeDefaultTimeBase',
+    descKey: 'settingScopeDefaultTimeBaseDesc',
+    control: { kind: 'number', min: 0.0001, max: 10, step: 0.0001 },
+  },
+  {
+    category: 'editor',
+    field: 'scopeDefaultVPerDiv',
+    labelKey: 'settingScopeDefaultVPerDiv',
+    descKey: 'settingScopeDefaultVPerDivDesc',
+    control: { kind: 'number', min: 0.001, max: 100, step: 0.001 },
+  },
+  {
+    category: 'editor',
+    field: 'gridVisible',
+    labelKey: 'settingGridVisible',
+    descKey: 'settingGridVisibleDesc',
+    control: { kind: 'toggle' },
+  },
+  {
+    category: 'editor',
+    field: 'cursorReadoutVisible',
+    labelKey: 'settingCursorReadoutVisible',
+    descKey: 'settingCursorReadoutVisibleDesc',
+    control: { kind: 'toggle' },
+    keywords: ['cursor', 'readout', '光标', '读数'],
+  },
+  {
+    category: 'editor',
+    field: 'cursorSnap',
+    labelKey: 'settingCursorSnap',
+    descKey: 'settingCursorSnapDesc',
+    control: { kind: 'toggle' },
+    keywords: ['snap', 'cursor', '吸附', '光标'],
+  },
+  {
+    category: 'editor',
+    field: 'crosshairVisible',
+    labelKey: 'settingCrosshairVisible',
+    descKey: 'settingCrosshairVisibleDesc',
+    control: { kind: 'toggle' },
+    keywords: ['crosshair', '十字线'],
+  },
+  {
+    category: 'editor',
+    field: 'hoverPointsVisible',
+    labelKey: 'settingHoverPointsVisible',
+    descKey: 'settingHoverPointsVisibleDesc',
+    control: { kind: 'toggle' },
+    keywords: ['hover', 'points', '采样点', 'uplot'],
+  },
+  {
+    category: 'editor',
+    field: 'pauseOnInteract',
+    labelKey: 'settingPauseOnInteract',
+    descKey: 'settingPauseOnInteractDesc',
+    control: { kind: 'toggle' },
+    keywords: ['pause', 'interact', 'zoom', 'pan', '暂停', '缩放', '拖动'],
+  },
+];

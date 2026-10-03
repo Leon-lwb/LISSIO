@@ -40,7 +40,7 @@ export function BindingSection<K extends BindableKind>({ widget, update }: Bindi
 
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'bindingMode')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'bindingMode')}</div>
       <select className="form-select mb-2" value={binding.mode} onChange={(event) => {
         const mode = event.target.value;
         if (mode === 'None') setBinding({ mode: 'None' });

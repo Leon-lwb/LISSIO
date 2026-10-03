@@ -17,7 +17,7 @@ export const FFTProperties = memo(function FFTProperties({ widget, update }: Wid
     update({ kind: 'FFT', params: { ...widget.params, ...p } });
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'fftSettings')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'fftSettings')}</div>
       <SelectField label={t(lang, 'spectrumWindowSize')} value={String(windowSize)}
         options={[256, 512, 1024, 2048, 4096].map((sz) => ({ value: String(sz), label: String(sz) }))}
         onChange={(v) => patch({ windowSize: Number(v), hopSize: Number(v) / 2 })} />

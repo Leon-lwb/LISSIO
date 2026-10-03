@@ -15,9 +15,9 @@ export function KeychainPermissionDialog() {
   const [dontRemind, setDontRemind] = useState(false);
 
   return (
-    <div className="fixed inset-0 float-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]">
+    <div className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]">
       <div
-        className="w-[460px] max-w-[92vw] float-card px-7 py-6 flex flex-col gap-4 animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[460px] max-w-[92vw] dialog-surface px-7 py-6 flex flex-col gap-4 animate-[settings-slide-in_0.2s_ease-out]"
         role="dialog"
         aria-modal="true"
         aria-labelledby="keychain-permission-title"

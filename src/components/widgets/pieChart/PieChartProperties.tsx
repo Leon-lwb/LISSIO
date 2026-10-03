@@ -18,7 +18,7 @@ export const PieChartProperties = memo(function PieChartProperties({ widget, upd
   return (
     <section className="mt-3 pt-3 border-t border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t(lang, 'pieChartSegments')}</span>
+        <span className="section-heading section-heading--micro">{t(lang, 'pieChartSegments')}</span>
         <button type="button" className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={() => patch({ segments: [...segments, `Segment ${segments.length + 1}`] })}
           title={t(lang, 'addSegment')} aria-label={t(lang, 'addSegment')}><Plus size={13} /></button>

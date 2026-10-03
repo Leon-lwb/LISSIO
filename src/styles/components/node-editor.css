@@ -1,0 +1,117 @@
+/* ============ React Flow Node Editor 专用覆盖 (node-editor-rf) ============ */
+/* 覆盖全局默认值, 只对 .node-editor-rf 内的 React Flow 生效 */
+.node-editor-rf {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg-editor);
+  overflow: hidden;
+}
+
+.node-editor-rf.drag-over::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px dashed var(--color-accent);
+  background: var(--color-accent-drop-strong);
+  z-index: 5;
+}
+
+.node-editor-rf .react-flow {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-editor);
+}
+
+.node-editor-rf .react-flow__background {
+  background-color: var(--color-bg-editor);
+}
+
+.node-editor-rf .react-flow__attribution {
+  display: none;
+}
+
+.node-editor-rf .react-flow__controls {
+  box-shadow: var(--shadow-node-controls);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.node-editor-rf .react-flow__controls-button {
+  background: var(--color-bg-panel-header);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  fill: var(--color-text-primary);
+  width: 24px;
+  height: 24px;
+}
+
+.node-editor-rf .react-flow__controls-button:hover {
+  background: var(--color-bg-hover);
+}
+
+.node-editor-rf .react-flow__controls-button svg {
+  fill: var(--color-text-primary);
+}
+
+.node-editor-rf .react-flow__edge-path {
+  stroke: var(--color-accent);
+  stroke-width: 1.5;
+}
+
+.node-editor-rf .react-flow__edge.selected .react-flow__edge-path,
+.node-editor-rf .react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--color-text-bright);
+  stroke-width: 2;
+}
+
+.node-editor-rf .react-flow__handle {
+  width: 9px;
+  height: 9px;
+  background: var(--color-bg-input);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 50%;
+  cursor: crosshair;
+  /* 明确指定过渡属性，避免不必要的动画性能损耗 */
+  transition: background-color var(--transition-fast) var(--ease-out-cubic),
+    border-color var(--transition-fast) var(--ease-out-cubic),
+    transform var(--transition-fast) var(--ease-out-cubic);
+}
+
+.node-editor-rf .react-flow__handle:hover {
+  background: var(--color-accent);
+  transform: scale(1.3);
+}
+
+/* 已连接的端口 — 实色填充 */
+.node-editor-rf .react-flow__handle.connected {
+  background: var(--color-accent);
+}
+
+.node-editor-rf .react-flow__handle.connectingto,
+.node-editor-rf .react-flow__handle.valid {
+  background: var(--color-green);
+  border-color: var(--color-green);
+}
+
+.node-editor-rf .react-flow__minimap {
+  background: var(--color-bg-sidebar) !important;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.node-editor-rf .react-flow__minimap-mask {
+  fill: var(--color-accent-tint);
+}
+
+/* ============ Responsive: React Flow ============ */
+@media (max-width: 1024px) {
+  .node-editor-rf .react-flow__minimap {
+    display: none;
+  }
+  .node-editor-rf .react-flow__controls {
+    transform: scale(0.85);
+    transform-origin: bottom right;
+  }
+}

@@ -1,0 +1,48 @@
+/* ============ Step Knob 旋钮 (displays/StepKnob.tsx) ============ */
+.step-knob-dial {
+  position: relative;
+  border-radius: 50%;
+  background: var(--gradient-step-knob);
+  border: var(--line-hairline) solid var(--color-mask-solid);
+  box-shadow:
+    var(--shadow-step-knob);
+  cursor: grab;
+  transition:
+    border-color var(--transition-fast) var(--ease-out-cubic),
+    transform var(--transition-fast) var(--ease-out-cubic);
+  touch-action: none;
+}
+
+.step-knob-dial:hover {
+  border-color: var(--color-accent-hover);
+}
+
+.step-knob-dial:active {
+  cursor: grabbing;
+  border-color: var(--color-accent-active);
+}
+
+.step-knob-dial:focus-visible {
+  outline-offset: 3px;
+}
+
+.step-knob-rim {
+  position: absolute;
+  inset: 2px;
+  border-radius: 50%;
+  border: var(--line-hairline) solid var(--color-highlight-subtle);
+  pointer-events: none;
+}
+
+.step-knob-pointer {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 2px;
+  height: 30%;
+  margin-left: -1px;
+  background: var(--color-blue);
+  border-radius: 1px;
+  box-shadow: var(--shadow-step-pointer);
+  pointer-events: none;
+}

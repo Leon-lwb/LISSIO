@@ -83,7 +83,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
       </div>
       {expanded && (
         <div className="px-2 pb-2 flex flex-col gap-1.5">
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">{t(lang, 'triggerEnabled')}</label>
             <button
               className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary text-left ${rule.enabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
@@ -92,7 +92,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
               {rule.enabled ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
             </button>
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">{t(lang, 'triggerMatchType')}</label>
             <select
               className="form-select text-xs w-full"
@@ -104,7 +104,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">{t(lang, 'triggerPattern')}</label>
             <input
               type="text"
@@ -115,7 +115,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
               title={t(lang, cfg.hintKey)}
             />
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">{t(lang, 'triggerOutputType')}</label>
             <div className="flex bg-bg-input rounded border border-border overflow-hidden">
               {(['number', 'string'] as const).map((ot) => (
@@ -129,7 +129,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">
               {rule.outputType === 'string' ? t(lang, 'triggerOutputText') : t(lang, 'triggerOutputValue')}
             </label>
@@ -154,7 +154,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
             )}
           </div>
           {rule.matchType === 'regex' && (
-            <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+            <div className="field-grid field-grid--default">
               <label className="text-[10px] text-text-secondary">{t(lang, 'triggerFlags')}</label>
               <input
                 type="text"
@@ -185,7 +185,7 @@ interface ManualPanelProps {
 function ManualPanel({ command, onCommandChange, result, lang }: ManualPanelProps) {
   return (
     <>
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, 'triggerManualInput')}</div>
+      <div className="section-heading section-heading--micro">{t(lang, 'triggerManualInput')}</div>
       <textarea
         className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-2 py-1.5 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
         value={command}
@@ -211,7 +211,7 @@ interface TriggerResultSnapshot {
 function ResultBlock({ result, titleKey, lang }: { result: TriggerResultSnapshot; titleKey: string; lang: Lang }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, titleKey)}</div>
+      <div className="section-heading section-heading--micro">{t(lang, titleKey)}</div>
       <div className="flex items-center gap-2 px-2 py-1 bg-bg-editor rounded-sm">
         <span className="text-[10px] text-text-secondary">{t(lang, 'triggerMatched')}</span>
         <span className={`text-xs font-mono ${result.matched ? 'text-green' : 'text-red'}`}>
@@ -239,7 +239,7 @@ interface AutoPanelProps {
 function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanelProps) {
   return (
     <>
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">
+      <div className="section-heading section-heading--micro">
         {t(lang, 'triggerAutoInput')}
       </div>
 
@@ -253,7 +253,7 @@ function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanel
         </span>
       </div>
 
-      <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+      <div className="field-grid field-grid--default">
         <label className="text-[10px] text-text-secondary">{t(lang, 'triggerEdge')}</label>
         <div className="flex bg-bg-input rounded border border-border overflow-hidden">
           {(['level', 'rising'] as const).map((e) => (
@@ -268,7 +268,7 @@ function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanel
         </div>
       </div>
 
-      <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+      <div className="field-grid field-grid--default">
         <label className="text-[10px] text-text-secondary">{t(lang, 'triggerCommand')}</label>
         {/* 自动模式的匹配输入来自上游 trigger 端口, 只读展示 (手动命令文本不参与) */}
         <span className="text-xs font-mono text-text-primary px-2 py-1 bg-bg-input border border-border rounded truncate">
@@ -452,22 +452,22 @@ export function Trigger({ widget }: TriggerProps) {
             onEdgeChange={(e) => updateParams({ edge: e })} result={lastResult} lang={lang} />
         )}
 
-        <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pt-1">{t(lang, 'triggerGlobalSettings')}</div>
+        <div className="section-heading section-heading--micro pt-1">{t(lang, 'triggerGlobalSettings')}</div>
         <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
             <input type="text" value={params.label}
               onChange={(e) => updateParams({ label: e.target.value })}
               className="text-xs w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent transition-colors" />
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-xs text-text-secondary">{t(lang, 'triggerMissValue')}</label>
             <input type="number" step="any"
               value={Number.isFinite(defaultMiss) ? defaultMiss : 0}
               onChange={(e) => { const n = parseFloat(e.target.value); updateParams({ defaultMiss: Number.isFinite(n) ? n : 0 }); }}
               className="text-xs w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent transition-colors font-mono" />
           </div>
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-xs text-text-secondary">{t(lang, 'triggerMissText')}</label>
             <input type="text"
               value={defaultMissText}

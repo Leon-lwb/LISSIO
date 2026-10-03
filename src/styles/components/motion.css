@@ -1,0 +1,9 @@
+/* ============ 低动画模式 (用户设置) ============ */
+/* 通过设置开启，替代 prefers-reduced-motion 系统偏好 */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  transition: none !important;
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+}

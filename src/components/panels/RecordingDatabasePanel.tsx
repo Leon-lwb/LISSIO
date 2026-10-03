@@ -1,17 +1,14 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect } from 'react';
 import { CornerUpLeft, Database, Eraser, ExternalLink, FilePlus2, Pause, Play, RefreshCw, Square, Trash2 } from 'lucide-react';
-import { platform } from '../../lib/platform';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
-import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
-import { showContextMenu } from '../../lib/hooks/useContextMenu';
 import { t } from '../../i18n';
-import type { RecordingSessionSummary } from '../../lib/tauri/tauri';
 import type { RunState } from '../../types';
 import { RecordingDisabledNotice } from '../displays/recording/RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs } from '../displays/recording/recordingFormat';
+import { useRecordingDatabaseActions } from './useRecordingDatabaseActions';
 
 /// 与 RunControls 一致的运行状态配色 + 标签
 const RUN_BADGE: Record<RunState, { dot: string; label: string }> = {
@@ -35,7 +32,6 @@ function stateLabelKey(state: string): string {
 
 export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   const lang = useAppStore((s) => s.lang);
-  const addRecordingDatabaseTab = useAppStore((s) => s.addRecordingDatabaseTab);
   const runState = useAppStore((s) => s.runState);
   const workspaceRun = useAppStore((s) => s.workspaceRun);
   // 数据库总开关 (设置项): 关闭时入口保留但写操作禁用, 并说明原因
@@ -46,10 +42,6 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   const databaseInfo = useRecordingDatabaseStore((s) => s.databaseInfo);
   const selectedSessionId = useRecordingDatabaseStore((s) => s.selectedSessionId);
   const loadOverview = useRecordingDatabaseStore((s) => s.loadOverview);
-  const selectSession = useRecordingDatabaseStore((s) => s.selectSession);
-  const cleanupSessions = useRecordingDatabaseStore((s) => s.cleanupSessions);
-  const createSession = useRecordingDatabaseStore((s) => s.createSession);
-  const setActiveSession = useRecordingDatabaseStore((s) => s.setActiveSession);
   const error = useRecordingDatabaseStore((s) => s.error);
   const clearError = useRecordingDatabaseStore((s) => s.clearError);
   const warning = useRecordingDatabaseStore((s) => s.warning);
@@ -57,10 +49,19 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
   // 新建/切换写入目标只在运行暂停时开放:暂停期间管道不喂数据,替换 recorder 无丢批风险
   const paused = runState === 'paused';
 
-  const [keepLatest, setKeepLatest] = useState(10);
-  const [busy, setBusy] = useState(false);
-  const [hint, setHint] = useState<string | null>(null);
-  const hintTimer = useRef<number | null>(null);
+  const {
+    keepLatest,
+    setKeepLatest,
+    busy,
+    hint,
+    handleCreateSession,
+    openSession,
+    attemptSelect,
+    requestDelete,
+    openRowMenu,
+    cleanupStopped,
+    cleanupKept,
+  } = useRecordingDatabaseActions({ paused });
 
   useEffect(() => {
     // 总开关关闭时后端不建任何连接, 查询必然失败 — 这里只显示「已关闭」说明,
@@ -69,154 +70,6 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
     void loadOverview();
   }, [loadOverview, recordingEnabled, runState]);
 
-  useEffect(() => () => {
-    if (hintTimer.current !== null) window.clearTimeout(hintTimer.current);
-  }, []);
-
-  /// 操作被拒时给出短暂提示 — 不能静默无反应
-  function showHint(key: string): void {
-    setHint(t(lang, key));
-    if (hintTimer.current !== null) window.clearTimeout(hintTimer.current);
-    hintTimer.current = window.setTimeout(() => setHint(null), 3200);
-  }
-
-  async function openSession(sessionId: string): Promise<void> {
-    await selectSession(sessionId);
-    openDataPanelAndReveal(() => addRecordingDatabaseTab());
-  }
-
-  async function handleCreateSession(): Promise<void> {
-    setBusy(true);
-    try {
-      await createSession();
-    } catch (createError) {
-      console.error('recording session creation failed', createError);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleSetActiveSession(sessionId: string): Promise<void> {
-    setBusy(true);
-    try {
-      await setActiveSession(sessionId);
-    } catch (switchError) {
-      console.error('recording session switch failed', switchError);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  /// 点击会话行 = 设为写入目标;不满足条件时用提示说明原因
-  function attemptSelect(summary: RecordingSessionSummary): void {
-    if (summary.active) {
-      showHint('recordingDatabaseHintAlreadyActive');
-      return;
-    }
-    if (!paused) {
-      showHint('recordingDatabaseHintNeedsPause');
-      return;
-    }
-    if (summary.session.state !== 'stopped') {
-      showHint('recordingDatabaseHintNeedsStopped');
-      return;
-    }
-    void handleSetActiveSession(summary.session.id);
-  }
-
-  function requestDelete(summary: RecordingSessionSummary): void {
-    if (summary.active) {
-      showHint('recordingDatabaseHintDeleteActive');
-      return;
-    }
-    void deleteSession(summary.session.id);
-  }
-
-  function openRowMenu(event: React.MouseEvent, summary: RecordingSessionSummary): void {
-    event.preventDefault();
-    event.stopPropagation();
-    showContextMenu(event.clientX, event.clientY, [
-      {
-        id: 'set-active',
-        label: t(lang, 'recordingDatabaseSetActive'),
-        icon: <CornerUpLeft size={14} />,
-        onClick: () => attemptSelect(summary),
-      },
-      {
-        id: 'open-view',
-        label: t(lang, 'recordingDatabaseOpenSession'),
-        icon: <ExternalLink size={14} />,
-        onClick: () => { void openSession(summary.session.id); },
-      },
-      { kind: 'separator' },
-      {
-        id: 'delete',
-        label: t(lang, 'recordingDatabaseDelete'),
-        icon: <Trash2 size={14} />,
-        onClick: () => requestDelete(summary),
-      },
-    ]);
-  }
-
-  async function cleanupStopped(): Promise<void> {
-    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseCleanupStoppedConfirm'), { kind: 'warning' });
-    if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
-        session_ids: [],
-        delete_stopped: true,
-        delete_failed: true,
-        older_than_us: null,
-        keep_latest: null,
-      });
-    } catch (cleanupError) {
-      console.error('recording cleanup failed', cleanupError);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function cleanupKept(): Promise<void> {
-    const confirmed = await platform.confirm(
-      t(lang, 'recordingDatabaseCleanupKeepConfirm').replace('{count}', String(keepLatest)),
-      { kind: 'warning' },
-    );
-    if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
-        session_ids: [],
-        delete_stopped: false,
-        delete_failed: false,
-        older_than_us: null,
-        keep_latest: keepLatest,
-      });
-    } catch (cleanupError) {
-      console.error('recording cleanup failed', cleanupError);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function deleteSession(sessionId: string): Promise<void> {
-    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseDeleteConfirm'), { kind: 'warning' });
-    if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
-        session_ids: [sessionId],
-        delete_stopped: false,
-        delete_failed: false,
-        older_than_us: null,
-        keep_latest: null,
-      });
-    } catch (cleanupError) {
-      console.error('recording cleanup failed', cleanupError);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const terminalCount = sessions.filter(
     (item) => item.session.state === 'stopped' || item.session.state === 'failed',

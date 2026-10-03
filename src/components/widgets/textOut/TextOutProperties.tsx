@@ -15,7 +15,7 @@ export const TextOutProperties = memo(function TextOutProperties({ widget, updat
   const transports = nodes.filter((n) => n.type === 'acquisition');
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'textOutSettings')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'textOutSettings')}</div>
       <SelectField label={t(lang, 'textOutTarget')} value={targetTransport}
         options={[
           { value: '', label: t(lang, 'textOutNoTarget') },

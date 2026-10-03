@@ -1,0 +1,31 @@
+/* ============ Form 通用样式 ============ */
+/* 标准控件高度 28px (h-7), 全局面板输入/下拉统一 */
+/* 焦点环: 仅 :focus-visible (键盘导航); hover 用 accent-hover 语义 */
+.form-input,
+.form-select {
+  width: 100%;
+  height: var(--form-control-height);
+  padding-inline: var(--spacing-2);
+  color: var(--color-text-primary);
+  background: var(--color-bg-input);
+  border: var(--line-hairline) solid var(--color-border);
+  border-radius: var(--radius);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-sm);
+  outline: none;
+  transition:
+    border-color var(--transition-fast) var(--ease-out-cubic),
+    box-shadow var(--transition-fast) var(--ease-out-cubic);
+}
+
+.form-input:hover,
+.form-select:hover {
+  border-color: var(--color-accent-hover);
+}
+
+.form-input:focus-visible,
+.form-select:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}

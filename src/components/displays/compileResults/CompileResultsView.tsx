@@ -4,11 +4,9 @@ import { syncTabGraphToBackend } from '../../../store/appStoreHelpers';
 import {
   edgeClassLabel,
   isDualRole,
-  type EdgeClass,
   type GraphHir,
   type HirEdgeView,
   type HirNodeView,
-  type PortDomain,
 } from '../../../store/slices/compileHir';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import {
@@ -17,52 +15,16 @@ import {
   Plus as PlusIcon,
   Edit2,
   ClipboardPaste,
-  X as XIcon,
 } from 'lucide-react';
 import { t } from '../../../i18n';
 import type { Edge } from '@xyflow/react';
-
-/// Add / Modify Edge 模态框状态
-interface EdgeModalState {
-  open: boolean;
-  mode: 'add' | 'modify';
-  edge?: HirEdgeView;
-  // 表单字段
-  sourceNode: string;
-  sourceHandle: string;
-  targetNode: string;
-  targetHandle: string;
-}
-
-const EMPTY_MODAL: EdgeModalState = {
-  open: false,
-  mode: 'add',
-  sourceNode: '',
-  sourceHandle: '',
-  targetNode: '',
-  targetHandle: '',
-};
-
-/// 端口域 chip 颜色 (按域)
-const DOMAIN_CHIP_CLASS: Record<PortDomain, string> = {
-  F32: 'state-info',
-  Bytes: 'state-success',
-  String: 'state-warning',
-};
-
-/// 边分类 badge 颜色
-function edgeClassChipClass(c: EdgeClass): string {
-  switch (c.kind) {
-    case 'byte':
-      return 'state-success';
-    case 'f32':
-      return 'state-info';
-    case 'str':
-      return 'state-warning';
-    case 'raw_data_marker':
-      return 'state-neutral';
-  }
-}
+import { EdgeEditDialog } from './EdgeEditDialog';
+import {
+  DOMAIN_CHIP_CLASS,
+  EMPTY_MODAL,
+  edgeClassChipClass,
+  type EdgeModalState,
+} from './compileResultsModel';
 
 export const CompileResultsView = memo(function CompileResultsView() {
   const lang = useAppStore((s) => s.lang);
@@ -417,103 +379,15 @@ export const CompileResultsView = memo(function CompileResultsView() {
         </table>
       </div>
 
-      {/* Add / Modify Edge 模态框 */}
-      {modal.open && (
-        <div className="fixed inset-0 z-modal float-overlay flex items-center justify-center">
-          <div className="float-card w-[420px] p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-sm font-semibold text-text-primary">
-                {modal.mode === 'add'
-                  ? t(lang, 'modalAddEdge')
-                  : t(lang, 'modalModifyEdge')}
-              </h3>
-              <button
-                className="p-1 text-text-muted hover:text-text-primary"
-                onClick={closeModal}
-              >
-                <XIcon size={14} />
-              </button>
-            </div>
-            <div className="flex flex-col gap-2 text-xs">
-              <label className="flex flex-col gap-1">
-                <span className="text-text-secondary">{t(lang, 'fieldSourceNode')}</span>
-                <select
-                  className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary"
-                  value={modal.sourceNode}
-                  onChange={(e) =>
-                    setModal((m) => ({ ...m, sourceNode: e.target.value }))
-                  }
-                >
-                  {(hir?.nodes ?? []).map((n) => (
-                    <option key={n.nodeId} value={n.nodeId}>
-                      {getNodeName(n.nodeId)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-text-secondary">{t(lang, 'fieldSourceHandle')}</span>
-                <input
-                  type="text"
-                  className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary font-mono"
-                  value={modal.sourceHandle}
-                  onChange={(e) =>
-                    setModal((m) => ({ ...m, sourceHandle: e.target.value }))
-                  }
-                  placeholder="value / result / ch0..."
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-text-secondary">{t(lang, 'fieldTargetNode')}</span>
-                <select
-                  className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary"
-                  value={modal.targetNode}
-                  onChange={(e) =>
-                    setModal((m) => ({ ...m, targetNode: e.target.value }))
-                  }
-                >
-                  {(hir?.nodes ?? []).map((n) => (
-                    <option key={n.nodeId} value={n.nodeId}>
-                      {getNodeName(n.nodeId)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-text-secondary">{t(lang, 'fieldTargetHandle')}</span>
-                <input
-                  type="text"
-                  className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary font-mono"
-                  value={modal.targetHandle}
-                  onChange={(e) =>
-                    setModal((m) => ({ ...m, targetHandle: e.target.value }))
-                  }
-                  placeholder="in0 / in1 / str..."
-                />
-              </label>
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                className="px-3 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs"
-                onClick={closeModal}
-              >
-                {t(lang, 'cancel')}
-              </button>
-              <button
-                className="px-3 py-1 bg-accent-primary hover:opacity-secondary text-text-primary rounded text-xs disabled:opacity-disabled"
-                onClick={() => { void submitModal(); }}
-                disabled={
-                  !modal.sourceNode ||
-                  !modal.targetNode ||
-                  modal.sourceNode === modal.targetNode
-                }
-              >
-                {t(lang, 'confirmAdd')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EdgeEditDialog
+        modal={modal}
+        setModal={setModal}
+        hir={hir}
+        getNodeName={getNodeName}
+        closeModal={closeModal}
+        submitModal={submitModal}
+      />
+
     </div>
   );
 });

@@ -1,0 +1,63 @@
+/* ============ 统一浮层 (设置与面板二级卡片) ============ */
+/* 浮层遮罩与卡片 chrome 统一走 token; 卡片磨砂跟随 :root[data-floating-glass='true'],
+   与窗口亚克力开关相互独立。布局、尺寸和内边距仍由各组件的 utility 控制。 */
+.dialog-overlay {
+  background: var(--color-bg-overlay);
+}
+
+.dialog-surface,
+.popover-surface,
+.context-menu,
+.prompt-card {
+  background: var(--color-float-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+}
+
+.popover-surface {
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+}
+
+.dialog-chrome,
+.dialog-chrome-muted {
+  background-color: color-mix(
+    in srgb,
+    var(--color-dialog-chrome) var(--frost-alpha-chrome),
+    transparent
+  );
+}
+
+.dialog-chrome-muted {
+  background-color: color-mix(
+    in srgb,
+    var(--color-dialog-chrome-muted) var(--frost-alpha-chrome),
+    transparent
+  );
+}
+
+[data-floating-glass='true'] .dialog-surface,
+[data-floating-glass='true'] .popover-surface,
+[data-floating-glass='true'] .context-menu {
+  background-color: color-mix(
+    in srgb,
+    var(--color-float-surface) var(--frost-alpha-floating),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}
+
+/* 面板内无需开关状态的磨砂表面, 与浮层/Widget 共用同一组磨砂处理 token。 */
+.frost-surface {
+  background-color: color-mix(
+    in srgb,
+    var(--color-bg-editor) var(--frost-alpha-surface),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+}

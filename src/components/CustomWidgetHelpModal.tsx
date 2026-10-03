@@ -14,17 +14,17 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
 
   return (
     <div
-      className="fixed inset-0 float-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
       role="button"
       tabIndex={0}
     >
       <div
-        className="flex flex-col float-card overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="flex flex-col dialog-surface overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         style={{ width: '80vw', height: '85vh', maxWidth: 1000, maxHeight: 800 }}
       >
-        <div className="flex items-center gap-2 px-3 py-2 float-chrome border-b border-border text-text-primary font-semibold">
+        <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">
           <BookOpen size={16} />
           <span>{t(lang, 'helpTitle')}</span>
           <button
@@ -94,7 +94,7 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
             <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpCtxApiDesc')}</p>
             <table className="w-full border-collapse text-xs">
               <thead>
-                <tr className="float-chrome text-text-secondary font-semibold text-left">
+                <tr className="dialog-chrome text-text-secondary font-semibold text-left">
                   <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiField')}</th>
                   <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiType')}</th>
                   <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiDesc')}</th>
@@ -271,7 +271,7 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           </section>
         </div>
 
-        <div className="px-3 py-2 flex justify-end float-chrome border-t border-border">
+        <div className="px-3 py-2 flex justify-end dialog-chrome border-t border-border">
           <button className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover" onClick={onClose}>
             {t(lang, 'helpClose')}
           </button>

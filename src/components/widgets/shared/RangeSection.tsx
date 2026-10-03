@@ -35,7 +35,7 @@ export const RangeSection = memo(function RangeSection({ lang, range, widgetId, 
 
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'displayRange')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'displayRange')}</div>
       <select className="form-select mb-2" value={range.mode} onChange={(e) => patch({ mode: e.target.value as DisplayRangeConfig['mode'] })}>
         <option value="manual">{t(lang, 'manual')}</option>
         <option value="auto">{t(lang, 'auto')}</option>

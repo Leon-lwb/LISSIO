@@ -259,9 +259,9 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
       </div>
       {/* 侧栏: 设置面板 (固定宽, 纵向滚动, 直接展开) */}
       <div className="w-[240px] flex-shrink-0 border-l border-border bg-bg-sidebar overflow-y-auto flex flex-col gap-2 p-2.5">
-        <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold px-1">{t(lang, 'spectrumSettings')}</div>
+        <div className="section-heading section-heading--micro px-1">{t(lang, 'spectrumSettings')}</div>
         <div className="flex flex-col gap-1.5 px-1">
-          <div className="grid grid-cols-[80px_1fr] items-center gap-1.5 text-[10px]">
+          <div className="field-grid field-grid--default text-[10px]">
             <label className="text-text-secondary">{t(lang, 'spectrumSource')}</label>
             <span className="font-mono text-text-primary truncate" title={sourceWidget?.params.label}>
               {sourceWidget ? sourceWidget.params.label : t(lang, 'spectrumNoSource')}

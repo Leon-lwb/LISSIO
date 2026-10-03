@@ -34,7 +34,7 @@ export function ManualModePanel({
 }: ManualModePanelProps) {
   return (
     <>
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, 'fdManualInput')}</div>
+      <div className="section-heading section-heading--micro">{t(lang, 'fdManualInput')}</div>
 
       <div className="flex items-center gap-2 text-xs">
         <span className="text-text-secondary">{t(lang, 'fdFormat')}</span>
@@ -59,7 +59,7 @@ export function ManualModePanel({
             <ChevronDown size={9} />
           </button>
           {showExamples && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto float-popover">
+            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto popover-surface">
               {FRAME_EXAMPLES.map((ex, i) => (
                 <button
                   key={i}
@@ -86,7 +86,7 @@ export function ManualModePanel({
             <ChevronDown size={9} />
           </button>
           {showHistory && (
-            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto float-popover">
+            <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto popover-surface">
               {history.length === 0 ? (
                 <div className="px-3 py-2 text-xs text-text-secondary italic">{t(lang, 'fdHistoryEmpty')}</div>
               ) : (
@@ -146,7 +146,7 @@ export function ManualModePanel({
 
       {result && (
         <div className="flex flex-col gap-1.5">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, 'fdParseResult')}</div>
+          <div className="section-heading section-heading--micro">{t(lang, 'fdParseResult')}</div>
           {result.error ? (
             <div className="flex items-start gap-1 bg-red/10 border border-red/30 text-red px-2 py-1.5 rounded-sm text-xs">
               <AlertTriangle size={11} className="shrink-0 mt-0.5" />

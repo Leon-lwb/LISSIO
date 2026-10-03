@@ -193,7 +193,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
 
       <div className="flex min-h-0 flex-1">
         <div className="flex w-64 shrink-0 flex-col border-r border-border-subtle">
-          <div className="flex h-8 items-center border-b border-border-subtle px-2 text-[10px] font-semibold uppercase tracking-wider text-text-secondary">
+          <div className="flex h-8 items-center border-b border-border-subtle px-2 section-heading section-heading--micro">
             {t(lang, 'recordingDatabaseSessions')}
             <span className="ml-auto font-mono">{sessions.length}</span>
           </div>

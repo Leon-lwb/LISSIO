@@ -18,7 +18,7 @@ export const StrProperties = memo(function StrProperties({ widget, update }: Wid
   const VALUES = { pos, len, size } as const;
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'strSettings')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'strSettings')}</div>
       {op === 'format' && (
         <TextField label={t(lang, 'strFormatTmpl')} value={tmpl ?? ''}
           onCommit={(next) => patch({ tmpl: next })} />

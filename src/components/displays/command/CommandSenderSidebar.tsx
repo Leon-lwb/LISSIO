@@ -46,7 +46,7 @@ export function CommandSenderSidebar({
   return (
     <div className="w-[300px] shrink-0 border-l border-border bg-bg-sidebar overflow-y-auto flex flex-col gap-2 p-3">
       {/* 预览 */}
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, 'cmdPreview')}</div>
+      <div className="section-heading section-heading--micro">{t(lang, 'cmdPreview')}</div>
       <div className="bg-bg-editor border border-border rounded px-2 py-1.5 flex flex-col gap-1">
         <div className="flex items-center justify-between text-[10px] text-text-secondary uppercase tracking-wide">
           <span>HEX</span>
@@ -118,9 +118,9 @@ export function CommandSenderSidebar({
       )}
 
       {/* 全局设置 */}
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pt-1">{t(lang, 'cmdSettings')}</div>
+      <div className="section-heading section-heading--micro pt-1">{t(lang, 'cmdSettings')}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
-        <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+        <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
           <input
             type="text"
@@ -132,9 +132,9 @@ export function CommandSenderSidebar({
       </div>
 
       {/* 帧设置 (当前选中帧) */}
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pt-1">{t(lang, 'cmdFrameSettings')}</div>
+      <div className="section-heading section-heading--micro pt-1">{t(lang, 'cmdFrameSettings')}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
-        <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+        <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{t(lang, 'cmdAppendNewline')}</label>
           <button
             className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${frame.appendNewline ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
@@ -143,7 +143,7 @@ export function CommandSenderSidebar({
             {frame.appendNewline ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
           </button>
         </div>
-        <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+        <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{t(lang, 'cmdSendMode')}</label>
           <select
             value={sendMode}
@@ -156,7 +156,7 @@ export function CommandSenderSidebar({
           </select>
         </div>
         {sendMode === 'timer' && (
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-xs text-text-secondary">{t(lang, 'cmdSendModeInterval')}</label>
             <input
               type="number"
@@ -171,9 +171,9 @@ export function CommandSenderSidebar({
       </div>
 
       {/* 回环模式设置 */}
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pt-2">{t(lang, 'cmdLoopback')}</div>
+      <div className="section-heading section-heading--micro pt-2">{t(lang, 'cmdLoopback')}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
-        <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+        <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{t(lang, 'cmdLoopback')}</label>
           <button
             className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${params.loopbackEnabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}

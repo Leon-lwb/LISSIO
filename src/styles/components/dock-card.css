@@ -1,0 +1,33 @@
+/* ============ 亚克力 Dock 卡片主体 (承载 widget 的容器) ============ */
+/* 关键链路: widget-card-acrylic 通过 backdrop-filter 模糊 "背后内容" 才能看到
+   玻璃质感. 但 widget 卡片背后通常是 dock 卡片主体的 bg-bg-surface (纯色),
+   模糊纯色 = 视觉无变化, 用户感觉"没效果".
+
+   因此 dock 卡片主体在亚克力模式下也要变成半透明, 让更外层的编辑器画布
+   (含 React Flow 节点 / 网格 / 曲线) 透出来, widget 卡片才有东西可模糊.
+
+   alpha 取 Widget 磨砂的 1.6 倍 (更实), 保证 dock 主体仍清晰可辨;
+   blur 与 saturate 共享同一组变量, 与 widget 卡片视觉一致. */
+.dock-card-acrylic {
+  /* 默认: 实色 (与 .module-card 默认一致) */
+  background-color: var(--color-bg-surface);
+  transition:
+    background-color var(--transition-base) var(--ease-out-cubic),
+    border-color var(--transition-fast) var(--ease-out-cubic),
+    box-shadow var(--transition-fast) var(--ease-out-cubic);
+}
+
+[data-acrylic='true'] .dock-card-acrylic {
+  background-color: color-mix(
+    in srgb,
+    var(--color-bg-surface)
+      /* alpha = Widget alpha * 1.6, clamp 到 [40%, 92%], 比 Widget 卡片更实 */
+      clamp(40%, calc(var(--frost-alpha-widget) * 1.6), 92%),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  -webkit-backdrop-filter: blur(var(--frost-blur-widget)) saturate(var(--frost-saturate-widget));
+  /* 边框在亚克力模式下加亮 + 顶部高光, 玻璃面板质感 */
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}

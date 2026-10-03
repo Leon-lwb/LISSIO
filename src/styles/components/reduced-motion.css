@@ -1,0 +1,31 @@
+/* ============ 减少动效: 关闭交互态非必要过渡 ============ */
+/* 仅保留即时反馈 (颜色/边框直接切换), 去掉时延缓动 */
+@media (prefers-reduced-motion: reduce) {
+  [data-panel-resize-handle-id],
+  .context-menu-item,
+  .form-input,
+  .form-select,
+  .search-box,
+  .knob-dial,
+  .step-knob-dial,
+  .slider-input,
+  .slider-input::-webkit-slider-thumb,
+  .slider-input::-moz-range-thumb,
+  .settings-toggle-slider,
+  .settings-toggle-slider::before,
+  .tab-sliding-pill,
+  .snap-drop-zone,
+  .prompt-card-btn,
+  .prompt-card-btn-ghost,
+  .node-editor-rf .react-flow__handle {
+    transition: none;
+  }
+  .animate-rawdata-enter,
+  .animate-palette-row,
+  .animate-palette-row-exit,
+  .animate-search-clear-in,
+  .animate-led-pulse,
+  .notif-progress {
+    animation: none;
+  }
+}

@@ -65,7 +65,7 @@ function CommandFrameTabBar({
 
   return (
     <div className="flex items-center gap-1 px-2 py-1 border-b border-border shrink-0 overflow-x-auto">
-      <span className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pr-1 shrink-0">
+      <span className="section-heading section-heading--micro pr-1 shrink-0">
         {t(lang, 'cmdFrames')}
       </span>
       {frames.map((f) => {

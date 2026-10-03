@@ -139,8 +139,8 @@
   --color-info: var(--color-blue);
   --color-danger-surface: var(--color-bg-danger);
   --color-float-surface: var(--color-bg-elevated);
-  --color-float-chrome: var(--color-bg-panel-header);
-  --color-float-chrome-muted: var(--color-bg-elevated);
+  --color-dialog-chrome: var(--color-bg-panel-header);
+  --color-dialog-chrome-muted: var(--color-bg-elevated);
 
   /* ---------- 透明度档位 (--alpha-*, 全仓唯一白名单) ---------- */
   /* 组件不写裸 `opacity: 0.NN` / `opacity-NN`, 一律引用档位; --opacity-* 是

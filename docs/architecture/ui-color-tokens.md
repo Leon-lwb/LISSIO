@@ -165,3 +165,14 @@ TEXT_TONE_ALPHA                     // 档位白名单 {faint:.15, subtle:.4, di
 
 裸色相 (`text-green` / `bg-blue`) 经 `@theme` token 解析, **允许**; 禁的是带色阶的
 `text-green-500` (tailwind 默认调色板, 不随主题联动)。
+
+
+## CSS 文件与组件 Token 边界
+
+`src/styles/component-tokens.css` 是组件局部视觉 token 的统一入口；`src/styles/theme.css`
+继续拥有可被 ThemeEditor 运行时改写的主题 token。除这两个文件外，组件 CSS 不得出现
+hex / rgb / hsl 颜色字面量，只能引用 `var(--*)`。
+
+组件样式按 owner 拆到 `src/styles/components/<component>.css`，`src/styles/components.css`
+只维护导入清单。前端生产 TS/TSX/CSS 单文件不得超过 500 行；`pnpm check:tokens`
+同时检查颜色边界、文件上限和组件样式清单。

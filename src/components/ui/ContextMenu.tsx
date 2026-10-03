@@ -106,7 +106,7 @@ export function ContextMenu() {
   return (
     <div
       ref={menuRef}
-      className="context-menu float-popover"
+      className="context-menu popover-surface"
       style={{
         position: 'fixed',
         left: x,

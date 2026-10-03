@@ -1,0 +1,95 @@
+/* ============ AI 面板 ============ */
+/* --- 入场动画 --- */
+/* 面板按停靠方向滑入 (打开面板 / 切换停靠位置时随容器重挂载播放) */
+@keyframes ai-panel-in-x {
+  from { opacity: 0; transform: translateX(var(--ai-slide-from, 28px)); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes ai-panel-in-y {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ai-panel-in-float {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-ai-in-right {
+  animation: ai-panel-in-x 220ms var(--ease-out-cubic);
+  --ai-slide-from: 28px;
+}
+
+.animate-ai-in-left {
+  animation: ai-panel-in-x 220ms var(--ease-out-cubic);
+  --ai-slide-from: -28px;
+}
+
+.animate-ai-in-bottom {
+  animation: ai-panel-in-y 220ms var(--ease-out-cubic);
+}
+
+.animate-ai-in-float {
+  animation: ai-panel-in-float 180ms var(--ease-out-cubic);
+  transform-origin: bottom right;
+}
+
+/* 会话下拉 / 消息气泡 / 提示横幅 — 微入场 */
+@keyframes ai-menu-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes ai-msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ai-banner-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-ai-menu-in {
+  animation: ai-menu-in 120ms var(--ease-out-cubic);
+  transform-origin: top left;
+}
+
+.animate-ai-msg-in {
+  animation: ai-msg-in 160ms var(--ease-out-cubic);
+}
+
+.animate-ai-banner-in {
+  animation: ai-banner-in 150ms var(--ease-out-cubic);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ai-in-right,
+  .animate-ai-in-left,
+  .animate-ai-in-bottom,
+  .animate-ai-in-float,
+  .animate-ai-menu-in,
+  .animate-ai-msg-in,
+  .animate-ai-banner-in {
+    animation: none;
+  }
+}
+
+/* Scroll-away fade for chat messages. */
+.ai-chat-scroll-fade {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    var(--color-mask-solid) calc(100% - 5rem),
+    var(--color-mask-strong) calc(100% - 3.25rem),
+    var(--color-mask-soft) calc(100% - 1.375rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    var(--color-mask-solid) calc(100% - 5rem),
+    var(--color-mask-strong) calc(100% - 3.25rem),
+    var(--color-mask-soft) calc(100% - 1.375rem),
+    transparent
+  );
+}

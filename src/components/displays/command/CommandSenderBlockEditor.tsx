@@ -21,7 +21,7 @@ export function CommandBlockEditor({
   return (
     <div className="px-2 pb-2 flex flex-col gap-1.5">
       {/* 通用: label */}
-      <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+      <div className="field-grid field-grid--compact">
         <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockLabel')}</label>
         <input
           type="text"
@@ -34,7 +34,7 @@ export function CommandBlockEditor({
 
       {/* const_hex */}
       {block.type === 'const_hex' && (
-        <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+        <div className="field-grid field-grid--compact">
           <label htmlFor={`command-block-${block.id}-hex`} className="text-[10px] text-text-secondary">HEX</label>
           <input
             id={`command-block-${block.id}-hex`}
@@ -51,7 +51,7 @@ export function CommandBlockEditor({
       {/* var_ref */}
       {block.type === 'var_ref' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockPortName')}</label>
             <input
               type="text"
@@ -62,7 +62,7 @@ export function CommandBlockEditor({
               spellCheck={false}
             />
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockType')}</label>
             <select
               value={block.fieldType ?? 'uint16LE'}
@@ -83,7 +83,7 @@ export function CommandBlockEditor({
       {/* typed_const */}
       {block.type === 'typed_const' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockType')}</label>
             <select
               value={block.fieldType ?? 'uint8'}
@@ -95,7 +95,7 @@ export function CommandBlockEditor({
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockValue')}</label>
             <input
               type="text"
@@ -112,7 +112,7 @@ export function CommandBlockEditor({
       {/* checksum */}
       {block.type === 'checksum' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className="text-[10px] text-text-secondary">{t(lang, 'cmdChecksum')}</label>
             <select
               value={block.checksum ?? 'sum8'}

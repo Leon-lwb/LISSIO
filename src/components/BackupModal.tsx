@@ -83,19 +83,19 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
 
   return (
     <div
-      className="fixed inset-0 float-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
       role="button"
       tabIndex={0}
     >
       <div
-        className="w-[460px] max-w-[92vw] max-h-[88vh] float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[460px] max-w-[92vw] max-h-[88vh] dialog-surface flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         role="dialog"
         aria-modal="true"
       >
         {/* 标题栏 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border float-chrome flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border dialog-chrome flex-shrink-0">
           <span className="text-sm font-semibold text-text-bright">{t(lang, 'backupModalTitle')}</span>
           <button
             className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer"
@@ -164,7 +164,7 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
         </div>
 
         {/* 底部按钮 */}
-        <div className="flex items-center gap-2 px-4 py-3 border-t border-border float-chrome flex-shrink-0">
+        <div className="flex items-center gap-2 px-4 py-3 border-t border-border dialog-chrome flex-shrink-0">
           <button
             className="flex-1 px-3 h-8 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover inline-flex items-center justify-center gap-1.5 disabled:opacity-disabled disabled:cursor-default"
             onClick={() => void handleExport()}

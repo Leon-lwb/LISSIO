@@ -1,0 +1,108 @@
+/* ============ AI 回复 Markdown (AiMarkdown) ============ */
+/* 相邻块级间距 (Tailwind preflight 归零了原生 margin, 不用 space-y 以兼容嵌套) */
+.ai-md > * + * {
+  margin-top: 0.4rem;
+}
+/* 行内代码 (代码块内的 code 由 hljs 主题接管) */
+.ai-md :not(pre) > code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--color-bg-hover);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 4px;
+  padding: 0.5px 4px;
+}
+
+/* ---- 折行策略: 回复在面板宽度内自适应折行, 任何内容都不撑出横向滚动条 ----
+   1) 正文/行内代码/单元格用 anywhere: 长 URL、哈希、CJK 混排标识符在
+      任意字符处可断。必须用 anywhere 而非 break-word — 只有前者参与
+      min-content 计算, 表格列与 flex 子项才会真正收缩到面板宽度。
+   2) 代码块保留源码缩进与手动换行 (pre-wrap), 超长行同样折行。
+   3) 表格按内容取宽但不超过气泡 (窄表保持紧凑, 宽表收缩), 单元格顶端对齐。 */
+.ai-md,
+.ai-md p,
+.ai-md li,
+.ai-md blockquote,
+.ai-md th,
+.ai-md td,
+.ai-md :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
+.ai-md pre,
+.ai-md pre code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ai-md table {
+  max-width: 100%;
+}
+
+.ai-md th,
+.ai-md td {
+  vertical-align: top;
+}
+
+/* highlight.js 暗色主题 — 仅覆盖常用 token, 配色对齐 app 暗色 token
+   (rehype-highlight 输出 hljs-* 类; 直接依赖完整 hljs 主题需引入 highlight.js 包) */
+.ai-md .hljs {
+  color: var(--color-text-primary);
+}
+.ai-md .hljs-comment,
+.ai-md .hljs-quote {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+.ai-md .hljs-keyword,
+.ai-md .hljs-selector-tag,
+.ai-md .hljs-doctag,
+.ai-md .hljs-meta .hljs-keyword {
+  color: var(--color-red);
+}
+.ai-md .hljs-string,
+.ai-md .hljs-regexp,
+.ai-md .hljs-meta .hljs-string {
+  color: var(--color-green);
+}
+.ai-md .hljs-number,
+.ai-md .hljs-literal {
+  color: var(--color-yellow);
+}
+.ai-md .hljs-title,
+.ai-md .hljs-title.class_,
+.ai-md .hljs-title.function_,
+.ai-md .hljs-section {
+  color: var(--color-purple);
+}
+.ai-md .hljs-attr,
+.ai-md .hljs-attribute,
+.ai-md .hljs-variable,
+.ai-md .hljs-template-variable,
+.ai-md .hljs-type {
+  color: var(--color-blue);
+}
+.ai-md .hljs-built_in,
+.ai-md .hljs-symbol,
+.ai-md .hljs-name,
+.ai-md .hljs-selector-id,
+.ai-md .hljs-selector-class {
+  color: var(--color-green);
+}
+.ai-md .hljs-meta {
+  color: var(--color-text-secondary);
+}
+.ai-md .hljs-deletion {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 15%, transparent);
+}
+.ai-md .hljs-addition {
+  color: var(--color-success);
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+}
+.ai-md .hljs-emphasis {
+  font-style: italic;
+}
+.ai-md .hljs-strong {
+  font-weight: 600;
+}

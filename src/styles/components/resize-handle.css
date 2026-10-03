@@ -1,0 +1,10 @@
+/* ============ Resize Handle (react-resizable-panels) ============ */
+[data-panel-resize-handle-id] {
+  background: transparent;
+  transition: background-color var(--transition-fast) var(--ease-out-cubic);
+}
+
+[data-panel-resize-handle-id][data-resize-handle-active],
+[data-panel-resize-handle-id]:hover {
+  background: var(--color-accent);
+}

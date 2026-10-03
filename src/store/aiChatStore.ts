@@ -1,6 +1,4 @@
 import { create } from 'zustand';
-import { transport } from '../lib/rpc';
-import type { EventChannel } from '../lib/rpc/types';
 import { api } from '../lib/tauri/tauri';
 import { notify } from '../lib/tauri/notifications';
 import { formatAiKindError } from '../lib/ai/aiErrors';
@@ -8,121 +6,23 @@ import { checkAiProviderSettings } from '../settings/aiProvider';
 import { useSettingsStore } from './settingsStore';
 import { useAppStore } from './appStore';
 import { t } from '../i18n';
-import { errorText } from '../types/errors';
-import type {
-  AiAttachment,
-  AiChatEvent,
-  AiSessionMeta,
-  AiToolRun,
-  AiTurnEvent,
-  AiViewItem,
-  McpServerConfig,
-  McpToolInfo,
-} from '../types';
+import type { AiAttachment, AiViewItem } from '../types';
+import type { AiChatState } from './aiChatStoreTypes';
+import {
+  appendTextEvent,
+  errorItemFromRejection,
+  openChatChannel,
+  providerConfigFromSettings,
+} from './aiChatStoreSupport';
 
-interface AiChatState {
-  /** 会话摘要列表 (后端持有) */
-  sessions: AiSessionMeta[];
-  /** 当前会话 id */
-  activeSessionId: string | null;
-  /** 当前会话的视图条目 — 由后端会话水合 */
-  viewItems: AiViewItem[];
-  /** 正在流式生成 (全局同一时刻至多一个任务) */
-  streaming: boolean;
-  /** 流式回合所属会话 — 切换会话时气泡只在所属会话内显示 */
-  streamingSessionId: string | null;
-  /** 当前流式文本聚合 */
-  streamingText: string;
-  /** 当前推理文本聚合 */
-  reasoningText: string;
-  /** 当前流式回合的原始事件顺序。 */
-  timeline: AiTurnEvent[];
-  /** 当前回合的工具调用记录 */
-  toolRuns: AiToolRun[];
-  /** 进行中的 task_id (可取消) */
-  taskId: string | null;
-  /** 聚合工具列表缓存 */
-  tools: McpToolInfo[];
-  /** 外部 server 配置缓存 */
-  servers: McpServerConfig[];
-  /** 本地 MCP server 状态 */
-  serverRunning: boolean;
-  serverPort: number | null;
+export type { AiChatState } from './aiChatStoreTypes';
 
-  refreshSessions: () => Promise<void>;
-  createSession: (title: string) => Promise<void>;
-  switchSession: (id: string) => Promise<void>;
-  renameSession: (id: string, title: string) => Promise<void>;
-  deleteSession: (id: string) => Promise<void>;
-  send: (text: string, attachments?: AiAttachment[]) => Promise<void>;
-  /** 重新生成 — 截掉最后一条用户条目之后的回合并重跑 */
-  regenerate: () => Promise<void>;
-  cancel: () => Promise<void>;
-  clearSession: () => Promise<void>;
-  refreshTools: () => Promise<void>;
-  refreshServers: () => Promise<void>;
-  refreshServerStatus: () => Promise<void>;
-  startLocalServer: () => Promise<void>;
-  stopLocalServer: () => Promise<void>;
-  addServer: (config: McpServerConfig) => Promise<void>;
-  removeServer: (id: string) => Promise<void>;
-  setServerEnabled: (id: string, enabled: boolean) => Promise<void>;
-}
 
-/// 流式增量合批窗口 (ms) — 约三帧, 兼顾观感与主线程占用。
+/// Streaming updates are batched over roughly three frames.
 const STREAM_FLUSH_MS = 50;
 
-/// 当前流式任务的缓冲冲刷器 — 终态收束前必须先冲刷, 否则聚合会漏掉最后一段文本。
+/// Flush the current stream buffer before terminal state settlement.
 let flushStreaming: (() => void) | null = null;
-
-function appendTextEvent(timeline: AiTurnEvent[], kind: 'text' | 'reasoning', text: string): AiTurnEvent[] {
-  if (!text) return timeline;
-  const last = timeline[timeline.length - 1];
-  if (last?.kind === kind) {
-    return [...timeline.slice(0, -1), { kind, text: last.text + text }];
-  }
-  return [...timeline, { kind, text }];
-}
-
-/** 从设置读取 provider 配置 (随请求传给后端, 后端不落盘) */
-function providerConfigFromSettings() {
-  const ai = useSettingsStore.getState().settings.ai;
-  return {
-    adapter: ai.adapter,
-    base_url: ai.baseUrl,
-    api_key: '',
-    model: ai.model,
-    temperature: ai.temperature,
-    max_tokens: ai.maxTokens,
-  };
-}
-
-/** 命令级失败 (invoke reject 的结构化错误对象) → 本地错误条目 (kind/data 透传, 渲染时本地化) */
-function errorItemFromRejection(err: unknown): AiViewItem {
-  if (err && typeof err === 'object' && 'kind' in err) {
-    const e = err as { message?: string; kind?: string; data?: Record<string, string> };
-    return {
-      role: 'assistant',
-      text: e.message ?? 'AI request failed',
-      error: true,
-      error_kind: e.kind,
-      error_data: e.data,
-    };
-  }
-  return { role: 'assistant', text: errorText(err), error: true };
-}
-
-/** 构造对话事件通道 — 出口不支持 AI 命令时上报一次本地失败并返回 null */
-function openChatChannel(
-  onUnsupported: (err: unknown) => void
-): EventChannel<AiChatEvent> | null {
-  try {
-    return transport.eventChannel<AiChatEvent>();
-  } catch (error) {
-    onUnsupported(error);
-    return null;
-  }
-}
 
 export const useAiChatStore = create<AiChatState>()((set, get) => {
   /** 后端条目 → 视图条目 (同构, 仅收紧类型) */

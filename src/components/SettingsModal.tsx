@@ -12,64 +12,35 @@ import {
   X,
   RotateCcw,
   Check,
-  Settings as SettingsIcon,
-  Palette,
-  Sliders,
-  Usb,
-  Bell,
   Type,
   Database,
-  Gauge,
-  Pencil,
   Download,
   Upload,
   RefreshCw,
   Sparkles,
   ExternalLink,
-  FolderOpen,
 } from 'lucide-react';
 import { platform } from '../lib/platform';
-import { hasTauriRuntime, transport } from '../lib/rpc';
+import { hasTauriRuntime } from '../lib/rpc';
 import { ORCAROUTER_OFFERS_URL, ORCAROUTER_REFERRAL_URL } from '../settings/defaults';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
-import type { Lang } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
 import { ThemeEditor } from './ThemeEditor';
-import { BUILT_IN_THEMES, type ThemeDefinition } from '../settings/theme';
 import type { SettingFieldDef} from './settingFields';
 import { buildSettingFields } from './settingFields';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
-import { formatError, notify } from '../lib/tauri/notifications';
+import { formatError } from '../lib/tauri/notifications';
 import { BackupModal } from './BackupModal';
 import { useUpdateStore, type UpdateChannel } from '../store/updateStore';
 import { SearchInput } from './ui/SearchInput';
-import { DraftInput, DraftNumberInput, OpacitySliderControl } from './ui/fields';
+import { DialogHeader, DialogOverlay, DialogSurface } from './ui/Dialog';
 import { AiMcpSettings } from './ai/AiMcpSettings';
-
-const CATEGORY_ICONS: Record<keyof AppSettings, React.ReactNode> = {
-  general: <SettingsIcon size={16} />,
-  appearance: <Palette size={16} />,
-  editor: <Sliders size={16} />,
-  data: <Database size={16} />,
-  serial: <Usb size={16} />,
-  notifications: <Bell size={16} />,
-  performance: <Gauge size={16} />,
-  ai: <Sparkles size={16} />,
-};
-
-const CATEGORY_LABEL_KEY: Record<keyof AppSettings, string> = {
-  general: 'settingsGeneral',
-  appearance: 'settingsAppearance',
-  editor: 'settingsEditor',
-  data: 'settingsData',
-  serial: 'settingsSerial',
-  notifications: 'settingsNotifications',
-  performance: 'settingsPerformance',
-  ai: 'settingsAi',
-};
+import { SettingsControl } from './SettingsControl';
+import { UpdateChannelDialog } from './UpdateChannelDialog';
+import { CATEGORY_ICONS, CATEGORY_LABEL_KEY } from './settingsCategories';
 
 export function SettingsModal() {
   const lang = useAppStore((s) => s.lang);
@@ -205,185 +176,32 @@ export function SettingsModal() {
   const effectiveChannel: UpdateChannel =
     updateChannel ?? (appVersion.includes('-') ? 'beta' : 'stable');
 
-  // 渲染单个控件
-  const renderControl = (def: SettingFieldDef) => {
-    const category = def.category;
-    const value = (settings[category] as Record<string, unknown>)[def.field];
-
-    const handleChange = (v: unknown) => {
-      // 设置项的 category+field 组合来自 SETTING_FIELDS 静态表, 类型保证安全
-      // 但 TypeScript 无法静态推断, 此处用 type assertion
-      (update as (c: keyof AppSettings, f: string, v: unknown) => void)(
-        category,
-        def.field,
-        v
-      );
-      // 语言切换同步到 appStore
-      if (category === 'general' && def.field === 'language') {
-        setLang(v as Lang);
+  const renderControl = (def: SettingFieldDef) => (
+    <SettingsControl
+      def={def}
+      settings={settings}
+      update={(category, field, value) =>
+        (update as (c: keyof AppSettings, f: string, v: unknown) => void)(category, field, value)
       }
-    };
-
-    const ctrl = def.control;
-    switch (ctrl.kind) {
-      case 'toggle':
-        return (
-          <label className="settings-toggle">
-            <span className="sr-only">{def.field}</span>
-            <input
-              type="checkbox"
-              checked={Boolean(value)}
-              onChange={(e) => handleChange(e.target.checked)}
-            />
-            <span className="settings-toggle-slider" />
-          </label>
-        );
-      case 'select':
-        return (
-          <select
-            className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer min-w-[140px]"
-            value={String(value)}
-            onChange={(e) => {
-              const opt = ctrl.options.find((o) => String(o.value) === e.target.value);
-              if (opt) handleChange(opt.value);
-            }}
-          >
-            {ctrl.options.map((o) => (
-              <option key={String(o.value)} value={String(o.value)}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        );
-      case 'number':
-        return (
-          <DraftNumberInput
-            className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors w-[120px]"
-            value={typeof value === 'number' ? value : null}
-            min={ctrl.min}
-            max={ctrl.max}
-            step={ctrl.step}
-            onCommit={(n) => handleChange(n)}
-          />
-        );
-      case 'slider':
-        return (
-          <OpacitySliderControl
-            value={typeof value === 'number' ? value : ctrl.min}
-            min={ctrl.min}
-            max={ctrl.max}
-            step={ctrl.step}
-            label={t(lang, def.labelKey)}
-            onCommit={(n) => handleChange(n)}
-          />
-        );
-      case 'text':
-        return (
-          <DraftInput
-            type="text"
-            className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
-            value={String(value)}
-            onCommit={handleChange}
-          />
-        );
-      case 'path':
-        return (
-          <div className="flex items-center gap-2 min-w-[240px]">
-            <DraftInput
-              type="text"
-              className="flex-1 min-w-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
-              value={typeof value === 'string' ? value : ''}
-              placeholder={t(lang, 'settingRecDefaultDir')}
-              onCommit={handleChange}
-            />
-            <button
-              className="flex-shrink-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
-              onClick={() => {
-                void platform.openFile({
-                  directory: true,
-                  title: t(lang, 'settingRecDatabaseDir'),
-                }).then((dir) => {
-                  if (typeof dir === 'string' && dir) handleChange(dir);
-                });
-              }}
-              title={t(lang, 'settingRecBrowse')}
-            >
-              <FolderOpen size={12} />
-              <span>{t(lang, 'settingRecBrowse')}</span>
-            </button>
-          </div>
-        );
-      case 'openSettingsFolder':
-        return (
-          <button
-            type="button"
-            className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
-            onClick={() => {
-              void transport.call<void>('open_settings_folder').catch((error: unknown) => {
-                notify.error(t(lang, 'settingAiOpenSettingsFolderFailed'), formatError(error), {
-                  source: 'settings-folder',
-                });
-              });
-            }}
-            title={t(lang, 'settingAiOpenSettingsFolder')}
-          >
-            <FolderOpen size={12} />
-            <span>{t(lang, 'settingAiOpenSettingsFolder')}</span>
-          </button>
-        );
-      case 'theme': {
-        const themeOptions = [
-          ...BUILT_IN_THEMES.map((t) => ({ value: t.id, label: t.name })),
-          ...settings.appearance.customThemes.map((t: ThemeDefinition) => ({
-            value: t.id,
-            label: t.name,
-          })),
-        ];
-        return (
-          <div className="flex items-center gap-2 min-w-[220px]">
-            <select
-              className="flex-1 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm focus:outline-none focus:border-accent transition-colors cursor-pointer"
-              value={String(value)}
-              onChange={(e) => {
-                const opt = themeOptions.find((o) => o.value === e.target.value);
-                if (opt) handleChange(opt.value);
-              }}
-            >
-              {themeOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <button
-              className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
-              onClick={() => setThemeEditorOpen(true)}
-              title={t(lang, 'themeEdit')}
-            >
-              <Pencil size={12} />
-              <span>{t(lang, 'themeEdit')}</span>
-            </button>
-          </div>
-        );
-      }
-    }
-  };
+      setLang={setLang}
+      onEditTheme={() => setThemeEditorOpen(true)}
+    />
+  );
 
   return (
-    <div
-      className="fixed inset-0 float-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+    <DialogOverlay
+      className="animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) close(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
-      <div
-        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
-        role="dialog"
-        aria-modal="true"
+      <DialogSurface
+        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] animate-[settings-slide-in_0.2s_ease-out]"
+        label={t(lang, 'settingsTitle')}
       >
         {/* 顶部 — 标题 + 搜索框 + 关闭 */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border float-chrome flex-shrink-0">
+        <DialogHeader className="gap-3">
           <div className="flex items-center gap-1.5 text-text-bright text-base font-semibold flex-shrink-0">
             <Type size={16} />
             <span>{t(lang, 'settingsTitle')}</span>
@@ -400,11 +218,11 @@ export function SettingsModal() {
           <button className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer" onClick={close} title={t(lang, 'settingsClose')}>
             <X size={16} />
           </button>
-        </div>
+        </DialogHeader>
 
         {/* 主体 — 左侧分类 + 右侧表单 */}
         <div className="flex-1 flex min-h-0">
-          <div className="w-50 float-chrome-muted border-r border-border py-2 flex flex-col flex-shrink-0 overflow-y-auto">
+          <div className="w-50 dialog-chrome-muted border-r border-border py-2 flex flex-col flex-shrink-0 overflow-y-auto">
             {(Object.keys(CATEGORY_LABEL_KEY) as (keyof AppSettings)[]).map((cat) => {
               const isActive =
                 !searchQuery.trim() && activeCategory === cat;
@@ -427,7 +245,7 @@ export function SettingsModal() {
             })}
             <div className="flex-1" />
             <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
-              <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary mb-1">
+              <div className="section-heading mb-1">
                 {t(lang, 'backupCategory')}
               </div>
               <button
@@ -456,7 +274,7 @@ export function SettingsModal() {
               </button>
             </div>
             <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
-              <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary mb-1">
+              <div className="section-heading mb-1">
                 {t(lang, 'updateCategory')}
               </div>
               {appVersion && (
@@ -532,7 +350,7 @@ export function SettingsModal() {
               return (
                 <div key={cat} className="mb-6">
                   {searchQuery.trim() && (
-                    <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary pb-2 mb-3 border-b border-border">
+                    <div className="section-heading pb-2 mb-3 border-b border-border">
                       {t(lang, CATEGORY_LABEL_KEY[cat])}
                     </div>
                   )}
@@ -598,7 +416,7 @@ export function SettingsModal() {
         </div>
 
         {/* 底部 — 完成按钮 */}
-        <div className="flex items-center px-4 py-2.5 border-t border-border float-chrome flex-shrink-0">
+        <div className="flex items-center px-4 py-2.5 border-t border-border dialog-chrome flex-shrink-0">
           <div className="flex-1" />
           <form action={saveAction}>
             <button
@@ -614,7 +432,7 @@ export function SettingsModal() {
             )}
           </form>
         </div>
-      </div>
+      </DialogSurface>
       <ThemeEditor
         isOpen={themeEditorOpen}
         onClose={() => setThemeEditorOpen(false)}
@@ -652,51 +470,13 @@ export function SettingsModal() {
         }
       />
       <BackupModal isOpen={backupModalOpen} onClose={() => setBackupModalOpen(false)} />
-      {/* 更新通道切换确认 — select 为受控值, 取消即自动回原值 */}
-      {pendingChannel && (
-        <div
-          className="fixed inset-0 float-overlay z-modal-secondary flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
-          onClick={(e) => {
-            // 阻止冒泡到设置弹窗遮罩 (避免整个设置弹窗被关闭)
-            e.stopPropagation();
-            setPendingChannel(null);
-          }}
-          onKeyDown={activateOnKeyboard}
-          role="button"
-          tabIndex={0}
-        >
-          <div
-            className="w-[360px] max-w-[90vw] float-card p-5 flex flex-col gap-3 animate-[settings-slide-in_0.2s_ease-out]"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="text-sm font-semibold text-text-bright">
-              {t(lang, 'updateChannelConfirmTitle')}
-            </div>
-            <div className="text-xs text-text-secondary leading-relaxed">
-              {t(lang, pendingChannel === 'beta' ? 'updateChannelToBetaMsg' : 'updateChannelToStableMsg')}
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
-                onClick={() => setPendingChannel(null)}
-              >
-                {t(lang, 'updateCancel')}
-              </button>
-              <button
-                className="px-3 py-1 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs transition-colors hover:bg-bg-button-hover"
-                onClick={() => {
-                  setUpdateChannel(pendingChannel);
-                  setPendingChannel(null);
-                }}
-              >
-                {t(lang, 'updateConfirm')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <UpdateChannelDialog
+        pendingChannel={pendingChannel}
+        setPendingChannel={setPendingChannel}
+        setUpdateChannel={setUpdateChannel}
+      />
+
+    </DialogOverlay>
   );
 }
 

@@ -1,0 +1,17 @@
+/* ============ 拖拽吸附投放区提示 ============ */
+.snap-drop-zone {
+  position: absolute;
+  border-radius: var(--radius-md);
+  background: var(--color-accent-drop);
+  border: 1.5px dashed var(--color-accent);
+  pointer-events: none;
+  /* 定位由 left/top/width/height 控制，这里只对 opacity 动画表示出现/消失 */
+  transition: opacity var(--transition-fast) var(--ease-out-cubic);
+  opacity: 0;
+  z-index: 30;
+}
+
+/* 通过 JS 添加此类来显示 */
+.snap-drop-zone.visible {
+  opacity: 1;
+}

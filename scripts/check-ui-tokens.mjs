@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// 颜色 / 透明度 Token 统一静态检查 — 文字符号层 (text/symbol layer)
+// Frontend token and structure checks.
 //
-// 防止组件绕过 token 散写"颜色 + 透明度"。用法: pnpm check:tokens (CI 必跑)。
+// Prevents raw visual colors, oversized frontend source files, and monolithic component styles. Usage: pnpm check:tokens.
 //
 // 规则 (作用于 src/**/*.{ts,tsx,css}, 跳过 src/types/generated):
 //   1. opacity 档位 — class 串只允许:
@@ -40,6 +40,8 @@ const ARBITRARY_OPACITY = /(?<![-\w])opacity-\[/;
 const TEXT_WHITE = /(?<![\w-])text-white(?![\w-])/;
 const RAW_FROST = /\bbackdrop-(?:blur(?:-|\[)|filter\s*:)/;
 const LEGACY_FROST_TOKEN = /--(?:widget-acrylic|blur-acrylic|saturate-acrylic|shadow-modal)-?/;
+const RAW_CSS_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
+const FRONTEND_LIMIT = 500;
 
 /** 递归收集 src 下指定后缀的文件 */
 function collect(dir, out = []) {
@@ -108,6 +110,19 @@ for (const file of collect(path.join(root, 'src'))) {
     }
   });
 
+  const isTest = rel.includes('__tests__') || /\.(test|spec)\.(ts|tsx)$/.test(rel);
+  if (!isTest && lines.length > FRONTEND_LIMIT) {
+    errors.push(`${rel}:${lines.length}  前端生产文件超过 ${FRONTEND_LIMIT} 行 — 按职责拆分并保持公开 API 稳定`);
+  }
+  if (
+    isCss &&
+    !rel.endsWith('styles/theme.css') &&
+    !rel.endsWith('styles/component-tokens.css') &&
+    RAW_CSS_COLOR.test(raw.replace(/\/\*[\s\S]*?\*\//g, ''))
+  ) {
+    errors.push(`${rel}  裸 CSS 颜色 — 颜色只能定义在 theme.css / component-tokens.css，组件规则使用 var(--*)`);
+  }
+
   if (isCss && !rel.endsWith('styles/theme.css')) {
     const css = stripKeyframes(raw);
     const re = /(^|[;{\s])opacity:\s*(?!var\()([0-9]*\.?[0-9]+)/g;
@@ -137,8 +152,8 @@ const themeTs = fs.readFileSync(path.join(root, 'src/settings/theme.ts'), 'utf8'
 
 for (const token of [
   '--color-float-surface',
-  '--color-float-chrome',
-  '--color-float-chrome-muted',
+  '--color-dialog-chrome',
+  '--color-dialog-chrome-muted',
   '--shadow-float',
   '--shadow-popover',
   '--frost-blur',
@@ -228,4 +243,4 @@ if (errors.length > 0) {
   console.error('\n规范: docs/architecture/ui-color-tokens.md | 档位单一来源: src/styles/theme.css');
   process.exit(1);
 }
-console.log(`check:tokens 通过 — ${tierNames.length} 个透明度档位 (${tierNames.join('/')}) 与语义 token 四处同步。`);
+console.log(`check:tokens 通过 — ${tierNames.length} 个透明度档位 (${tierNames.join('/')})、语义 token 与前端结构规则同步。`);

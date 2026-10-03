@@ -24,7 +24,7 @@ export function LiveModePanel({ portNames, liveOutputs, enableValid, enableFrame
 
   return (
     <>
-      <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold">{t(lang, 'fdLiveOutputs')}</div>
+      <div className="section-heading section-heading--micro">{t(lang, 'fdLiveOutputs')}</div>
       <div className="bg-bg-editor border border-border rounded p-2 flex flex-col gap-1">
         {allPorts.length === 0 ? (
           <div className="text-xs text-text-secondary opacity-muted italic py-2 text-center">{t(lang, 'fdNoPorts')}</div>

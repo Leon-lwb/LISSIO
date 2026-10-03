@@ -49,7 +49,7 @@ export function ChoiceSection<K extends ChoiceKind>({ widget: narrowedWidget, up
   return (
     <section className="mt-3 pt-3 border-t border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{t(lang, 'options')}</span>
+        <span className="section-heading section-heading--micro">{t(lang, 'options')}</span>
         <button type="button" className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={() => changeOptions([...widget.params.options, { id: nanoid(8), label: `Option ${widget.params.options.length + 1}`, value: widget.params.options.length }])}
           title={t(lang, 'addOption')}><Plus size={13} /></button>

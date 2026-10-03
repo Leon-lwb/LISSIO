@@ -177,7 +177,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
 
   return (
     <div
-      className="fixed inset-0 float-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
@@ -185,10 +185,10 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
       aria-label={t(lang, 'close')}
     >
       <div
-        className="float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
+        className="dialog-surface flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
         style={{ width: '90vw', height: '85vh', maxWidth: 1200, maxHeight: 800 }}
       >
-        <div className="flex items-center gap-3 px-4 py-3 float-chrome border-b border-border text-text-bright font-semibold flex-shrink-0">
+        <div className="flex items-center gap-3 px-4 py-3 dialog-chrome border-b border-border text-text-bright font-semibold flex-shrink-0">
           <FileCode size={16} />
           <span>{t(lang, 'customWidgetEditor')}</span>
           <button
@@ -219,7 +219,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
         <div className="flex-1 flex min-h-0">
           {/* 左侧: 代码编辑器 */}
           <div className="flex-1 flex flex-col min-w-0 border-r border-border">
-            <div className="flex items-center justify-between px-2.5 py-1.5 float-chrome border-b border-border gap-1.5">
+            <div className="flex items-center justify-between px-2.5 py-1.5 dialog-chrome border-b border-border gap-1.5">
               <span className="text-text-secondary text-xs">
                 {t(lang, 'customWidgetCode')}
               </span>
@@ -279,7 +279,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
 
             {/* 解析出的 schema 信息 */}
             {validation.def && (
-              <div className="px-2.5 py-1.5 float-chrome border-t border-border text-xs text-text-secondary">
+              <div className="px-2.5 py-1.5 dialog-chrome border-t border-border text-xs text-text-secondary">
                 <div className="flex gap-1.5 items-baseline py-0.5">
                   <span className="text-blue min-w-[80px]">{t(lang, 'customInputs')}:</span>
                   <span>{validation.def.inputs?.map((i) => i.label).join(', ') ?? '-'}</span>
@@ -298,7 +298,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
 
           {/* 右侧: 预览 */}
           <div className="w-[320px] flex flex-col bg-bg-editor flex-shrink-0">
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 float-chrome border-b border-border">
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 dialog-chrome border-b border-border">
               <Play size={12} className="text-green" />
               <span className="text-xs">{t(lang, 'customPreview')}</span>
             </div>
@@ -318,7 +318,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
 
             {/* 设置项编辑 */}
             {validation.def?.settings && validation.def.settings.length > 0 && (
-              <div className="px-3 py-2 border-t border-border float-chrome-muted max-h-[40%] overflow-y-auto">
+              <div className="px-3 py-2 border-t border-border dialog-chrome-muted max-h-[40%] overflow-y-auto">
                 <div className="text-xs text-text-secondary uppercase tracking-wide mb-1.5">{t(lang, 'customSettingsValues')}</div>
                 {validation.def.settings.map((s) => (
                   <div key={s.id} className="flex items-center gap-2 py-1">
@@ -364,7 +364,7 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
           </div>
         </div>
 
-        <div className="px-3 py-2 flex justify-end gap-2 float-chrome border-t border-border">
+        <div className="px-3 py-2 flex justify-end gap-2 dialog-chrome border-t border-border">
           <button className="px-3 py-1.5 bg-transparent text-text-secondary border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-hover hover:text-text-primary" onClick={onClose}>
             {t(lang, 'customCancel')}
           </button>

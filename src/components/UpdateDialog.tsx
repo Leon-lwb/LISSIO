@@ -35,14 +35,14 @@ export function UpdateDialog() {
 
   return (
     <div
-      className="fixed inset-0 float-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
+      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget && closable) closeDialog(); }}
       onKeyDown={(event) => { if (closable && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); closeDialog(); } }}
       role="button"
       tabIndex={0}
     >
       <div
-        className="w-[440px] max-w-[90vw] max-h-[80vh] float-card py-6 px-7 flex flex-col gap-2 relative animate-[settings-slide-in_0.2s_ease-out]"
+        className="w-[440px] max-w-[90vw] max-h-[80vh] dialog-surface py-6 px-7 flex flex-col gap-2 relative animate-[settings-slide-in_0.2s_ease-out]"
         role="dialog"
         aria-modal="true"
       >
@@ -75,7 +75,7 @@ export function UpdateDialog() {
 
         {updateInfo?.notes && (
           <>
-            <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary mt-2">
+            <div className="section-heading mt-2">
               {t(lang, 'updateReleaseNotes')}
             </div>
             <div className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap max-h-[240px] overflow-y-auto bg-bg-input rounded px-3 py-2 border border-border">

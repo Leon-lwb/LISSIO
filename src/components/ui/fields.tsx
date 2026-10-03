@@ -7,9 +7,10 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, InputHTMLAttributes, KeyboardEvent, TextareaHTMLAttributes } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
+import { FormField } from './Form';
 
 export function TextField({ value, label, onCommit, allowEmpty = false }: {
-  value: string; label: string; onCommit: (value: string) => void; /// 允许提交空串 (如单位后缀)
+  value: string; label: string; onCommit: (value: string) => void;
   allowEmpty?: boolean;
 }) {
   const lang = useAppStore((s) => s.lang);
@@ -27,14 +28,18 @@ export function TextField({ value, label, onCommit, allowEmpty = false }: {
     if (next !== value) onCommit(next);
   };
   return (
-    <label className="block mb-2">
-      <span className="block text-xs text-text-secondary mb-1">{label}</span>
-      <input className={`form-input ${invalid ? 'border-red' : ''}`} value={draft}
-        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }} onBlur={commit}
-        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
-        aria-invalid={invalid} />
-      {invalid && <span className="block mt-1 text-[10px] text-red">{t(lang, 'requiredValue')}</span>}
-    </label>
+    <FormField label={label} error={invalid ? t(lang, 'requiredValue') : null}>
+      <input
+        className={`form-input ${invalid ? 'border-red' : ''}`}
+        value={draft}
+        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); commit(); }
+        }}
+        aria-invalid={invalid}
+      />
+    </FormField>
   );
 }
 
@@ -55,14 +60,19 @@ export function NumberField({ value, label, onCommit, error }: {
     if (ok) setDraft(String(parsed));
   };
   return (
-    <label className="block mb-2">
-      <span className="block text-xs text-text-secondary mb-1">{label}</span>
-      <input type="number" className={`form-input font-mono ${invalid ? 'border-red' : ''}`} value={draft}
-        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }} onBlur={commit}
-        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
-        aria-invalid={invalid} />
-      {invalid && <span className="block mt-1 text-[10px] text-red">{error ?? 'Invalid value'}</span>}
-    </label>
+    <FormField label={label} error={invalid ? error ?? 'Invalid value' : null}>
+      <input
+        type="number"
+        className={`form-input font-mono ${invalid ? 'border-red' : ''}`}
+        value={draft}
+        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); commit(); }
+        }}
+        aria-invalid={invalid}
+      />
+    </FormField>
   );
 }
 
@@ -89,14 +99,20 @@ export function OptionalNumberField({ value, label, placeholder, onCommit }: {
     if (next !== value) onCommit(next);
   };
   return (
-    <label className="block mb-2 flex-1 min-w-0">
-      <span className="block text-xs text-text-secondary mb-1">{label}</span>
-      <input type="number" className={`form-input font-mono ${invalid ? 'border-red' : ''}`} value={draft}
+    <FormField label={label} flex>
+      <input
+        type="number"
+        className={`form-input font-mono ${invalid ? 'border-red' : ''}`}
+        value={draft}
         placeholder={placeholder}
-        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }} onBlur={commit}
-        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit(); } }}
-        aria-invalid={invalid} />
-    </label>
+        onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') { event.preventDefault(); commit(); }
+        }}
+        aria-invalid={invalid}
+      />
+    </FormField>
   );
 }
 
@@ -108,15 +124,13 @@ export function SelectField({ value, label, options, onChange }: {
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="block mb-2">
-      <span className="block text-xs text-text-secondary mb-1">{label}</span>
-      <select className="form-select" value={value}
-        onChange={(event) => onChange(event.target.value)}>
+    <FormField label={label}>
+      <select className="form-select" value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-    </label>
+    </FormField>
   );
 }
 

@@ -1,0 +1,18 @@
+.section-heading {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.section-heading--divided {
+  padding-bottom: var(--spacing-2);
+  border-bottom: var(--line-hairline) solid var(--color-border);
+}
+
+.section-heading--micro {
+  font-size: var(--prompt-card-eyebrow-size);
+  letter-spacing: 1px;
+}

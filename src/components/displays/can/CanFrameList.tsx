@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useAppStore } from '../../../store/appStore';
 import { canFrameBuffer, CanFrameBuffer } from '../../../lib/buffers/canBuffer';
@@ -14,115 +14,12 @@ import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
 import type { CanFrame, CanFrameFilter } from '../../../types';
 import { errorText } from '../../../types/errors';
-
-const ROW_HEIGHT = 24;
-
-/// 格式化微秒时间戳为 HH:MM:SS.mmmuuu
-function formatCanTime(us: number): string {
-  if (!us) return '--:--:--.------';
-  const d = new Date(us / 1000);
-  const h = d.getHours().toString().padStart(2, '0');
-  const m = d.getMinutes().toString().padStart(2, '0');
-  const s = d.getSeconds().toString().padStart(2, '0');
-  const ms = d.getMilliseconds().toString().padStart(3, '0');
-  const us3 = Math.floor(us % 1000).toString().padStart(3, '0');
-  return `${h}:${m}:${s}.${ms}${us3}`;
-}
-
-/// 格式化 CAN ID
-function formatCanId(id: number, extended: boolean): string {
-  return extended
-    ? id.toString(16).toUpperCase().padStart(8, '0')
-    : id.toString(16).toUpperCase().padStart(3, '0');
-}
-
-/// 格式化数据为 HEX 字符串
-function formatDataHex(data: readonly number[]): string {
-  return data.map((b) => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
-}
-
-/// 将帧列表转换为 CSV 文本
-function framesToCsv(frames: readonly CanFrame[]): string {
-  const rows = [
-    ['Time', 'Dir', 'ID', 'Extended', 'RTR', 'DLC', 'Data'].join(','),
-    ...frames.map((f) =>
-      [
-        formatCanTime(f.timestamp),
-        f.direction,
-        formatCanId(f.id, f.extended),
-        f.extended ? 'X' : '',
-        f.rtr ? 'R' : '',
-        f.dlc,
-        f.rtr ? '' : formatDataHex(f.data),
-      ].join(',')
-    ),
-  ];
-  return rows.join('\n');
-}
-
-/// 导出帧列表为 CSV 文件
-function exportFramesToCsv(frames: readonly CanFrame[]): void {
-  const blob = new Blob([framesToCsv(frames)], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `can-frames-${new Date().toISOString().replace(/[:.]/g, '-')}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-interface RowProps {
-  index: number;
-  frame: CanFrame;
-  isSelected: boolean;
-  onMouseDown: (e: React.MouseEvent, index: number) => void;
-}
-
-/// CAN 帧行 — memo 化避免无关重渲染
-const Row = memo(function Row({ index, frame, isSelected, onMouseDown }: RowProps) {
-  return (
-    <div
-      className={`flex items-center text-xs font-mono border-b border-border/30 select-none ${
-        isSelected ? 'bg-accent/20' : 'hover:bg-bg-hover/60'
-      }`}
-      style={{ height: ROW_HEIGHT }}
-      onMouseDown={(e) => onMouseDown(e, index)}
-      role="presentation"
-    >
-      <span className="px-3 py-1 text-accent whitespace-nowrap min-w-[132px]">
-        {formatCanTime(frame.timestamp)}
-      </span>
-      <span className="px-2 py-1 whitespace-nowrap min-w-[56px]">
-        <span
-          className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
-            frame.direction === 'Tx' ? 'text-purple' : 'text-green'
-          }`}
-        >
-          {frame.direction === 'Tx' ? '→ Tx' : '← Rx'}
-        </span>
-      </span>
-      <span className="px-3 py-1 text-text-bright whitespace-nowrap min-w-[76px]">
-        0x{formatCanId(frame.id, frame.extended)}
-      </span>
-      <span className="px-2 py-1 text-center text-text-secondary min-w-[40px]">
-        {frame.extended ? 'X' : ''}
-      </span>
-      <span className="px-2 py-1 text-center text-text-secondary min-w-[40px]">
-        {frame.rtr ? 'R' : ''}
-      </span>
-      <span className="px-2 py-1 text-center text-text-secondary min-w-[40px]">
-        {frame.dlc}
-      </span>
-      <span className="px-3 py-1 text-text-primary flex-1 min-w-0 truncate">
-        {frame.rtr ? (
-          <span className="text-text-secondary italic">(remote)</span>
-        ) : (
-          formatDataHex(frame.data)
-        )}
-      </span>
-    </div>
-  );
-});
+import { Row } from './CanFrameRow';
+import {
+  exportFramesToCsv,
+  framesToCsv,
+  ROW_HEIGHT,
+} from './canFrameFormat';
 
 /// CAN 帧列表显示 — 虚拟滚动 + 选中复制 + 过滤
 export function CanFrameList() {

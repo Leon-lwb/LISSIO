@@ -149,7 +149,7 @@ export const PieChart = memo(function PieChart({ widget, full = false }: PieChar
         </div>
         {/* 侧栏: 图例列表 */}
         <div className="w-[200px] flex-shrink-0 border-l border-border bg-bg-sidebar overflow-y-auto flex flex-col gap-2 p-2.5">
-          <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold px-1">Legend</div>
+          <div className="section-heading section-heading--micro px-1">Legend</div>
           {legend}
         </div>
       </div>

@@ -17,7 +17,7 @@ export const FilterProperties = memo(function FilterProperties({ widget, update 
     update({ kind: 'Filter', params: { ...widget.params, ...p } });
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'filterSettings')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'filterSettings')}</div>
       <SelectField label={t(lang, 'filterPreset')} value={preset}
         options={([
           ['Lowpass', 'filterLowpass'],

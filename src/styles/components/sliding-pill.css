@@ -1,0 +1,22 @@
+/* ============ Tab 滑动指示器 (SlidingPill) ============ */
+/* 注意: left/top/width/height 过渡会触发布局重算，但 Tab 切换频率低，性能影响可接受 */
+/* 未来可通过组件改造使用 transform 优化 */
+.tab-sliding-pill {
+  position: absolute;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-editor);
+  box-shadow: var(--shadow-control);
+  transition:
+    left var(--transition-base) cubic-bezier(0.2, 0, 0, 1),
+    top var(--transition-base) cubic-bezier(0.2, 0, 0, 1),
+    width var(--transition-base) cubic-bezier(0.2, 0, 0, 1),
+    height var(--transition-base) cubic-bezier(0.2, 0, 0, 1),
+    background-color var(--transition-base) var(--ease-in-out);
+  pointer-events: none;
+  /* 提示浏览器提前优化位置变化 */
+  will-change: left, top, width, height;
+}
+
+.tab-sliding-pill--panel {
+  background: var(--color-bg-active);
+}

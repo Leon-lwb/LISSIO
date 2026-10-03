@@ -407,9 +407,9 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
         )}
 
         {/* 全局设置 (与 CommandSender 同款 grid 行 + 开关按钮) */}
-        <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold pt-1">{t(lang, 'fdSettings')}</div>
+        <div className="section-heading section-heading--micro pt-1">{t(lang, 'fdSettings')}</div>
         <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
-          <div className="grid grid-cols-[80px_1fr] items-center gap-2">
+          <div className="field-grid field-grid--default">
             <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
             <input
               type="text"
@@ -428,7 +428,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
           ).map(([labelKey, paramKey]) => {
             const on = params[paramKey] ?? false;
             return (
-              <div key={paramKey} className="grid grid-cols-[80px_1fr] items-center gap-2">
+              <div key={paramKey} className="field-grid field-grid--default">
                 <label className="text-xs text-text-secondary">{t(lang, labelKey)}</label>
                 <button
                   className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${on ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}

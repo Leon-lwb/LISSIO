@@ -1,0 +1,68 @@
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-overlay);
+}
+
+.dialog-surface {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dialog-header,
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-4);
+  border-color: var(--color-border);
+  flex-shrink: 0;
+}
+
+.dialog-header {
+  border-bottom: var(--line-hairline) solid var(--color-border);
+}
+
+.dialog-footer {
+  border-top: var(--line-hairline) solid var(--color-border);
+}
+
+.dialog-body {
+  min-height: 0;
+  flex: 1;
+}
+
+.dialog-button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-3);
+  color: var(--color-text-inverse);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: background-color var(--transition-fast) var(--ease-out-cubic);
+}
+
+.dialog-button--primary {
+  background: var(--color-bg-button);
+}
+
+.dialog-button--primary:hover {
+  background: var(--color-bg-button-hover);
+}
+
+.dialog-button--ghost {
+  color: var(--color-text-primary);
+  background: transparent;
+  border: var(--line-hairline) solid var(--color-border);
+}
+
+.dialog-button--ghost:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-bright);
+  background: var(--color-bg-hover);
+}

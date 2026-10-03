@@ -32,7 +32,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
   return (
     <>
       {/* 通用: label */}
-      <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+      <div className="field-grid field-grid--compact">
         <label className={labelClass}>{t(lang, 'cmdBlockLabel')}</label>
         <DraftInput
           type="text"
@@ -45,7 +45,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
 
       {/* header / tail: HEX */}
       {(block.type === 'header' || block.type === 'tail') && (
-        <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+        <div className="field-grid field-grid--compact">
           <label htmlFor={`decoder-block-${bid}-hex`} className={labelClass}>HEX</label>
           <DraftInput
             id={`decoder-block-${bid}-hex`}
@@ -62,7 +62,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* length / id / field: fieldType + portName */}
       {(block.type === 'length' || block.type === 'id' || block.type === 'field') && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'cmdBlockType')}</label>
             <select
               value={block.fieldType ?? 'uint8'}
@@ -74,7 +74,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
             <DraftInput
               type="text"
@@ -90,7 +90,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
 
       {/* length: unit */}
       {block.type === 'length' && (
-        <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+        <div className="field-grid field-grid--compact">
           <label className={labelClass}>{t(lang, 'fdLengthUnit')}</label>
           <select
             value={block.unit ?? 'bytes'}
@@ -105,7 +105,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
 
       {/* field: lengthRef (仅 bytes 类型有意义) */}
       {block.type === 'field' && (
-        <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+        <div className="field-grid field-grid--compact">
           <label className={labelClass}>{t(lang, 'fdLengthRef')}</label>
           <DraftInput
             type="text"
@@ -121,7 +121,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* bitfield: byteOffset / bitOffset / bitLength / isSigned / portName */}
       {block.type === 'bitfield' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdByteOffset')}</label>
             <DraftNumberInput
               min={0}
@@ -131,7 +131,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               className={inputClass}
             />
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdBitOffset')}</label>
             <DraftNumberInput
               min={0}
@@ -142,7 +142,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               className={inputClass}
             />
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdBitLength')}</label>
             <DraftNumberInput
               min={1}
@@ -153,7 +153,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               className={inputClass}
             />
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdSigned')}</label>
             <button
               className={`px-2 py-0.5 text-xs rounded-sm border ${block.isSigned ? 'bg-bg-button text-text-inverse border-bg-button' : 'bg-bg-input text-text-secondary border-border'}`}
@@ -162,7 +162,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               {block.isSigned ? t(lang, 'fdSignedYes') : t(lang, 'fdSignedNo')}
             </button>
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
             <DraftInput
               type="text"
@@ -179,7 +179,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* checksum: algorithm / cover / position / customScript */}
       {block.type === 'checksum' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'cmdChecksum')}</label>
             <select
               value={block.algorithm ?? 'sum8'}
@@ -193,7 +193,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdChecksumCover')}</label>
             <select
               value={block.cover ?? 'all_prior'}
@@ -209,7 +209,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           </div>
           {block.cover === 'range' && (
             <>
-              <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+              <div className="field-grid field-grid--compact">
                 <label className={labelClass}>{t(lang, 'fdCoverStart')}</label>
                 <DraftNumberInput
                   min={0}
@@ -219,7 +219,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
                   className={inputClass}
                 />
               </div>
-              <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+              <div className="field-grid field-grid--compact">
                 <label className={labelClass}>{t(lang, 'fdCoverEnd')}</label>
                 <DraftNumberInput
                   min={0}
@@ -231,7 +231,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               </div>
             </>
           )}
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'cmdChecksumPosition')}</label>
             <select
               value={block.position ?? 'append'}
@@ -268,7 +268,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* csv: 分隔符 + 端口列表 (逗号分隔端口名) */}
       {block.type === 'csv' && (
         <>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdCsvSeparator')}</label>
             <DraftInput
               type="text"
@@ -279,7 +279,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               spellCheck={false}
             />
           </div>
-          <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--compact">
             <label className={labelClass}>{t(lang, 'fdCsvPorts')}</label>
             <DraftInput
               type="text"
@@ -295,7 +295,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
 
       {/* matchId (id 块与扩展块 csv/asciiField/samples 不可设置) */}
       {block.type !== 'id' && block.type !== 'csv' && block.type !== 'asciiField' && block.type !== 'samples' && (
-        <div className="grid grid-cols-[60px_1fr] gap-1.5 items-center">
+        <div className="field-grid field-grid--compact">
           <label className={labelClass}>{t(lang, 'fdMatchId')}</label>
           <DraftInput
             type="number"

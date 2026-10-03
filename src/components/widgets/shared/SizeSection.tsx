@@ -26,7 +26,7 @@ export const SizeSection = memo(function SizeSection({ nodeId, kind }: {
   const limits = widgetMinSize(kind);
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-text-secondary mb-2">{t(lang, 'nodeSize')}</div>
+      <div className="section-heading section-heading--micro mb-2">{t(lang, 'nodeSize')}</div>
       <div className="flex gap-2">
         <OptionalNumberField label={t(lang, 'nodeWidth')} value={width} placeholder={t(lang, 'sizeAuto')}
           onCommit={(w) => commitSize({ width: w })} />

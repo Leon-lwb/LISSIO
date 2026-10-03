@@ -63,7 +63,7 @@ export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
         <>
           <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border shrink-0">
             <span
-              className="flex-1 min-w-0 truncate text-[10px] font-semibold uppercase tracking-wider text-text-secondary"
+              className="flex-1 min-w-0 truncate section-heading section-heading--micro"
               title={panelTitle(lang, node)}
             >
               {panelTitle(lang, node)}

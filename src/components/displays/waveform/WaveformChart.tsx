@@ -4,16 +4,11 @@ import type uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
-import { api } from '../../../lib/tauri/tauri';
-import { notify, formatError } from '../../../lib/tauri/notifications';
 import { useWaveformDetailBuffer } from '../../../lib/hooks/useWaveformDetailBuffer';
 import { waveformWindow, type WaveformWindowCache } from '../../../lib/buffers/dataBuffer';
-import { writeTextToClipboard } from '../../../lib/utils/clipboard';
-import { platform } from '../../../lib/platform';
 import { t } from '../../../i18n';
 import type {
   WaveformSeriesSelection,
-  WaveformWindow,
   WidgetConfig,
 } from '../../../types';
 import { getEffectiveChannel, type ScopeAxisConfig } from '../../../types';
@@ -29,14 +24,12 @@ import {
   type ConnectedInput, type SeriesSlot, type TimelineSeriesSpec,
 } from './waveformSeries';
 import { CursorOverlay } from './WaveformChartCursorOverlay';
-import { WaveformCursorReadout } from './WaveformCursorReadout';
-import { formatTimeMs } from './wavechartFormatters';
-import { absoluteTimeRangeUs } from './waveformChartExport';
+import { WaveformChartOverlays } from './WaveformChartOverlays';
+import { useWaveformSelectionActions } from './useWaveformSelectionActions';
 import {
   useUplotInit, useWheelZoom, usePanDrag, useCursorHide, useTooltipPos,
   type CursorDisplayOpts,
 } from './waveformChartHooks';
-import { Copy, Download, Check, X } from 'lucide-react';
 
 interface WaveformChartProps {
   widget: Extract<WidgetConfig, { kind: 'Waveform' }>;
@@ -48,38 +41,6 @@ interface WaveformChartProps {
   sourceId?: string | null;
 }
 
-function buildRawClipboardCsv(
-  windowData: WaveformWindow,
-  selection: WaveformSeriesSelection,
-  widgetId: string,
-): string {
-  const csvCell = (value: number | undefined) =>
-    value !== undefined && Number.isFinite(value) ? String(value) : '';
-  const channels = selection.channels;
-  const derived = selection.derived;
-  const headers = [
-    'timestamp_us',
-    ...channels.map((channel) => `CH${channel}`),
-    ...derived.map((series) =>
-      `${series.sink_id}:${series.source_id}:${series.source_handle}`,
-    ),
-  ];
-  const rows = [headers.join(',')];
-  const latestUs = windowData.latest_timestamp_us;
-  for (let index = 0; index < windowData.timestamps.length; index++) {
-    const timestampUs = Math.round(latestUs + windowData.timestamps[index] * 1000);
-    rows.push([
-      String(timestampUs),
-      ...channels.map((channel) => csvCell(windowData.channels[channel]?.[index])),
-      ...derived.map((series) => csvCell(
-        windowData.derived[series.sink_id]?.[series.source_id]?.[series.source_handle]?.[index]
-          ?? windowData.derived[widgetId]?.[series.source_id]?.[series.source_handle]?.[index]
-          ?? NaN,
-      )),
-    ].join(','));
-  }
-  return rows.join('\n');
-}
 
 /// 示波器风格波形图 — 每通道独立 V/div 与 position
 /// - 水平: 时基 (sec/div) × 10 格 = 总显示时长
@@ -421,64 +382,18 @@ export function WaveformChart({
 
   usePanDrag(containerRef, plotRef, axisConfigRef, onConfigChange, setSelectedRangeAnchored);
 
-  const getAbsoluteSelection = useCallback(() => {
-    if (!selectedRange) return null;
-    const latestUs = selectionAnchorUsRef.current;
-    if (!latestUs) return null;
-    return absoluteTimeRangeUs(selectedRange, latestUs);
-  }, [selectedRange]);
+  const { exportSelection, copySelection, clearSelection } = useWaveformSelectionActions({
+    selectedRange,
+    selectionAnchorUsRef,
+    sourceId,
+    snapshotId,
+    detailSelection,
+    widgetId: widget.params.id,
+    plotRef,
+    setSelectedRange,
+    setCopyFeedback,
+  });
 
-  const exportSelection = useCallback(() => {
-    const absolute = getAbsoluteSelection();
-    if (!absolute || !sourceId) return;
-    void platform.saveFile({
-      defaultPath: 'waveform.csv',
-      filters: [{ name: 'CSV', extensions: ['csv'] }],
-    }).then(async (path) => {
-      if (!path) return;
-      try {
-        const rows = await api.exportWaveformCsv(
-          sourceId,
-          snapshotId,
-          absolute.startUs,
-          absolute.endUs,
-          detailSelection,
-          path,
-        );
-        notify.info('CSV', t(lang, 'waveformCsvExported').replace('{{count}}', String(rows)));
-      } catch (error) {
-        notify.error('CSV', formatError(error));
-      }
-    });
-  }, [detailSelection, getAbsoluteSelection, lang, snapshotId, sourceId]);
-
-  const copySelection = useCallback(async () => {
-    const absolute = getAbsoluteSelection();
-    if (!absolute || !sourceId) return;
-    try {
-      const raw = await api.getWaveformRawRange(
-        sourceId,
-        snapshotId,
-        absolute.startUs,
-        absolute.endUs,
-        100_000,
-        detailSelection,
-      );
-      const csv = buildRawClipboardCsv(raw, detailSelection, widget.params.id);
-      const ok = await writeTextToClipboard(csv);
-      if (ok) {
-        setCopyFeedback(true);
-        setTimeout(() => setCopyFeedback(false), 1200);
-      }
-    } catch (error) {
-      notify.warn(t(lang, 'waveformCopyTitle'), formatError(error));
-    }
-  }, [detailSelection, getAbsoluteSelection, lang, snapshotId, sourceId, widget.params.id]);
-
-  const clearSelection = useCallback(() => {
-    setSelectedRange(null);
-    plotRef.current?.setSelect({ left: 0, top: 0, width: 0, height: 0 }, false);
-  }, []);
 
   return (
     <div className="flex flex-col h-full w-full" style={{ flexDirection: 'column' }}>
@@ -530,89 +445,32 @@ export function WaveformChart({
           </div>
         )}
 
-        {/* 左上角提示: 按住 Ctrl/Cmd 隐藏光标 */}
-        <div className="absolute top-1.5 right-2 z-[100] px-2 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded pointer-events-none select-none shadow whitespace-nowrap">
-          {cursorHidden
-            ? t(lang, 'cursorHiddenHint')
-            : (isMac ? '⌘ ' : 'Ctrl ') + t(lang, 'cursorHideHint')}
-        </div>
-
-        {/* 降载提示: 原始层装不下视图窗口, 由金字塔层提供真实包络 (不变量 2) */}
-        {derate && (
-          <div className="absolute top-7 right-2 z-[100] px-2 py-0.5 text-[10px] text-text-warning bg-bg-editor/95 border border-warning/40 rounded pointer-events-none select-none shadow whitespace-nowrap">
-            {t(lang, 'waveformDerated')} · tier {derate.tier} · Δ
-            {derate.overflow}
-          </div>
-        )}
-
-        {/* 框选导出/复制工具栏 */}
-        {selectedRange && (
-          <div className="absolute top-9 right-2 z-[100] flex items-center gap-1 px-1.5 py-1 bg-bg-editor/95 border border-border/30 rounded shadow-lg select-none">
-            <span className="text-[10px] text-text-secondary font-mono px-1">
-              {formatTimeMs(selectedRange.startSec * 1000)} - {formatTimeMs(selectedRange.endSec * 1000)}
-            </span>
-            <button
-              className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-              title={t(lang, 'copySelection')}
-              onClick={() => { void copySelection(); }}
-            >
-              {copyFeedback ? <Check size={12} className="text-green" /> : <Copy size={12} />}
-            </button>
-            <button
-              className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-              title={t(lang, 'exportSelection')}
-              onClick={exportSelection}
-            >
-              <Download size={12} />
-            </button>
-            <button
-              className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-              title={t(lang, 'clearSelection')}
-              onClick={clearSelection}
-            >
-              <X size={12} />
-            </button>
-          </div>
-        )}
-
-        {/* 右下角动态 series 开关 (仅用户创建的波形图, default-waveform 不显示) */}
-        {widget.params.id !== 'default-waveform' && (
-          <button
-            className={`absolute bottom-1.5 right-2 z-[100] px-2.5 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded cursor-pointer select-none shadow whitespace-nowrap transition-all duration-150 hover:bg-bg-hover hover:border-border/50 ${widget.params.dynamicSeries ? 'text-orange border-orange/50 bg-orange/10' : ''}`}
-            onClick={() => {
-              updateWidget(widget.params.id, {
-                ...widget,
-                params: {
-                  ...widget.params,
-                  dynamicSeries: !widget.params.dynamicSeries,
-                },
-              });
-            }}
-            title={t(lang, 'dynamicSeriesToggle')}
-          >
-            {widget.params.dynamicSeries
-              ? t(lang, 'dynamicSeriesOn')
-              : t(lang, 'dynamicSeriesOff')}
-          </button>
-        )}
-
-        <WaveformCursorReadout
-          readout={cursorReadout}
-          hidden={!cursorReadoutVisible || cursorHidden}
+        <WaveformChartOverlays
+          cursorHidden={cursorHidden}
+          isMac={isMac}
+          derate={derate}
+          selectedRange={selectedRange}
+          copyFeedback={copyFeedback}
+          onCopySelection={copySelection}
+          onExportSelection={exportSelection}
+          onClearSelection={clearSelection}
+          dynamicSeriesVisible={widget.params.id !== 'default-waveform'}
+          dynamicSeries={widget.params.dynamicSeries ?? false}
+          onToggleDynamicSeries={() => {
+            updateWidget(widget.params.id, {
+              ...widget,
+              params: { ...widget.params, dynamicSeries: !widget.params.dynamicSeries },
+            });
+          }}
+          cursorReadout={cursorReadout}
+          cursorReadoutVisible={cursorReadoutVisible}
           tooltipPos={tooltipPos}
           tooltipRef={tooltipRef}
+          snapshotError={snapshotError}
+          running={axisConfig.running}
+          isConnected={isConnected}
         />
-        {snapshotError && !axisConfig.running && (
-          <div className="absolute bottom-2 left-2 z-[100] max-w-[70%] rounded border border-orange/50 bg-bg-editor/95 px-2 py-1 text-[10px] text-orange shadow">
-            {t(lang, 'waveformSnapshotUnavailable')}: {snapshotError}
-          </div>
-        )}
       </div>
-      {!isConnected && (
-        <div className="absolute inset-0 flex items-center justify-center text-text-secondary text-sm pointer-events-none">
-          <span>{t(lang, 'emptyWaveform')}</span>
-        </div>
-      )}
       <WaveformTimeline
         axisConfig={axisConfig}
         viewEndSec={viewEndSec}

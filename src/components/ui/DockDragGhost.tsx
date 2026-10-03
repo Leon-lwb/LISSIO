@@ -14,7 +14,7 @@ export function DockDragGhost() {
   return (
     <div
       aria-hidden
-      className="fixed z-[150] pointer-events-none flex items-center gap-1.5 px-2.5 py-1 float-popover text-text-primary text-xs whitespace-nowrap"
+      className="fixed z-[150] pointer-events-none flex items-center gap-1.5 px-2.5 py-1 popover-surface text-text-primary text-xs whitespace-nowrap"
       style={{
         left: ghost.x,
         top: ghost.y,

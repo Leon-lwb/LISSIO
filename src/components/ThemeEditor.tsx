@@ -10,27 +10,17 @@ import { activateOnKeyboard } from '../lib/utils/a11y';
 import {
   X,
   Plus,
-  Copy,
-  Trash2,
   Check,
-  RotateCcw,
   Palette,
-  Download,
-  Upload,
   FileCode,
-  Link,
-  Trash,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { t } from '../i18n';
-import type {
-  TOKEN_GROUPS} from '../settings/theme';
 import {
   BUILT_IN_THEMES,
   BUILT_IN_CSS_THEMES,
   DARK_THEME,
   LIGHT_THEME,
-  TOKEN_LABELS,
   THEME_TOKENS,
   applyTheme,
   applyThemeToken,
@@ -41,6 +31,9 @@ import {
   type CssStyleTheme,
 } from '../settings/theme';
 import { loadCssTheme } from '../settings/css-theme-loader';
+import { ThemeEditorColorPanel } from './ThemeEditorColorPanel';
+import { ThemeEditorCssPanel } from './ThemeEditorCssPanel';
+import { DialogHeader, DialogOverlay, DialogSurface } from './ui/Dialog';
 
 interface ThemeEditorProps {
   isOpen: boolean;
@@ -54,74 +47,6 @@ interface ThemeEditorProps {
   onCssThemesChange: (themes: CssStyleTheme[]) => void;
   activeCssThemeId: string;
   onActiveCssThemeChange: (id: string) => void;
-}
-
-const GROUP_LABELS: Record<(typeof TOKEN_GROUPS)[keyof typeof TOKEN_GROUPS], string> = {
-  background: '背景',
-  border: '边框',
-  text: '文字',
-  accent: '强调色',
-};
-
-const GROUP_ORDER: (keyof typeof GROUP_LABELS)[] = ['background', 'text', 'border', 'accent'];
-
-/// 将颜色值转换为可用于 <input type="color"> 的 hex (无法解析则返回 null)
-function toColorInputValue(value: string): string | null {
-  const trimmed = value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed;
-  // 简单解析 rgb/rgba
-  const rgbMatch = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(trimmed);
-  if (rgbMatch) {
-    const r = Number(rgbMatch[1]).toString(16).padStart(2, '0');
-    const g = Number(rgbMatch[2]).toString(16).padStart(2, '0');
-    const b = Number(rgbMatch[3]).toString(16).padStart(2, '0');
-    return `#${r}${g}${b}`;
-  }
-  return null;
-}
-
-/// 颜色选择 + 文本输入组合控件
-function ColorField({
-  token,
-  value,
-  onChange,
-  disabled,
-}: {
-  token: ThemeToken;
-  value: string;
-  onChange: (v: string) => void;
-  disabled?: boolean;
-}) {
-  const colorValue = useMemo(() => toColorInputValue(value), [value]);
-
-  return (
-    <div className="flex items-center gap-2 py-1.5">
-      <div
-        className="w-6 h-6 rounded border border-border flex-shrink-0"
-        style={{ background: value }}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-text-primary mb-0.5">{TOKEN_LABELS[token]}</div>
-        <div className="flex items-center gap-1.5">
-          <input
-            type="color"
-            value={colorValue ?? '#000000'}
-            disabled={disabled ?? !colorValue}
-            onChange={(e) => onChange(e.target.value)}
-            className="w-7 h-7 p-0 border-0 rounded cursor-pointer bg-transparent disabled:opacity-disabled"
-            title={token}
-          />
-          <input
-            type="text"
-            value={value}
-            disabled={disabled}
-            onChange={(e) => onChange(e.target.value)}
-            className="flex-1 min-w-0 px-1.5 py-0.5 bg-bg-input text-text-primary border border-border rounded text-[11px] font-mono focus:outline-none focus:border-accent disabled:opacity-disabled"
-          />
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function ThemeEditor({
@@ -351,20 +276,19 @@ export function ThemeEditor({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 float-overlay z-modal flex items-center justify-center animate-[settings-fade-in_0.15s_ease-out]"
+    <DialogOverlay
+      className="animate-[settings-fade-in_0.15s_ease-out]"
       onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
     >
-      <div
-        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] float-card flex flex-col overflow-hidden animate-[settings-slide-in_0.2s_ease-out]"
-        role="dialog"
-        aria-modal="true"
+      <DialogSurface
+        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] animate-[settings-slide-in_0.2s_ease-out]"
+        label={t(lang, 'themeEditor')}
       >
         {/* 顶部 */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-border float-chrome flex-shrink-0">
+        <DialogHeader className="gap-3">
           <div className="flex items-center gap-1.5 text-text-primary text-base font-semibold flex-shrink-0">
             <Palette size={16} />
             <span>{t(lang, 'themeEditor')}</span>
@@ -400,14 +324,14 @@ export function ThemeEditor({
           >
             <X size={16} />
           </button>
-        </div>
+        </DialogHeader>
 
         {/* 主体 */}
         <div className="flex-1 flex min-h-0">
           {activeTab === 'color' ? (
             <>
               {/* 左侧颜色主题列表 */}
-              <div className="w-56 float-chrome-muted border-r border-border flex flex-col flex-shrink-0">
+              <div className="w-56 dialog-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
                     {t(lang, 'themeList')}
@@ -448,162 +372,35 @@ export function ThemeEditor({
                 </div>
               </div>
 
-              {/* 右侧颜色编辑器 */}
-              <div className="flex-1 flex flex-col min-w-0 bg-bg-editor">
-                {/* 工具栏 */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border flex-shrink-0">
-                  {renaming && !isBuiltIn ? (
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename();
-                        if (e.key === 'Escape') setRenaming(false);
-                      }}
-                      className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-semibold focus:outline-none focus:border-accent"
-                    />
-                  ) : (
-                    <button
-                      className="text-sm font-semibold text-text-primary hover:bg-bg-hover px-2 py-1 rounded cursor-pointer bg-transparent border-none"
-                      onClick={startRename}
-                      disabled={isBuiltIn}
-                      title={isBuiltIn ? undefined : t(lang, 'themeRename')}
-                    >
-                      {selectedTheme.name}
-                    </button>
-                  )}
-                  <div className="flex-1" />
-                  {!isBuiltIn && (
-                    <>
-                      <button
-                        className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                        onClick={handleDuplicate}
-                        title={t(lang, 'themeDuplicate')}
-                      >
-                        <Copy size={12} />
-                        <span>{t(lang, 'themeDuplicate')}</span>
-                      </button>
-                      <button
-                        className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-danger-hover hover:text-text-inverse rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                        onClick={handleDelete}
-                        title={t(lang, 'themeDelete')}
-                      >
-                        <Trash2 size={12} />
-                        <span>{t(lang, 'themeDelete')}</span>
-                      </button>
-                    </>
-                  )}
-                  <div className="w-px h-4 bg-border mx-1" />
-                  <button
-                    className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                    onClick={handleImportClick}
-                    title={t(lang, 'themeImport')}
-                  >
-                    <Upload size={12} />
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".json"
-                    className="hidden"
-                    onChange={handleImportFile}
-                  />
-                  <button
-                    className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                    onClick={handleExport}
-                    title={t(lang, 'themeExport')}
-                  >
-                    <Download size={12} />
-                  </button>
-                  {!isBuiltIn && (
-                    <button
-                      className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                      onClick={handleReset}
-                      title={t(lang, 'themeReset')}
-                    >
-                      <RotateCcw size={12} />
-                      <span>{t(lang, 'themeReset')}</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* 只读提示 */}
-                {isBuiltIn && (
-                  <div className="px-4 py-2 bg-bg-active text-text-primary text-xs flex-shrink-0">
-                    {t(lang, 'themeBuiltInReadOnly')}
-                  </div>
-                )}
-
-                {/* Token 网格 */}
-                <div className="flex-1 overflow-y-auto px-4 py-3">
-                  {GROUP_ORDER.map((group) => {
-                    const tokens = groupedTokens[group];
-                    if (!tokens?.length) return null;
-                    return (
-                      <div key={group} className="mb-5">
-                        <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary pb-2 mb-2 border-b border-border">
-                          {GROUP_LABELS[group]}
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                          {tokens.map((token) => (
-                            <ColorField
-                              key={token}
-                              token={token}
-                              value={selectedTheme.tokens[token]}
-                              onChange={(v) => handleTokenChange(token, v)}
-                              disabled={isBuiltIn}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* 底部操作 */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border float-chrome flex-shrink-0">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded border border-border"
-                      style={{
-                        background: `linear-gradient(135deg, ${selectedTheme.tokens.bgEditor} 50%, ${selectedTheme.tokens.bgSidebar} 50%)`,
-                      }}
-                    />
-                    <div className="text-xs text-text-secondary">
-                      {selectedThemeId === activeThemeId
-                        ? t(lang, 'themeActivePreview')
-                        : t(lang, 'themeClickToPreview')}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {selectedThemeId !== activeThemeId && !isBuiltIn && (
-                      <button
-                        className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded text-sm cursor-pointer hover:bg-bg-button-hover"
-                        onClick={() => {
-                          onActiveThemeChange(selectedTheme.id);
-                          applyTheme(selectedTheme);
-                        }}
-                      >
-                        {t(lang, 'themeActivate')}
-                      </button>
-                    )}
-                    <button
-                      className="px-3 py-1.5 bg-transparent text-text-primary border border-border rounded text-sm cursor-pointer hover:bg-bg-hover"
-                      onClick={onClose}
-                    >
-                      {t(lang, 'themeEditorClose')}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ThemeEditorColorPanel
+                selectedTheme={selectedTheme}
+                selectedThemeId={selectedThemeId}
+                activeThemeId={activeThemeId}
+                isBuiltIn={isBuiltIn}
+                renaming={renaming}
+                renameValue={renameValue}
+                setRenameValue={setRenameValue}
+                setRenaming={setRenaming}
+                renameInputRef={renameInputRef}
+                commitRename={commitRename}
+                startRename={startRename}
+                handleDuplicate={handleDuplicate}
+                handleDelete={handleDelete}
+                handleImportClick={handleImportClick}
+                fileInputRef={fileInputRef}
+                handleImportFile={handleImportFile}
+                handleExport={handleExport}
+                handleReset={handleReset}
+                groupedTokens={groupedTokens}
+                handleTokenChange={handleTokenChange}
+                onActiveThemeChange={onActiveThemeChange}
+                onClose={onClose}
+              />
             </>
           ) : (
             <>
               {/* 左侧CSS主题列表 */}
-              <div className="w-56 float-chrome-muted border-r border-border flex flex-col flex-shrink-0">
+              <div className="w-56 dialog-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
                     {t(lang, 'cssThemeList')}
@@ -634,141 +431,24 @@ export function ThemeEditor({
                 </div>
               </div>
 
-              {/* 右侧CSS主题管理 */}
-              <div className="flex-1 flex flex-col min-w-0 bg-bg-editor">
-                {/* 工具栏 */}
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border flex-shrink-0">
-                  <span className="text-sm font-semibold text-text-primary">
-                    {selectedCssTheme?.name}
-                  </span>
-                  <div className="flex-1" />
-                  {!isBuiltInCssTheme && (
-                    <button
-                      className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-danger-hover hover:text-text-inverse rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
-                      onClick={handleDeleteCssTheme}
-                      title={t(lang, 'cssThemeDelete')}
-                    >
-                      <Trash size={12} />
-                      <span>{t(lang, 'cssThemeDelete')}</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* 只读提示 */}
-                {isBuiltInCssTheme && (
-                  <div className="px-4 py-2 bg-bg-active text-text-primary text-xs flex-shrink-0">
-                    {t(lang, 'cssThemeBuiltInReadOnly')}
-                  </div>
-                )}
-
-                {/* CSS主题信息 */}
-                <div className="flex-1 overflow-y-auto px-4 py-3">
-                  <div className="mb-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary pb-2 mb-2 border-b border-border">
-                      {t(lang, 'cssThemeInfo')}
-                    </div>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex items-start gap-2">
-                        <span className="text-text-secondary min-w-[60px]">{t(lang, 'cssThemeName')}:</span>
-                        <span className="text-text-primary">{selectedCssTheme?.name}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-text-secondary min-w-[60px]">{t(lang, 'cssThemeUrl')}:</span>
-                        <span className="text-text-primary font-mono text-xs break-all">{selectedCssTheme?.url}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-text-secondary min-w-[60px]">{t(lang, 'cssThemeType')}:</span>
-                        <span className="text-text-primary">{selectedCssTheme?.isBuiltIn ? t(lang, 'cssThemeBuiltIn') : t(lang, 'cssThemeCustom')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 添加自定义CSS主题 */}
-                  {!isBuiltInCssTheme && (
-                    <div className="mb-4">
-                      <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary pb-2 mb-2 border-b border-border">
-                        {t(lang, 'cssThemeAddCustom')}
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs text-text-secondary mb-1">{t(lang, 'cssThemeName')}</label>
-                          <input
-                            type="text"
-                            value={cssNameInput}
-                            onChange={(e) => setCssNameInput(e.target.value)}
-                            placeholder="My Custom Theme"
-                            className="w-full h-7 px-2 bg-bg-input text-text-primary border border-border rounded text-sm focus:outline-none focus:border-accent"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-text-secondary mb-1">{t(lang, 'cssThemeUrl')}</label>
-                          <input
-                            type="text"
-                            value={cssUrlInput}
-                            onChange={(e) => setCssUrlInput(e.target.value)}
-                            placeholder="https://example.com/theme.css"
-                            className="w-full h-7 px-2 bg-bg-input text-text-primary border border-border rounded text-sm font-mono focus:outline-none focus:border-accent"
-                          />
-                        </div>
-                        <button
-                          className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded text-sm cursor-pointer hover:bg-bg-button-hover inline-flex items-center gap-1"
-                          onClick={handleAddCssTheme}
-                          disabled={!cssUrlInput.trim()}
-                        >
-                          <Link size={12} />
-                          {t(lang, 'cssThemeLoad')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CSS主题使用说明 */}
-                  <div>
-                    <div className="text-xs font-semibold uppercase tracking-[0.5px] text-text-secondary pb-2 mb-2 border-b border-border">
-                      {t(lang, 'cssThemeHelp')}
-                    </div>
-                    <div className="text-xs text-text-secondary space-y-2">
-                      <p>{t(lang, 'cssThemeHelpDesc1')}</p>
-                      <p>{t(lang, 'cssThemeHelpDesc2')}</p>
-                      <pre className="bg-bg-input p-2 rounded text-text-primary font-mono text-[11px] overflow-x-auto">
-{`:root {
-  --color-accent: #ff6b6b;
-  --color-bg-sidebar: #1a1a2e;
-  --radius-default: 16px;
-}`}</pre>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 底部操作 */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-border float-chrome flex-shrink-0">
-                  <div className="text-xs text-text-secondary">
-                    {selectedCssThemeId === activeCssThemeId
-                      ? t(lang, 'cssThemeActive')
-                      : t(lang, 'cssThemeClickToActivate')}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {selectedCssThemeId !== activeCssThemeId && (
-                      <button
-                        className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded text-sm cursor-pointer hover:bg-bg-button-hover"
-                        onClick={() => selectedCssTheme && handleActivateCssTheme(selectedCssTheme)}
-                      >
-                        {t(lang, 'cssThemeActivate')}
-                      </button>
-                    )}
-                    <button
-                      className="px-3 py-1.5 bg-transparent text-text-primary border border-border rounded text-sm cursor-pointer hover:bg-bg-hover"
-                      onClick={onClose}
-                    >
-                      {t(lang, 'themeEditorClose')}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ThemeEditorCssPanel
+                selectedCssTheme={selectedCssTheme}
+                selectedCssThemeId={selectedCssThemeId}
+                activeCssThemeId={activeCssThemeId}
+                isBuiltInCssTheme={isBuiltInCssTheme}
+                cssNameInput={cssNameInput}
+                setCssNameInput={setCssNameInput}
+                cssUrlInput={cssUrlInput}
+                setCssUrlInput={setCssUrlInput}
+                handleAddCssTheme={handleAddCssTheme}
+                handleDeleteCssTheme={handleDeleteCssTheme}
+                handleActivateCssTheme={handleActivateCssTheme}
+                onClose={onClose}
+              />
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }

@@ -71,7 +71,7 @@ function MetricCard({
     <div className="min-w-0 rounded-md border border-border-subtle bg-bg-panel p-2.5">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-text-secondary">{label}</div>
+          <div className="truncate section-heading section-heading--micro">{label}</div>
           <div className="mt-1 truncate font-mono text-lg font-semibold tabular-nums text-text-bright">{value}</div>
           <div className="truncate text-[10px] text-text-secondary">{detail}</div>
         </div>

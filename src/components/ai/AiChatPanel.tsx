@@ -1,20 +1,14 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertCircle,
   ArrowDown,
   ArrowUp,
   Bot,
-  Check,
-  ChevronDown,
-  Copy,
   Download,
   Eraser,
   FileText,
-  Pencil,
   Plus,
-  RotateCcw,
   Square,
-  Trash2,
   Upload,
   X,
 } from 'lucide-react';
@@ -35,199 +29,10 @@ import {
 import { checkAiProviderSettings } from '../../settings/aiProvider';
 import { notify, formatError } from '../../lib/tauri/notifications';
 import { t } from '../../i18n';
-import { activateOnKeyboard } from '../../lib/utils/a11y';
 import { AiTurnTimeline } from './AiTurnTimeline';
-import type { AiAttachment, AiViewItem } from '../../types';
-
-/// 助手消息气泡 — Markdown 渲染 + 悬停操作 (复制 / 错误重试)
-///
-/// memo 化: 流式回合刷新的是活跃尾块, 历史条目引用不变时必须跳过重建 —
-/// 否则每个 token 都会把整张消息列表重新渲染一遍 (长会话下直接拖垮渲染进程)。
-const AssistantBubble = memo(function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boolean }) {
-  const lang = useAppStore((s) => s.lang);
-  const regenerate = useAiChatStore((s) => s.regenerate);
-  const [copied, setCopied] = useState(false);
-  const hasText = item.text.length > 0;
-  // 错误条目: 按 kind 本地化为主行, 后端原始描述降级为次要信息 (排查用)
-  const errView = item.error
-    ? formatAiKindError(item.error_kind ?? '', item.error_data, item.text, lang)
-    : null;
-
-  const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(item.text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* 剪贴板不可用时静默 */
-    }
-  };
-
-  return (
-    <div className="flex justify-start group animate-ai-msg-in ai-assistant-message">
-      <div
-        className={`max-w-full min-w-0 w-full px-1 py-1 space-y-2 ${
-          item.error ? 'text-danger' : ''
-        }`}
-      >
-        {errView ? (
-          <>
-            <div className="break-words [overflow-wrap:anywhere]">{errView.summary}</div>
-            {errView.detail && (
-              <div className="break-words [overflow-wrap:anywhere] opacity-secondary line-clamp-3">{errView.detail}</div>
-            )}
-          </>
-        ) : <AiTurnTimeline text={item.text} reasoning={item.reasoning} tools={item.tools} timeline={item.timeline} durationMs={item.duration_ms} />}
-        {/* 悬停操作条 — 复制原文 / 错误条目重试 (仅最后一条可重试, 与后端 truncate 语义一致) */}
-        <div
-          className={`flex items-center gap-0.5 -mb-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${
-            item.error ? 'justify-end' : ''
-          }`}
-        >
-          {hasText && (
-            <button
-              className="p-0.5 rounded text-text-secondary hover:text-text-primary"
-              onClick={() => void onCopy()}
-              title={t(lang, 'aiCopy')}
-            >
-              {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
-            </button>
-          )}
-          {item.error && canRetry && (
-            <button
-              className="p-0.5 rounded text-text-secondary hover:text-text-primary disabled:opacity-disabled"
-              onClick={() => void regenerate()}
-              disabled={!canRetry}
-              title={t(lang, 'aiRetry')}
-            >
-              <RotateCcw size={11} />
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-});
-
-/// 会话下拉 — 列表 (最近活动优先) / 新建 / 行内重命名 / 删除
-function SessionMenu() {
-  const lang = useAppStore((s) => s.lang);
-  const { sessions, activeSessionId, createSession, switchSession, renameSession, deleteSession } =
-    useAiChatStore();
-  const [open, setOpen] = useState(false);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState('');
-
-  const sorted = useMemo(() => [...sessions].sort((a, b) => b.updated_at - a.updated_at), [sessions]);
-  const activeTitle = sessions.find((s) => s.id === activeSessionId)?.title ?? t(lang, 'aiSessionNew');
-
-  const commitRename = async () => {
-    if (renamingId && draft.trim()) await renameSession(renamingId, draft.trim());
-    setRenamingId(null);
-  };
-
-  const onDelete = async (id: string) => {
-    await deleteSession(id);
-    // 删空后自动补一个默认会话, 面板保持可用
-    if (useAiChatStore.getState().sessions.length === 0) {
-      await createSession(t(lang, 'aiSessionNew'));
-    }
-  };
-
-  return (
-    <div className="relative min-w-0 flex-1">
-      <button
-        className="flex w-full min-w-0 items-center gap-1 px-1.5 h-5 rounded text-[11px] text-text-secondary hover:bg-bg-hover hover:text-text-primary"
-        onClick={() => setOpen((v) => !v)}
-        title={`${t(lang, 'aiSessionSwitch')}: ${activeTitle}`}
-      >
-        <span className="truncate">{activeTitle}</span>
-        <ChevronDown size={11} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <>
-          <button
-            type="button"
-            aria-label={t(lang, 'aiSessionSwitch')}
-            className="fixed inset-0 z-20 border-0 bg-transparent"
-            onClick={() => setOpen(false)}
-          />
-          <div className="absolute left-0 top-6 z-30 w-56 max-w-[80vw] float-popover py-1 flex flex-col animate-ai-menu-in">
-            <div className="max-h-56 overflow-y-auto">
-              {sorted.length === 0 && (
-                <div className="px-2 py-1.5 text-[11px] text-text-secondary">{t(lang, 'aiSessionEmpty')}</div>
-              )}
-              {sorted.map((s) => (
-                <div
-                  key={s.id}
-                  className={`group flex items-center gap-1 px-2 py-1 text-xs hover:bg-bg-hover cursor-pointer ${
-                    s.id === activeSessionId ? 'text-accent' : 'text-text-primary'
-                  }`}
-                  onClick={() => {
-                    if (s.id !== activeSessionId) void switchSession(s.id);
-                    setOpen(false);
-                  }}
-                  onKeyDown={activateOnKeyboard}
-                  role="button"
-                  tabIndex={0}
-                >
-                  {renamingId === s.id ? (
-                    <input
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.nativeEvent.isComposing) void commitRename();
-                        if (e.key === 'Escape') setRenamingId(null);
-                      }}
-                      onBlur={() => void commitRename()}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 min-w-0 bg-bg-input rounded px-1 outline-none focus:ring-1 ring-accent"
-                    />
-                  ) : (
-                    <>
-                      <span className="flex-1 min-w-0 truncate">{s.title}</span>
-                      <button
-                        className="p-0.5 rounded text-text-secondary opacity-0 group-hover:opacity-100 hover:text-text-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRenamingId(s.id);
-                          setDraft(s.title);
-                        }}
-                        title={t(lang, 'aiSessionRename')}
-                      >
-                        <Pencil size={10} />
-                      </button>
-                      <button
-                        className="p-0.5 rounded text-text-secondary opacity-0 group-hover:opacity-100 hover:text-danger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void onDelete(s.id);
-                        }}
-                        title={t(lang, 'aiSessionDelete')}
-                      >
-                        <Trash2 size={10} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-            <button
-              className="w-full flex items-center gap-1 px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary border-t border-border-subtle"
-              onClick={() => {
-                void createSession(t(lang, 'aiSessionNew'));
-                setOpen(false);
-              }}
-            >
-              <Plus size={11} />
-              {t(lang, 'aiSessionNew')}
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
+import type { AiAttachment } from '../../types';
+import { AssistantBubble } from './AssistantBubble';
+import { SessionMenu } from './SessionMenu';
 
 /// AI 对话面板 — 可停靠 (右/左/下/浮动), 流式对话 + Markdown 渲染 +
 /// 多会话 (后端持有) + MCP 工具调用展示

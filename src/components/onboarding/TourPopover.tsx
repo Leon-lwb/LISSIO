@@ -78,7 +78,7 @@ export function TourPopover(props: TourPopoverProps) {
   return (
     <div
       ref={bodyRef}
-      className="fixed w-80 float-card p-4 flex flex-col gap-3 animate-[tour-pop-in_0.18s_ease-out]"
+      className="fixed w-80 dialog-surface p-4 flex flex-col gap-3 animate-[tour-pop-in_0.18s_ease-out]"
       style={{ left: style.left, top: style.top, pointerEvents: 'auto' }}
     >
       <div className="flex items-start justify-between gap-2">

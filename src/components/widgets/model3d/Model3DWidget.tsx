@@ -252,9 +252,9 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </div>
           ))}
         </div>
-        <div className="text-[10px] text-text-secondary uppercase tracking-wide font-semibold px-1 pt-1">{t(lang, 'model3dSettings')}</div>
+        <div className="section-heading section-heading--micro px-1 pt-1">{t(lang, 'model3dSettings')}</div>
         <div className="flex flex-col gap-1.5 px-1">
-          <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--wide">
             <label className="text-[10px] text-text-secondary">{t(lang, 'model3dMode')}</label>
             <div className="flex gap-0.5">
               {MODE_TOGGLES.map((opt) => {
@@ -273,7 +273,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </div>
           </div>
           {(mode === 'attitude' || mode === 'trajectory-attitude') && (
-            <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+            <div className="field-grid field-grid--wide">
               <label className="text-[10px] text-text-secondary">{t(lang, 'model3dAttitudeInput')}</label>
               <select
                 value={attitudeInputMode}
@@ -293,7 +293,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </div>
           )}
           {(mode === 'trajectory' || mode === 'trajectory-attitude') && (
-            <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+            <div className="field-grid field-grid--wide">
               <label className="text-[10px] text-text-secondary">{t(lang, 'model3dTrailLength')}</label>
               <input
                 type="number"
@@ -305,7 +305,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
               />
             </div>
           )}
-          <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--wide">
             <label className="text-[10px] text-text-secondary">{t(lang, 'model3dColor')}</label>
             <input
               type="color"
@@ -315,7 +315,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             />
           </div>
           {/* [TEMP-DISABLED] 自定义模型导入 UI 段暂时隐藏 — 恢复时取消下方注释
-          <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--wide">
             <label className="text-[10px] text-text-secondary">{t(lang, 'model3dModel')}</label>
             <div className="flex gap-1 items-center">
               <span
@@ -342,7 +342,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </button>
           </div>
           */}
-          <div className="grid grid-cols-[80px_1fr] gap-1.5 items-center">
+          <div className="field-grid field-grid--wide">
             <label className="text-[10px] text-text-secondary">{t(lang, 'model3dAxisLength')}</label>
             <input
               type="number"

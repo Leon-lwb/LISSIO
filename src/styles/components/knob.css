@@ -1,0 +1,37 @@
+/* ============ Knob 旋钮 (controls/Knob.tsx) ============ */
+.knob-dial {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--gradient-knob);
+  border: 2px solid var(--color-border);
+  position: relative;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: border-color var(--transition-fast) var(--ease-out-cubic);
+}
+
+.knob-dial:hover {
+  border-color: var(--color-accent-hover);
+}
+
+.knob-dial:active {
+  cursor: grabbing;
+  border-color: var(--color-accent-active);
+}
+
+.knob-dial:focus-visible {
+  outline-offset: 3px;
+}
+
+.knob-indicator-line {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 3px;
+  height: 18px;
+  background: var(--color-accent);
+  border-radius: 2px;
+  transform-origin: 50% 100%;
+}

@@ -58,8 +58,8 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
   const activeTheme = resolveActiveTheme(appearance);
   // 浮层底色固定取主题原色, 避免 acrylic 对 bg-* 的半透明处理二次叠加到独立浮层磨砂上。
   root.style.setProperty('--color-float-surface', activeTheme.tokens.bgSidebar);
-  root.style.setProperty('--color-float-chrome', activeTheme.tokens.bgPanelHeader);
-  root.style.setProperty('--color-float-chrome-muted', activeTheme.tokens.bgSidebar);
+  root.style.setProperty('--color-dialog-chrome', activeTheme.tokens.bgPanelHeader);
+  root.style.setProperty('--color-dialog-chrome-muted', activeTheme.tokens.bgSidebar);
   const acrylic = appearance.acrylicBackground === true;
   if (acrylic) {
     root.dataset.acrylic = 'true';
