@@ -21,6 +21,7 @@ import {
   CircuitBoard,
   Cpu,
   Database,
+  Gauge,
   History,
   Image as ImageIcon,
   LineChart,
@@ -215,7 +216,7 @@ export const PANEL_DEFS: Readonly<Record<PanelKind, PanelDef>> = {
   },
 };
 
-/// 5 个纯应用外壳 tab 的图标 — 它们是 UI 外壳而非数据面板, 因此没有后端契约,
+/// 6 个纯应用外壳 tab 的图标 — 它们是 UI 外壳而非数据面板, 因此没有后端契约,
 /// 只有图标归此表。内容元素在 `panelViews.tsx` (视图面)。
 export const SHELL_TAB_ICONS: Readonly<Record<ShellTabType, LucideIcon>> = {
   'compile-errors': AlertTriangle,
@@ -223,6 +224,7 @@ export const SHELL_TAB_ICONS: Readonly<Record<ShellTabType, LucideIcon>> = {
   'operation-history': History,
   'node-properties': Settings2,
   'recording-database': Database,
+  'performance-monitor': Gauge,
 };
 
 /// 历史 tab 类型别名 —— `waveform` 是 `waveform-extra` 的旧拼写, 归一后再查表。

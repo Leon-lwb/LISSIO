@@ -244,7 +244,13 @@ async fn handle_one(state: &ServerState, request: Value) -> RpcResponse {
                 .unwrap_or(Value::Null),
         );
     }
-    match rpc_api::dispatch(&state.host, &request.cmd, request.args).await {
+    let started = std::time::Instant::now();
+    let response = rpc_api::dispatch(&state.host, &request.cmd, request.args).await;
+    state
+        .host
+        .performance
+        .record_rpc(started.elapsed(), response.is_ok());
+    match response {
         Ok(result) => RpcResponse::success(request.id, result),
         Err(error) => RpcResponse::failure(
             request.id,
@@ -263,6 +269,7 @@ async fn ws_handler(State(state): State<Arc<ServerState>>, upgrade: WebSocketUpg
         next_subscription_id: state.next_subscription_id.clone(),
         active_websockets: state.active_websockets.clone(),
         active_display_subscriptions: state.active_display_subscriptions.clone(),
+        performance: state.host.performance.clone(),
     };
     upgrade.on_upgrade(move |socket| async move {
         crate::session::run(socket, context).await;

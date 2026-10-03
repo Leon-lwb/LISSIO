@@ -425,6 +425,46 @@ errorGuideIo: System IO error. Check the device connection and your permission t
 errorGuideConfig: Invalid node configuration. Check the node parameters (port / baud rate / protocol, etc.)
 errorGuideSerde: Data serialization failed. Check the payload or configuration format
 
+# Performance monitor
+performanceMonitor: Performance Monitor
+performanceFrontend: Frontend
+performanceBackend: Backend
+performanceFrontendSource: WebView / browser rendering and scripting
+performanceBackendSource: lissio-server process and data pipeline
+performancePause: Pause sampling
+performanceResume: Resume sampling
+performanceRefresh: Sample now
+performanceClear: Clear history
+performancePaused: Paused
+performanceWaiting: Collecting performance data…
+performanceFps: FPS
+performanceFramesPerSecond: Rendered frames per second
+performanceFrameTime: Frame time P95
+performanceAverage: Average
+performanceHeap: JS Heap
+performanceLimit: Limit
+performanceLongTasks: Long tasks
+performanceLongest: Longest
+performanceCpu: CPU
+performanceThreads: Threads
+performanceMemory: Memory
+performanceUptime: Uptime
+performanceRpcLatency: RPC P95
+performanceDropped: Dropped
+performancePipeline: Data pipeline
+performanceCompleted: Completed frames
+performanceQueue: Queue
+performanceEvalWait: Eval service peak
+performanceIngressDropped: Ingress dropped
+performanceRpcCalls: RPC calls
+performanceRpcErrors: RPC errors
+performanceWsConnections: WS connections
+performanceWsDropped: WS dropped
+performanceSampling: Sampling
+performanceSampleCount: Samples
+performanceMonitorRpc: Monitor request
+performanceLastSample: Last sample
+
 # Settings system
 settings: Settings
 settingsTitle: Settings

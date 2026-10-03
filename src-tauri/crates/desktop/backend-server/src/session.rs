@@ -17,6 +17,7 @@ use app::display::DisplayRequest;
 use axum::extract::ws::{Message, WebSocket};
 use backend_host::BackendHost;
 use futures::{SinkExt, StreamExt};
+use performance::PerformanceMonitor;
 use serde::Deserialize;
 use tokio::sync::broadcast;
 
@@ -36,21 +37,31 @@ pub struct SessionContext {
     pub active_websockets: Arc<AtomicUsize>,
     /// 当前活动显示订阅数。
     pub active_display_subscriptions: Arc<AtomicUsize>,
+    /// Backend performance recorder shared by RPC and WebSocket instrumentation.
+    pub performance: Arc<PerformanceMonitor>,
 }
 
 /// WebSocket 生命周期计数卫兵。
-struct ConnectionCountGuard(Arc<AtomicUsize>);
+struct ConnectionCountGuard {
+    counter: Arc<AtomicUsize>,
+    performance: Arc<PerformanceMonitor>,
+}
 
 impl ConnectionCountGuard {
-    fn new(counter: Arc<AtomicUsize>) -> Self {
+    fn new(counter: Arc<AtomicUsize>, performance: Arc<PerformanceMonitor>) -> Self {
         counter.fetch_add(1, Ordering::Relaxed);
-        Self(counter)
+        performance.ws_connection_opened();
+        Self {
+            counter,
+            performance,
+        }
     }
 }
 
 impl Drop for ConnectionCountGuard {
     fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::Relaxed);
+        self.counter.fetch_sub(1, Ordering::Relaxed);
+        self.performance.ws_connection_closed();
     }
 }
 
@@ -65,9 +76,14 @@ struct SubscribeArgs {
 
 /// 处理一条已升级的 WebSocket 连接, 直至对端关闭或出错。
 pub async fn run(socket: WebSocket, context: SessionContext) {
-    let _connection_count = ConnectionCountGuard::new(context.active_websockets.clone());
+    let _connection_count = ConnectionCountGuard::new(
+        context.active_websockets.clone(),
+        context.performance.clone(),
+    );
     let (mut sink, mut stream) = socket.split();
-    let outbox = Arc::new(ConnectionOutbox::new());
+    let outbox = Arc::new(ConnectionOutbox::with_monitor(Some(
+        context.performance.clone(),
+    )));
 
     // 写任务 — 唯一持有 WebSocket sink 的一方。控制帧严格优先；显示流队列满时
     // 由 ConnectionOutbox 丢弃新帧并计数，不把慢消费者转成服务端内存增长。
@@ -224,8 +240,12 @@ async fn handle_text(
                 chat_events,
                 frontend_sink: ConnectionEventSink::handle(outbox),
             };
+            let started = std::time::Instant::now();
             let response =
                 rpc_api::dispatch_with_context(&context.host, &cmd, args, &rpc_context).await;
+            context
+                .performance
+                .record_rpc(started.elapsed(), response.is_ok());
             let _ = send_message(outbox, response_message(id, response)).await;
         }
     }

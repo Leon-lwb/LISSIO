@@ -33,6 +33,7 @@ export function DataPanelsPanel() {
   const addLogicTab = useAppStore((s) => s.addLogicTab);
   const addOperationHistoryTab = useAppStore((s) => s.addOperationHistoryTab);
   const addNodePropertiesTab = useAppStore((s) => s.addNodePropertiesTab);
+  const addPerformanceMonitorTab = useAppStore((s) => s.addPerformanceMonitorTab);
   const addWidgetTab = useAppStore((s) => s.addWidgetTab);
 
   /// 后端目录 × 前端注册表 — 不一致的面板显式占位 + 开发期报错, 不静默
@@ -51,6 +52,7 @@ export function DataPanelsPanel() {
       addLogicTab,
       addOperationHistoryTab,
       addNodePropertiesTab,
+      addPerformanceMonitorTab,
       addDataTab: useAppStore.getState().addDataTab,
       setActiveDataTab: useAppStore.getState().setActiveDataTab,
       addWidgetTab,

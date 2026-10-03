@@ -24,6 +24,7 @@ control-api = { workspace = true }
 data_model = { workspace = true }
 events = { workspace = true }
 mcp-server = { workspace = true }
+performance = { workspace = true }
 rpc-api = { workspace = true }
 axum = { workspace = true }
 clap = { workspace = true }

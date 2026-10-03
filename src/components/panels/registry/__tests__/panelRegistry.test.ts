@@ -17,6 +17,7 @@ import {
   CircuitBoard,
   Cpu,
   Database,
+  Gauge,
   History,
   Image as ImageIcon,
   LineChart,
@@ -97,6 +98,7 @@ const LEGACY_ICONS: Readonly<Record<string, LucideIcon>> = {
   'operation-history': History,
   'node-properties': Settings2,
   'recording-database': Database,
+  'performance-monitor': Gauge,
 };
 
 const LEGACY_SHELL_TABS = [
@@ -105,6 +107,7 @@ const LEGACY_SHELL_TABS = [
   'operation-history',
   'node-properties',
   'recording-database',
+  'performance-monitor',
 ] as const;
 
 describe('PANEL_DEFS 与既有平行表等价', () => {
@@ -224,7 +227,7 @@ describe('注册表内部一致性', () => {
 });
 
 describe('应用外壳', () => {
-  it('5 个外壳的图标与内容同集合', () => {
+  it('6 个外壳的图标与内容同集合', () => {
     expect(Object.keys(SHELL_TAB_ICONS).sort()).toEqual([...LEGACY_SHELL_TABS].sort());
     expect(Object.keys(SHELL_TAB_CONTENT).sort()).toEqual([...LEGACY_SHELL_TABS].sort());
   });

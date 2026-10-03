@@ -25,6 +25,7 @@ ai-host = { workspace = true }
 app = { workspace = true }
 acquisition = { workspace = true }
 pipeline = { workspace = true }
+performance = { workspace = true }
 points = { workspace = true }
 transport = { workspace = true }
 serial = { workspace = true }

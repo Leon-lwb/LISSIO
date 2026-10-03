@@ -25,6 +25,8 @@ pub struct BackendHost {
     pub ai: Arc<ai_host::AiHost>,
     /// 出口事件端口 (stderr / Tauri / WebSocket 广播)。
     pub sink: EventSinkHandle,
+    /// 后端性能采样器 (进程 / RPC / WebSocket / 数据平面)。
+    pub performance: std::sync::Arc<performance::PerformanceMonitor>,
     /// 配置目录 (workspace.json / settings.json / recordings/ 所在处)。
     pub config_dir: PathBuf,
     /// 导出产物暂存区 — 只有 Web 出口注入 (浏览器没有可写路径); 其余出口为
@@ -75,6 +77,7 @@ pub async fn assemble(
         },
     );
     let toolbox = Toolbox::from_state(&state);
+    let performance = performance::PerformanceMonitor::new();
     let ai = Arc::new(ai_host::AiHost::new(
         config_dir.clone(),
         toolbox.clone(),
@@ -85,6 +88,7 @@ pub async fn assemble(
         toolbox,
         ai,
         sink,
+        performance,
         config_dir,
         // Web 出口装配后自行注入暂存区 (见 `backend_server::serve`)
         artifacts: None,

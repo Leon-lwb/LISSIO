@@ -27,6 +27,7 @@ mod frame_decoder;
 mod graph;
 pub mod models;
 mod panel;
+mod performance;
 mod pipeline;
 mod recording;
 mod transport;
@@ -171,6 +172,7 @@ pub async fn dispatch_with_context(
         "get_workspace_run_state" => pipeline::get_workspace_run_state(host),
         "set_widget_send_tasks" => pipeline::set_widget_send_tasks(host, cmd, &args),
         "get_send_task_status" => pipeline::get_send_task_status(host),
+        "get_performance_snapshot" => performance::get_snapshot(host),
 
         // ===== 缓冲与停止快照 =====
         "clear_buffer" => buffer::clear_buffer(host, cmd, &args),

@@ -84,7 +84,7 @@ they also satisfy the layer rule.
 | transport | `device-tree`, `transport`, `serial`, `network`, `can-transport`, `automotive`, `automotive-isotp`, `automotive-diag`, `modbus-adapter`, `s7-adapter` |
 | data | `bus`, `recording` |
 | ai | `llm`, `chat-session`, `chat`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph-ops`, `control-api`, `ai-host`, `rpc-api`, `backend-host`, `menu-shell`, `update-flow`, `mcp-server`, `backend-server`, `backend-cli`, and the shell-only root package `lissio` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph-ops`, `control-api`, `ai-host`, `rpc-api`, `performance`, `backend-host`, `menu-shell`, `update-flow`, `mcp-server`, `backend-server`, `backend-cli`, and the shell-only root package `lissio` |
 
 `graph` owns the compiler as separate responsibility crates:
 `kind` defines node semantics, `hir` builds and classifies the typed graph,
@@ -134,6 +134,15 @@ sees `RecordingHub`. The boundary that matters for the whole product:
 Violating the first rule is what produced "Start shows a few characters and Pause
 never releases": backpressure used to be classified as a writer fault, and the
 fault flag was sticky.
+
+## Performance monitor boundary
+
+性能监视器按“谁运行谁测量”划边界：
+
+- 前端采集 WebView/浏览器自身的帧率、帧时间、Long Task 与可选 JS Heap；这些值只在前端产生，不向后端伪造或回传为权威状态。
+- `performance` (L4) 采集 `lissio-server` 进程 CPU/RSS/运行时长，并由 `backend-server` 埋点记录 RPC 延迟、WebSocket 输出与有界队列丢弃；`pipeline::EvalDiagnostics` 与 `bus::RuntimeHealth` 投影为同一后端快照。
+- `rpc-api::get_performance_snapshot` 是后端快照唯一出口，前端只拉取、合并和绘制两类序列。监控 UI 不读取内部锁、不解析日志文本，也不通过 Tauri IPC旁路 Web 合同。
+- 监控请求本身计入 RPC 统计；前端历史是显示层短时环形数据，后端快照仍是当前状态的权威来源。
 
 ## Command-name contract
 

@@ -55,6 +55,13 @@ fn main() {
         data_model::model_descriptor::NodePortDomain,
         data_model::model_descriptor::NodePortDescriptor,
 
+        // ---- 后端性能监视合同 (performance) ----
+        performance::BackendPerformanceSnapshot,
+        performance::ProcessPerformance,
+        performance::RpcPerformance,
+        performance::WebSocketPerformance,
+        performance::PipelinePerformance,
+
         // ---- 数据面板合同 (data-model::panel_descriptor) ----
         data_model::panel_descriptor::PanelDescriptor,
         data_model::panel_descriptor::PanelKind,

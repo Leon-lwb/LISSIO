@@ -50,6 +50,7 @@ import { normalizeWaveformWindow } from '../buffers/dataBuffer';
 import type { GraphEdge } from '../utils/nodeDef';
 import type { NodeDocument } from '../nodes/document';
 import type { GraphDerivedPayload } from '../../store/slices/derived';
+import type { BackendPerformanceSnapshot } from '../../types/generated/BackendPerformanceSnapshot';
 import { clearRawDataBuffer } from '../buffers/rawDataSubscription';
 import { subscribeDisplay } from '../buffers/displaySubscription';
 import { decodeWaveformWindow } from '../data/waveformProtocol';
@@ -658,6 +659,10 @@ export const api = {
   // ===== 数据管道性能配置 =====
   setPipelineConfig: (config: PipelineConfig) =>
     transport.call<void>('set_pipeline_config', { config }),
+
+  /// 后端进程 / RPC / WebSocket / 数据平面性能快照。
+  getBackendPerformance: () =>
+    transport.call<BackendPerformanceSnapshot>('get_performance_snapshot'),
 
   // ===== 四域持久化与历史查询 =====
   getRecordingHealth: () => transport.call<RecordingHealth>('get_recording_health'),

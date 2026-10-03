@@ -425,6 +425,46 @@ errorGuideIo: 系统 IO 错误, 请检查设备连接是否稳定, 以及当前�
 errorGuideConfig: 节点配置有误, 请检查节点参数 (端口/波特率/协议等) 是否完整合法
 errorGuideSerde: 数据序列化失败, 请检查发送内容或配置格式是否正确
 
+# 性能监视器
+performanceMonitor: 性能监视器
+performanceFrontend: 前端
+performanceBackend: 后端
+performanceFrontendSource: WebView / 浏览器渲染与脚本
+performanceBackendSource: lissio-server 进程与数据管道
+performancePause: 暂停采样
+performanceResume: 继续采样
+performanceRefresh: 立即采样
+performanceClear: 清空历史
+performancePaused: 已暂停
+performanceWaiting: 正在采集性能数据…
+performanceFps: 帧率
+performanceFramesPerSecond: 每秒渲染帧
+performanceFrameTime: 帧时间 P95
+performanceAverage: 平均
+performanceHeap: JS Heap
+performanceLimit: 上限
+performanceLongTasks: 长任务
+performanceLongest: 最长
+performanceCpu: CPU
+performanceThreads: 线程
+performanceMemory: 内存
+performanceUptime: 运行
+performanceRpcLatency: RPC P95
+performanceDropped: 丢弃
+performancePipeline: 数据管道
+performanceCompleted: 已完成帧
+performanceQueue: 队列
+performanceEvalWait: 求值服务峰值
+performanceIngressDropped: 入站丢弃
+performanceRpcCalls: RPC 调用
+performanceRpcErrors: RPC 错误
+performanceWsConnections: WS 连接
+performanceWsDropped: WS 丢弃
+performanceSampling: 采样
+performanceSampleCount: 样本数
+performanceMonitorRpc: 监控请求
+performanceLastSample: 最近采样
+
 # 设置系统
 settings: 设置
 settingsTitle: 设置

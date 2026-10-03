@@ -38,6 +38,7 @@ graph_ops = { workspace = true }
 kind = { workspace = true }
 logic = { workspace = true }
 pipeline = { workspace = true }
+performance = { workspace = true }
 points = { workspace = true }
 raw-data = { workspace = true }
 schema_types = { workspace = true }

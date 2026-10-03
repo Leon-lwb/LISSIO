@@ -13,6 +13,7 @@ import { CompileErrorsView } from '../../displays/compileErrors/CompileErrorsVie
 import { CompileResultsView } from '../../displays/compileResults/CompileResultsView';
 import { OperationHistoryView } from '../../displays/history/OperationHistoryView';
 import { RecordingDatabaseView } from '../../displays/recording/RecordingDatabaseView';
+import { PerformanceMonitorView } from '../../displays/performance/PerformanceMonitorView';
 import { NodePropertiesPanel } from '../../nodes/NodePropertiesPanel';
 import {
   CanPanelView,
@@ -75,6 +76,11 @@ const recordingDatabaseTabContent = (
     <RecordingDatabaseView />
   </div>
 );
+const performanceMonitorTabContent = (
+  <div className="flex h-full w-full">
+    <PerformanceMonitorView />
+  </div>
+);
 
 /// 外壳 tab 类型 → 内容元素。
 export const SHELL_TAB_CONTENT: Readonly<Record<ShellTabType, ReactNode>> = {
@@ -83,4 +89,5 @@ export const SHELL_TAB_CONTENT: Readonly<Record<ShellTabType, ReactNode>> = {
   'operation-history': operationHistoryTabContent,
   'node-properties': nodePropertiesTabContent,
   'recording-database': recordingDatabaseTabContent,
+  'performance-monitor': performanceMonitorTabContent,
 };

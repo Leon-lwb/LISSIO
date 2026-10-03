@@ -78,6 +78,7 @@ pub const SUPPORTED: &[&str] = &[
     "get_workspace_run_state",
     "set_widget_send_tasks",
     "get_send_task_status",
+    "get_performance_snapshot",
     // 缓冲与停止快照
     "clear_buffer",
     "set_buffer_channels",

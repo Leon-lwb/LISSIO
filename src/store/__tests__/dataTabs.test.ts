@@ -1,7 +1,7 @@
 // 数据面板菜单条目 / Tab 轮转 —— 条目来源已从手写双表收敛为注册表派生。
 //
 // 这里钉住两件事:
-//   1. 条目集合与顺序与收敛前逐项一致 (独立面板 6 条 + 派生面板 10 条);
+//   1. 条目集合与顺序稳定 (独立面板 7 条 + 派生面板 9 条);
 //   2. 独立面板的身份来自注册表 (can / logic 是「无宿主面板」), 但每条都必须
 //      在 dataTabs 侧有对应 store action 才能真正打开 —— 否则就是死条目。
 
@@ -11,13 +11,14 @@ import { cycleDataPanelTab, getAvailableDataPanelEntries } from '../slices/dataT
 import { HOST_PANEL_DEFS, SINGLETON_PANEL_DEFS } from '../../components/panels/registry/panelDefs';
 import type { WidgetConfig } from '../../types';
 
-/// 收敛前的条目顺序 (standalone 6 + derived 9); table-view 是注册表补齐的派生面板。
+/// 面板条目顺序 (standalone 7 + derived 9); table-view 是注册表补齐的派生面板。
 const EXPECTED_TYPES = [
   'compile-errors',
   'compile-results',
   'can',
   'logic',
   'operation-history',
+  'performance-monitor',
   'node-properties',
   'waveform-extra',
   'spectrum',
@@ -32,6 +33,7 @@ const EXPECTED_TYPES = [
 ];
 
 const EXPECTED_GROUPS = [
+  'standalone',
   'standalone',
   'standalone',
   'standalone',
@@ -67,6 +69,7 @@ function stubActions() {
     addLogicTab: vi.fn(),
     addOperationHistoryTab: vi.fn(),
     addNodePropertiesTab: vi.fn(),
+    addPerformanceMonitorTab: vi.fn(),
     addDataTab: vi.fn(),
     setActiveDataTab: vi.fn(),
     addWidgetTab: vi.fn(),

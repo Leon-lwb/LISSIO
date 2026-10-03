@@ -33,7 +33,8 @@ export type ShellTabType =
   | 'compile-results'
   | 'operation-history'
   | 'node-properties'
-  | 'recording-database';
+  | 'recording-database'
+  | 'performance-monitor';
 
 /// 一个数据面板的前端声明 (后端 `PanelDescriptor` 的镜像)。
 export interface PanelDef {

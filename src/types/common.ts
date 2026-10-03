@@ -340,7 +340,7 @@ export interface ControlTab {
 
 // ============ 数据显示区 Tab ============
 
-export type DataTabType = 'waveform' | 'raw' | 'pie' | 'image' | 'waveform-extra' | 'model3d' | 'spectrum' | 'command' | 'can' | 'logic' | 'frame-decoder' | 'table-view' | 'trigger' | 'compile-errors' | 'compile-results' | 'operation-history' | 'node-properties' | 'recording-database';
+export type DataTabType = 'waveform' | 'raw' | 'pie' | 'image' | 'waveform-extra' | 'model3d' | 'spectrum' | 'command' | 'can' | 'logic' | 'frame-decoder' | 'table-view' | 'trigger' | 'compile-errors' | 'compile-results' | 'operation-history' | 'node-properties' | 'recording-database' | 'performance-monitor';
 
 /// 节点属性面板 tab 的稳定 id — 默认布局专属卡 (properties-main) 与
 /// addNodePropertiesTab 重建路径共用, 关闭再开仍落回同一张卡

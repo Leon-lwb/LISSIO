@@ -1,0 +1,29 @@
+[package]
+name = "lissio-performance"
+description = "Backend process, RPC, WebSocket, and pipeline performance sampling"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "performance"
+
+[lints]
+workspace = true
+
+[dependencies]
+bus = { workspace = true }
+parking_lot = { workspace = true }
+pipeline = { workspace = true }
+serde = { workspace = true }
+sysinfo = { workspace = true }
+ts-rs = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[package.metadata.lissio]
+domain = "desktop"
+layer = 4
+responsibility = "Backend process, RPC, WebSocket, and pipeline performance sampling"

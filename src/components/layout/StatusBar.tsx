@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { t } from '../../i18n';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
-import { RefreshCw, Settings, Info, Sparkles } from 'lucide-react';
+import { Gauge, RefreshCw, Settings, Info, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
 import { CanLoadAlarm } from './CanLoadAlarm';
 import { PipelineDropAlarm } from './PipelineDropAlarm';
@@ -12,6 +12,8 @@ import { usePrimaryDeviceNode, usePrimaryProtocolConfig } from '../../lib/hooks/
 import CompileStatusIndicator from './CompileStatusIndicator';
 import { RunControls } from './RunControls';
 import { useLayoutStore } from '../../store/layoutStore';
+import { usePerformanceStore } from '../../store/performanceStore';
+import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 
 /// AI 对话面板开关 — 状态栏右侧常驻入口 (面板可见性持久化, 会话在后端不丢失)
 function AiPanelToggle() {
@@ -29,6 +31,27 @@ function AiPanelToggle() {
       onClick={() => setAiPanelVisible(!visible)}
     >
       <Sparkles size={12} />
+    </button>
+  );
+}
+
+/// 前后端性能监视器入口 — 仅订阅两个标量，避免采样更新引发状态栏整体重渲染。
+function PerformanceIndicator({ compact }: { compact: boolean }) {
+  const lang = useAppStore((s) => s.lang);
+  const fps = usePerformanceStore((s) => s.frontend?.fps ?? null);
+  const cpu = usePerformanceStore((s) => s.backend?.process.cpuPercent ?? null);
+  const label = compact
+    ? `${cpu == null ? '—' : `${cpu.toFixed(0)}%`}`
+    : `${fps == null ? '—' : fps.toFixed(0)} FPS · ${cpu == null ? '—' : `${cpu.toFixed(0)}%`}`;
+  return (
+    <button
+      className="flex h-full items-center gap-1 whitespace-nowrap rounded px-1 text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
+      title={t(lang, 'performanceMonitor')}
+      aria-label={t(lang, 'performanceMonitor')}
+      onClick={() => openDataPanelAndReveal(() => useAppStore.getState().addPerformanceMonitorTab())}
+    >
+      <Gauge size={12} className="shrink-0" />
+      <span className="tabular-nums">{label}</span>
     </button>
   );
 }
@@ -231,6 +254,8 @@ export const StatusBar = memo(function StatusBar() {
       <CanLoadAlarm />
       <PipelineDropAlarm />
       <UpdateIndicator />
+      <div className="w-px h-3 bg-border-subtle mx-1 shrink-0" />
+      <PerformanceIndicator compact={tier >= 3} />
       <div className="w-px h-3 bg-border-subtle mx-1 shrink-0" />
       <button
         className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary active:bg-accent-active transition-colors duration-150 shrink-0"

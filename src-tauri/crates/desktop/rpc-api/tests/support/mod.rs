@@ -64,6 +64,7 @@ pub fn host() -> BackendHost {
         toolbox,
         ai,
         sink,
+        performance: performance::PerformanceMonitor::new(),
         config_dir,
         artifacts: None,
     }

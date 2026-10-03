@@ -97,6 +97,7 @@ members = [
   "crates/desktop/ai-host",
   "crates/desktop/control-api",
   "crates/desktop/rpc-api",
+  "crates/desktop/performance",
   "crates/desktop/backend-server",
   "crates/desktop/backend-host",
   "crates/desktop/mcp-server",
@@ -259,6 +260,8 @@ core-foundation = "0.10"
 io-kit-sys = "0.4"
 nusb = "0.2"
 windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices_DeviceAndDriverInstallation", "Win32_System_Registry", "Win32_System_Time"] }
+# sysinfo: 跨平台进程 CPU/内存采样 (性能监视器 L4 adapter, 仅启用 system)
+sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
 # FFT (dsp_fft)
 rustfft = "6"
 realfft = "3"
@@ -332,6 +335,7 @@ ai-host = { version = "0.7.2", package = "lissio-ai-host", path = "crates/deskto
 mcp-server = { version = "0.7.2", package = "lissio-mcp-server", path = "crates/desktop/mcp-server" }
 control-api = { version = "0.7.2", package = "lissio-control-api", path = "crates/desktop/control-api" }
 rpc-api = { version = "0.7.2", package = "lissio-rpc-api", path = "crates/desktop/rpc-api" }
+performance = { version = "0.7.2", package = "lissio-performance", path = "crates/desktop/performance" }
 backend-server = { version = "0.7.2", package = "lissio-backend-server", path = "crates/desktop/backend-server" }
 backend-host = { version = "0.7.2", package = "lissio-backend-host", path = "crates/desktop/backend-host" }
 # backend-cli 是叶子 bin (无消费方), 仅经 [workspace].members 纳入构建

@@ -3551,6 +3551,7 @@ dependencies = [
  "lissio-llm",
  "lissio-modbus-adapter",
  "lissio-network",
+ "lissio-performance",
  "lissio-pipeline",
  "lissio-points",
  "lissio-s7-adapter",
@@ -3577,6 +3578,7 @@ dependencies = [
  "lissio-data-model",
  "lissio-events",
  "lissio-mcp-server",
+ "lissio-performance",
  "lissio-rpc-api",
  "log",
  "parking_lot",
@@ -4047,6 +4049,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "lissio-performance"
+version = "0.7.2"
+dependencies = [
+ "lissio-bus",
+ "lissio-pipeline",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "sysinfo",
+ "ts-rs",
+]
+
+[[package]]
 name = "lissio-pipeline"
 version = "0.7.2"
 dependencies = [
@@ -4187,6 +4202,7 @@ dependencies = [
  "lissio-llm",
  "lissio-logic",
  "lissio-mcp-client",
+ "lissio-performance",
  "lissio-pipeline",
  "lissio-points",
  "lissio-raw-data",
@@ -4720,6 +4736,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ntapi"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3b335231dfd352ffb0f8017f3b6027a4917f7df785ea2143d8af2adc66980ae"
+dependencies = [
+ "winapi",
+]
+
+[[package]]
 name = "num-bigint"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4941,6 +4966,16 @@ dependencies = [
  "block2",
  "libc",
  "objc2",
+ "objc2-core-foundation",
+]
+
+[[package]]
+name = "objc2-io-kit"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33fafba39597d6dc1fb709123dfa8289d39406734be322956a69f0931c73bb15"
+dependencies = [
+ "libc",
  "objc2-core-foundation",
 ]
 
@@ -6825,6 +6860,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "sysinfo"
+version = "0.39.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2071df9448915b71c4fe6d25deaf1c22f12bd234f01540b77312bb8e41361e6"
+dependencies = [
+ "libc",
+ "memchr",
+ "ntapi",
+ "objc2-core-foundation",
+ "objc2-io-kit",
+ "windows 0.62.2",
 ]
 
 [[package]]

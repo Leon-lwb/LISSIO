@@ -27,6 +27,8 @@ export interface DataTabSlice {
   addNodePropertiesTab: () => void;
   /// 新增 — 录制数据库面板 (恒定单例, 由侧边栏入口打开)
   addRecordingDatabaseTab: () => void;
+  /// 新增 — 前后端性能监视器 (恒定单例, 状态栏与侧边栏入口打开)
+  addPerformanceMonitorTab: () => void;
   /// 新增 — 由控件 id 构造对应窗口 Tab (已存在则激活, 否则新建并激活)
   addWidgetTab: (widget: WidgetConfig) => void;
 }
@@ -194,6 +196,24 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       });
     },
 
+    addPerformanceMonitorTab: () => {
+      const existing = get().dataTabs.find((t: DataTab) => t.type === 'performance-monitor');
+      if (existing) {
+        set({ activeDataTabId: existing.id });
+        return;
+      }
+      const tab: DataTab = {
+        id: 'performance-monitor',
+        type: 'performance-monitor',
+        name: t(get().lang, 'performanceMonitor'),
+        closable: true,
+      };
+      set({
+        dataTabs: [...get().dataTabs, tab],
+        activeDataTabId: tab.id,
+      });
+    },
+
     addWidgetTab: (widget) => {
       const tab = widgetToTab(widget);
       if (!tab) return;
@@ -246,6 +266,7 @@ type DataPanelActions = Pick<
   | 'addLogicTab'
   | 'addOperationHistoryTab'
   | 'addNodePropertiesTab'
+  | 'addPerformanceMonitorTab'
   | 'addDataTab'
   | 'setActiveDataTab'
   | 'addWidgetTab'
@@ -260,6 +281,7 @@ const STANDALONE_ORDER: readonly DataTab['type'][] = [
   'can',
   'logic',
   'operation-history',
+  'performance-monitor',
   'node-properties',
 ];
 
@@ -279,6 +301,10 @@ const SHELL_PANEL_ENTRIES: Partial<Record<DataTab['type'], {
   'operation-history': {
     labelKey: 'menuPanelOpenOperationHistory',
     open: (actions) => actions.addOperationHistoryTab(),
+  },
+  'performance-monitor': {
+    labelKey: 'performanceMonitor',
+    open: (actions) => actions.addPerformanceMonitorTab(),
   },
   'node-properties': {
     labelKey: 'menuPanelOpenNodeProperties',

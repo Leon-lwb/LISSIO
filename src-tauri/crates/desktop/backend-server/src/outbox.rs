@@ -6,9 +6,11 @@
 //! - 显示流同时受帧数与字节预算约束，满载时丢弃新帧并计数，订阅继续运行。
 
 use std::collections::VecDeque;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use parking_lot::Mutex;
+use performance::PerformanceMonitor;
 use tokio::sync::Notify;
 
 use crate::frames::ServerMessage;
@@ -39,6 +41,10 @@ impl OutFrame {
             Self::StreamJson { id, .. } | Self::StreamBinary { id, .. } => Some(*id),
             Self::Message(_) | Self::Pong => None,
         }
+    }
+
+    const fn is_stream(&self) -> bool {
+        matches!(self, Self::StreamJson { .. } | Self::StreamBinary { .. })
     }
 
     const fn stream_bytes(&self) -> usize {
@@ -97,17 +103,24 @@ pub struct ConnectionOutbox {
     dropped_control_frames: AtomicU64,
     dropped_stream_frames: AtomicU64,
     dropped_stream_bytes: AtomicU64,
+    monitor: Option<Arc<PerformanceMonitor>>,
 }
 
 impl ConnectionOutbox {
     /// 构造空队列。
     pub fn new() -> Self {
+        Self::with_monitor(None)
+    }
+
+    /// Construct a queue wired into the backend performance monitor.
+    pub fn with_monitor(monitor: Option<Arc<PerformanceMonitor>>) -> Self {
         Self {
             state: Mutex::new(OutboxState::new()),
             ready: Notify::new(),
             dropped_control_frames: AtomicU64::new(0),
             dropped_stream_frames: AtomicU64::new(0),
             dropped_stream_bytes: AtomicU64::new(0),
+            monitor,
         }
     }
 
@@ -193,6 +206,9 @@ impl ConnectionOutbox {
                     state.queued_stream_bytes = state
                         .queued_stream_bytes
                         .saturating_sub(frame.stream_bytes());
+                    if frame.is_stream() {
+                        self.record_stream_sent(frame.stream_bytes());
+                    }
                     drop(state);
                     self.ready.notify_waiters();
                     return Some(frame);
@@ -252,10 +268,19 @@ impl ConnectionOutbox {
         }
     }
 
+    fn record_stream_sent(&self, bytes: usize) {
+        if let Some(monitor) = self.monitor.as_ref() {
+            monitor.record_ws_sent(bytes);
+        }
+    }
+
     fn record_stream_drop(&self, bytes: usize) {
         let dropped = self.dropped_stream_frames.fetch_add(1, Ordering::Relaxed) + 1;
         self.dropped_stream_bytes
             .fetch_add(u64::try_from(bytes).unwrap_or(u64::MAX), Ordering::Relaxed);
+        if let Some(monitor) = self.monitor.as_ref() {
+            monitor.record_ws_drop(bytes);
+        }
         if dropped == 1 || dropped.is_power_of_two() {
             log::warn!("WebSocket 显示流超出 32 帧 / 16 MiB 预算，累计丢弃 {dropped} 帧");
         }

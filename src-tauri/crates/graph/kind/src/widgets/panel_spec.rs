@@ -6,7 +6,7 @@
 //! 前端不再各自维护 kind → tab 类型 / 数据面 / 绑定的平行表。
 //!
 //! `None` 表示该控件不是数据面板（Knob、Math、Str、Gauge、LED 等就地展示控件），
-//! 以及 `compile-errors` / `operation-history` / `node-properties` 这类纯应用外壳。
+//! 以及编译、历史、属性、录制与性能监视这类纯应用外壳。
 
 use data_model::panel_descriptor::{PanelDelivery, PanelKind, panel_ops};
 
@@ -62,6 +62,7 @@ pub const SHELL_TAB_TYPES: &[&str] = &[
     "operation-history",
     "node-properties",
     "recording-database",
+    "performance-monitor",
 ];
 
 /// 校验一条面板规格的自洽性（`ensure_valid` 逐条调用）。
