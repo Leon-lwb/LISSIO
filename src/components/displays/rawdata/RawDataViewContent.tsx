@@ -3,6 +3,7 @@ import type { RawDataLineSource } from '../../../lib/buffers/dataBuffer';
 import type { Lang } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, HexColorMode } from './rawDataViewHelpers';
 import { ROW_HEIGHT, HeaderBytes } from './rawDataViewHelpers';
+import { isTextEncoding } from '../../../lib/utils/textEncoding';
 import { Row } from './RawDataRow';
 import type { useSelection } from '../../../lib/hooks/useSelection';
 
@@ -62,9 +63,11 @@ export function RawDataViewContent({
       {showOffset && grouping === 'grid' && (
         <span className="text-text-secondary text-xs font-mono min-w-[80px] text-right">Offset</span>
       )}
-      {repr === 'utf8' ? (
+      {isTextEncoding(repr) ? (
         <div className="flex-1">
-          <span className="text-text-secondary text-xs font-mono">UTF-8</span>
+          <span className="text-text-secondary text-xs font-mono">
+            {repr === 'gbk' ? 'GBK' : 'UTF-8'}
+          </span>
         </div>
       ) : grouping === 'line' ? (
         <>

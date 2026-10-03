@@ -158,9 +158,11 @@ bindingInvalidTarget: Binding target is invalid; nothing will be sent
 rawData: Raw Data
 gridView: Grid
 lineView: Line
+decodeMode: Decode mode
 hexView: HEX
 asciiView: ASCII
 utf8View: UTF-8
+gbkView: GBK
 terminalView: Terminal
 rawDataChannel: Channel
 send: Send

@@ -1,10 +1,11 @@
-// ============ 终端流解析器 — 增量 UTF-8 解码 + ANSI 转义状态机 ============
+// ============ 终端流解析器 — 增量文本解码 + ANSI 转义状态机 ============
 //
-// 串口字节流 → TerminalLine[] 的纯逻辑层。TextDecoder({stream:true}) 负责跨分片
-// 续接多字节序列; 转义状态机的状态跨 feed() 调用保持 (CSI 参数可断在任意字节处)。
+// 串口字节流 → TerminalLine[] 的纯逻辑层。TextDecoder({stream:true}) 按 UTF-8/GBK
+// 跨分片续接多字节序列; 转义状态机的状态跨 feed() 调用保持 (CSI 参数可断在任意字节处)。
 // 行模型为流式行终端 (非全网格): \r/\b/CSI G 在当前行内覆写, \n 提交一行。
 
 import type { RawDataDirection } from '../../types';
+import { createTextDecoder, type TextEncoding } from '../utils/textEncoding';
 import { SgrState, type TermColor } from './termColor';
 
 export interface TerminalSegment {
@@ -35,12 +36,15 @@ const CSI_FINAL_MAX = 0x7e;
 export interface AnsiParserOptions {
   /// true = 解释转义序列 (彩色渲染); false = 序列原文可见 (调试设备输出)
   ansiDecode: boolean;
+  /// 字节流文本编码, 默认 UTF-8
+  textEncoding?: TextEncoding;
   /// 一行提交 (收到 \n 或 2J 清屏截断) 时回调
   onLine: (line: TerminalLine) => void;
 }
 
 export class AnsiStreamParser {
-  private decoder = new TextDecoder('utf-8');
+  private decoder: TextDecoder;
+  private readonly textEncoding: TextEncoding;
   private state: ParserState = 'ground';
   private csiParams = '';
   /// OSC 收集中 (等 BEL / ESC\ 终止)
@@ -61,6 +65,8 @@ export class AnsiStreamParser {
   screenCleared = false;
 
   constructor(opts: AnsiParserOptions) {
+    this.textEncoding = opts.textEncoding ?? 'utf8';
+    this.decoder = createTextDecoder(this.textEncoding);
     this.ansiDecode = opts.ansiDecode;
     this.onLine = opts.onLine;
     this.cur = this.newLine();
@@ -88,6 +94,7 @@ export class AnsiStreamParser {
 
   /// 清空内部状态 (缓冲 clear 时调用); 未提交行随之丢弃
   reset(): void {
+    this.decoder = createTextDecoder(this.textEncoding);
     this.state = 'ground';
     this.csiParams = '';
     this.oscEsc = false;

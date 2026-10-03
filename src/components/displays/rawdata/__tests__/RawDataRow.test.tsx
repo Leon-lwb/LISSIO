@@ -61,6 +61,28 @@ describe('RawDataRow', () => {
     expect(spaceCell).toHaveClass('whitespace-pre');
   });
 
+  it('decodes UTF-8 and GBK text representations', () => {
+    const renderRow = (repr: 'utf8' | 'gbk') => render(
+      <Row
+        originalIndex={0}
+        filteredIndex={0}
+        grouping="line"
+        repr={repr}
+        buffer={createBuffer([0xc4, 0xe3])}
+        showTimestamp={false}
+        showOffset={false}
+        hexColorMode="none"
+        isSelected={false}
+        version={1}
+        lang="zh"
+        onMouseDown={vi.fn()}
+      />
+    );
+
+    expect(renderRow('gbk').container.textContent).toContain('你');
+    expect(renderRow('utf8').container.textContent).toContain('\ufffd');
+  });
+
   it('marks a wrapped continuation row with ↳ instead of the direction arrow', () => {
     const { container, rerender } = render(
       <Row

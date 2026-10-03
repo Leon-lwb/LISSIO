@@ -1052,6 +1052,67 @@ body.dragging-dock * {
   }
 }
 
+/* ============ 横向滚动提示 ============ */
+.horizontal-scroll-area {
+  overscroll-behavior-x: contain;
+}
+
+.horizontal-scroll-shadow {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-fast) var(--ease-out-cubic);
+}
+
+.horizontal-scroll-shadow[data-visible='true'] {
+  opacity: 1;
+}
+
+.horizontal-scroll-shadow-start {
+  left: 0;
+  background: linear-gradient(to right, var(--color-bg-panel-header), transparent);
+}
+
+.horizontal-scroll-shadow-end {
+  right: 0;
+  background: linear-gradient(to left, var(--color-bg-panel-header), transparent);
+}
+
+/* ============ 响应式工具栏 ============ */
+/* 容器宽度不足时按钮收为纯图标; 顶部工具栏始终单行，由横向滚动承接溢出 */
+.responsive-toolbar,
+.rawdata-toolbar {
+  container-type: inline-size;
+  scrollbar-width: thin;
+}
+
+.responsive-toolbar-label,
+.responsive-toolbar-label-wide,
+.responsive-toolbar-label-compact {
+  display: none;
+}
+
+@container (min-width: 40rem) {
+  .responsive-toolbar-label-compact {
+    display: inline;
+  }
+}
+
+@container (min-width: 64rem) {
+  .responsive-toolbar-label {
+    display: inline;
+  }
+}
+
+@container (min-width: 84rem) {
+  .responsive-toolbar-label-wide {
+    display: inline;
+  }
+}
+
 /* ============ RawData 视图动画 ============ */
 /* 内容区切换 (grouping/repr/channel) 入场: 淡入 + 轻微上滑 */
 @keyframes rawdata-enter {

@@ -42,7 +42,7 @@ describe('AnsiStreamParser 行提交', () => {
   });
 });
 
-describe('AnsiStreamParser UTF-8', () => {
+describe('AnsiStreamParser 文本编码', () => {
   it('多字节序列跨 feed 断裂可续接', () => {
     const lines: TerminalLine[] = [];
     const parser = new AnsiStreamParser({ ansiDecode: true, onLine: (l) => lines.push(l) });
@@ -58,6 +58,31 @@ describe('AnsiStreamParser UTF-8', () => {
     const p = new AnsiStreamParser({ ansiDecode: true, onLine: (l) => lines.push(l) });
     p.feed(new Uint8Array([0x61, 0xff, 0x62, 0x0a]), 1, 'rx');
     expect(lines.map(text)).toEqual(['a\ufffdb']);
+  });
+
+  it('GBK 多字节序列跨 feed 断裂可续接', () => {
+    const lines: TerminalLine[] = [];
+    const parser = new AnsiStreamParser({
+      ansiDecode: true,
+      textEncoding: 'gbk',
+      onLine: (l) => lines.push(l),
+    });
+    parser.feed(Uint8Array.from([0xc4]), 1, 'rx');
+    parser.feed(Uint8Array.from([0xe3, 0xba, 0xc3, 0x0a]), 2, 'rx');
+    expect(lines).toHaveLength(1);
+    expect(text(lines[0])).toBe('你好');
+  });
+
+  it('reset 后不延续上一段流的半个字符', () => {
+    const parser = new AnsiStreamParser({
+      ansiDecode: true,
+      textEncoding: 'gbk',
+      onLine: () => { return undefined; },
+    });
+    parser.feed(Uint8Array.from([0xc4]), 1, 'rx');
+    parser.reset();
+    parser.feed(Uint8Array.from([0xe3, 0xba, 0xc3]), 2, 'rx');
+    expect(text(parser.openLine)).not.toBe('你');
   });
 });
 

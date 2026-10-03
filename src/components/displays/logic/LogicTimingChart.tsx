@@ -4,6 +4,7 @@ import { logicSampleBuffer } from '../../../lib/buffers/logicBuffer';
 import { clearLogicBuffer } from '../../../lib/buffers/logicSubscription';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { usePanelFollowing, usePanelGoLive } from '../common/PanelLiveness';
 import { Trash2, ArrowDown, ZoomIn, ZoomOut } from 'lucide-react';
 import type { LogicSample } from '../../../types';
@@ -116,15 +117,18 @@ export function LogicTimingChart() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-bg-editor">
       {/* 工具栏 */}
-      <div className="flex flex-wrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header flex-shrink-0">
-        <div className="flex items-center gap-1.5 text-xs text-text-secondary font-mono">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex flex-nowrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header"
+      >
+        <div className="flex flex-shrink-0 items-center gap-1.5 text-xs text-text-secondary font-mono">
           <span className="px-1.5 py-0.5 rounded bg-bg-input">{samples.length} samples</span>
           <span className="px-1.5 py-0.5 rounded bg-bg-input">{visibleChannels} ch</span>
         </div>
 
         <div className="flex-1 min-w-2" />
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-2">
           <ToolbarIconButton
             icon={<ZoomOut />}
             title="Zoom out"
@@ -138,7 +142,7 @@ export function LogicTimingChart() {
             step={0.5}
             value={zoom}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
-            className="w-20 sm:w-28 slider-input"
+            className="w-20 sm:w-28 flex-shrink-0 slider-input"
           />
           <ToolbarIconButton
             icon={<ZoomIn />}
@@ -149,18 +153,20 @@ export function LogicTimingChart() {
         </div>
 
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<ArrowDown />}
           active={autoScroll}
           title={t(lang, 'autoScroll')}
           onClick={() => setAutoScroll(!autoScroll)}
         />
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
           title={t(lang, 'clear')}
           onClick={handleClear}
         />
-      </div>
+      </HorizontalScrollArea>
 
       {/* 时序图 */}
       <div

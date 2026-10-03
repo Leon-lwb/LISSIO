@@ -3,10 +3,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 /// RawData 视图的持久化偏好 — 按 widgetId 分别保存, 无 widget 时使用 'global' key
 export interface RawDataViewPrefs {
-  /// 显示模式: bytes = 网格/行字节视图, terminal = 串口终端 (ANSI 彩色 + UTF-8)
+  /// 显示模式: bytes = 网格/行字节视图, terminal = 串口终端 (ANSI 彩色 + UTF-8/GBK)
   viewMode: 'bytes' | 'terminal';
   grouping: 'grid' | 'line';
-  repr: 'hex' | 'ascii' | 'utf8';
+  repr: 'hex' | 'ascii' | 'utf8' | 'gbk';
   directionFilter: 'all' | 'rx' | 'tx';
   showTimestamp: boolean;
   showOffset: boolean;

@@ -1,5 +1,8 @@
+import { Send } from 'lucide-react';
 import type { AppendMode } from './rawDataViewHelpers';
 import { t, type Lang } from '../../../i18n';
+import { ToolbarButton } from '../../ui/ToolbarIconButton';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 interface Props {
   appendMode: AppendMode;
@@ -50,7 +53,7 @@ export function RawDataViewSendPanel({
   const renderSendInput = () => (
     <input
       type="text"
-      className="flex-1 min-w-[60px] px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm focus:outline-none focus:border-accent transition-colors"
+      className="w-[220px] flex-shrink-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm focus:outline-none focus:border-accent transition-colors"
       placeholder={lang === 'zh' ? '输入要发送的文本...' : 'Type to send...'}
       value={sendContent}
       onChange={(e) => onSendContentChange(e.target.value)}
@@ -61,19 +64,22 @@ export function RawDataViewSendPanel({
   );
 
   const renderSendButton = () => (
-    <button
-      className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover disabled:opacity-disabled disabled:cursor-default"
+    <ToolbarButton
+      size="lg"
+      variant="primary"
+      className="px-3"
+      icon={<Send />}
+      label={t(lang, 'send')}
+      labelMode="responsive-compact"
       onClick={onSend}
       disabled={!targetTransportLabel}
-      title={!targetTransportLabel ? t(lang, 'noTransportNode') : undefined}
-    >
-      {t(lang, 'send')}
-    </button>
+      title={!targetTransportLabel ? t(lang, 'noTransportNode') : t(lang, 'send')}
+    />
   );
 
   const renderTargetLabel = () => (
     <span
-      className="text-xs text-text-secondary whitespace-nowrap font-mono max-w-[160px] truncate"
+      className="flex-shrink-0 text-xs text-text-secondary whitespace-nowrap font-mono max-w-[160px] truncate"
       title={t(lang, 'targetTransport')}
     >
       → {targetTransportLabel ?? t(lang, 'noTransportNode')}
@@ -82,7 +88,7 @@ export function RawDataViewSendPanel({
 
   if (compact) {
     return (
-      <div className="flex flex-col gap-1.5">
+      <div className="responsive-toolbar flex flex-col gap-1.5">
         <span className="text-xs text-text-secondary">{t(lang, 'appendSuffix')}</span>
         {renderAppendOptions(true)}
         {renderTargetLabel()}
@@ -93,11 +99,11 @@ export function RawDataViewSendPanel({
   }
 
   return (
-    <div className="flex gap-1.5 p-1.5 items-center border-t border-border bg-bg-panel-header flex-shrink-0">
+    <HorizontalScrollArea shellClassName="flex-shrink-0" className="responsive-toolbar flex flex-nowrap gap-1.5 p-1.5 items-center border-t border-border bg-bg-panel-header">
       {renderAppendOptions()}
       {renderTargetLabel()}
       {renderSendInput()}
       {renderSendButton()}
-    </div>
+    </HorizontalScrollArea>
   );
 }

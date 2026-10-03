@@ -8,6 +8,7 @@ import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { SearchInput } from '../../ui/SearchInput';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
 import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
@@ -341,16 +342,19 @@ export function CanFrameList() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-bg-editor">
       {/* 工具栏 */}
-      <div className="flex flex-wrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header shrink-0">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex flex-nowrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header"
+      >
         <SearchInput
           mono
-          className="w-24 sm:w-28"
+          className="w-24 sm:w-28 flex-shrink-0"
           placeholder={t(lang, 'canFilterById')}
           value={filterId}
           onChange={setFilterId}
         />
 
-        <div className="flex items-center gap-0.5">
+        <div className="flex flex-shrink-0 items-center gap-0.5">
           {(['all', 'Rx', 'Tx'] as const).map((d) => (
             <button
               key={d}
@@ -368,7 +372,7 @@ export function CanFrameList() {
         </div>
 
         {hasSubscriptionError && (
-          <div className="w-full text-[11px] text-red" role="alert">
+          <div className="flex-shrink-0 whitespace-nowrap text-[11px] text-red" role="alert">
             {parsedFilterId.kind === 'error'
               ? t(lang, 'canInvalidFilterId')
               : formatSubscriptionError(subscriptionError)}
@@ -377,14 +381,14 @@ export function CanFrameList() {
 
         <div className="flex-1 min-w-2" />
 
-        <div className="flex items-center gap-1.5 text-xs text-text-secondary font-mono">
+        <div className="flex flex-shrink-0 items-center gap-1.5 text-xs text-text-secondary font-mono">
           <span className="hidden sm:inline">{rxTxCounts.total}</span>
           <span className="px-1.5 py-0.5 rounded bg-green/10 text-green">Rx:{rxCount}</span>
           <span className="px-1.5 py-0.5 rounded bg-purple/10 text-purple">Tx:{txCount}</span>
         </div>
 
         {selection.selected.size > 0 && (
-          <>
+          <div className="flex flex-shrink-0 items-center gap-1">
             <span className="text-text-secondary text-xs">{selection.selected.size}</span>
             <button
               className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer ${
@@ -402,7 +406,7 @@ export function CanFrameList() {
             >
               <X size={14} />
             </button>
-          </>
+          </div>
         )}
 
         <ToolbarIconButton
@@ -420,17 +424,19 @@ export function CanFrameList() {
           }}
         />
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<Download />}
           title="Export CSV"
           onClick={() => exportFramesToCsv(frames.slice())}
         />
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
           title={t(lang, 'clear')}
           onClick={handleClear}
         />
-      </div>
+      </HorizontalScrollArea>
 
       {/* 表头 */}
       <div className="flex items-center text-[10px] uppercase text-text-secondary font-mono border-b border-border bg-bg-panel-header shrink-0 select-none">

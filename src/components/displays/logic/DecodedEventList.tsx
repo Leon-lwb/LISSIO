@@ -4,6 +4,7 @@ import { decodedEventBuffer, DecodedEventBuffer } from '../../../lib/buffers/log
 import { clearDecodedBuffer, subscribeDecodedEventsFiltered, type DecodedEventFilterOptions } from '../../../lib/buffers/logicSubscription';
 import { t } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
 import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown } from 'lucide-react';
@@ -200,8 +201,11 @@ export function DecodedEventList() {
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-bg-editor">
-      <div className="flex flex-wrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header shrink-0">
-        <div className="flex items-center gap-0.5">
+      <HorizontalScrollArea
+        shellClassName="flex-shrink-0"
+        className="flex flex-nowrap gap-2 p-2 items-center border-b border-border bg-bg-panel-header"
+      >
+        <div className="flex flex-shrink-0 items-center gap-0.5">
           {(['all', 'Uart', 'I2c', 'Spi'] as const).map((tp) => (
             <button
               key={tp}
@@ -220,8 +224,9 @@ export function DecodedEventList() {
 
         <div className="flex-1 min-w-2" />
 
-        <span className="text-xs text-text-secondary font-mono">{events.length} events</span>
+        <span className="flex-shrink-0 whitespace-nowrap text-xs text-text-secondary font-mono">{events.length} events</span>
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<ArrowDown />}
           active={autoScroll && !detached}
           title={t(lang, 'autoScroll')}
@@ -236,12 +241,13 @@ export function DecodedEventList() {
           }}
         />
         <ToolbarIconButton
+          className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
           title={t(lang, 'clear')}
           onClick={handleClear}
         />
-      </div>
+      </HorizontalScrollArea>
 
       {/* 表头 */}
       <div className="grid grid-cols-[7rem_4rem_1fr] sm:grid-cols-[8rem_4rem_1fr] gap-2 px-3 sm:px-4 py-1 border-b border-border bg-bg-panel-header text-[10px] font-semibold uppercase tracking-wide text-text-secondary shrink-0">

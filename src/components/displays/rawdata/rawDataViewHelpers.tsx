@@ -9,8 +9,9 @@ export type SendPanelMode = 'bottom' | 'separate';
 export type HexColorMode = 'none' | 'printable' | 'range';
 /// 行分组方式: grid = 固定 16 字节一行, line = 换行分隔, terminal = 串口终端视图
 export type RawDataGrouping = 'grid' | 'line' | 'terminal';
-/// 字节表示方式: hex = 十六进制 (+ascii 尾列), ascii = 仅 ascii, utf8 = 整行按 UTF-8 解码的文本
-export type RawDataRepr = 'hex' | 'ascii' | 'utf8';
+/// 字节表示方式: hex = 十六进制 (+ascii 尾列), ascii = 仅 ascii,
+/// utf8/gbk = 整行按对应文本编码解码
+export type RawDataRepr = 'hex' | 'ascii' | 'utf8' | 'gbk';
 
 export const ROW_HEIGHT = 22;
 export const GROUP_SIZE = 8;

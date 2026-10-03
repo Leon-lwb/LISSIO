@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnsiStreamParser, type TerminalLine } from './ansiParser';
 import type { RawDataBuffer } from '../buffers/dataBuffer';
+import type { TextEncoding } from '../utils/textEncoding';
 
 /// 终端行数上限 (环形, 淘汰最旧)
 export const TERMINAL_MAX_LINES = 5000;
@@ -18,9 +19,10 @@ export class TerminalBuffer {
   private consumedOffset = 0;
   private listeners = new Set<() => void>();
 
-  constructor(ansiDecode: boolean) {
+  constructor(ansiDecode: boolean, textEncoding: TextEncoding = 'utf8') {
     this.parser = new AnsiStreamParser({
       ansiDecode,
+      textEncoding,
       onLine: (line) => this.pushLine(line),
     });
   }
@@ -105,12 +107,17 @@ export class TerminalBuffer {
 }
 
 /// 终端行订阅 hook — active=false 时不消费 (字节视图省开销);
-/// ansiDecode 变化时重建解析器 (重建后从保留字节全量重放一次)
-export function useTerminalLines(buffer: RawDataBuffer, ansiDecode: boolean, active: boolean): {
+/// ansiDecode/文本编码变化时重建解析器 (重建后从保留字节全量重放一次)
+export function useTerminalLines(
+  buffer: RawDataBuffer,
+  textEncoding: TextEncoding,
+  ansiDecode: boolean,
+  active: boolean,
+): {
   terminal: TerminalBuffer;
   version: number;
 } {
-  const terminal = useMemo(() => new TerminalBuffer(ansiDecode), [ansiDecode]);
+  const terminal = useMemo(() => new TerminalBuffer(ansiDecode, textEncoding), [ansiDecode, textEncoding]);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     if (!active) return;

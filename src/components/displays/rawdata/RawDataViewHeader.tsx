@@ -1,19 +1,25 @@
 import {
   Trash2,
   ArrowDown,
+  ArrowDownUp,
+  ArrowUp,
   Clock,
   Settings2,
   X,
   Copy,
   Check,
   FileWarning,
+  type LucideIcon,
 } from 'lucide-react';
 import { t } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter } from './rawDataViewHelpers';
+import { isTextEncoding } from '../../../lib/utils/textEncoding';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import { directionColorClass } from './rawDataViewHelpers';
 import { SearchInput } from '../../ui/SearchInput';
+import { ToolbarButton } from '../../ui/ToolbarIconButton';
+import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 const GROUPING_OPTIONS: { value: RawDataGrouping; label: string }[] = [
   { value: 'grid', label: 'gridView' },
@@ -25,12 +31,13 @@ const REPR_OPTIONS: { value: RawDataRepr; label: string }[] = [
   { value: 'hex', label: 'hexView' },
   { value: 'ascii', label: 'asciiView' },
   { value: 'utf8', label: 'utf8View' },
+  { value: 'gbk', label: 'gbkView' },
 ];
 
-const DIRECTION_OPTIONS: { value: DirectionFilter; label: string; symbol: string }[] = [
-  { value: 'all', label: 'rawDataDirectionAll', symbol: '↕' },
-  { value: 'rx', label: 'rawDataDirectionRx', symbol: '↓' },
-  { value: 'tx', label: 'rawDataDirectionTx', symbol: '↑' },
+const DIRECTION_OPTIONS: { value: DirectionFilter; label: string; icon: LucideIcon }[] = [
+  { value: 'all', label: 'rawDataDirectionAll', icon: ArrowDownUp },
+  { value: 'rx', label: 'rawDataDirectionRx', icon: ArrowDown },
+  { value: 'tx', label: 'rawDataDirectionTx', icon: ArrowUp },
 ];
 
 interface ChannelOption {
@@ -126,54 +133,71 @@ export function RawDataViewHeader({
 }: Props) {
   return (
     <>
-      <div className="flex gap-1 p-1.5 items-center border-b border-border bg-bg-panel-header shrink-0">
-        <div className="flex items-center bg-bg-input rounded p-0.5">
+      <HorizontalScrollArea className="rawdata-toolbar flex flex-nowrap gap-1 p-1.5 items-center border-b border-border bg-bg-panel-header">
+        <div className="flex flex-shrink-0 items-center bg-bg-input rounded p-0.5">
           {GROUPING_OPTIONS.map((opt) => (
-            <button
+            <ToolbarButton
               key={opt.value}
+              size="sm"
+              variant="selected"
+              active={grouping === opt.value}
               disabled={isNum || isStr}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${grouping === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
+              label={t(lang, opt.label)}
               onClick={() => onGroupingChange(opt.value)}
-            >
-              {t(lang, opt.label)}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center bg-bg-input rounded p-0.5">
-          {REPR_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              disabled={isNum || isStr || grouping === 'terminal'}
-              title={grouping === 'terminal' ? t(lang, 'terminalReprDisabled') : undefined}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${repr === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
-              onClick={() => onReprChange(opt.value)}
-            >
-              {t(lang, opt.label)}
-            </button>
+            />
           ))}
         </div>
 
-        <div className="flex items-center bg-bg-input rounded p-0.5">
-          {DIRECTION_OPTIONS.map((opt) => (
-            <button
+        <select
+          aria-label={t(lang, 'decodeMode')}
+          title={t(lang, 'decodeMode')}
+          value={repr}
+          disabled={isNum || isStr}
+          onChange={(e) => onReprChange(e.target.value as RawDataRepr)}
+          className="flex-shrink-0 w-[88px] bg-bg-input border border-border rounded px-1 py-0.5 text-xs font-mono text-text-primary transition-colors hover:border-accent focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/40 cursor-pointer disabled:cursor-not-allowed disabled:opacity-disabled"
+        >
+          {REPR_OPTIONS.map((opt) => (
+            <option
               key={opt.value}
+              value={opt.value}
+              disabled={grouping === 'terminal' && !isTextEncoding(opt.value)}
+            >
+              {t(lang, opt.label)}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex flex-shrink-0 items-center bg-bg-input rounded p-0.5">
+          {DIRECTION_OPTIONS.map((opt) => (
+            <ToolbarButton
+              key={opt.value}
+              size="sm"
+              variant="selected"
+              active={directionFilter === opt.value}
               disabled={isNum || isStr}
               title={t(lang, opt.label)}
-              className={`px-2 py-0.5 rounded-sm text-xs font-medium transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${directionFilter === opt.value ? 'bg-bg-button text-text-inverse' : 'text-text-secondary hover:text-text-primary'}`}
+              label={t(lang, opt.label)}
+              labelMode="responsive"
+              icon={
+                <opt.icon
+                  className={
+                    directionFilter === opt.value
+                      ? 'text-text-inverse'
+                      : opt.value === 'all'
+                        ? 'text-text-secondary'
+                        : directionColorClass(opt.value)
+                  }
+                />
+              }
               onClick={() => onDirectionFilterChange(opt.value)}
-            >
-              <span className={`mr-1 ${directionFilter === opt.value ? 'text-text-inverse' : opt.value === 'all' ? 'text-text-secondary' : directionColorClass(opt.value)}`}>
-                {opt.symbol}
-              </span>
-              {t(lang, opt.label)}
-            </button>
+            />
           ))}
         </div>
 
         {/* 150ms 防抖: 高速打字只重建一次后端过滤订阅 (acquire/release + 匹配历史重推) */}
         <SearchInput
           size="sm"
-          className="w-[140px]"
+          className="w-[140px] flex-shrink-0"
           debounceMs={150}
           disabled={isNum}
           placeholder={t(lang, 'rawDataSearchPlaceholder')}
@@ -184,7 +208,7 @@ export function RawDataViewHeader({
         {/* 选中源连接状态徽章 — Connected 不显示 (避免常驻噪音); Error 红灯 */}
         {connState && connState !== 'Connected' && (
           <span
-            className={`flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-sm border shrink-0 ${
+            className={`flex flex-shrink-0 items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded-sm border ${
               connState === 'Error'
                 ? 'text-red border-red/40 bg-red/10'
                 : connState === 'Connecting'
@@ -203,7 +227,7 @@ export function RawDataViewHeader({
         )}
 
         {channelOptions.length > 0 && (
-          <label className="flex items-center gap-1 text-xs text-text-secondary shrink-0">
+          <label className="flex flex-shrink-0 items-center gap-1 text-xs text-text-secondary">
             <span>{t(lang, 'rawDataChannel')}</span>
             <select
               value={channel}
@@ -219,7 +243,7 @@ export function RawDataViewHeader({
           </label>
         )}
 
-        <div className="flex items-center gap-1 text-text-secondary text-xs font-mono">
+        <div className="flex flex-shrink-0 items-center gap-1 text-text-secondary text-xs font-mono">
           {isStr ? (
             // 字符串通道: 无字节统计, 显示历史行数
             <span>{(stringRowCount ?? 0).toLocaleString()} rows</span>
@@ -250,64 +274,78 @@ export function RawDataViewHeader({
           )}
         </div>
 
-        <div className="flex-1" />
+        <div className="flex-1 min-w-0 flex-shrink-0" />
 
         {selectionCount > 0 && (
           <>
-            <span className="text-text-secondary text-xs">{selectionCount}</span>
-            <button
+            <span className="text-text-secondary text-xs flex-shrink-0">{selectionCount}</span>
+            <ToolbarButton
+              size="lg"
+              variant={copyFeedback ? 'success' : 'default'}
               disabled={isNum}
-              className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled ${copyFeedback ? 'text-green' : ''}`}
               title={t(lang, 'copySelected')}
+              label={t(lang, 'copySelected')}
+              labelMode="responsive-wide"
+              icon={copyFeedback ? <Check /> : <Copy />}
               onClick={onCopySelected}
-            >
-              {copyFeedback ? <Check size={14} /> : <Copy size={14} />}
-            </button>
-            <button
+            />
+            <ToolbarButton
+              size="lg"
               disabled={isNum}
-              className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-disabled"
               title={t(lang, 'clearSelection')}
+              label={t(lang, 'clearSelection')}
+              labelMode="responsive-wide"
+              icon={<X />}
               onClick={onClearSelection}
-            >
-              <X size={14} />
-            </button>
+            />
           </>
         )}
 
-        <button
-          className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer ${showTimestamp ? 'text-text-bright bg-bg-hover' : ''}`}
+        <ToolbarButton
+          size="lg"
+          active={showTimestamp}
           title={t(lang, 'showTimestamp')}
+          label={t(lang, 'showTimestamp')}
+          labelMode="responsive-wide"
+          icon={<Clock />}
+          aria-pressed={showTimestamp}
           onClick={() => onShowTimestampChange(!showTimestamp)}
-        >
-          <Clock size={14} />
-        </button>
-        <button
-          className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer ${autoScroll && !detached ? 'text-text-bright bg-bg-hover' : ''}`}
+        />
+        <ToolbarButton
+          size="lg"
+          active={autoScroll && !detached}
           title={t(lang, 'autoScroll')}
+          label={t(lang, 'autoScroll')}
+          labelMode="responsive-wide"
+          icon={<ArrowDown />}
+          aria-pressed={autoScroll && !detached}
           onClick={() => {
             const next = !autoScroll;
             onAutoScrollChange(next);
             // 打开自动滚动即恢复跟随; 关闭时保留脱离状态 — 视口仍不在最新, 按钮应继续显示
             if (next) onResetUserScroll();
           }}
-        >
-          <ArrowDown size={14} />
-        </button>
-        <button
-          className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-all duration-150 motion-safe:active:scale-95 cursor-pointer ${showSettings ? 'text-text-bright bg-bg-hover' : ''}`}
+        />
+        <ToolbarButton
+          size="lg"
+          active={showSettings}
           title={t(lang, 'settings')}
+          label={t(lang, 'settings')}
+          labelMode="responsive-wide"
+          icon={<Settings2 />}
+          aria-pressed={showSettings}
           onClick={() => onShowSettingsChange(!showSettings)}
-        >
-          <Settings2 size={14} />
-        </button>
-        <button
-          className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-danger hover:text-text-bright transition-all duration-150 motion-safe:active:scale-95 cursor-pointer"
+        />
+        <ToolbarButton
+          size="lg"
+          variant="danger"
           title={t(lang, 'clear')}
+          label={t(lang, 'clear')}
+          labelMode="responsive-wide"
+          icon={<Trash2 />}
           onClick={onClear}
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
+        />
+      </HorizontalScrollArea>
     </>
   );
 }

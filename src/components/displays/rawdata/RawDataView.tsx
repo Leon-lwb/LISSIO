@@ -8,7 +8,7 @@ import { traceTransportSource } from '../../../store/appStoreHelpers';
 import { t } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter, HexColorMode, AppendMode, SendPanelMode } from './rawDataViewHelpers';
 import { byteToHex, byteToAscii, formatTime } from './rawDataViewHelpers';
-import { decodeUtf8 } from '../../../lib/utils/utf8';
+import { decodeText, isTextEncoding, type TextEncoding } from '../../../lib/utils/textEncoding';
 import { useLongTaskMonitor, useRawDataBuffer, useRawNumericSamples, useRawStringSamples } from './useRawDataBuffer';
 import { useRawDataChannel } from './useRawDataChannel';
 import { useAutoScrollBottom } from './useAutoScrollBottom';
@@ -24,14 +24,14 @@ import { RawDataBackToLatest } from './RawDataBackToLatest';
 import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
 import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { getRawDataViewPrefs } from '../../../lib/buffers/rawDataViewStore';
-/// 原始数据显示 — Grid/Line/终端 × HEX/ASCII 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
+/// 原始数据显示 — Grid/Line/终端 × HEX/ASCII/UTF-8/GBK 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
 /// 纯端口制: 每张卡片独立的输入选择 (存 RawDataConfig.selectedInput), 选择器只列该卡片
 /// 已连接的端口 (Transport.rx / Protocol.out / FrameDecoder.raw / 字符串口 / 数值口);
 /// 无连线时空态引导。
 /// FrameDecoder 的 raw 口 = 该节点独立整帧字节流; Transport/Protocol = 原始字节流;
 /// 字符串域输出口 (Trigger.text / TextInput.str / Str) = 字符串平面值变化历史;
 /// 其余数值口 = 数值流 (graphOutputs)
-/// 终端分组 = 串口终端视图: ANSI 彩色 + UTF-8 流式行, \r 覆盖, 可选本地回显
+/// 终端分组 = 串口终端视图: ANSI 彩色 + UTF-8/GBK 流式行, \r 覆盖, 可选本地回显
 export function RawDataView({ widgetId }: { widgetId?: string }) {
   const lang = useAppStore((s) => s.lang);
   const clearData = useAppStore((s) => s.clearData);
@@ -121,7 +121,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   useLongTaskMonitor();
 
   // ---- 终端视图 (仅字节通道激活消费; 切到终端时从保留字节全量重放一次) ----
-  const { terminal, version: termVersion } = useTerminalLines(buffer, ansiDecode, isTerm);
+  const textEncoding: TextEncoding = isTextEncoding(repr) ? repr : 'utf8';
+  const { terminal, version: termVersion } = useTerminalLines(buffer, textEncoding, ansiDecode, isTerm);
   const terminalLineCount = terminal.getLines().length + 1;
 
   // ---- 数值/字符串通道视图 ----
@@ -239,8 +240,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         const prefix = index === 0 || (isLine && line.continued) ? '' : '\n';
         const hex = Array.from(line.bytes, (b) => byteToHex(b)).join(' ');
         const ascii = Array.from(line.bytes, (b) => byteToAscii(b)).join('');
-        if (repr === 'utf8') {
-          return `${prefix}${formatTime(line.timestamp)}  ${decodeUtf8(line.bytes)}`;
+        if (isTextEncoding(repr)) {
+          return `${prefix}${formatTime(line.timestamp)}  ${decodeText(line.bytes, textEncoding)}`;
         }
         if (repr === 'ascii') {
           return `${prefix}${formatTime(line.timestamp)}  ${ascii}`;
@@ -256,7 +257,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
       setCopyFeedback(true);
       setTimeout(() => setCopyFeedback(false), 1200);
     }
-  }, [selection.selected.size, selection.selectedSorted, grouping, buffer, repr]);
+  }, [selection.selected.size, selection.selectedSorted, grouping, buffer, repr, textEncoding]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -276,6 +277,11 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     },
     [selection, copySelected, isTerm]
   );
+
+  const handleGroupingChange = (next: RawDataGrouping) => {
+    if (next === 'terminal' && !isTextEncoding(repr)) setRepr('utf8');
+    setGrouping(next);
+  };
 
   const handleRowMouseDown = useCallback(
     (e: React.MouseEvent, index: number) => {
@@ -432,7 +438,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
         lang={lang}
         sourceLabel={sourceLabel}
         connState={viewConnState}
-        onGroupingChange={setGrouping}
+        onGroupingChange={handleGroupingChange}
         onReprChange={setRepr}
         onDirectionFilterChange={setDirectionFilter}
         onSearchTermChange={setSearchTerm}

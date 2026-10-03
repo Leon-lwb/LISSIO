@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { type RawDataLineSource, RAWDATA_BYTES_PER_ROW } from '../../../lib/buffers/dataBuffer';
-import { decodeUtf8 } from '../../../lib/utils/utf8';
+import { decodeText, isTextEncoding } from '../../../lib/utils/textEncoding';
 import { t, type Lang } from '../../../i18n';
 import { ROW_HEIGHT, GROUP_SIZE, formatTime, byteToHex, byteToAscii, isPrintable, hexColorClass, directionColorClass, directionSymbol, EscapedText, type HexColorMode, type RawDataGrouping, type RawDataRepr } from './rawDataViewHelpers';
 
@@ -38,7 +38,7 @@ function cellClassName(type: 'hex' | 'ascii', isGroupEnd: boolean, isCompact: bo
 }
 
 /// 原始数据行 — 从指定 buffer 按索引读取, memo 化避免无关重渲染
-/// grouping × repr 四组合: grid+hex / grid+ascii / line+hex / line+ascii
+/// grouping × repr: grid/line × hex/ascii/utf8/gbk
 /// version 用于在底层数据变化时强制刷新可见行
 export const Row = memo(function Row({
   originalIndex,
@@ -94,7 +94,7 @@ export const Row = memo(function Row({
 
   const hexCells: React.ReactNode[] = [];
   const asciiCells: React.ReactNode[] = [];
-  if (repr !== 'utf8') {
+  if (!isTextEncoding(repr)) {
     for (let i = 0; i < cellCount; i++) {
       if (repr === 'hex') hexCells.push(renderCell(i, 'hex'));
       asciiCells.push(renderCell(i, 'ascii'));
@@ -125,10 +125,10 @@ export const Row = memo(function Row({
         </span>
       )}
       {repr === 'hex' && <div className="flex-1 flex gap-0.5">{hexCells}</div>}
-      {repr === 'utf8' ? (
-        // 整行按 UTF-8 解码; 不可见字符渲染为弱化可见符号 (与字符串通道一致)
+      {isTextEncoding(repr) ? (
+        // 整行按所选文本编码解码; 不可见字符渲染为弱化可见符号 (与字符串通道一致)
         <div className="flex-1 min-w-0 whitespace-pre font-mono text-xs">
-          <EscapedText text={decodeUtf8(line.bytes)} />
+          <EscapedText text={decodeText(line.bytes, repr)} />
         </div>
       ) : (
         <div className={`flex ${isLine ? '' : 'gap-0.5'} ${repr === 'ascii' ? 'flex-1' : ''}`}>

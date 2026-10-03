@@ -158,9 +158,11 @@ bindingInvalidTarget: 绑定目标无效，当前不会发送
 rawData: 原始数据
 gridView: 网格
 lineView: 行
+decodeMode: 解码方式
 hexView: HEX
 asciiView: ASCII
 utf8View: UTF-8
+gbkView: GBK
 terminalView: 终端
 rawDataChannel: 通道
 send: 发送

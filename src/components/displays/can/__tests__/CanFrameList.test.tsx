@@ -86,6 +86,16 @@ describe('CanFrameList', () => {
     });
   });
 
+  it('keeps its toolbar horizontally wheel-scrollable with edge shadows', () => {
+    const { container } = render(<CanFrameList />);
+    const toolbar = container.querySelector('.horizontal-scroll-area');
+
+    expect(toolbar).toHaveClass('flex-nowrap');
+    expect(toolbar).toHaveClass('overflow-x-auto');
+    expect(container.querySelector('.horizontal-scroll-shadow-start')).not.toBeNull();
+    expect(container.querySelector('.horizontal-scroll-shadow-end')).not.toBeNull();
+  });
+
   it('shows an error instead of silently showing an empty filtered list', async () => {
     const user = userEvent.setup();
     render(<CanFrameList />);
