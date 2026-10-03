@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
 import { useDescribeEntry, describeDomainToUi } from '../../lib/models/describeStore';
 import { NodeFrame } from './NodeFrame';
@@ -29,8 +29,8 @@ export const ProtocolNode = memo(function ProtocolNode({ id, data, selected }: N
     onRename={(label) => { if (treeRootId) updateDeviceTreeChild(treeRootId, id, { name: label }); else rename(id, label); }}
     onOpen={treeRootId ? () => useAppStore.getState().revealDeviceTreeNode(id) : undefined}>
     {treeRootId && <button type="button" className="nodrag text-accent text-[10px] hover:underline"
-      onClick={() => useAppStore.getState().revealDeviceTreeNode(id)}>{t(lang, 'deviceTreeConfigure')}</button>}
-    <div className="text-center text-text-secondary">{raw ? 'str' : `${ports.length} ${t(lang, 'channels')}`}</div>
+      onClick={() => useAppStore.getState().revealDeviceTreeNode(id)}>{translate('deviceTreeConfigure', lang)}</button>}
+    <div className="text-center text-text-secondary">{raw ? 'str' : `${ports.length} ${translate('channels', lang)}`}</div>
     {config.convertTo && <div className="text-center text-text-secondary">→ {config.convertTo.kind}</div>}
   </NodeFrame>;
 });

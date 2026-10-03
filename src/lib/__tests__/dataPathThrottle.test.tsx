@@ -1,5 +1,6 @@
 import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { act } from '@testing-library/react';
+import { renderWithI18n } from '../../test/renderWithI18n';;
 import { useEffect, useState } from 'react';
 import { tauriMock } from '../../test/setup';
 import { canFrameBuffer } from '../buffers/canBuffer';
@@ -93,7 +94,7 @@ describe('buffer burst render-guard (RAF-throttled notify)', () => {
       renderSpy();
       return <span data-testid="n">{n}</span>;
     }
-    render(<Subscriber />);
+    renderWithI18n(<Subscriber />);
     expect(renderSpy).toHaveBeenCalledTimes(1);
 
     // 同一帧内 push 30 次 — 不应有任何通知
@@ -122,7 +123,7 @@ describe('buffer burst render-guard (RAF-throttled notify)', () => {
       renderSpy();
       return <span data-testid="n">{n}</span>;
     }
-    render(<Subscriber />);
+    renderWithI18n(<Subscriber />);
 
     // 与 events.ts 相同的接线: Channel onmessage → canFrameBuffer.push
     const sub = subscribeCanFrames((batch) => canFrameBuffer.push(batch.frames));
@@ -156,7 +157,7 @@ describe('buffer burst render-guard (RAF-throttled notify)', () => {
       eventRender();
       return <span>{n}</span>;
     }
-    render(
+    renderWithI18n(
       <>
         <LogicSubscriber />
         <EventSubscriber />
@@ -185,7 +186,7 @@ describe('buffer burst render-guard (RAF-throttled notify)', () => {
       renderSpy();
       return <span>{n}</span>;
     }
-    render(<Subscriber />);
+    renderWithI18n(<Subscriber />);
 
     const makeBatch = (i: number): RawDataBatch => ({
       seq: i,
@@ -216,7 +217,7 @@ describe('buffer burst render-guard (RAF-throttled notify)', () => {
       renderSpy();
       return <span>{stats.length}</span>;
     }
-    render(<StatsSubscriber />);
+    renderWithI18n(<StatsSubscriber />);
     // subscribeStats 在订阅时立即推一次当前值 → 挂载期多一次渲染
     expect(renderSpy).toHaveBeenCalledTimes(2);
 

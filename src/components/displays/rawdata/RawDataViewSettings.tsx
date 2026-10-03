@@ -1,5 +1,5 @@
 import { Palette, PanelRight, AlignLeft, Terminal } from 'lucide-react';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import type { HexColorMode, SendPanelMode } from './rawDataViewHelpers';
 
 interface Props {
@@ -37,21 +37,21 @@ export function RawDataViewSettings({
   lang,
 }: Props) {
   const hexColorOptions: { mode: HexColorMode; label: string }[] = [
-    { mode: 'none', label: t(lang, 'hexColorNone') },
-    { mode: 'printable', label: t(lang, 'hexColorPrintable') },
-    { mode: 'range', label: t(lang, 'hexColorRange') },
+    { mode: 'none', label: translate('hexColorNone', lang) },
+    { mode: 'printable', label: translate('hexColorPrintable', lang) },
+    { mode: 'range', label: translate('hexColorRange', lang) },
   ];
 
   const sendPanelOptions: { mode: SendPanelMode; label: string }[] = [
-    { mode: 'bottom', label: t(lang, 'sendPanelBottom') },
-    { mode: 'separate', label: t(lang, 'sendPanelSeparate') },
+    { mode: 'bottom', label: translate('sendPanelBottom', lang) },
+    { mode: 'separate', label: translate('sendPanelSeparate', lang) },
   ];
 
   return (
     <div className="flex flex-col gap-4">
       <div>
         <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
-          <Palette size={12} /> {t(lang, 'hexColorMode')}
+          <Palette size={12} /> {translate('hexColorMode', lang)}
         </h4>
         <div className="flex flex-col gap-1">
           {hexColorOptions.map((opt) => (
@@ -67,7 +67,7 @@ export function RawDataViewSettings({
       </div>
       <div>
         <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
-          <PanelRight size={12} /> {t(lang, 'sendPanelMode')}
+          <PanelRight size={12} /> {translate('sendPanelMode', lang)}
         </h4>
         <div className="flex flex-col gap-1">
           {sendPanelOptions.map((opt) => (
@@ -83,7 +83,7 @@ export function RawDataViewSettings({
       </div>
       <div>
         <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
-          <AlignLeft size={12} /> {t(lang, 'displayOptions')}
+          <AlignLeft size={12} /> {translate('displayOptions', lang)}
         </h4>
         <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer mb-1.5">
           <input
@@ -92,7 +92,7 @@ export function RawDataViewSettings({
             onChange={(e) => onShowTimestampChange(e.target.checked)}
             className="accent-accent"
           />
-          {t(lang, 'showTimestamp')}
+          {translate('showTimestamp', lang)}
         </label>
         <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer">
           <input
@@ -101,13 +101,13 @@ export function RawDataViewSettings({
             onChange={(e) => onShowOffsetChange(e.target.checked)}
             className="accent-accent"
           />
-          {t(lang, 'showOffset')}
+          {translate('showOffset', lang)}
         </label>
       </div>
       {showTerminalOptions && (
         <div>
           <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
-            <Terminal size={12} /> {t(lang, 'terminalOptions')}
+            <Terminal size={12} /> {translate('terminalOptions', lang)}
           </h4>
           <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer mb-1.5">
             <input
@@ -116,7 +116,7 @@ export function RawDataViewSettings({
               onChange={(e) => onAnsiDecodeChange(e.target.checked)}
               className="accent-accent"
             />
-            {t(lang, 'ansiDecode')}
+            {translate('ansiDecode', lang)}
           </label>
           <label className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary cursor-pointer">
             <input
@@ -125,7 +125,7 @@ export function RawDataViewSettings({
               onChange={(e) => onLocalEchoChange(e.target.checked)}
               className="accent-accent"
             />
-            {t(lang, 'localEcho')}
+            {translate('localEcho', lang)}
           </label>
         </div>
       )}

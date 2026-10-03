@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import type { DecoderBlock } from '../../../types';
 import { BLOCK_TYPE_CONFIG, blockSummary } from '../../displays/decoder/frameDecoderShared';
 import { BlockEditor } from '../../displays/decoder/FrameDecoderBlockEditor';
@@ -74,7 +74,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
     <div className="flex flex-col gap-1.5">
       {blocks.length === 0 && (
         <div className="text-xs text-text-secondary opacity-muted italic py-2 text-center">
-          {t(lang, 'fdBlocksEmpty')}
+          {translate('fdBlocksEmpty', lang)}
         </div>
       )}
       {blocks.map((block, idx) => {
@@ -92,7 +92,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
             >
               <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-semibold uppercase tracking-wide flex-shrink-0 border ${cfg.badgeClass}`}>
                 {cfg.icon}
-                {t(lang, cfg.labelKey)}
+                {translate(cfg.labelKey, lang)}
               </span>
               <span className="text-[10px] text-text-secondary font-mono truncate flex-1 min-w-0">
                 {blockSummary(block)}
@@ -119,7 +119,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
               <button
                 className="text-text-secondary hover:text-red flex-shrink-0 p-0.5"
                 onClick={(e) => { e.stopPropagation(); removeBlock(idx); }}
-                title={t(lang, 'removeWidget')}
+                title={translate('removeWidget', lang)}
               >
                 <Trash2 size={10} />
               </button>
@@ -147,11 +147,11 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
               type="button"
               className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-1.5 py-0.5 text-[10px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
               onClick={() => addBlock(bt)}
-              title={t(lang, cfg.addLabelKey)}
+              title={translate(cfg.addLabelKey, lang)}
             >
               <Plus size={10} />
               <span className={`inline-flex items-center gap-0.5 ${cfg.iconClass}`}>{cfg.icon}</span>
-              <span>{t(lang, cfg.addLabelKey)}</span>
+              <span>{translate(cfg.addLabelKey, lang)}</span>
             </button>
           );
         })}

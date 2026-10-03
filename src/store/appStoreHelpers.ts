@@ -18,7 +18,7 @@ import type {
 import { notify } from '../lib/tauri/notifications';
 import { nodeError } from '../lib/tauri/errorGuidance';
 import { parseNodeError } from '../types/errors';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import { widgetInputValue } from '../lib/utils/widgetValue';
 import type {
   DataTab,
@@ -126,7 +126,7 @@ async function doSyncTabGraphOnce(
     const lang = useAppStore.getState().lang;
     const message = nodeError(lang, err);
     notify.error(
-      t(lang, 'notifNodeGraphSyncFailed'),
+      translate('notifNodeGraphSyncFailed', lang),
       message,
       { source: 'syncTabGraph' }
     );

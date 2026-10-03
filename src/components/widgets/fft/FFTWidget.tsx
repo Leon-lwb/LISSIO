@@ -2,7 +2,7 @@ import { memo } from 'react';
 import type { WidgetConfig } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { useNumericInput } from '../../../lib/hooks/useNumericPort';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 interface FFTWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'FFT' }>;
@@ -46,7 +46,7 @@ export const FFTWidget = memo(function FFTWidget({ widget }: FFTWidgetProps) {
           </span>
         ) : (
           <span className="text-[11px] text-text-secondary font-mono py-0.5">
-            {t(lang, 'spectrumWaiting')}
+            {translate('spectrumWaiting', lang)}
           </span>
         )}
       </div>

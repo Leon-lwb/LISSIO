@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField } from '../../ui/fields';
 import { BindingSection } from '../shared/BindingSection';
 import type { WidgetPropertiesProps } from '../registryTypes';
@@ -13,9 +13,9 @@ export const ButtonProperties = memo(function ButtonProperties({ widget, update 
   const patch = (p: Partial<typeof widget.params>) => update({ kind: 'Button', params: { ...widget.params, ...p } });
   return (
     <>
-      <NumberField label={t(lang, 'press')} value={widget.params.pressValue}
+      <NumberField label={translate('press', lang)} value={widget.params.pressValue}
         onCommit={(pressValue) => { patch({ pressValue }); return true; }} />
-      <NumberField label={t(lang, 'release')} value={widget.params.releaseValue}
+      <NumberField label={translate('release', lang)} value={widget.params.releaseValue}
         onCommit={(releaseValue) => { patch({ releaseValue }); return true; }} />
       <BindingSection widget={widget} update={update} />
     </>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { decodedEventBuffer, DecodedEventBuffer } from '../../../lib/buffers/logicBuffer';
 import { clearDecodedBuffer, subscribeDecodedEventsFiltered, type DecodedEventFilterOptions } from '../../../lib/buffers/logicSubscription';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
@@ -217,7 +217,7 @@ export function DecodedEventList() {
               }`}
               onClick={() => setFilterType(tp)}
             >
-              {tp === 'all' ? t(lang, 'all') : tp}
+              {tp === 'all' ? translate('all', lang) : tp}
             </button>
           ))}
         </div>
@@ -229,7 +229,7 @@ export function DecodedEventList() {
           className="flex-shrink-0"
           icon={<ArrowDown />}
           active={autoScroll && !detached}
-          title={t(lang, 'autoScroll')}
+          title={translate('autoScroll', lang)}
           onClick={() => {
             const next = !autoScroll;
             setAutoScroll(next);
@@ -244,14 +244,14 @@ export function DecodedEventList() {
           className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
-          title={t(lang, 'clear')}
+          title={translate('clear', lang)}
           onClick={handleClear}
         />
       </HorizontalScrollArea>
 
       {/* 表头 */}
       <div className="grid grid-cols-[7rem_4rem_1fr] sm:grid-cols-[8rem_4rem_1fr] gap-2 px-3 sm:px-4 py-1 border-b border-border bg-bg-panel-header text-[10px] font-semibold uppercase tracking-wide text-text-secondary shrink-0">
-        <span>{t(lang, 'time')}</span>
+        <span>{translate('time', lang)}</span>
         <span>Protocol</span>
         <span>Data</span>
       </div>
@@ -265,7 +265,7 @@ export function DecodedEventList() {
       >
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-48 text-text-secondary text-xs">
-            {t(lang, 'noDecodedEvents')}
+            {translate('noDecodedEvents', lang)}
           </div>
         ) : (
           events.map(renderEvent)

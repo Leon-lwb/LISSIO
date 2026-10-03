@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { STR_OP_PORTS } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, TextField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -18,18 +18,18 @@ export const StrProperties = memo(function StrProperties({ widget, update }: Wid
   const VALUES = { pos, len, size } as const;
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'strSettings')}</div>
+      <div className="section-heading section-heading--micro mb-2">{translate('strSettings', lang)}</div>
       {op === 'format' && (
-        <TextField label={t(lang, 'strFormatTmpl')} value={tmpl ?? ''}
+        <TextField label={translate('strFormatTmpl', lang)} value={tmpl ?? ''}
           onCommit={(next) => patch({ tmpl: next })} />
       )}
       {meta.inlineNumPorts.map((portId) => (
-        <NumberField key={portId} label={t(lang, INLINE_LABEL[portId] ?? portId)}
+        <NumberField key={portId} label={translate(INLINE_LABEL[portId] ?? portId, lang)}
           value={VALUES[portId as 'pos' | 'len' | 'size']}
           onCommit={(v) => { if (v >= 0) { patch({ [portId]: Math.round(v) }); return true; } return false; }}
-          error={t(lang, 'invalidStep')} />
+          error={translate('invalidStep', lang)} />
       ))}
-      <div className="text-[10px] text-text-secondary">{t(lang, 'strInlineFallbackHint')}</div>
+      <div className="text-[10px] text-text-secondary">{translate('strInlineFallbackHint', lang)}</div>
       <div className="mt-1 text-[10px] text-text-muted break-all">id: {id}</div>
     </section>
   );

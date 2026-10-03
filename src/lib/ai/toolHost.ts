@@ -27,7 +27,7 @@ import { nodeDocument } from '../nodes/document';
 import { createNodeFromCatalog } from '../models/createFromCatalog';
 import { QUICK_START_TEMPLATES, getTemplate } from '../quickstart/templates';
 import { applyTemplate, type TemplateApplyMode } from '../quickstart/applyTemplate';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { ProtocolConfig, WidgetConfig } from '../../types';
 import { preprocessWebPage } from './webpage';
 
@@ -292,8 +292,8 @@ function listTemplates(): unknown {
   return {
     templates: QUICK_START_TEMPLATES.map((tpl) => ({
       id: tpl.id,
-      name: t(lang, tpl.nameKey as never),
-      description: t(lang, tpl.descKey as never),
+      name: translate(tpl.nameKey as never, lang),
+      description: translate(tpl.descKey as never, lang),
     })),
   };
 }

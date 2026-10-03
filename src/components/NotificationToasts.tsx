@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { notify, type AppNotification } from '../lib/tauri/notifications';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import { XCircle, AlertTriangle, Info, X, ChevronDown } from 'lucide-react';
 import { activateOnKeyboard } from '../lib/utils/a11y';
 
@@ -29,10 +29,10 @@ export function NotificationToasts() {
         <button
           className="pointer-events-auto bg-bg-sidebar border border-border rounded-lg px-3 py-1.5 text-xs cursor-pointer inline-flex items-center gap-1 transition-colors hover:bg-bg-hover hover:text-text-bright"
           onClick={dismissAll}
-          title={t(lang, 'notifDismissAll')}
+          title={translate('notifDismissAll', lang)}
         >
           <ChevronDown size={12} />
-          {t(lang, 'notifMore').replace('{{count}}', String(hiddenCount))}
+          {translate('notifMore', lang).replace('{{count}}', String(hiddenCount))}
         </button>
       )}
       {visible.map((n) => (
@@ -66,10 +66,10 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
 
   const severityLabel =
     notif.severity === 'error'
-      ? t(lang, 'notifError')
+      ? translate('notifError', lang)
       : notif.severity === 'warn'
-      ? t(lang, 'notifWarn')
-      : t(lang, 'notifInfo');
+      ? translate('notifWarn', lang)
+      : translate('notifInfo', lang);
 
   const iconColorClass =
     notif.severity === 'error' ? 'text-red' :
@@ -106,7 +106,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
           <span className="prompt-card-title flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
             {notif.title}
             {notif.count > 1 && (
-              <span className="text-text-secondary font-normal font-mono text-xs cursor-help" title={t(lang, 'notifCollapsedHint')}>
+              <span className="text-text-secondary font-normal font-mono text-xs cursor-help" title={translate('notifCollapsedHint', lang)}>
                 {' '}×{notif.count}
               </span>
             )}
@@ -118,8 +118,8 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
         <button
           className="shrink-0 bg-transparent border-none text-text-secondary cursor-pointer p-0.5 rounded-sm flex items-center justify-center transition-colors hover:bg-bg-hover hover:text-text-bright"
           onClick={onDismiss}
-          title={t(lang, 'notifDismiss')}
-          aria-label={t(lang, 'notifDismiss')}
+          title={translate('notifDismiss', lang)}
+          aria-label={translate('notifDismiss', lang)}
         >
           <X size={14} />
         </button>

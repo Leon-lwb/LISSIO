@@ -1,7 +1,7 @@
 import { api } from '../../lib/tauri/tauri';
 import { notify } from '../../lib/tauri/notifications';
 import { nodeError } from '../../lib/tauri/errorGuidance';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { ProtocolConfig, ProtocolSchema } from '../../types';
 import type { AppSlice } from './types';
 import type { ProtocolNodeData } from '../appStoreHelpers';
@@ -46,7 +46,7 @@ export const createProtocolSlice: AppSlice<ProtocolSlice> = (set, get) => {
           prepared = await prepareProtocolDocument(config);
         } catch (error) {
           const lang = get().lang;
-          notify.error(t(lang, 'notifSetProtocolFailed'), nodeError(lang, error), { source: 'setProtocol' });
+          notify.error(translate('notifSetProtocolFailed', lang), nodeError(lang, error), { source: 'setProtocol' });
           return;
         }
       }
@@ -78,7 +78,7 @@ export const createProtocolSlice: AppSlice<ProtocolSlice> = (set, get) => {
         }
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifSetProtocolFailed'), nodeError(lang, e), { source: 'setProtocol' });
+        notify.error(translate('notifSetProtocolFailed', lang), nodeError(lang, e), { source: 'setProtocol' });
       }
       // 3. 全 tab 图同步
       get().controlTabs.forEach((tab) => { void get().syncTabGraph(tab.id); });

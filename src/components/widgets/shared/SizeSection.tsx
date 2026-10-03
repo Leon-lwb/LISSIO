@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import type { WidgetConfig } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { clampWidgetSize, widgetMinSize } from '../../../lib/utils/widgetSize';
 import { OptionalNumberField } from '../../ui/fields';
 
@@ -26,20 +26,20 @@ export const SizeSection = memo(function SizeSection({ nodeId, kind }: {
   const limits = widgetMinSize(kind);
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'nodeSize')}</div>
+      <div className="section-heading section-heading--micro mb-2">{translate('nodeSize', lang)}</div>
       <div className="flex gap-2">
-        <OptionalNumberField label={t(lang, 'nodeWidth')} value={width} placeholder={t(lang, 'sizeAuto')}
+        <OptionalNumberField label={translate('nodeWidth', lang)} value={width} placeholder={translate('sizeAuto', lang)}
           onCommit={(w) => commitSize({ width: w })} />
-        <OptionalNumberField label={t(lang, 'nodeHeight')} value={height} placeholder={t(lang, 'sizeAuto')}
+        <OptionalNumberField label={translate('nodeHeight', lang)} value={height} placeholder={translate('sizeAuto', lang)}
           onCommit={(h) => commitSize({ height: h })} />
       </div>
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-text-secondary">
-          {t(lang, 'nodeSizeMinHint').replace('{w}', String(limits.minW)).replace('{h}', String(limits.minH))}
+          {translate('nodeSizeMinHint', lang).replace('{w}', String(limits.minW)).replace('{h}', String(limits.minH))}
         </span>
         <button type="button" onClick={() => setNodeSize(nodeId, {})}
           className="inline-flex items-center gap-1 text-[10px] text-text-secondary hover:text-text-primary rounded px-1.5 py-1 hover:bg-bg-hover transition-colors">
-          <RotateCcw size={10} /> {t(lang, 'resetSize')}
+          <RotateCcw size={10} /> {translate('resetSize', lang)}
         </button>
       </div>
     </section>

@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 interface DroppedInfoPopoverProps {
   open: boolean;
@@ -52,22 +52,22 @@ export function DroppedInfoPopover({ open, onClose, variant }: DroppedInfoPopove
         <button
           className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer bg-transparent border-none"
           onClick={onClose}
-          title={t(lang, 'settingsClose')}
+          title={translate('settingsClose', lang)}
         >
           <X size={16} />
         </button>
 
         <h2 className="prompt-card-title m-0">
-          {t(lang, titleKey)}
+          {translate(titleKey, lang)}
         </h2>
         <p className="prompt-card-body m-0">
-          {t(lang, whatKey)}
+          {translate(whatKey, lang)}
         </p>
         <p className="prompt-card-body m-0">
-          {t(lang, 'droppedInfoWhy')}
+          {translate('droppedInfoWhy', lang)}
         </p>
         <p className="prompt-card-body m-0">
-          {t(lang, howKey)}
+          {translate(howKey, lang)}
         </p>
 
         <div className="flex justify-end mt-1">
@@ -79,7 +79,7 @@ export function DroppedInfoPopover({ open, onClose, variant }: DroppedInfoPopove
             }}
           >
             <Settings size={14} />
-            {t(lang, 'droppedInfoOpenSettings')}
+            {translate('droppedInfoOpenSettings', lang)}
           </button>
         </div>
       </div>

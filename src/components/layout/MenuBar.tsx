@@ -12,7 +12,7 @@ import { useHistoryStore } from '../../store/historyStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { getAvailableDataPanelEntries, type DataPanelEntry } from '../../store/slices/dataTabs';
 import { openDataPanelAndReveal, openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 
 const APP_GITHUB = 'https://github.com/Horldsence/lissio';
 const APP_DOCS = 'https://github.com/Horldsence/lissio#readme';
@@ -80,7 +80,7 @@ interface MenuDef {
 
 /// 构建菜单定义 — 与 Rust 原生菜单 (src-tauri/src/menu.rs) 保持同等结构
 function buildMenus(lang: Lang, historyFlags: { canUndo: boolean; canRedo: boolean }): MenuDef[] {
-  const L = (key: string) => t(lang, key);
+  const L = (key: string) => translate(key, lang);
   const app = useAppStore.getState;
   const settings = useSettingsStore.getState;
 

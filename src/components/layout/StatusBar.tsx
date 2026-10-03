@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { Gauge, RefreshCw, Settings, Info, Sparkles } from 'lucide-react';
 import clsx from 'clsx';
@@ -27,7 +27,7 @@ function AiPanelToggle() {
           ? 'text-accent bg-accent/10'
           : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
       }`}
-      title={t(lang, 'aiChat')}
+      title={translate('aiChat', lang)}
       onClick={() => setAiPanelVisible(!visible)}
     >
       <Sparkles size={12} />
@@ -46,8 +46,8 @@ function PerformanceIndicator({ compact }: { compact: boolean }) {
   return (
     <button
       className="flex h-full items-center gap-1 whitespace-nowrap rounded px-1 text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
-      title={t(lang, 'performanceMonitor')}
-      aria-label={t(lang, 'performanceMonitor')}
+      title={translate('performanceMonitor', lang)}
+      aria-label={translate('performanceMonitor', lang)}
       onClick={() => openDataPanelAndReveal(() => useAppStore.getState().addPerformanceMonitorTab())}
     >
       <Gauge size={12} className="shrink-0" />
@@ -134,37 +134,37 @@ export const StatusBar = memo(function StatusBar() {
   const onContextMenu = useContextMenu([
     {
       id: 'refresh-ports',
-      label: t(lang, 'refresh'),
+      label: translate('refresh', lang),
       icon: <RefreshCw />,
       onClick: () => { void refreshPorts(); },
     },
     { kind: 'separator' },
     {
       id: 'settings',
-      label: t(lang, 'settings'),
+      label: translate('settings', lang),
       icon: <Settings />,
       onClick: openSettings,
     },
     {
       id: 'about',
-      label: t(lang, 'about'),
+      label: translate('about', lang),
       icon: <Info />,
       onClick: openAbout,
     },
   ]);
 
   const stateLabel: Record<typeof connectionState, string> = {
-    Disconnected: t(lang, 'disconnected'),
-    Connecting: t(lang, 'connecting'),
-    Connected: t(lang, 'connected'),
+    Disconnected: translate('disconnected', lang),
+    Connecting: translate('connecting', lang),
+    Connected: translate('connected', lang),
     Error: 'Error',
   };
 
   const transportLabel: Record<string, string> = {
-    serial: t(lang, 'serial'),
-    udp: t(lang, 'udp'),
-    'tcp-client': t(lang, 'tcpClient'),
-    'tcp-server': t(lang, 'tcpServer'),
+    serial: translate('serial', lang),
+    udp: translate('udp', lang),
+    'tcp-client': translate('tcpClient', lang),
+    'tcp-server': translate('tcpServer', lang),
     slcan: 'Slcan',
     'candle-light': 'CandleLight',
     'modbus-tcp': 'Modbus TCP',
@@ -172,9 +172,9 @@ export const StatusBar = memo(function StatusBar() {
   };
 
   const protocolLabel: Record<string, string> = {
-    JustFloat: t(lang, 'justfloat'),
-    FireWater: t(lang, 'firewater'),
-    RawData: t(lang, 'rawdata'),
+    JustFloat: translate('justfloat', lang),
+    FireWater: translate('firewater', lang),
+    RawData: translate('rawdata', lang),
   };
 
   const formatBytes = (n: number) => {
@@ -213,13 +213,13 @@ export const StatusBar = memo(function StatusBar() {
         <>
           <div
             className="flex items-center gap-1 h-full whitespace-nowrap tabular-nums"
-            title={`${t(lang, 'rxBytes')}: ${formatBytes(rxBytes)}`}
+            title={`${translate('rxBytes', lang)}: ${formatBytes(rxBytes)}`}
           >
             ↓ {formatBytes(rxBytes)}
           </div>
           <div
             className="flex items-center gap-1 h-full whitespace-nowrap tabular-nums"
-            title={`${t(lang, 'txBytes')}: ${formatBytes(txBytes)}`}
+            title={`${translate('txBytes', lang)}: ${formatBytes(txBytes)}`}
           >
             ↑ {formatBytes(txBytes)}
           </div>
@@ -227,20 +227,20 @@ export const StatusBar = memo(function StatusBar() {
       ) : (
         <>
           <div className="flex items-center gap-1.5 h-full whitespace-nowrap tabular-nums">
-            {t(lang, 'rxBytes')}: {formatBytes(rxBytes)}
+            {translate('rxBytes', lang)}: {formatBytes(rxBytes)}
           </div>
           <div className="flex items-center gap-1.5 h-full whitespace-nowrap tabular-nums">
-            {t(lang, 'txBytes')}: {formatBytes(txBytes)}
+            {translate('txBytes', lang)}: {formatBytes(txBytes)}
           </div>
         </>
       )}
       {tier < 1 && (
         <>
           <div className="flex items-center gap-1.5 h-full whitespace-nowrap tabular-nums">
-            {t(lang, 'rxFrames')}: {rxFrames}
+            {translate('rxFrames', lang)}: {rxFrames}
           </div>
           <div className="flex items-center gap-1.5 h-full whitespace-nowrap tabular-nums">
-            {t(lang, 'txFrames')}: {txFrames}
+            {translate('txFrames', lang)}: {txFrames}
           </div>
         </>
       )}
@@ -259,7 +259,7 @@ export const StatusBar = memo(function StatusBar() {
       <div className="w-px h-3 bg-border-subtle mx-1 shrink-0" />
       <button
         className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary active:bg-accent-active transition-colors duration-150 shrink-0"
-        title={t(lang, 'refresh')}
+        title={translate('refresh', lang)}
         onClick={() => { void refreshPorts(); }}
       >
         <RefreshCw size={12} />

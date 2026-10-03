@@ -1,0 +1,123 @@
+# Frame Decoder
+frameDecoder: Frame Decoder
+trigger: Trigger
+paletteSearchPlaceholder: Search widgets…
+paletteNoResults: No matches
+paletteClearSearch: Clear
+clearSearch: Clear search
+fdModeLive: Live Mode
+fdModeManual: Manual Test
+fdSettings: Global Settings
+fdEnableValid: Output valid port
+fdEnableFrameCount: Output frame_count port
+fdEnableLastTimestamp: Output last_timestamp port
+fdEnableFps: Output fps port
+fdBlocksEmpty: No blocks yet, click below to add
+fdLiveOutputs: Live Outputs
+fdLiveHint: After connecting transport, parsed results appear in ports below
+fdNoPorts: No output ports
+fdManualInput: Manual Input
+fdFormat: Format
+fdAutoFormat: Auto
+fdParse: Parse
+fdClear: Clear
+fdHexPlaceholder: "HEX byte stream (e.g.: AA 01 02 BB or AA0102BB, supports 0x prefix and commas)"
+fdAsciiPlaceholder: "ASCII text (escapes supported: \\n \\r \\t \\xHH \\0 \\\\)"
+fdShortcutHint: Press Ctrl/Cmd + Enter to parse immediately
+fdExamples: Examples
+fdHistory: History
+fdClearHistory: Clear History
+fdHistoryEmpty: No history
+fdParseResult: Parse Result
+fdResultValid: Checksum valid
+fdConsumedBytes: Consumed bytes
+fdNoOutputs: No output fields
+fdLengthUnit: Length unit
+fdLengthUnitBytes: Bytes
+fdLengthUnitFields: Field count
+fdLengthRef: Variable length ref
+fdLengthRefPlaceholder: length block id (optional)
+fdByteOffset: Byte offset
+fdBitOffset: Bit offset
+fdBitLength: Bit length
+fdSigned: Signed
+fdSignedYes: Signed
+fdSignedNo: Unsigned
+fdChecksumCover: Checksum cover
+fdCoverStart: Cover start
+
+# Trigger widget
+triggerTitle: Trigger
+triggerModeManual: Manual
+triggerModeAuto: Auto
+triggerEdge: Edge
+triggerEdgeLevel: Level
+triggerEdgeRising: Rising
+triggerMatchExact: Exact
+triggerMatchPrefix: Prefix
+triggerMatchContains: Contains
+triggerMatchRegex: Regex
+triggerMatchRange: Range
+triggerHintExact: Exact string match
+triggerHintPrefix: Command starts with pattern
+triggerHintContains: Command contains pattern
+triggerHintRegex: JavaScript/PCRE regex, flags supported (i/m/s/U)
+triggerHintRange: Numeric range min..max, Infinity supported
+triggerMatchType: Match type
+triggerPattern: Pattern
+triggerOutputValue: Output value
+triggerFlags: Regex flags
+triggerFlagsHint: e.g. i (case-insensitive) / im / ims
+triggerEnabled: Enabled
+triggerRulesCount: rules
+triggerRulesEmpty: No rules yet, click below to add
+triggerManualInput: Manual command input
+triggerAutoInput: Auto trigger
+triggerCmdPlaceholder: "Type a command, e.g. GET_TEMP"
+triggerPort: Upstream trigger
+triggerCommand: Current command
+triggerMatchResult: Match result
+triggerLastResult: Last result
+triggerMatched: Matched
+triggerValue: Output value
+triggerMissValue: Miss value
+triggerGlobalSettings: Global settings
+triggerOutputType: Output type
+triggerOutputNumber: Number
+triggerOutputString: String
+triggerOutputText: Output text
+triggerMissText: Default miss text
+triggerMatchGlob: Glob
+triggerHintGlob: Standard shell glob (supports * ? [abc] {a,b,c})
+textDisplay: Text Display
+textInput: Text Input
+fdCoverEnd: Cover end
+fdMatchId: Match ID
+fdMatchIdPlaceholder: Only executes when id_value equals this (optional)
+fdBlockHeader: Frame Header
+fdBlockLength: Length
+fdBlockId: ID
+fdBlockField: Field
+fdBlockBitfield: Bitfield
+fdBlockChecksum: Checksum
+fdBlockTail: Frame Tail
+fdAddBlockHeader: Add Header
+fdAddBlockLength: Add Length
+fdAddBlockId: Add ID
+fdAddBlockField: Add Field
+fdAddBlockBitfield: Add Bitfield
+fdAddBlockChecksum: Add Checksum
+fdAddBlockTail: Add Tail
+fdBlockCsv: CSV
+fdBlockAsciiField: ASCII Field
+fdBlockSamples: Samples
+fdAddBlockCsv: Add CSV
+fdAddBlockAsciiField: Add ASCII Field
+fdAddBlockSamples: Add Samples
+fdCsvSeparator: Separator
+fdCsvPorts: Ports
+fdChecksumPosAppend: Append
+fdChecksumPosInline: Inline
+fdChecksumPosPrepend: Prepend
+fdChecksumCoverAllPrior: All prior blocks
+fdChecksumCoverRange: Custom range

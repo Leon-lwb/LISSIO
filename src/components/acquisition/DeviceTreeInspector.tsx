@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Node } from '@xyflow/react';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 import type { DeviceTreeNodeDecl, DriverManifestProjection, ProtocolConfig, ProtocolSchema, SimulationConfig } from '../../types';
 import { findDeviceTreeNode, updateDeviceTreeChild, validateDeviceTreeName, type DeviceTreeItem } from '../../lib/acquisition/deviceTree';
@@ -22,7 +22,7 @@ export function DeviceTreeInspector({ item, root, manifest }: {
   const [error, setError] = useState('');
   const device = item.node;
   const change = (patch: Partial<DeviceTreeNodeDecl>) => {
-    if (!updateDeviceTreeChild(item.rootId, item.id, patch)) setError(t(lang, 'deviceTreeInvalidName'));
+    if (!updateDeviceTreeChild(item.rootId, item.id, patch)) setError(translate('deviceTreeInvalidName', lang));
     else setError('');
   };
   // 表单可能连续提交协议和 schema，始终基于最新树合并，避免闭包覆盖前一次写入。
@@ -32,30 +32,30 @@ export function DeviceTreeInspector({ item, root, manifest }: {
     if (current) change({ config: { ...(current.config as Record<string, unknown>), ...patch } });
   };
   if (!device) return <div className="space-y-3 text-xs">
-    <p className="text-text-secondary">{t(lang, 'deviceTreeCanvasNode')}</p>
+    <p className="text-text-secondary">{translate('deviceTreeCanvasNode', lang)}</p>
     <button type="button" className="form-input" onClick={() => {
       const state = useAppStore.getState();
       state.onNodesChange(state.rfNodes.map(n => ({ id: n.id, type: 'select', selected: n.id === item.canvasNodeId })));
       openNodePropertiesPanel();
-    }}>{t(lang, 'deviceTreeEditCanvas')}</button>
+    }}>{translate('deviceTreeEditCanvas', lang)}</button>
   </div>;
 
   const config = device.config as { protocol?: ProtocolConfig; schema?: ProtocolSchema | null; convertTo?: ProtocolConfig | null };
   return <div className="flex flex-col gap-3 text-xs">
-    <label>{t(lang, 'widgetName')}
+    <label>{translate('widgetName', lang)}
       <input className="form-input mt-1" value={name} aria-invalid={!!error}
         onChange={event => setName(event.target.value)} onBlur={() => {
           const rootDecl = (root?.data as AcquisitionNodeData | undefined)?.node;
           if (!rootDecl || validateDeviceTreeName(rootDecl, item.id, name.trim())) {
-            setError(t(lang, 'deviceTreeInvalidName')); return;
+            setError(translate('deviceTreeInvalidName', lang)); return;
           }
           change({ name: name.trim() });
         }} onKeyDown={event => { if (event.key === 'Enter') event.currentTarget.blur(); }} />
     </label>
     {error && <p role="alert" className="text-red">{error}</p>}
     <label className="flex items-center gap-2"><input type="checkbox" checked={device.enabled}
-      onChange={event => change({ enabled: event.target.checked })} />{t(lang, 'deviceTreeEnabled')}</label>
-    <div className="rounded bg-bg-inset px-2 py-1.5 text-text-muted break-all"><span>{t(lang, 'deviceTreeDriver')}: </span><code>{device.driver}</code></div>
+      onChange={event => change({ enabled: event.target.checked })} />{translate('deviceTreeEnabled', lang)}</label>
+    <div className="rounded bg-bg-inset px-2 py-1.5 text-text-muted break-all"><span>{translate('deviceTreeDriver', lang)}: </span><code>{device.driver}</code></div>
     {device.driver === 'protocol-engine' && config.protocol ? <>
       <ProtocolConfigForm value={config.protocol} lang={lang} nameSuffix={`-tree-${item.id}`}
         schema={config.schema ?? undefined}
@@ -70,12 +70,12 @@ export function DeviceTreeInspector({ item, root, manifest }: {
             .catch(() => undefined);
         }}
         onSchemaChange={schema => configChange({ schema })} />
-      <label>{t(lang, 'convertTo')}
+      <label>{translate('convertTo', lang)}
         <select className="form-select mt-1" value={config.convertTo?.kind ?? ''} onChange={event => {
           const kind = event.target.value;
           configChange({ convertTo: !kind ? null : kind === 'RawData' ? { kind } : { kind, channels: null } });
         }}>
-          <option value="">{t(lang, 'convertNone')}</option>
+          <option value="">{translate('convertNone', lang)}</option>
           {['JustFloat', 'FireWater', 'RawData'].map(value => <option key={value}>{value}</option>)}
         </select>
       </label>
@@ -85,7 +85,7 @@ export function DeviceTreeInspector({ item, root, manifest }: {
         ? <SchemaFields schema={manifest.configSchema.jsonSchema} uiHints={manifest.configSchema.uiHints}
           value={device.config} path={`device-tree-${device.id}`} onChange={value => change({ config: value })} />
         : <JsonConfig config={device.config as Record<string, unknown>} onChange={value => change({ config: value })} />}
-    <p className="text-[11px] leading-relaxed text-text-muted">{t(lang, 'deviceTreeReconnect')}</p>
+    <p className="text-[11px] leading-relaxed text-text-muted">{translate('deviceTreeReconnect', lang)}</p>
   </div>;
 }
 
@@ -94,7 +94,7 @@ function JsonConfig({ config, onChange }: { config: Record<string, unknown>; onC
   const [draft, setDraft] = useState(JSON.stringify(config, null, 2));
   const [error, setError] = useState('');
   return <div className="space-y-2">
-    <label className="block">{t(lang, 'deviceTreeJsonConfig')}<textarea className="form-input mt-1 min-h-32 font-mono text-[11px]" value={draft}
+    <label className="block">{translate('deviceTreeJsonConfig', lang)}<textarea className="form-input mt-1 min-h-32 font-mono text-[11px]" value={draft}
       onChange={event => setDraft(event.target.value)} spellCheck={false} /></label>
     <button type="button" className="form-input" onClick={() => {
       try {
@@ -102,7 +102,7 @@ function JsonConfig({ config, onChange }: { config: Record<string, unknown>; onC
         if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a JSON object');
         onChange(value as Record<string, unknown>); setError('');
       } catch (cause) { setError(String(cause)); }
-    }}>{t(lang, 'deviceTreeApply')}</button>
+    }}>{translate('deviceTreeApply', lang)}</button>
     {error && <p role="alert" className="text-red break-all">{error}</p>}
   </div>;
 }

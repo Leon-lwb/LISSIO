@@ -8,7 +8,7 @@ import { Send } from 'lucide-react';
 import type { WidgetConfig } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { api } from '../../../lib/tauri/tauri';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 interface TextOutWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'TextOut' }>;
@@ -42,9 +42,9 @@ export const TextOutWidget = memo(function TextOutWidget({ widget }: TextOutWidg
         className={`px-1.5 py-0.5 text-[10px] font-mono truncate rounded-sm ${
           targetLabel ? 'text-text-secondary bg-bg-subtle' : 'text-text-disabled italic'
         }`}
-        title={t(lang, 'textOutTarget')}
+        title={translate('textOutTarget', lang)}
       >
-        → {targetLabel ?? t(lang, 'textOutNoTarget')}
+        → {targetLabel ?? translate('textOutNoTarget', lang)}
       </div>
 
       {/* 待发文本实时预览 + 手动发送 */}
@@ -61,8 +61,8 @@ export const TextOutWidget = memo(function TextOutWidget({ widget }: TextOutWidg
           onClick={() => void api.sendTextOutNow(id).catch(() => { return undefined; })}
           title={
             targetTransport
-              ? t(lang, 'textOutSendNow')
-              : t(lang, 'textOutNoTarget')
+              ? translate('textOutSendNow', lang)
+              : translate('textOutNoTarget', lang)
           }
           className="w-7 flex items-center justify-center rounded-sm bg-bg-button hover:bg-bg-button-hover disabled:opacity-disabled text-text-inverse transition-colors"
         >

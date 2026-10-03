@@ -6,7 +6,7 @@
 //!
 //! 无 kind 时回退显示后端原始描述。
 
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import { errorText } from '../../types/errors';
 
 /// 错误展示形态 — summary 为主行,detail 为次要原始信息 (如 provider 返回的 HTTP 错误)
@@ -31,26 +31,26 @@ export function formatAiKindError(
   const detail = rawMessage && rawMessage !== '' ? rawMessage : undefined;
   switch (kind) {
     case 'AiMissingApiKey':
-      return { summary: fill(t(lang, 'aiErrMissingApiKey'), params) };
+      return { summary: fill(translate('aiErrMissingApiKey', lang), params) };
     case 'AiMissingBaseUrl':
-      return { summary: t(lang, 'aiErrMissingBaseUrl') };
+      return { summary: translate('aiErrMissingBaseUrl', lang) };
     case 'AiMissingModel':
-      return { summary: fill(t(lang, 'aiErrMissingModel'), params) };
+      return { summary: fill(translate('aiErrMissingModel', lang), params) };
     case 'AiUnknownAdapter':
-      return { summary: fill(t(lang, 'aiErrUnknownAdapter'), params) };
+      return { summary: fill(translate('aiErrUnknownAdapter', lang), params) };
     case 'AiProviderRequest':
       // 原始描述携带 provider 返回的真实原因 (HTTP 状态 / 限流信息), 作为次要行展示
-      return { summary: fill(t(lang, 'aiErrProviderRequest'), params), detail };
+      return { summary: fill(translate('aiErrProviderRequest', lang), params), detail };
     case 'AiCancelled':
-      return { summary: t(lang, 'aiErrCancelled') };
+      return { summary: translate('aiErrCancelled', lang) };
     case 'AiKeyring':
-      return { summary: t(lang, 'aiErrKeyring'), detail };
+      return { summary: translate('aiErrKeyring', lang), detail };
     case 'AiKeyringAccessDenied':
-      return { summary: t(lang, 'aiErrKeyringAccessDenied'), detail };
+      return { summary: translate('aiErrKeyringAccessDenied', lang), detail };
     case 'AiUnknownSession':
-      return { summary: t(lang, 'aiErrUnknownSession') };
+      return { summary: translate('aiErrUnknownSession', lang) };
     case 'AiPersist':
-      return { summary: t(lang, 'aiErrPersist'), detail };
+      return { summary: translate('aiErrPersist', lang), detail };
     default:
       // MCP 错误等未映射种类 — 直接展示后端描述
       return { summary: rawMessage || kind };

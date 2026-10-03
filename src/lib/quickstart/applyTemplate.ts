@@ -12,7 +12,7 @@ import { useDockStore } from '../../store/dockStore';
 import { applySnapshot, type AppSnapshot } from '../tauri/appExport';
 import { rebaseHistory } from '../../store/historyStore';
 import { notify, formatError } from '../tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { DeviceTreeNodeDecl } from '../../types';
 
 export type TemplateApplyMode = 'replace' | 'merge';
@@ -100,11 +100,11 @@ export async function applyTemplate(
       (v) => v === 'Connected'
     );
     notify.info(
-      t(lang, 'templateApplySuccess'),
-      isConnected ? t(lang, 'templateApplySuccessDescReconnect') : t(lang, 'templateApplySuccessDesc'),
+      translate('templateApplySuccess', lang),
+      isConnected ? translate('templateApplySuccessDescReconnect', lang) : translate('templateApplySuccessDesc', lang),
       { source: 'applyTemplate' }
     );
   } catch (e) {
-    notify.error(t(lang, 'templateApplyFailed'), formatError(e), { source: 'applyTemplate' });
+    notify.error(translate('templateApplyFailed', lang), formatError(e), { source: 'applyTemplate' });
   }
 }

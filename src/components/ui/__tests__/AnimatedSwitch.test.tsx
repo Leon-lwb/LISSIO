@@ -1,5 +1,6 @@
+import { renderWithI18n } from '../../../test/renderWithI18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render } from '@testing-library/react';
+;
 import { AnimatedSwitch } from '../AnimatedSwitch';
 
 function stubMatchMedia(matches = false) {
@@ -28,7 +29,7 @@ describe('AnimatedSwitch', () => {
   });
 
   it('applies a pure CSS transform/opacity transition on switchKey change without remounting', () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithI18n(
       <AnimatedSwitch switchKey="a">
         <div>content</div>
       </AnimatedSwitch>
@@ -53,7 +54,7 @@ describe('AnimatedSwitch', () => {
   });
 
   it('resolves the slide direction from the ordered keys', () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithI18n(
       <AnimatedSwitch switchKey="a" order={['a', 'b']} axis="x">
         <div>content</div>
       </AnimatedSwitch>
@@ -79,7 +80,7 @@ describe('AnimatedSwitch', () => {
 
   it('skips animation when prefers-reduced-motion is enabled', () => {
     stubMatchMedia(true);
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithI18n(
       <AnimatedSwitch switchKey="a">
         <div>content</div>
       </AnimatedSwitch>

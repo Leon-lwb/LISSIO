@@ -1,0 +1,141 @@
+# Onboarding
+helpCenterTitle: Help Center
+helpCenterOpen: Open Help Center
+dismissTip: Dismiss tip
+canHintMessage: The current protocol engine is not a CAN protocol. Please select Slcan or CandleLight in Protocol Engine and connect CAN-capable hardware.
+canHintAction: Open Protocol Engine
+logicHintMessage: The current protocol engine is not LogicDecode. Please switch to LogicDecode in Protocol Engine to capture and decode digital signals.
+logicHintAction: Open Protocol Engine
+
+# Tour
+tourStep: Step
+tourNext: Next
+tourPrev: Previous
+tourSkip: Skip
+tourFinish: Finish
+tourWelcomeTitle: Welcome to Lissio
+tourWelcomeContent: The core workflow in three minutes. The spotlight marks each topic; steps with a <strong>checkbox are hands-on</strong>. Exit anytime via ×.
+tourQuickStartTitle: Quick Start · Templates
+tourQuickStartContent: The <strong>rocket icon</strong> in the activity bar opens this panel — 7 templates generate a canvas plus wiring in one click, landing on <strong>Compile Results</strong> for review.
+tourPaletteTitle: Widget Categories · Assets
+tourPaletteContent: Every asset lives in <strong>nine categories</strong> — Connections, Parsing & encoding, Sending, Signal processing, Text processing, Display, Interactive inputs, Attributes, Custom. Their icons live in the leftmost bar.
+tourJumpbarTitle: Widget Categories · Switch & Search
+tourJumpbarContent: Click a category icon in the leftmost bar to <strong>open that category's widget list</strong> (click again to collapse); the search box above the list filters widgets by name instantly.
+tourActJumpbar: Click any category icon on the jump bar
+tourCreateTitle: New Cards · Onto the Canvas
+tourCreateContent: <strong>Drag</strong> any palette row onto the canvas to place it exactly there, or click the row for a quick add; interfaces and protocol nodes are global.
+tourActCreate: Drag a widget onto the canvas (or click a row)
+tourConnectTitle: Wiring Edges · Data Flow
+tourConnectContent: Left dots are inputs, right dots are outputs — only <strong>same-colored (same-domain) ports connect</strong>; valid targets enlarge and turn green.
+tourActConnect: Wire one output dot to an input dot
+tourDeleteCardTitle: Deleting Cards
+tourDeleteCardContent: Hover a node's header and click <strong>×</strong>, or select it and press <strong>Backspace</strong>. Closing a window never deletes the node - double-click to reopen.
+tourActDeleteCard: Delete any node either way
+tourCompileErrorsTitle: Compile Errors · Auto-Locate
+tourCompileErrorsContent: Edits recompile instantly. A red triangle in the status bar opens this panel; the <strong>Locate button</strong> flies to the red-outlined node - hover for details.
+tourResultsTitle: Compile Results · Connection Table
+tourResultsContent: The backend's authoritative HIR table - add, remove, edit, copy/paste connections; clicking a node name highlights it on canvas.
+tourActDeleteEdge: Delete one connection via its trash icon
+tourHistoryTitle: Operation History · Undo & Time Travel
+tourHistoryContent: Every edit is recorded here as a timeline - <strong>click any entry to jump straight back to that moment</strong>, or undo/redo step by step via the header buttons or Ctrl+Z / Ctrl+Y.
+tourActHistory: Click any entry in the history list (or the Undo button)
+tourDataTabsTitle: Data Windows · Free Layout
+tourDataTabsContent: Waveform / CAN / logic / compile windows coexist as tabs. <strong>Drag tabs to merge or split</strong>, drag dividers to resize, right-click to close.
+tourCanTitle: CAN Frames · Bus Analysis
+tourCanContent: Opened for you already. Switching to Slcan/CandleLight protocol plus hardware shows real bus traffic; the <strong>hint bar</strong> jumps into protocol settings.
+tourActCanTab: Click any sub-tab below to switch views
+tourAiTitle: AI Assistant · Chat to Operate
+tourAiContent: Toggle this panel anytime via the AI icon on the right of the status bar (docks left/right/bottom or floats). After setting a provider and API key in Settings → AI, <strong>the AI can build node graphs, read waveforms and CAN data, and send commands to your device</strong>; manage external tools at Settings → AI → MCP, while 127.0.0.1:8765/mcp lets external AI clients like Claude Desktop drive this app.
+tourHelpTitle: Help Center · Come Back Anytime
+tourHelpContent: The question-mark icon reopens this center or replays the tour; Settings disables the first-launch tour and contextual hints.
+tourNoEdgeSkip: Skip
+
+# Help Center sections
+helpCenterQuickStart: Quick Start
+helpCenterQuickStartDesc: From a template to your first live data path in minutes.
+helpCenterQuickStartSteps: |-
+  Click the rocket icon in the activity bar to open Quick Start, pick a built-in template (CAN or Serial recommended) and apply it
+  After applying you land on Compile Results first - review every generated connection, each row being a real, live edge
+  Back on the canvas, drag in more widgets and wire their ports to extend your data flow
+  The status bar tracks connection & compile state live; when a red triangle appears, click it to jump into the Compile Errors panel and locate the fault
+  The question-mark icon at the bottom-left reopens this Help Center or replays the tour anytime
+helpTransport: Transport
+helpTransportDesc: Configure the physical connection between the device and the app.
+helpTransportSteps: |-
+  Serial: choose port, baud rate, data/parity/stop bits, then click Connect
+  CAN: choose Slcan (serial-to-CAN) or CandleLight (native USB) and set bitrate
+  Network: UDP or TCP client/server, fill local/remote address and port
+  Test Data: no hardware needed; use the built-in signal generator to verify waveforms and widgets
+helpProtocol: Protocol Engine
+helpProtocolDesc: Parse raw byte streams into channel data, CAN frames, or logic samples.
+helpProtocolSteps: |-
+  JustFloat / FireWater: generic float protocols; auto-detect or manually set channel count
+  RawData: no parsing, display raw bytes directly
+  Slcan / CandleLight: CAN protocols, parsed into CAN frames and shown in the CAN tab
+  LogicDecode: logic-analyzer protocol, captures digital channels and supports protocol decoding
+helpWidgets: Widgets & Node Editor
+helpWidgetsDesc: A nine-group asset library - drag to place cards, wire ports to build data flow.
+helpWidgetsSteps: |-
+  The palette organizes every building block into nine groups - Inputs / Data Interfaces / Protocol Engine / Displays / Arithmetic / Filters / Frequency / String ops / Custom JS widgets
+  Use the top jump bar to hop straight to a group (auto-expanding collapsed ones) or the search box to filter by name; group headers collapse/expand
+  Drag any row onto the canvas to place a node exactly there, or click the row once to drop it into a common spot
+  Wire nodes by holding an output dot and dropping it onto another node's input dot; only same-colored (same-domain) ports connect, cross-domain attempts are blocked with a toast
+  Delete a node via its header × or by selecting it and pressing Backspace; closing a data window never deletes the node - double-click it on canvas to reopen its window
+helpCompile: Compile Feedback - Errors & Results
+helpCompileDesc: Every edit recompiles instantly; faults highlight themselves, and the results table edits connections directly.
+helpCompileSteps: |-
+  The status bar hosts a permanent compile indicator - spinner means compiling, green check means ok, red triangle with a count means errors; click the triangle to open the Compile Errors panel
+  Each entry targets one failing node - hit Locate to fly there on canvas, see it outlined in red, hover for the exact reason (e.g. domain mismatch)
+  The refresh button top-right forces a full manual recompile; entries persist until fixed so you can work through them one by one
+  Compile Results is a permanent tab showing the backend's authoritative HIR connection table - one row per live edge with source/target endpoints and both domains
+  Manage connections across their whole lifecycle in the table - Add Connection, Paste Connection, inline edit, copy and trash-delete; deletions remove the edge on canvas and recompile instantly
+  Clicking a row's node name focuses that canvas card and outlines the node in blue; click again to clear the highlight
+helpCan: CAN Frame Analysis
+helpCanDesc: Receive, filter, send, and analyze CAN bus data.
+helpCanSteps: |-
+  Open via activity bar Panels → Standalone Panels → CAN Frames, or the menu bar's Panel menu
+  Bottom pills switch the four sub-views - Frame List / Sender / Bus Activity / Load Analysis
+  The protocol engine must be Slcan or CandleLight with hardware attached; otherwise use the top hint bar to jump into settings
+  Frame List supports ID/direction filters, selection copy and CSV export
+  Sender constructs and transmits frames manually; Bus Activity shows per-ID RX/TX stats; Load Analysis estimates bus utilization
+helpLogic: Logic Analyzer
+helpLogicDesc: Capture multi-channel digital signals and view timing plus decoded events.
+helpLogicSteps: |-
+  Protocol Engine must be set to LogicDecode
+  Click the bottom "+" to add a Logic Analyzer tab
+  Timing Diagram shows digital waveforms per channel, with zoom and auto-scroll
+  Decoded Events lists protocol decode results and supports export
+  Sample rate and channel count are determined by the backend based on hardware config
+helpCustom: Custom Widgets
+helpCustomDesc: Create dedicated display or interaction widgets with JavaScript.
+helpCustomSteps: |-
+  Add a Custom widget from the palette and open the editor
+  Return an object containing name / inputs / outputs / settings / render
+  The render function reads ctx.inputs / ctx.settings and manipulates ctx.el
+  Use ctx.send to emit values to downstream output ports
+  Custom scripts run in an iframe sandbox with security restrictions; a performance warning is shown on first use
+helpWindowOrganize: Multi-Window Organization
+helpWindowOrganizeDesc: The central workspace is made of dockable windows (cards); widget canvases and data views can be split and merged freely.
+helpWindowOrganizeSteps: |-
+  Drag a tab onto another window's title bar to merge it as a tab of that window (same window kind only)
+  Drag a tab to a window's edge (top/bottom/left/right) to split it into a separate window
+  Drag the empty area of a title bar to move the whole window onto another window's edge or the page edges
+  Drop onto the hot zones at the page edges to dock the window as a full row / column strip
+  A blue preview area shows where the window will land before you release
+  A window is removed automatically once all its tabs are gone
+helpWindowResize: Window Adjustment
+helpWindowResizeDesc: Resize windows and manage tabs; the layout is saved automatically.
+helpWindowResizeSteps: |-
+  Drag the divider between adjacent windows to adjust their width / height ratio
+  Double-click a control-canvas tab to rename it
+  Right-click a tab to close it or close others; control-canvas tabs can also be duplicated
+  Right-click the empty title-bar area to add a control tab or a CAN / Logic Analyzer page
+  The window layout (splits and sizes) is persisted automatically and restored on next launch
+helpAi: AI Assistant
+helpAiDesc: The built-in AI chat operates the app and reads device data directly; the app also exposes itself as an MCP server for external AI clients.
+helpAiSteps: |-
+  Pick a provider and enter the API key in Settings → AI - the default is the OrcaRouter gateway, whose model names need a vendor prefix (e.g. openai/gpt-4o-mini); keys live in the system keychain, never in the settings file
+  Open the AI Chat panel from the AI icon on the right of the status bar - it docks left/right/bottom or floats freely, with multi-session management in the title bar
+  With Built-in Tools enabled in settings, the AI can build and edit node graphs, read waveform/CAN/raw data, send data to the device, and consult the bundled usage knowledge base
+  Settings → AI → MCP adds external MCP servers (stdio command or http URL), exposing their tools to the model
+  The app also serves MCP at 127.0.0.1:8765/mcp (loopback only, port configurable in settings) - point Claude Desktop or other external clients at it to drive this app

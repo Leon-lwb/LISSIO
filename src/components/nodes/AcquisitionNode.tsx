@@ -8,7 +8,7 @@ import { useDeviceNodeSnapshot } from '../../lib/acquisition/useDeviceNodeSnapsh
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { buildDeviceCards, type DeviceCardModel } from '../../lib/acquisition/deviceCardModel';
 import type { PortDescriptor } from '../../types';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 function acceptsInput(port: PortDescriptor): boolean {
   return port.direction === 'input' || port.direction === 'bidirectional';
@@ -74,9 +74,9 @@ export const AcquisitionNode = memo(function AcquisitionNode({ id, data, selecte
     color="#e5c07b" inputs={inputPorts.map((port) => ({ id: port.id, label: port.displayName, domain: port.dataDomain }))}
     outputs={outputPorts.map((port) => ({ id: port.id, label: port.displayName, domain: port.dataDomain }))}
     onRename={(label) => updateAcquisitionNode(id, { ...device, name: label })} onRemove={() => remove(id)}
-    status={<span className={online ? 'text-green' : failed ? 'text-red' : 'text-text-secondary'}>{t(lang, stateLabel)}</span>}>
-    {simulationConfig(device) && <span className="text-center text-yellow">{t(lang, 'testData')}</span>}
-    {cardError && <span className="text-center text-red" title={t(lang, 'acquisitionCardMissing')}>{t(lang, 'acquisitionCardMissing')}</span>}
+    status={<span className={online ? 'text-green' : failed ? 'text-red' : 'text-text-secondary'}>{translate(stateLabel, lang)}</span>}>
+    {simulationConfig(device) && <span className="text-center text-yellow">{translate('testData', lang)}</span>}
+    {cardError && <span className="text-center text-red" title={translate('acquisitionCardMissing', lang)}>{translate('acquisitionCardMissing', lang)}</span>}
     <div className="text-center text-text-secondary">{card?.adapter.displayName}</div>
   </NodeFrame>;
 });

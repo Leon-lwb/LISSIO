@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Binary, Cable, ChevronDown, ChevronRight, FlaskConical, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 import type { DriverManifestProjection } from '../../types';
 import { api } from '../../lib/tauri/tauri';
@@ -88,15 +88,15 @@ export function DeviceTreePanel() {
     && !selected.node.children.some(child => child.driver === 'simulation');
 
   return <div className="flex h-full min-h-0 flex-col gap-3" data-testid="device-tree-panel">
-    <p className="text-[11px] leading-relaxed text-text-muted">{t(lang, 'deviceTreeHint')}</p>
+    <p className="text-[11px] leading-relaxed text-text-muted">{translate('deviceTreeHint', lang)}</p>
     <div className="flex gap-1">
-      <select aria-label={t(lang, 'deviceTreeAddRoot')} className="form-select min-w-0 flex-1" value={card?.key ?? ''}
+      <select aria-label={translate('deviceTreeAddRoot', lang)} className="form-select min-w-0 flex-1" value={card?.key ?? ''}
         disabled={pending || !rootCards.length} onChange={event => setDriverKey(event.target.value)}>
-        {!rootCards.length && <option value="">{t(lang, 'deviceTreeAddRoot')}</option>}
+        {!rootCards.length && <option value="">{translate('deviceTreeAddRoot', lang)}</option>}
         {rootCards.map(item => <option key={item.key} value={item.key}>{item.adapter.displayName}{item.adapter.endpoints.length > 1 ? ` · ${item.endpoint.displayName}` : ''}</option>)}
       </select>
-      <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-disabled" title={t(lang, 'deviceTreeAddRoot')}
-        aria-label={t(lang, 'deviceTreeAddRoot')} disabled={pending || !card} onClick={() => {
+      <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-disabled" title={translate('deviceTreeAddRoot', lang)}
+        aria-label={translate('deviceTreeAddRoot', lang)} disabled={pending || !card} onClick={() => {
           if (!card) return;
           // 目录创建为异步 — 节点就绪后再选中
           void addAcquisitionNode(card, { x: 60, y: 80 + tree.length * 200 }, tabId)
@@ -104,18 +104,18 @@ export function DeviceTreePanel() {
             .catch(() => undefined);
         }}><Plus size={15} /></button>
       <button type="button" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-disabled" disabled={pending}
-        title={t(lang, 'refresh')} aria-label={t(lang, 'refresh')} onClick={() => { setAttempt(value => value + 1); void refreshDeviceNodeSnapshots(); }}>
+        title={translate('refresh', lang)} aria-label={translate('refresh', lang)} onClick={() => { setAttempt(value => value + 1); void refreshDeviceNodeSnapshots(); }}>
         {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
       </button>
     </div>
     <button type="button" className="text-left text-[11px] text-accent hover:underline"
-      onClick={() => useAppStore.getState().openCategory('transport')}>{t(lang, 'deviceTreeCatalog')}</button>
-    {error && <p role="alert" className="text-[11px] text-red break-words">{t(lang, 'deviceTreeUnavailable')}: {error}</p>}
-    <SearchInput value={query} onChange={setQuery} placeholder={t(lang, 'deviceTreeSearch')} />
+      onClick={() => useAppStore.getState().openCategory('transport')}>{translate('deviceTreeCatalog', lang)}</button>
+    {error && <p role="alert" className="text-[11px] text-red break-words">{translate('deviceTreeUnavailable', lang)}: {error}</p>}
+    <SearchInput value={query} onChange={setQuery} placeholder={translate('deviceTreeSearch', lang)} />
     <div className="min-h-28 max-h-[45%] overflow-y-auto rounded-lg border border-border bg-bg-inset py-1">
-      {tree.length === 0 ? <p className="px-3 py-6 text-center text-xs text-text-muted">{t(lang, 'deviceTreeEmpty')}</p>
-        : visible.length === 0 ? <p role="status" className="p-3 text-xs text-text-muted">{t(lang, 'paletteNoResults')}</p>
-          : <div role="tree" aria-label={t(lang, 'deviceTreeTitle')}>
+      {tree.length === 0 ? <p className="px-3 py-6 text-center text-xs text-text-muted">{translate('deviceTreeEmpty', lang)}</p>
+        : visible.length === 0 ? <p role="status" className="p-3 text-xs text-text-muted">{translate('paletteNoResults', lang)}</p>
+          : <div role="tree" aria-label={translate('deviceTreeTitle', lang)}>
             {visible.map(item => <DeviceTreeRow key={item.id} item={item} depth={0} selectedId={selectedId}
               select={select} forceExpanded={!!query.trim()} parentEnabled />)}
           </div>}
@@ -126,7 +126,7 @@ export function DeviceTreePanel() {
           <div className="min-w-0"><h3 className="truncate text-xs font-semibold text-text-primary">{selected.name}</h3>
             <code className="block truncate text-[10px] text-text-muted" title={selected.id}>{selected.id}</code></div>
           <button type="button" className="rounded p-1 text-text-muted hover:bg-bg-hover hover:text-red"
-            title={t(lang, 'deviceTreeSubtreeHint')} aria-label={t(lang, 'deviceTreeRemove')} onClick={() => {
+            title={translate('deviceTreeSubtreeHint', lang)} aria-label={translate('deviceTreeRemove', lang)} onClick={() => {
               if (selected.node && selected.id !== selected.rootId) removeDeviceTreeChild(selected.rootId, selected.id);
               else useAppStore.getState().removeNode(selected.canvasNodeId);
               useAppStore.setState({ selectedDeviceTreeNodeId: null });
@@ -142,19 +142,19 @@ export function DeviceTreePanel() {
                   if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
                 })
                 .catch(() => undefined);
-            }}><Binary size={13} />{t(lang, 'deviceTreeAddProtocol')}</button>}
+            }}><Binary size={13} />{translate('deviceTreeAddProtocol', lang)}</button>}
           {canAddSimulation && <button type="button" className="flex items-center gap-2 rounded border border-border px-2 py-1.5 text-[11px] hover:bg-bg-hover"
             onClick={() => {
               const child = createSimulationNode(selected.node!);
               if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
-            }}><FlaskConical size={13} />{t(lang, 'deviceTreeAddSimulation')}</button>}
+            }}><FlaskConical size={13} />{translate('deviceTreeAddSimulation', lang)}</button>}
           {childOptions.length > 0 && <div className="flex gap-1">
-            <select className="form-select min-w-0 flex-1" aria-label={t(lang, 'deviceTreeAddChild')}
+            <select className="form-select min-w-0 flex-1" aria-label={translate('deviceTreeAddChild', lang)}
               value={childOptions.some(option => option.driverId === childDriver) ? childDriver : childOptions[0].driverId}
               onChange={event => setChildDriver(event.target.value)}>
               {childOptions.map(option => <option key={option.driverId} value={option.driverId}>{option.driverId}</option>)}
             </select>
-            <button type="button" className="rounded border border-border px-2 hover:bg-bg-hover" aria-label={t(lang, 'deviceTreeAddChild')}
+            <button type="button" className="rounded border border-border px-2 hover:bg-bg-hover" aria-label={translate('deviceTreeAddChild', lang)}
               onClick={() => {
                 const driver = childOptions.find(option => option.driverId === childDriver) ?? childOptions[0];
                 const parent = selected.node!;
@@ -167,7 +167,7 @@ export function DeviceTreePanel() {
         </div>
         {root?.type === 'acquisition' && <DeviceConnection rootId={root.id} enabled={rootData?.node.enabled ?? false} />}
         <DeviceTreeInspector key={selected.id} item={selected} root={root} manifest={manifest} />
-      </> : <p className="py-6 text-center text-xs text-text-muted">{t(lang, 'deviceTreeSelect')}</p>}
+      </> : <p className="py-6 text-center text-xs text-text-muted">{translate('deviceTreeSelect', lang)}</p>}
     </div>
   </div>;
 }
@@ -185,9 +185,9 @@ function DeviceConnection({ rootId, enabled }: { rootId: string; enabled: boolea
         const store = useAppStore.getState();
         void (opened ? store.disconnectNode(rootId) : store.connectNode(rootId))
           .finally(() => { setPending(false); void refreshDeviceNodeSnapshots(); });
-      }}>{t(lang, pending ? 'connecting' : opened ? 'disconnect' : 'connect')}</button>
+      }}>{translate(pending ? 'connecting' : opened ? 'disconnect' : 'connect', lang)}</button>
     {(snapshot?.issue != null || connection === 'Error') && <p role="alert" className="mt-1 break-words text-[11px] text-red">
-      {snapshot?.issue?.detail ?? t(lang, 'deviceTreeFailed')}
+      {snapshot?.issue?.detail ?? translate('deviceTreeFailed', lang)}
     </p>}
   </div>;
 }
@@ -208,16 +208,16 @@ function DeviceTreeRow({ item, depth, selectedId, select, forceExpanded, parentE
   return <div role="treeitem" aria-selected={selectedId === item.id} aria-expanded={item.children.length ? open : undefined}>
     <div className={`flex items-center gap-1 rounded px-1 py-1.5 text-xs ${selectedId === item.id ? 'bg-bg-active text-text-bright' : 'text-text-secondary hover:bg-bg-hover'} ${!active ? 'opacity-disabled' : ''}`}
       style={{ paddingLeft: 4 + depth * 14 }}>
-      {item.children.length ? <button type="button" className="shrink-0 rounded hover:bg-bg-hover" aria-label={t(lang, open ? 'deviceTreeCollapse' : 'deviceTreeExpand')}
+      {item.children.length ? <button type="button" className="shrink-0 rounded hover:bg-bg-hover" aria-label={translate(open ? 'deviceTreeCollapse' : 'deviceTreeExpand', lang)}
         onClick={() => setExpanded(value => !value)}>{open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}</button> : <span className="w-[13px] shrink-0" />}
       <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 text-left" onClick={() => select(item.id)}
-        title={`${item.name}\n${item.driver}\n${t(lang, state)}`} onKeyDown={event => {
+        title={`${item.name}\n${item.driver}\n${translate(state, lang)}`} onKeyDown={event => {
           if (event.key === 'ArrowRight') { setExpanded(true); event.preventDefault(); }
           if (event.key === 'ArrowLeft') { setExpanded(false); event.preventDefault(); }
         }}>
         <Icon size={13} className="shrink-0" /><span className="min-w-0 flex-1 truncate">{item.name}</span>
-        {item.source === 'canvas' && <span className="rounded bg-bg-subtle px-1 text-[9px] text-text-muted">{t(lang, 'deviceTreeCanvasBadge')}</span>}
-        <span aria-label={t(lang, state)} className={`mr-1 h-1.5 w-1.5 shrink-0 rounded-full ${state === 'deviceTreeOnline' ? 'bg-green' : state === 'deviceTreeFailed' ? 'bg-red' : 'bg-text-muted'}`} />
+        {item.source === 'canvas' && <span className="rounded bg-bg-subtle px-1 text-[9px] text-text-muted">{translate('deviceTreeCanvasBadge', lang)}</span>}
+        <span aria-label={translate(state, lang)} className={`mr-1 h-1.5 w-1.5 shrink-0 rounded-full ${state === 'deviceTreeOnline' ? 'bg-green' : state === 'deviceTreeFailed' ? 'bg-red' : 'bg-text-muted'}`} />
       </button>
     </div>
     {open && item.children.length > 0 && <div role="group">{item.children.map(child => <DeviceTreeRow key={child.id} item={child} depth={depth + 1}

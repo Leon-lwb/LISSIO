@@ -1,0 +1,70 @@
+# Sidebar
+portConfig: Port Config
+dataInterface: Transport
+protocolEngine: Protocol Engine
+protocolCustom: Custom Blocks
+protocolCustomBlocks: Frame Blocks
+protocolResetToPreset: Reset to Preset
+protocolDerivedPorts: Derived Ports
+protocolCustomDesc: User-defined frame blocks. Ports are derived from field/bitfield/csv blocks and can be named freely.
+transportType: Transport
+widgetPalette: Widgets
+
+# Connection
+connect: Connect
+disconnect: Disconnect
+connecting: Connecting...
+connected: Connected
+disconnected: Disconnected
+notConnected: Not connected
+connError: Connection error
+acquisitionCardMissing: Capability catalog mismatch; ports unavailable
+
+# Port Config
+portName: Port
+portFilterPlaceholder: Filter ports…
+portsNoneFound: No ports found
+portsNoMatch: No matching ports
+baudRate: Baud Rate
+dataBits: Data Bits
+parity: Parity
+stopBits: Stop Bits
+flowControl: Flow Control
+refresh: Refresh
+refreshPorts: Refresh Ports
+
+# Protocol
+justfloat: JustFloat
+firewater: FireWater
+rawdata: RawData
+channels: Channels
+channelsAuto: Auto Detect
+channelsManual: Manual
+detectedChannels: Detected Channels
+
+# Transport
+serial: Serial
+udp: UDP
+tcpClient: TCP Client
+tcpServer: TCP Server
+testData: Test Data
+localAddr: Local Addr
+remoteAddr: Remote Addr
+localPort: Local Port
+remotePort: Remote Port
+host: Host
+port: Port
+listenAddr: Listen Addr
+listenPort: Listen Port
+sampleRate: Sample Rate
+signalType: Signal Type
+sine: Sine
+square: Square
+triangle: Triangle
+sawtooth: Sawtooth
+random: Random
+dc: DC
+chirp: Chirp
+steps: Steps
+noise: Noise
+multitone: MultiTone

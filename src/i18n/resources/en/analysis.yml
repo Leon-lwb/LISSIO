@@ -1,0 +1,51 @@
+# Logic Analyzer
+logicAnalyzer: Logic Analyzer
+timingDiagram: Timing Diagram
+decodedEvents: Decoded Events
+noLogicSamples: No logic samples
+noDecodedEvents: No decoded events
+addLogicTab: Add Logic Analyzer Tab
+decoderType: Decoder Type
+uartConfig: UART
+i2cConfig: I2C
+spiConfig: SPI
+sdaChannel: SDA Channel
+sclChannel: SCL Channel
+sclkChannel: SCLK Channel
+mosiChannel: MOSI Channel
+misoChannel: MISO Channel
+csChannel: CS Channel
+spiMode: SPI Mode
+parityNone: None
+parityEven: Even
+parityOdd: Odd
+stopBits1: 1
+stopBits2: 2
+
+# TableView
+tableViewNoColumns: No columns
+tableViewShowRaw: Show Raw Bytes
+tableViewHideRaw: Hide Raw Bytes
+tableViewTimestamp: Timestamp
+tableViewEmpty: Waiting for data...
+tableViewRows: rows
+tableViewLoopbackRows: loopback
+tableViewLabel: Table
+
+# Loopback
+cmdLoopback: Loopback
+
+# Send mode (independent of loopback)
+cmdSendMode: Send mode
+cmdSendModeManual: Manual send
+cmdSendModeOnChange: Send on change
+cmdSendModeTimer: Timed send
+cmdSendModeInterval: Interval (ms)
+
+# Frame list (multiple frames per sender)
+cmdFrames: Frames
+cmdAddFrame: Add frame
+cmdRemoveFrame: Delete frame
+cmdRenameFrameHint: Double-click to rename
+cmdNewFrame: Frame
+cmdFrameSettings: Frame settings

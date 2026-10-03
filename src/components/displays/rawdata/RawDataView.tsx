@@ -5,7 +5,7 @@ import type { RawDataFilterOptions } from '../../../lib/buffers/rawDataSubscript
 import { useSelection } from '../../../lib/hooks/useSelection';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { traceTransportSource } from '../../../store/appStoreHelpers';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter, HexColorMode, AppendMode, SendPanelMode } from './rawDataViewHelpers';
 import { byteToHex, byteToAscii, formatTime } from './rawDataViewHelpers';
 import { decodeText, isTextEncoding, type TextEncoding } from '../../../lib/utils/textEncoding';
@@ -296,9 +296,9 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-text-secondary">
         <Unplug size={22} className="opacity-disabled" />
-        <span className="text-xs">{t(lang, 'rawDataNoInputTitle')}</span>
+        <span className="text-xs">{translate('rawDataNoInputTitle', lang)}</span>
         <span className="text-[10px] opacity-secondary px-6 text-center break-all">
-          {t(lang, 'rawDataNoInputHint')}
+          {translate('rawDataNoInputHint', lang)}
         </span>
       </div>
     );

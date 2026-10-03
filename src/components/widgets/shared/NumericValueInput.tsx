@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { formatControlValue, snapControlValue, type NumericControlRange } from '../../../lib/utils/numericControl';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 interface NumericValueInputProps extends NumericControlRange {
   value: number;
@@ -74,10 +74,10 @@ export function NumericValueInput({ value, min, max, step, onPreview, onCommit }
           event.stopPropagation();
           if (event.key === 'ArrowUp' || event.key === 'ArrowDown') commit();
         }}
-        aria-label={t(lang, 'currentValue')}
+        aria-label={translate('currentValue', lang)}
         aria-invalid={invalid}
       />
-      {invalid && <span className="block mt-1 text-[10px] text-red">{t(lang, 'invalidValue')}</span>}
+      {invalid && <span className="block mt-1 text-[10px] text-red">{translate('invalidValue', lang)}</span>}
     </label>
   );
 }

@@ -1,0 +1,195 @@
+# CAN
+canFrames: CAN Frames
+canInvalidFilterId: Invalid CAN ID filter; enter a hexadecimal ID from 0x000 to 0x1FFFFFFF
+canFilterById: Filter by ID (HEX)
+canSender: CAN Sender
+frameList: Frame List
+canLatestById: Latest by ID
+canFrameCount: Frames
+busActivity: Bus Activity
+idDistribution: ID Distribution
+extendedFrame: Extended Frame
+remoteFrame: Remote Frame
+dataHex: Data (HEX)
+sendHistory: Send History
+noSendHistory: No send history
+noCanFrames: No CAN frames
+all: All
+time: Time
+addCanTab: Add CAN Frame Tab
+slcan: Slcan
+candleLight: CandleLight
+canBitrate: CAN Bitrate
+candleDevice: USB Device
+noCandleDevices: No devices found
+# Compile Errors Panel
+compileErrorsTitle: Compile Errors
+compileErrors: Compile Errors Panel
+noCompileErrors: No compile errors
+flyToNode: Fly to node
+addCompileErrorsTab: Add Compile Errors Tab
+compileErrorNodes: "{{count}} node(s)"
+compileErrorTabs: "{{count}} tab(s)"
+slcanDesc: Communicate with CANable devices via slcan ASCII protocol (serial-to-CAN)
+
+# Compile Results Panel
+connectionResultsTitle: Connection Results
+colEdgeClass: Edge Class
+colSourceDomain: Source Domain
+colTargetDomain: Target Domain
+colDualRole: Dual Role
+dualRoleMarker: DUAL
+modalAddEdge: Add Connection
+modalModifyEdge: Edit Connection
+fieldSourceNode: Source node
+fieldTargetNode: Target node
+fieldSourceHandle: Source handle
+fieldTargetHandle: Target handle
+confirmAdd: Confirm
+cancel: Cancel
+
+# Data Panel Menu (菜单 — 数据面板)
+menuPanel: Panel
+menuPanelOpenCompileErrors: Open Compile Errors
+menuPanelOpenCompileResults: Open Compile Results
+menuPanelOpenCan: Open CAN Frames
+menuPanelOpenLogic: Open Logic Analyzer
+panelOpenNoWidget: "no widget on canvas"
+dataPanelsStandaloneTitle: Standalone
+dataPanelsDerivedTitle: By Widget
+dataPanelsUnsupportedTitle: Unsupported
+dataTabWaveform: Waveform
+dataTabSpectrum: Spectrum
+dataTabRawData: Raw Data
+dataTabPie: Pie Chart
+dataTabImage: Image
+dataTabModel3d: 3D Model
+dataTabCommand: Command Sender
+dataTabFrameDecoder: Frame Decoder
+dataTabTrigger: Trigger
+menuPanelOpenOperationHistory: Open Operation History
+menuPanelOpenNodeProperties: Open Properties
+operationHistoryTitle: Operation History
+recordingDatabaseTitle: Recording Database
+recordingDatabaseRefresh: Refresh
+recordingDatabaseIncludePayload: Decode payload
+recordingDatabaseExport: Export
+recordingDatabaseExporting: Exporting
+recordingDatabaseDismiss: Dismiss
+recordingDatabaseRecovered: The recording database was damaged and has been recovered automatically; recording continued (the original file is kept as a backup — hover for its path)
+recordingDatabaseSessions: Sessions
+recordingDatabaseBatches: batches
+recordingDatabaseChannels: channels
+recordingDatabaseNoSessions: No recording sessions
+recordingDatabaseBindings: Display bindings
+recordingDatabaseAllBindings: All bindings
+recordingDatabaseSamples: samples
+recordingDatabaseColumnTime: Time
+recordingDatabaseColumnBinding: Binding
+recordingDatabaseColumnDomain: Domain
+recordingDatabaseColumnSequence: Sequence
+recordingDatabaseColumnItems: Items
+recordingDatabaseColumnPayload: Payload
+recordingDatabaseNoData: No rows in this page
+recordingDatabaseSelectSession: Select a recording session
+recordingDatabaseRows: rows
+recordingDatabaseLoading: Loading
+recordingDatabaseLoadMore: Load more
+recordingDatabaseCleanupStopped: Clean stopped
+recordingDatabaseCleanupStoppedConfirm: Delete all stopped and failed recording sessions? This cannot be undone.
+recordingDatabaseKeepLatest: Keep latest count
+recordingDatabaseCleanupKeep: Keep latest N
+recordingDatabaseCleanupKeepConfirm: Keep only the latest {count} finished sessions? Older sessions will be deleted.
+recordingDatabaseDelete: Delete
+recordingDatabaseDeleteConfirm: Delete the selected recording session? This cannot be undone.
+recordingDatabaseStateRunning: running
+recordingDatabaseStatePaused: paused
+recordingDatabaseStateStopped: stopped
+recordingDatabaseStateFailed: failed
+recordingDatabaseNewSession: New session
+recordingDatabaseSetActive: Set active
+recordingDatabaseActiveBadge: writing
+recordingDatabasePausedOnlyHint: Only available while the run is paused
+recordingDatabaseOpenSession: Open in view
+recordingDatabaseCurrentTarget: Writing to
+recordingDatabaseNoActiveTarget: none
+recordingDatabaseHintAlreadyActive: This session is already the write target
+recordingDatabaseHintNeedsPause: Pause the run first to switch the write target
+recordingDatabaseHintNeedsStopped: Only stopped sessions can become the write target
+recordingDatabaseHintDeleteActive: Switch the write target before deleting this session
+recordingDatabaseRowSelectHint: Click while paused to set as the write target; right-click for more actions
+recordingDatabaseSessionCount: Sessions
+recordingDatabaseBatchCount: Batches
+recordingDatabaseItemCount: Items
+recordingDatabaseFileSize: File
+opHistoryInitial: Initial state
+opHistoryEmpty: No operations recorded yet.
+opHistoryClear: Clear history
+opHistoryClearConfirm: Confirm clear?
+opHistoryRedoZone: Undone · redoable
+opHistoryCurrentPosition: Current position
+opAddWidget: Add widget
+opRemoveWidget: Remove widget
+opUpdateWidgetParams: Adjust widget parameters
+opConnectNodes: Connect edges
+opDeleteEdges: Delete edges
+opMoveNodes: Move nodes
+opResizeNodes: Resize widget
+opRemoveNodes: Delete nodes
+opAddTransportNode: Add transport node
+opAddProtocolNode: Add protocol node
+opRemoveNode: Delete node
+opUpdateTransportConfig: Update transport config
+opUpdateProtocolConfig: Update protocol config
+opConvertProtocolTo: Convert protocol
+opUpdateProtocolSchema: Edit frame schema
+opAddControlTab: New control tab
+opRemoveControlTab: Delete control tab
+opRenameControlTab: Rename tab
+opImportWorkspace: Import workspace
+opApplyTemplate: Apply template
+addConnection: Add
+pasteConnection: Paste
+colSource: Source
+colTarget: Target
+colActions: Actions
+noConnections: No connections found.
+defaultHandle: default
+editConnection: Edit
+nodeTypeTransport: Transport
+nodeTypeProtocol: Protocol
+candleLightDesc: Communicate with CANable devices via candleLight binary protocol (native USB)
+
+# CAN Load Analysis
+canLoadAnalysis: Load Analysis
+canLoadWindow: Time Window
+canLoadAutoBitrate: Auto Bitrate
+canLoadClear: Clear Stats
+canLoadBitrate: Bitrate
+canLoadTotalBits: Total Bits
+canLoadTotalBytes: Total Bytes
+canLoadFps: Frame Rate
+canLoadHistory: Load History
+canLoadPerId: Per-ID Load Distribution
+canLoadIdFilterHint: Click to toggle overlay on history chart
+canLoadThreshold: Threshold
+canLoadThresholdAlarm: Load Alarm
+
+# Data loss warnings (status bar + popover) — preview drops (rawdata) vs real loss (pipeline)
+statusDropped: Data loss detected, click for details
+notifDataDroppedTitle: Data loss detected
+notifDataDroppedBody: "Lost {{count}} messages in the latest window (these bytes never reached the parser; the waveform has gaps). Try: lowering the source rate; increasing parallel worker limit and buffers in Settings → Performance; disabling unused raw data subscriptions"
+droppedInfoTitle: Data loss explained
+droppedInfoTitleRawdata: Preview drop explained
+droppedInfoWhatRawdata: What is this — An overflow counter of the raw data preview. These bytes were parsed normally and reached the waveform; the preview just did not retain all of them for display. This is not data loss — parsing and waveforms are unaffected.
+droppedInfoWhatPipeline: What is this — Real data loss. When incoming data exceeds the parse pipeline's capacity, some messages are skipped before parsing (broadcast Lagged), leaving gaps in waveforms and parse results.
+droppedInfoWhy: "Why it happens — The source rate is too high, or parsing/rendering cannot keep up. The pipeline uses bounded buffers; when full, excess messages are dropped instead of blocking the stream. Note: the raw data preview drop counter (yellow) does not indicate data loss."
+droppedInfoHowRawdata: What to do — Lower the source rate, or increase the raw data buffer capacity in Settings → Data Cache.
+droppedInfoHowPipeline: What to do — Lower the source rate; increase the parallel worker limit and buffer capacities in Settings → Performance; or disable unused raw data subscriptions.
+droppedInfoOpenSettings: Open Settings
+canLoadExport: Export CSV
+canLoadExportFailed: Export failed
+canLoadExportSuccess: Exported
+download: Download
+downloadFailed: Download failed
+serverNotify: Server notification

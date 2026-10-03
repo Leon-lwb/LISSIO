@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { RunState } from '../../types';
 import { RecordingDisabledNotice } from '../displays/recording/RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs } from '../displays/recording/recordingFormat';
@@ -81,19 +81,19 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
       <div className="rounded border border-border-subtle bg-bg-input p-2">
         <div className="flex items-center gap-1.5 text-text-primary">
           <Database size={13} className="text-accent" />
-          <span className="font-semibold">{t(lang, 'recordingDatabaseTitle')}</span>
+          <span className="font-semibold">{translate('recordingDatabaseTitle', lang)}</span>
           <button
             type="button"
             onClick={() => void loadOverview()}
             className="ml-auto rounded p-1 text-text-secondary hover:bg-bg-hover hover:text-text-bright"
-            title={t(lang, 'recordingDatabaseRefresh')}
+            title={translate('recordingDatabaseRefresh', lang)}
           >
             <RefreshCw size={12} />
           </button>
         </div>
         <div className="mt-1.5 flex items-center gap-1.5">
           <span className={clsx('inline-block h-1.5 w-1.5 rounded-full', RUN_BADGE[runState].dot)} />
-          <span className="text-[10px] text-text-secondary">{t(lang, RUN_BADGE[runState].label)}</span>
+          <span className="text-[10px] text-text-secondary">{translate(RUN_BADGE[runState].label, lang)}</span>
           <div className="ml-auto flex items-center gap-1">
             <button
               type="button"
@@ -103,8 +103,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                   ? 'text-green bg-green/10'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-green',
               )}
-              title={t(lang, 'runStartHint')}
-              aria-label={t(lang, 'runStartHint')}
+              title={translate('runStartHint', lang)}
+              aria-label={translate('runStartHint', lang)}
               onClick={() => { void workspaceRun('start'); }}
             >
               <Play size={11} />
@@ -118,8 +118,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                   : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
                 runState === 'stopped' && 'pointer-events-none opacity-subtle',
               )}
-              title={t(lang, 'runPauseHint')}
-              aria-label={t(lang, 'runPauseHint')}
+              title={translate('runPauseHint', lang)}
+              aria-label={translate('runPauseHint', lang)}
               disabled={runState === 'stopped'}
               onClick={() => { void workspaceRun('pause'); }}
             >
@@ -133,8 +133,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                   ? 'text-text-secondary opacity-subtle'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-red',
               )}
-              title={t(lang, 'runStopHint')}
-              aria-label={t(lang, 'runStopHint')}
+              title={translate('runStopHint', lang)}
+              aria-label={translate('runStopHint', lang)}
               disabled={runState === 'stopped'}
               onClick={() => { void workspaceRun('stop'); }}
             >
@@ -144,25 +144,25 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         </div>
         {databaseInfo !== null && databaseInfo !== undefined && (
           <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 font-mono text-[10px] text-text-secondary">
-            <span>{t(lang, 'recordingDatabaseSessionCount')}</span>
+            <span>{translate('recordingDatabaseSessionCount', lang)}</span>
             <span className="text-right text-text-primary">{databaseInfo.session_count}</span>
-            <span>{t(lang, 'recordingDatabaseBatchCount')}</span>
+            <span>{translate('recordingDatabaseBatchCount', lang)}</span>
             <span className="text-right text-text-primary">{databaseInfo.batch_count}</span>
-            <span>{t(lang, 'recordingDatabaseItemCount')}</span>
+            <span>{translate('recordingDatabaseItemCount', lang)}</span>
             <span className="text-right text-text-primary">{databaseInfo.item_count}</span>
-            <span>{t(lang, 'recordingDatabaseFileSize')}</span>
+            <span>{translate('recordingDatabaseFileSize', lang)}</span>
             <span className="text-right text-text-primary">{formatBytes(databaseInfo.file_size_bytes)}</span>
           </div>
         )}
         <div className="mt-1.5 flex items-center gap-1.5 border-t border-border-subtle/60 pt-1.5">
           <span className="shrink-0 text-[10px] text-text-secondary">
-            {t(lang, 'recordingDatabaseCurrentTarget')}
+            {translate('recordingDatabaseCurrentTarget', lang)}
           </span>
           <span
             className="min-w-0 flex-1 truncate text-right font-mono text-[10px] text-accent"
             title={activeSession?.session.id ?? undefined}
           >
-            {activeSession !== null ? activeSession.session.id : t(lang, 'recordingDatabaseNoActiveTarget')}
+            {activeSession !== null ? activeSession.session.id : translate('recordingDatabaseNoActiveTarget', lang)}
           </span>
         </div>
       </div>
@@ -173,10 +173,10 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           disabled={!recordingEnabled || !paused || busy}
           onClick={() => void handleCreateSession()}
           className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
-          title={paused ? t(lang, 'recordingDatabaseNewSession') : t(lang, 'recordingDatabasePausedOnlyHint')}
+          title={paused ? translate('recordingDatabaseNewSession', lang) : translate('recordingDatabasePausedOnlyHint', lang)}
         >
           <FilePlus2 size={12} />
-          {t(lang, 'recordingDatabaseNewSession')}
+          {translate('recordingDatabaseNewSession', lang)}
         </button>
         <button
           type="button"
@@ -185,7 +185,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
           className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
         >
           <Eraser size={12} />
-          {t(lang, 'recordingDatabaseCleanupStopped')}
+          {translate('recordingDatabaseCleanupStopped', lang)}
         </button>
         <div className="inline-flex h-7 items-center overflow-hidden rounded border border-border-subtle bg-bg-input">
           <input
@@ -195,7 +195,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             value={keepLatest}
             onChange={(event) => setKeepLatest(Number(event.target.value))}
             className="h-full w-14 bg-transparent px-1.5 text-text-primary outline-none"
-            title={t(lang, 'recordingDatabaseKeepLatest')}
+            title={translate('recordingDatabaseKeepLatest', lang)}
           />
           <button
             type="button"
@@ -208,7 +208,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             onClick={() => void cleanupKept()}
             className="h-full border-l border-border-subtle px-2 text-text-secondary hover:text-text-bright disabled:opacity-disabled"
           >
-            {t(lang, 'recordingDatabaseCleanupKeep')}
+            {translate('recordingDatabaseCleanupKeep', lang)}
           </button>
         </div>
       </div>
@@ -223,14 +223,14 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         >
           <div className="flex items-start gap-1">
             <span className="min-w-0 flex-1 break-words">
-              {t(lang, 'recordingDatabaseRecovered')}
+              {translate('recordingDatabaseRecovered', lang)}
             </span>
             <button
               type="button"
               onClick={clearHealthWarning}
               className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
-              {t(lang, 'recordingDatabaseDismiss')}
+              {translate('recordingDatabaseDismiss', lang)}
             </button>
           </div>
         </div>
@@ -245,7 +245,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
               onClick={clearWarning}
               className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
-              {t(lang, 'recordingDatabaseDismiss')}
+              {translate('recordingDatabaseDismiss', lang)}
             </button>
           </div>
         </div>
@@ -259,7 +259,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
               onClick={clearError}
               className="shrink-0 text-text-danger-strong hover:text-text-inverse"
             >
-              {t(lang, 'recordingDatabaseDismiss')}
+              {translate('recordingDatabaseDismiss', lang)}
             </button>
           </div>
         </div>
@@ -288,7 +288,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                 attemptSelect(summary);
               }}
               onContextMenu={(event) => openRowMenu(event, summary)}
-              title={t(lang, 'recordingDatabaseRowSelectHint')}
+              title={translate('recordingDatabaseRowSelectHint', lang)}
               className={clsx(
                 'group cursor-pointer border-b border-border-subtle/50 px-2 py-1.5 last:border-b-0',
                 summary.active
@@ -303,11 +303,11 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                   'rounded px-1 py-0.5 text-[9px] font-semibold uppercase',
                   active ? 'bg-success/15 text-text-success' : 'bg-bg-input text-text-secondary',
                 )}>
-                  {t(lang, stateLabelKey(summary.session.state))}
+                  {translate(stateLabelKey(summary.session.state), lang)}
                 </span>
                 {summary.active && (
                   <span className="rounded bg-accent/15 px-1 py-0.5 text-[9px] font-semibold text-accent">
-                    {t(lang, 'recordingDatabaseActiveBadge')}
+                    {translate('recordingDatabaseActiveBadge', lang)}
                   </span>
                 )}
                 <span className="ml-auto font-mono text-[9px] text-text-secondary">
@@ -320,7 +320,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                     void openSession(summary.session.id);
                   }}
                   className="rounded p-0.5 text-text-secondary hover:bg-bg-hover hover:text-accent"
-                  title={t(lang, 'recordingDatabaseOpenSession')}
+                  title={translate('recordingDatabaseOpenSession', lang)}
                 >
                   <ExternalLink size={10} />
                 </button>
@@ -329,8 +329,8 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                 {summary.session.id}
               </div>
               <div className="mt-0.5 flex flex-wrap gap-x-2 text-[9px] text-text-secondary">
-                <span>{summary.batch_count} {t(lang, 'recordingDatabaseBatches')}</span>
-                <span>{summary.binding_count} {t(lang, 'recordingDatabaseChannels')}</span>
+                <span>{summary.batch_count} {translate('recordingDatabaseBatches', lang)}</span>
+                <span>{summary.binding_count} {translate('recordingDatabaseChannels', lang)}</span>
                 <span>{formatDurationUs(duration)}</span>
               </div>
               <div className="mt-0.5 text-[9px] text-text-secondary">
@@ -346,10 +346,10 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                       attemptSelect(summary);
                     }}
                     className="inline-flex items-center gap-1 text-[9px] text-text-secondary hover:text-accent disabled:opacity-disabled"
-                    title={paused ? t(lang, 'recordingDatabaseSetActive') : t(lang, 'recordingDatabasePausedOnlyHint')}
+                    title={paused ? translate('recordingDatabaseSetActive', lang) : translate('recordingDatabasePausedOnlyHint', lang)}
                   >
                     <CornerUpLeft size={10} />
-                    {t(lang, 'recordingDatabaseSetActive')}
+                    {translate('recordingDatabaseSetActive', lang)}
                   </button>
                 )}
                 <button
@@ -360,10 +360,10 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
                     requestDelete(summary);
                   }}
                   className="inline-flex items-center gap-1 text-[9px] text-text-danger hover:text-text-danger-strong disabled:opacity-disabled"
-                  title={t(lang, 'recordingDatabaseDelete')}
+                  title={translate('recordingDatabaseDelete', lang)}
                 >
                   <Trash2 size={10} />
-                  {t(lang, 'recordingDatabaseDelete')}
+                  {translate('recordingDatabaseDelete', lang)}
                 </button>
               </div>
             </div>
@@ -371,7 +371,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
         })}
         {sessions.length === 0 && (
           <div className="p-4 text-center text-[11px] text-text-secondary">
-            {t(lang, 'recordingDatabaseNoSessions')}
+            {translate('recordingDatabaseNoSessions', lang)}
           </div>
         )}
       </div>

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useAppStore } from '../../../store/appStore';
 import { PortPicker } from '../PortPicker';
 import type { PortInfo } from '../../../types';
@@ -35,7 +36,7 @@ describe('PortPicker', () => {
       });
     });
 
-    render(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
+    renderWithI18n(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
 
     expect(screen.getByText('USB-SERIAL CH340 (COM3)')).toBeInTheDocument();
     expect(screen.getByText(/USB-SERIAL CH340 · wch\.cn/)).toBeInTheDocument();
@@ -51,7 +52,7 @@ describe('PortPicker', () => {
       });
     });
 
-    render(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
+    renderWithI18n(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
 
     // product 行渲染一次，description 行因与 product 相同被去重不渲染
     expect(screen.getAllByText(/USB-SERIAL CH340/).length).toBe(1);
@@ -64,7 +65,7 @@ describe('PortPicker', () => {
       });
     });
 
-    render(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
+    renderWithI18n(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
 
     expect(screen.queryByText('USB-SERIAL CH340 (COM3)')).not.toBeInTheDocument();
     expect(screen.getByText(/USB-SERIAL CH340 · wch\.cn/)).toBeInTheDocument();
@@ -80,7 +81,7 @@ describe('PortPicker', () => {
       });
     });
 
-    render(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
+    renderWithI18n(<PortPicker selectedPortName="" onSelect={() => { return undefined; }} />);
     const input = screen.getByPlaceholderText(/Filter ports/i);
     fireEvent.change(input, { target: { value: 'stlink' } });
 

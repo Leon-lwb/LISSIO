@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { sendCanFrame } from '../../../lib/buffers/canSubscription';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { Send, Clock, AlertCircle } from 'lucide-react';
 import type { CanFrame } from '../../../types';
 import { errorText } from '../../../types/errors';
@@ -45,7 +45,7 @@ export function CanSender() {
       );
       const anyTransport = nodes.find((n) => n.type === 'acquisition' && n.data.tabId === useAppStore.getState().activeControlTabId);
       const targetId = canNode?.id ?? anyTransport?.id;
-      if (!targetId) throw new Error(t(lang, 'noTransportNode'));
+      if (!targetId) throw new Error(translate('noTransportNode', lang));
 
       const id = parseInt(idText.replace(/^0x/i, ''), 16);
       if (isNaN(id)) throw new Error('无效 ID');
@@ -76,7 +76,7 @@ export function CanSender() {
     <div className="h-full flex flex-col overflow-hidden bg-bg-editor">
       {/* 发送表单 */}
       <div className="p-3 sm:p-4 border-b border-border bg-bg-panel-header flex-shrink-0 overflow-y-auto">
-        <h3 className="text-sm font-semibold text-text-primary mb-3">{t(lang, 'canSender')}</h3>
+        <h3 className="text-sm font-semibold text-text-primary mb-3">{translate('canSender', lang)}</h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
           <div>
@@ -112,7 +112,7 @@ export function CanSender() {
               onChange={(e) => setExtended(e.target.checked)}
               className="accent-accent w-3.5 h-3.5"
             />
-            <span className="text-text-secondary">{t(lang, 'extendedFrame')}</span>
+            <span className="text-text-secondary">{translate('extendedFrame', lang)}</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -121,13 +121,13 @@ export function CanSender() {
               onChange={(e) => setRtr(e.target.checked)}
               className="accent-accent w-3.5 h-3.5"
             />
-            <span className="text-text-secondary">{t(lang, 'remoteFrame')}</span>
+            <span className="text-text-secondary">{translate('remoteFrame', lang)}</span>
           </label>
         </div>
 
         {!rtr && (
           <div className="mb-3">
-            <label className="block text-[10px] uppercase tracking-wide text-text-secondary mb-1">{t(lang, 'dataHex')}</label>
+            <label className="block text-[10px] uppercase tracking-wide text-text-secondary mb-1">{translate('dataHex', lang)}</label>
             <input
               type="text"
               className="w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-mono focus:outline-none focus:border-accent transition-colors"
@@ -151,7 +151,7 @@ export function CanSender() {
           onClick={() => { void handleSend(); }}
         >
           <Send size={14} />
-          {t(lang, 'send')}
+          {translate('send', lang)}
         </button>
       </div>
 
@@ -159,12 +159,12 @@ export function CanSender() {
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="px-3 sm:px-4 py-1.5 border-b border-border text-[10px] font-semibold uppercase tracking-wide text-text-secondary flex items-center gap-1.5 sticky top-0 bg-bg-panel-header z-10">
           <Clock size={11} />
-          {t(lang, 'sendHistory')}
+          {translate('sendHistory', lang)}
           <span className="ml-auto text-text-secondary font-mono">{history.length}</span>
         </div>
         {history.length === 0 ? (
           <div className="flex items-center justify-center h-32 text-text-secondary text-xs">
-            {t(lang, 'noSendHistory')}
+            {translate('noSendHistory', lang)}
           </div>
         ) : (
           <div className="font-mono text-xs">

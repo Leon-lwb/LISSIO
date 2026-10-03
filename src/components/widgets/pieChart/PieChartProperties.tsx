@@ -5,7 +5,7 @@
 import { memo } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { TextField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -18,22 +18,22 @@ export const PieChartProperties = memo(function PieChartProperties({ widget, upd
   return (
     <section className="mt-3 pt-3 border-t border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="section-heading section-heading--micro">{t(lang, 'pieChartSegments')}</span>
+        <span className="section-heading section-heading--micro">{translate('pieChartSegments', lang)}</span>
         <button type="button" className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={() => patch({ segments: [...segments, `Segment ${segments.length + 1}`] })}
-          title={t(lang, 'addSegment')} aria-label={t(lang, 'addSegment')}><Plus size={13} /></button>
+          title={translate('addSegment', lang)} aria-label={translate('addSegment', lang)}><Plus size={13} /></button>
       </div>
       <div className="flex flex-col gap-2">
         {segments.map((seg, index) => (
           <div key={index} className="flex items-center gap-1">
             <div className="flex-1 min-w-0">
-              <TextField label={`${t(lang, 'segmentName')} ${index + 1}`} value={seg}
+              <TextField label={`${translate('segmentName', lang)} ${index + 1}`} value={seg}
                 onCommit={(next) => patch({ segments: segments.map((item, i) => (i === index ? next : item)) })} />
             </div>
             <button type="button" disabled={segments.length <= 1}
               className="w-6 h-6 self-end mb-2 flex items-center justify-center rounded hover:bg-bg-hover disabled:opacity-disabled flex-shrink-0"
               onClick={() => patch({ segments: segments.filter((_, i) => i !== index) })}
-              aria-label={`${t(lang, 'segmentName')} ${index + 1}`}><Trash2 size={12} /></button>
+              aria-label={`${translate('segmentName', lang)} ${index + 1}`}><Trash2 size={12} /></button>
           </div>
         ))}
       </div>

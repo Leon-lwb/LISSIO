@@ -19,7 +19,7 @@ import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
 import { useLayoutStore, AI_FLOAT_MIN_W, AI_FLOAT_MIN_H } from './store/layoutStore';
 import { useUpdateStore } from './store/updateStore';
-import { t } from './i18n';
+import { useTranslation } from './i18n';
 import { openDataPanelAndReveal } from './lib/utils/revealDataTab';
 import { useCanFrameSubscription } from './lib/buffers/useCanFrameSubscription';
 import { resolveStartupFlow } from './lib/startup/phases';
@@ -45,7 +45,7 @@ function App() {
   const sidebarView = useAppStore((s) => s.sidebarView);
   const sidebarVisible = useAppStore((s) => s.sidebarVisible);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
-  const lang = useAppStore((s) => s.lang);
+  const { t } = useTranslation();
 
   const refreshPorts = useAppStore((s) => s.refreshPorts);
   const openSettings = useSettingsStore((s) => s.open);
@@ -102,32 +102,32 @@ function App() {
     () => [
       {
         id: 'settings',
-        label: t(lang, 'settings'),
+        label: t('settings'),
         icon: <Settings />,
         shortcut: 'Ctrl+,',
         onClick: openSettings,
       },
       {
         id: 'about',
-        label: t(lang, 'about'),
+        label: t('about'),
         icon: <Info />,
         onClick: openAbout,
       },
       { kind: 'separator' as const },
       {
         id: 'refresh-ports',
-        label: t(lang, 'refreshPorts'),
+        label: t('refreshPorts'),
         icon: <RefreshCw />,
         onClick: () => { void refreshPorts(); },
       },
       {
         id: 'toggle-sidebar',
-        label: sidebarVisible ? t(lang, 'contextMenuHideSidebar') : t(lang, 'contextMenuShowSidebar'),
+        label: sidebarVisible ? t('contextMenuHideSidebar') : t('contextMenuShowSidebar'),
         icon: <PanelLeft />,
         onClick: () => toggleSidebar(sidebarView),
       },
     ],
-    [lang, openSettings, openAbout, refreshPorts, sidebarVisible, sidebarView, toggleSidebar]
+    [t, openSettings, openAbout, refreshPorts, sidebarVisible, sidebarView, toggleSidebar]
   );
   const onAppContextMenu = useContextMenu(defaultMenuItems);
 

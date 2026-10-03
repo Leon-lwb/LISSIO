@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { useEffect, type ReactNode } from 'react';
 
 import {
@@ -42,7 +43,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('运行中且跟随最新时不显示角标', async () => {
     await act(async () => {
       setWorkspaceRunState('running');
-      render(panel(<><Probe /><LiveStatusBadge panelKey="panel-1" /></>));
+      renderWithI18n(panel(<><Probe /><LiveStatusBadge panelKey="panel-1" /></>));
       await Promise.resolve();
     });
     expect(screen.queryByTestId('display-frozen-badge')).toBeNull();
@@ -51,7 +52,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('暂停时显示「非实时」角标', async () => {
     await act(async () => {
       setWorkspaceRunState('running');
-      render(panel(<><Probe /><LiveStatusBadge panelKey="panel-1" /></>));
+      renderWithI18n(panel(<><Probe /><LiveStatusBadge panelKey="panel-1" /></>));
       await Promise.resolve();
     });
     act(() => {
@@ -64,7 +65,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('运行中但面板离开最新时显示角标', async () => {
     await act(async () => {
       setWorkspaceRunState('running');
-      render(panel(<><Probe following={false} /><LiveStatusBadge panelKey="panel-1" /></>));
+      renderWithI18n(panel(<><Probe following={false} /><LiveStatusBadge panelKey="panel-1" /></>));
       await Promise.resolve();
     });
     expect(screen.getByTestId('display-frozen-badge')).toBeTruthy();
@@ -73,7 +74,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('非实时时给面板内容区描警示色边框 (不改面板底色)', async () => {
     await act(async () => {
       setWorkspaceRunState('running');
-      render(panel(<><Probe /><FrozenPanelOutline panelKey="panel-1" /></>));
+      renderWithI18n(panel(<><Probe /><FrozenPanelOutline panelKey="panel-1" /></>));
       await Promise.resolve();
     });
     expect(screen.queryByTestId('display-frozen-outline')).toBeNull();
@@ -91,7 +92,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('角标使用 warning token 语义色', async () => {
     await act(async () => {
       setWorkspaceRunState('paused');
-      render(panel(<LiveStatusBadge panelKey="panel-1" />));
+      renderWithI18n(panel(<LiveStatusBadge panelKey="panel-1" />));
       await Promise.resolve();
     });
     const badge = screen.getByTestId('display-frozen-badge');
@@ -103,7 +104,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
     const onGoLive = vi.fn();
     await act(async () => {
       setWorkspaceRunState('paused');
-      render(panel(<Probe onGoLive={onGoLive} />));
+      renderWithI18n(panel(<Probe onGoLive={onGoLive} />));
       await Promise.resolve();
     });
     expect(onGoLive).not.toHaveBeenCalled();
@@ -117,7 +118,7 @@ describe('PanelLiveness 时效绑定与角标', () => {
   it('没有 Provider 时面板绑定安全退化 (不抛错也不上报)', async () => {
     await act(async () => {
       setWorkspaceRunState('running');
-      render(<Probe following={false} />);
+      renderWithI18n(<Probe following={false} />);
       await Promise.resolve();
     });
     expect(screen.queryByTestId('display-frozen-badge')).toBeNull();

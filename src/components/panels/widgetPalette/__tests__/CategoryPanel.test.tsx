@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiscoveredEndpoint } from '../../../../types';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { ActivityBar } from '../../../layout/ActivityBar';
 import { CategoryPanel } from '../CategoryPanel';
 import { useAppStore } from '../../../../store/appStore';
@@ -69,7 +70,7 @@ const flush = () => act(async () => { await Promise.resolve(); });
 
 describe('CategoryPanel', () => {
   it('连续渲染各分类条目', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     expect(screen.getByRole('button', { name: 'Add' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Square Root' })).toBeInTheDocument();
@@ -78,7 +79,7 @@ describe('CategoryPanel', () => {
   });
 
   it('切换 activeCategory 保留连续目录', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     act(() => useAppStore.setState({ activeCategory: 'input' }));
     expect(screen.getByRole('button', { name: 'Knob' })).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe('CategoryPanel', () => {
   });
 
   it('搜索框过滤全部分类的条目', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     fireEvent.change(screen.getByPlaceholderText('Search devices, widgets, categories…'), { target: { value: 'root' } });
     expect(screen.getByRole('button', { name: 'Square Root' })).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe('CategoryPanel', () => {
   });
 
   it('点击文字目录清除搜索并定位分类，支持重复跳转', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'waveform' } });
     fireEvent.click(screen.getByRole('button', { name: 'Signal processing' }));
@@ -107,7 +108,7 @@ describe('CategoryPanel', () => {
   });
 
   it('分类跳转滚动目录到目标标题，而不切掉其他分类', async () => {
-    const { container } = render(<CategoryPanel />);
+    const { container } = renderWithI18n(<CategoryPanel />);
     await flush();
     const list = container.querySelector<HTMLElement>('[data-tour="palette-list"]')!;
     const target = screen.getByRole('region', { name: 'Interactive inputs' });
@@ -122,7 +123,7 @@ describe('CategoryPanel', () => {
   });
 
   it('滚动同步活动栏与顶部导航，不把滚动位置吸回分类开头', async () => {
-    const { container } = render(<><ActivityBar activeView="category" onSelect={() => undefined} /><CategoryPanel /></>);
+    const { container } = renderWithI18n(<><ActivityBar activeView="category" onSelect={() => undefined} /><CategoryPanel /></>);
     await flush();
     const list = container.querySelector<HTMLElement>('[data-tour="palette-list"]')!;
     const regions = screen.getAllByRole('region');
@@ -143,7 +144,7 @@ describe('CategoryPanel', () => {
   });
 
   it('滚动搜索结果时同步分类并保留查询', async () => {
-    const { container } = render(<CategoryPanel />);
+    const { container } = renderWithI18n(<CategoryPanel />);
     await flush();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'waveform' } });
     const list = container.querySelector<HTMLElement>('[data-tour="palette-list"]')!;
@@ -159,7 +160,7 @@ describe('CategoryPanel', () => {
   });
 
   it('分类跳转请求平滑滚动', async () => {
-    const { container } = render(<CategoryPanel />);
+    const { container } = renderWithI18n(<CategoryPanel />);
     await flush();
     const list = container.querySelector<HTMLElement>('[data-tour="palette-list"]')!;
     const scrollTo = vi.fn();
@@ -179,7 +180,7 @@ describe('CategoryPanel', () => {
       adapterId: 'future', discoveryId: 'COM3', displayName: 'USB sensor',
       configurationPatch: { port: 'COM3' }, metadata: {},
     }] as DiscoveredEndpoint[]);
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     const device = await screen.findByRole('button', { name: /USB sensor/ });
     const begin = vi.spyOn(dockDrag, 'begin').mockImplementation(() => undefined);
     fireEvent.pointerDown(device, { button: 0 });
@@ -200,7 +201,7 @@ describe('CategoryPanel', () => {
   });
 
   it('搜索无匹配时显示空态提示', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     fireEvent.change(screen.getByPlaceholderText('Search devices, widgets, categories…'), { target: { value: 'zzz-nothing' } });
     expect(screen.getByText('No matches')).toBeInTheDocument();
@@ -209,7 +210,7 @@ describe('CategoryPanel', () => {
   it('transport 分类加载并渲染后端 capability 设备条目', async () => {
     vi.spyOn(api, 'listAdapterCapabilities').mockResolvedValue([adapter]);
     useAppStore.setState({ activeCategory: 'transport' });
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     fireEvent.click(await screen.findByText('Add a connection manually'));
     expect(await screen.findByRole('button', { name: 'Future interface' })).toBeInTheDocument();
   });
@@ -229,7 +230,7 @@ describe('CategoryPanel', () => {
       metadata: { vid: 0x1a86, pid: 0x7523, serialNumber: 'ABC' },
     }]);
     useAppStore.setState({ activeCategory: 'transport' });
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     const device = await screen.findByRole('button', { name: /USB sensor.*VID/ });
     expect(screen.getByText('VID 1A86 · PID 7523')).toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '1a86' } });
@@ -254,7 +255,7 @@ describe('CategoryPanel', () => {
       metadata: { portType: 'Bluetooth', description: 'Headset' },
     }]);
     useAppStore.setState({ activeCategory: 'transport' });
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     expect(await screen.findByText('Headset')).toBeInTheDocument();
     expect(screen.getByText('/dev/cu.Headset')).toBeInTheDocument();
     expect(screen.getByText('Bluetooth serial')).toBeInTheDocument();
@@ -275,7 +276,7 @@ describe('CategoryPanel', () => {
       metadata: { deviceId: 'serial:COM3' },
     }]));
     useAppStore.setState({ activeCategory: 'transport' });
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     expect(await screen.findAllByText('USB bridge')).toHaveLength(1);
     fireEvent.change(screen.getByRole('combobox'), { target: { value: 'rtu:primary' } });
     fireEvent.click(screen.getByRole('button', { name: /USB bridge/ }));
@@ -286,7 +287,7 @@ describe('CategoryPanel', () => {
   });
 
   it('点击条目添加对应控件 (含 op 变体)', async () => {
-    render(<CategoryPanel />);
+    renderWithI18n(<CategoryPanel />);
     await flush();
     fireEvent.click(screen.getByRole('button', { name: 'Add' }));
     // 目录变体条目经 prepare 创建 (异步), 文档显示名取变体 fallbackLabel

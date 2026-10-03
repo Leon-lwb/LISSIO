@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/tauri/tauri';
 import { notify } from '../../lib/tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 import { useCanLoadAlarmStore } from '../../store/canLoadAlarmStore';
 
@@ -37,7 +37,7 @@ export function CanLoadAlarm() {
           if (now - lastAlarmRef.current > 5000) {
             lastAlarmRef.current = now;
             notify.warn(
-              t(lang, 'canLoadThresholdAlarm'),
+              translate('canLoadThresholdAlarm', lang),
               `${(snap.load_ratio * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(0)}%`,
               { source: 'can-load-alarm' }
             );
@@ -54,7 +54,7 @@ export function CanLoadAlarm() {
   return (
     <div
       className="flex items-center gap-1.5 px-1.5"
-      title={`${t(lang, 'canLoadThresholdAlarm')}: ${(loadRatio * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(0)}%`}
+      title={`${translate('canLoadThresholdAlarm', lang)}: ${(loadRatio * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(0)}%`}
     >
       <span className="w-2 h-2 rounded-full bg-red animate-pulse inline-block" />
       <span className="text-red font-mono text-[10px]">

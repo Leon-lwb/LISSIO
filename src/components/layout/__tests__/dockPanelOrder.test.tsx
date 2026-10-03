@@ -35,7 +35,8 @@ vi.mock('../DockCardFrame', () => ({
   DockCardFrame: ({ cardId }: { cardId: string }) => <div data-probe-card={cardId} />,
 }));
 
-import { act, render } from '@testing-library/react';
+import { act } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { DockLayout } from '../DockLayout';
 import { useDockStore } from '../../../store/dockStore';
 import { useAppStore } from '../../../store/appStore';
@@ -51,7 +52,7 @@ describe('DockLayout 面板顺序', () => {
   });
 
   it('每个 split 的 Panel 都带 1..N 的显式 order, 且自左/上向右/下递增', () => {
-    const { container } = render(<DockLayout />);
+    const { container } = renderWithI18n(<DockLayout />);
 
     const groups = [...container.querySelectorAll('[data-probe-group]')];
     expect(groups.length).toBeGreaterThan(0);
@@ -69,7 +70,7 @@ describe('DockLayout 面板顺序', () => {
   });
 
   it('卡片被摘除后重建时, 同一 split 的 order 仍然连续', () => {
-    const { container } = render(<DockLayout />);
+    const { container } = renderWithI18n(<DockLayout />);
     const before = [...container.querySelectorAll('[data-probe-group]')].length;
 
     // 模拟"关闭卡片 → 空卡片裁剪"导致 split 折叠, 再重排布局树
@@ -95,7 +96,7 @@ describe('DockLayout 面板顺序', () => {
   });
 
   it('默认布局下卡片按树结构渲染 (回归: 面板树未被破坏)', () => {
-    const { container } = render(<DockLayout />);
+    const { container } = renderWithI18n(<DockLayout />);
     const cards = [...container.querySelectorAll('[data-probe-card]')].map((el) =>
       el.getAttribute('data-probe-card')
     );

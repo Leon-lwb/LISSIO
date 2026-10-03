@@ -4,7 +4,7 @@ import type { SidebarView } from '../../store/appStore';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
 import { dockDrag } from '../../lib/dockDrag';
-import { t } from '../../i18n';
+import { translate, type TranslationKey } from '../../i18n';
 import { CategoryPanel } from '../panels/widgetPalette';
 import { QuickStartPanel } from '../panels/QuickStartPanel';
 import { DataPanelsPanel } from '../panels/DataPanelsPanel';
@@ -30,20 +30,20 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
   const onContextMenu = useContextMenu([
     {
       id: 'toggle-sidebar',
-      label: sidebarVisible ? t(lang, 'contextMenuHideSidebar') : t(lang, 'contextMenuShowSidebar'),
+      label: sidebarVisible ? translate('contextMenuHideSidebar', lang) : translate('contextMenuShowSidebar', lang),
       icon: <PanelLeft />,
       onClick: () => transitionStore(() => toggleSidebar(sidebarView)),
     },
     { kind: 'separator' },
     {
       id: 'refresh-ports',
-      label: t(lang, 'refresh'),
+      label: translate('refresh', lang),
       icon: <RefreshCw />,
       onClick: () => { void refreshPorts(); },
     },
   ]);
 
-  const titleMap: Partial<Record<SidebarView, Parameters<typeof t>[1]>> = {
+  const titleMap: Partial<Record<SidebarView, TranslationKey>> = {
     devices: 'deviceTreeTitle',
     quickstart: 'quickStart',
     panels: 'menuPanel',
@@ -51,7 +51,7 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
   };
 
   const activeCategory = useAppStore((s) => s.activeCategory);
-  const title = view === 'category' ? categoryLabel(lang, activeCategory) : t(lang, titleMap[view] ?? 'quickStart');
+  const title = view === 'category' ? categoryLabel(lang, activeCategory) : translate(titleMap[view] ?? 'quickStart', lang);
 
   // 标题栏为拖拽源 — 拖到窗口左/右边缘可切换停靠侧 (dockDrag 控制器)
   const draggingSidebar = useLayoutStore((s) => s.draggingSidebar);
@@ -70,7 +70,7 @@ export const Sidebar = memo(function Sidebar({ view }: SidebarProps) {
           if ((e.target as HTMLElement).closest('button, input')) return;
           dockDrag.begin(e, { kind: 'sidebar', label: title });
         }}
-        title={t(lang, 'dragToDock')}
+        title={translate('dragToDock', lang)}
       >
         <span className={view === 'category' ? 'h-1 w-8 rounded-full bg-border' : undefined}>{view !== 'category' && title}</span>
       </div>

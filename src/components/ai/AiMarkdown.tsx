@@ -8,7 +8,7 @@ import { Check, Copy } from 'lucide-react';
 import { platform } from '../../lib/platform';
 import { splitStreamingMarkdown } from '../../lib/ai/streamMarkdown';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 /// 从 hast 节点提取纯文本 — hljs 高亮会把代码拆成多个 span, 复制需还原原文
 function hastText(node: unknown): string {
@@ -39,7 +39,7 @@ function CodeBlock({ lang, raw, children }: { lang: string; raw: string; childre
         <button
           className="ml-auto p-0.5 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary"
           onClick={() => void onCopy()}
-          title={t(lang2, 'aiCopy')}
+          title={translate('aiCopy', lang2)}
         >
           {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
         </button>

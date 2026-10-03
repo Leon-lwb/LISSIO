@@ -18,7 +18,7 @@ import { useOnboardingStore } from '../../store/onboardingStore';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
-import { t } from '../../i18n';
+import { translate, type TranslationKey } from '../../i18n';
 import { CATEGORY_ICONS, PALETTE_CATEGORY_IDS, categoryLabel } from '../panels/widgetPalette/paletteSections';
 
 interface ActivityBarProps {
@@ -43,38 +43,38 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
   const onContextMenu = useContextMenu([
     {
       id: 'toggle-sidebar',
-      label: sidebarVisible ? t(lang, 'contextMenuHideSidebar') : t(lang, 'contextMenuShowSidebar'),
+      label: sidebarVisible ? translate('contextMenuHideSidebar', lang) : translate('contextMenuShowSidebar', lang),
       icon: <PanelLeft />,
       onClick: () => transitionStore(() => toggleSidebar(sidebarView)),
     },
     { kind: 'separator' },
     {
       id: 'refresh-ports',
-      label: t(lang, 'refresh'),
+      label: translate('refresh', lang),
       icon: <Cable />,
       onClick: () => { void refreshPorts(); },
     },
     {
       id: 'settings',
-      label: t(lang, 'settings'),
+      label: translate('settings', lang),
       icon: <Settings />,
       onClick: openSettings,
     },
     {
       id: 'about',
-      label: t(lang, 'about'),
+      label: translate('about', lang),
       icon: <Info />,
       onClick: openAbout,
     },
     {
       id: 'help',
-      label: t(lang, 'helpCenterOpen'),
+      label: translate('helpCenterOpen', lang),
       icon: <HelpCircle />,
       onClick: openHelp,
     },
   ]);
 
-  const items: { view: SidebarView; icon: React.ReactNode; key: Parameters<typeof t>[1] }[] = [
+  const items: { view: SidebarView; icon: React.ReactNode; key: TranslationKey }[] = [
     { view: 'devices', icon: <Network size={22} />, key: 'deviceTreeTitle' },
     { view: 'quickstart', icon: <Rocket size={22} />, key: 'quickStart' },
     { view: 'panels', icon: <Layers size={22} />, key: 'menuPanel' },
@@ -96,7 +96,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
               ? "text-text-bright bg-bg-active"
               : "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
           )}
-          title={t(lang, item.key)}
+          title={translate(item.key, lang)}
           onClick={() => transitionStore(() => onSelect(item.view))}
           onKeyDown={activateOnKeyboard}
           role="button"
@@ -137,7 +137,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
       <div
         data-tour="help"
         className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
-        title={t(lang, 'helpCenterOpen')}
+        title={translate('helpCenterOpen', lang)}
         onClick={openHelp}
         onKeyDown={activateOnKeyboard}
         role="button"
@@ -147,7 +147,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
       </div>
       <div
         className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
-        title={t(lang, 'about')}
+        title={translate('about', lang)}
         onClick={openAbout}
         onKeyDown={activateOnKeyboard}
         role="button"
@@ -157,7 +157,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
       </div>
       <div
         className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
-        title={t(lang, 'settings')}
+        title={translate('settings', lang)}
         onClick={() => openSettings()}
         onKeyDown={activateOnKeyboard}
         role="button"

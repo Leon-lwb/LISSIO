@@ -5,7 +5,7 @@ import { formatAiKindError } from '../lib/ai/aiErrors';
 import { checkAiProviderSettings } from '../settings/aiProvider';
 import { useSettingsStore } from './settingsStore';
 import { useAppStore } from './appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import type { AiAttachment, AiViewItem } from '../types';
 import type { AiChatState } from './aiChatStoreTypes';
 import {
@@ -284,7 +284,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       if (issue) {
         const lang = useAppStore.getState().lang;
         const view = formatAiKindError(issue.kind, issue.params, '', lang);
-        notify.error(t(lang, 'aiSendBlocked'), view.summary, { source: 'ai-send' });
+        notify.error(translate('aiSendBlocked', lang), view.summary, { source: 'ai-send' });
         return;
       }
 
@@ -324,7 +324,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       if (issue) {
         const lang = useAppStore.getState().lang;
         const view = formatAiKindError(issue.kind, issue.params, '', lang);
-        notify.error(t(lang, 'aiSendBlocked'), view.summary, { source: 'ai-send' });
+        notify.error(translate('aiSendBlocked', lang), view.summary, { source: 'ai-send' });
         return;
       }
       // 本地乐观截断: 移除最后一条用户条目之后的条目 (与后端 truncate 对称)

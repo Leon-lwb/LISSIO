@@ -11,7 +11,7 @@ import {
   FileWarning,
   type LucideIcon,
 } from 'lucide-react';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import type { RawDataGrouping, RawDataRepr, DirectionFilter } from './rawDataViewHelpers';
 import { isTextEncoding } from '../../../lib/utils/textEncoding';
@@ -142,15 +142,15 @@ export function RawDataViewHeader({
               variant="selected"
               active={grouping === opt.value}
               disabled={isNum || isStr}
-              label={t(lang, opt.label)}
+              label={translate(opt.label, lang)}
               onClick={() => onGroupingChange(opt.value)}
             />
           ))}
         </div>
 
         <select
-          aria-label={t(lang, 'decodeMode')}
-          title={t(lang, 'decodeMode')}
+          aria-label={translate('decodeMode', lang)}
+          title={translate('decodeMode', lang)}
           value={repr}
           disabled={isNum || isStr}
           onChange={(e) => onReprChange(e.target.value as RawDataRepr)}
@@ -162,7 +162,7 @@ export function RawDataViewHeader({
               value={opt.value}
               disabled={grouping === 'terminal' && !isTextEncoding(opt.value)}
             >
-              {t(lang, opt.label)}
+              {translate(opt.label, lang)}
             </option>
           ))}
         </select>
@@ -175,8 +175,8 @@ export function RawDataViewHeader({
               variant="selected"
               active={directionFilter === opt.value}
               disabled={isNum || isStr}
-              title={t(lang, opt.label)}
-              label={t(lang, opt.label)}
+              title={translate(opt.label, lang)}
+              label={translate(opt.label, lang)}
               labelMode="responsive"
               icon={
                 <opt.icon
@@ -200,7 +200,7 @@ export function RawDataViewHeader({
           className="w-[140px] flex-shrink-0"
           debounceMs={150}
           disabled={isNum}
-          placeholder={t(lang, 'rawDataSearchPlaceholder')}
+          placeholder={translate('rawDataSearchPlaceholder', lang)}
           value={searchTerm}
           onChange={onSearchTermChange}
         />
@@ -215,20 +215,20 @@ export function RawDataViewHeader({
                   ? 'text-yellow border-yellow/40 bg-yellow/10'
                   : 'text-text-secondary border-border bg-bg-input'
             }`}
-            title={t(lang, connState === 'Error' ? 'connError' : connState === 'Connecting' ? 'connecting' : 'notConnected')}
+            title={translate(connState === 'Error' ? 'connError' : connState === 'Connecting' ? 'connecting' : 'notConnected', lang)}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                 connState === 'Error' ? 'bg-red animate-pulse' : connState === 'Connecting' ? 'bg-yellow animate-pulse' : 'bg-text-muted'
               }`}
             />
-            {t(lang, connState === 'Error' ? 'connError' : connState === 'Connecting' ? 'connecting' : 'notConnected')}
+            {translate(connState === 'Error' ? 'connError' : connState === 'Connecting' ? 'connecting' : 'notConnected', lang)}
           </span>
         )}
 
         {channelOptions.length > 0 && (
           <label className="flex flex-shrink-0 items-center gap-1 text-xs text-text-secondary">
-            <span>{t(lang, 'rawDataChannel')}</span>
+            <span>{translate('rawDataChannel', lang)}</span>
             <select
               value={channel}
               onChange={(e) => onChannelChange(e.target.value)}
@@ -260,7 +260,7 @@ export function RawDataViewHeader({
               {droppedBytes > 0 && (
                 <span
                   className="text-yellow flex items-center gap-0.5 cursor-pointer hover:underline"
-                  title={t(lang, 'rawDataDropped')}
+                  title={translate('rawDataDropped', lang)}
                   onClick={onDroppedInfoOpen}
                   onKeyDown={activateOnKeyboard}
                   role="button"
@@ -283,8 +283,8 @@ export function RawDataViewHeader({
               size="lg"
               variant={copyFeedback ? 'success' : 'default'}
               disabled={isNum}
-              title={t(lang, 'copySelected')}
-              label={t(lang, 'copySelected')}
+              title={translate('copySelected', lang)}
+              label={translate('copySelected', lang)}
               labelMode="responsive-wide"
               icon={copyFeedback ? <Check /> : <Copy />}
               onClick={onCopySelected}
@@ -292,8 +292,8 @@ export function RawDataViewHeader({
             <ToolbarButton
               size="lg"
               disabled={isNum}
-              title={t(lang, 'clearSelection')}
-              label={t(lang, 'clearSelection')}
+              title={translate('clearSelection', lang)}
+              label={translate('clearSelection', lang)}
               labelMode="responsive-wide"
               icon={<X />}
               onClick={onClearSelection}
@@ -304,8 +304,8 @@ export function RawDataViewHeader({
         <ToolbarButton
           size="lg"
           active={showTimestamp}
-          title={t(lang, 'showTimestamp')}
-          label={t(lang, 'showTimestamp')}
+          title={translate('showTimestamp', lang)}
+          label={translate('showTimestamp', lang)}
           labelMode="responsive-wide"
           icon={<Clock />}
           aria-pressed={showTimestamp}
@@ -314,8 +314,8 @@ export function RawDataViewHeader({
         <ToolbarButton
           size="lg"
           active={autoScroll && !detached}
-          title={t(lang, 'autoScroll')}
-          label={t(lang, 'autoScroll')}
+          title={translate('autoScroll', lang)}
+          label={translate('autoScroll', lang)}
           labelMode="responsive-wide"
           icon={<ArrowDown />}
           aria-pressed={autoScroll && !detached}
@@ -329,8 +329,8 @@ export function RawDataViewHeader({
         <ToolbarButton
           size="lg"
           active={showSettings}
-          title={t(lang, 'settings')}
-          label={t(lang, 'settings')}
+          title={translate('settings', lang)}
+          label={translate('settings', lang)}
           labelMode="responsive-wide"
           icon={<Settings2 />}
           aria-pressed={showSettings}
@@ -339,8 +339,8 @@ export function RawDataViewHeader({
         <ToolbarButton
           size="lg"
           variant="danger"
-          title={t(lang, 'clear')}
-          label={t(lang, 'clear')}
+          title={translate('clear', lang)}
+          label={translate('clear', lang)}
           labelMode="responsive-wide"
           icon={<Trash2 />}
           onClick={onClear}

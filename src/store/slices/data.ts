@@ -3,7 +3,7 @@ import { waveformWindow } from '../../lib/buffers/dataBuffer';
 import { clearAllRawDataPreviewBuffers } from '../../lib/buffers/rawDataPreviewRegistry';
 import { isStructuralNode } from '../appStoreHelpers';
 import { notify, formatError } from '../../lib/tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { AppSlice } from './types';
 
 export interface DataSlice {
@@ -23,7 +23,7 @@ export const createDataSlice: AppSlice<DataSlice> = (_set, get) => {
         await api.clearRawDataBuffer();
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifClearBufferFailed'), formatError(e), { source: 'clearBuffer' });
+        notify.error(translate('notifClearBufferFailed', lang), formatError(e), { source: 'clearBuffer' });
       }
       clearAllRawDataPreviewBuffers();
       waveformWindow.clear();

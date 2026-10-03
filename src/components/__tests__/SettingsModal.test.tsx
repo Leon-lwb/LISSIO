@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { renderWithI18n } from '../../test/renderWithI18n';;
 import { SettingsModal } from '../SettingsModal';
 import { tauriMock } from '../../test/setup';
 import { useAppStore } from '../../store/appStore';
@@ -31,7 +32,7 @@ describe('SettingsModal AI prompt folder', () => {
   });
 
   it('opens the settings directory for the Markdown prompt', async () => {
-    render(<SettingsModal />);
+    renderWithI18n(<SettingsModal />);
 
     expect(screen.getByRole('dialog')).toHaveTextContent('ai-system-prompt.md');
     fireEvent.click(screen.getByRole('button', { name: '打开设置文件夹' }));
@@ -47,7 +48,7 @@ describe('SettingsModal AI prompt folder', () => {
         ? Promise.reject(new Error('permission denied'))
         : Promise.resolve(undefined)
     );
-    render(<SettingsModal />);
+    renderWithI18n(<SettingsModal />);
 
     fireEvent.click(screen.getByRole('button', { name: '打开设置文件夹' }));
 
@@ -63,7 +64,7 @@ describe('SettingsModal AI prompt folder', () => {
   });
 
   it('uses breadcrumbs for separate plugin and MCP second-level screens', () => {
-    render(<SettingsModal />);
+    renderWithI18n(<SettingsModal />);
 
     expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('设置');
     fireEvent.click(screen.getByRole('button', { name: '打开插件设置' }));
@@ -78,7 +79,7 @@ describe('SettingsModal AI prompt folder', () => {
   });
 
   it('keeps plugin master switches on the first level and gates plugin details', () => {
-    render(<SettingsModal />);
+    renderWithI18n(<SettingsModal />);
 
     fireEvent.click(screen.getByRole('checkbox', { name: '插件' }));
     fireEvent.click(screen.getByRole('button', { name: '打开插件设置' }));

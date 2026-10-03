@@ -1,7 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import { StepKnob } from './StepKnob';
 import { CurveRenderControls } from './CurveRenderControls';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import {
   V_PER_DIV,
   formatVPerDiv,
@@ -53,7 +53,7 @@ export function ChannelTabContent({
       </div>
 
       <div className="flex flex-col gap-1 py-1.5 border-b border-border">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'coupling')}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('coupling', lang)}</div>
         <select
           className="form-select"
           value={ch.coupling}
@@ -61,9 +61,9 @@ export function ChannelTabContent({
             onPatchChannel(idx, { coupling: e.target.value as Coupling })
           }
         >
-          <option value="DC">{t(lang, 'couplingDC')}</option>
-          <option value="AC">{t(lang, 'couplingAC')}</option>
-          <option value="GND">{t(lang, 'couplingGND')}</option>
+          <option value="DC">{translate('couplingDC', lang)}</option>
+          <option value="AC">{translate('couplingAC', lang)}</option>
+          <option value="GND">{translate('couplingGND', lang)}</option>
         </select>
       </div>
 
@@ -71,7 +71,7 @@ export function ChannelTabContent({
         // 共用 Y 模式: V/div/Position 在全部 Tab 统一设置, 这里只显示提示
         <div className="flex flex-col gap-1 py-1.5 border-b border-border">
           <div className="p-2 text-xs text-text-secondary bg-bg-input border border-dashed border-border rounded leading-relaxed">
-            {t(lang, 'sharedYHint')}
+            {translate('sharedYHint', lang)}
           </div>
         </div>
       ) : (
@@ -100,7 +100,7 @@ export function ChannelTabContent({
           </div>
 
           <div className="flex flex-col gap-1 py-1.5 border-b border-border last:border-b-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'position')}</div>
+            <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('position', lang)}</div>
             <div className="flex items-center gap-1 mt-0.5">
               <span className="text-[10px] text-text-secondary min-w-[24px]">Pos</span>
               <input
@@ -120,7 +120,7 @@ export function ChannelTabContent({
 
       {/* 曲线渲染方式 (per-channel, 不受 sharedY 影响) */}
       <div className="flex flex-col gap-1 py-1.5 border-b border-border last:border-b-0">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'curveRender')}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('curveRender', lang)}</div>
         <div className="mt-0.5">
           <CurveRenderControls
             render={ch.render}

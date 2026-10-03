@@ -1,7 +1,7 @@
 import type { RefObject } from 'react';
 import { Check, Copy, Download, X } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { formatTimeMs } from './wavechartFormatters';
 import { WaveformCursorReadout } from './WaveformCursorReadout';
 
@@ -62,14 +62,14 @@ export function WaveformChartOverlays({
               {/* 左上角提示: 按住 Ctrl/Cmd 隐藏光标 */}
               <div className="absolute top-1.5 right-2 z-[100] px-2 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded pointer-events-none select-none shadow whitespace-nowrap">
                 {cursorHidden
-                  ? t(lang, 'cursorHiddenHint')
-                  : (isMac ? '⌘ ' : 'Ctrl ') + t(lang, 'cursorHideHint')}
+                  ? translate('cursorHiddenHint', lang)
+                  : (isMac ? '⌘ ' : 'Ctrl ') + translate('cursorHideHint', lang)}
               </div>
 
               {/* 降载提示: 原始层装不下视图窗口, 由金字塔层提供真实包络 (不变量 2) */}
               {derate && (
                 <div className="absolute top-7 right-2 z-[100] px-2 py-0.5 text-[10px] text-text-warning bg-bg-editor/95 border border-warning/40 rounded pointer-events-none select-none shadow whitespace-nowrap">
-                  {t(lang, 'waveformDerated')} · tier {derate.tier} · Δ
+                  {translate('waveformDerated', lang)} · tier {derate.tier} · Δ
                   {derate.overflow}
                 </div>
               )}
@@ -82,21 +82,21 @@ export function WaveformChartOverlays({
                   </span>
                   <button
                     className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-                    title={t(lang, 'copySelection')}
+                    title={translate('copySelection', lang)}
                     onClick={() => { void onCopySelection(); }}
                   >
                     {copyFeedback ? <Check size={12} className="text-green" /> : <Copy size={12} />}
                   </button>
                   <button
                     className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-                    title={t(lang, 'exportSelection')}
+                    title={translate('exportSelection', lang)}
                     onClick={onExportSelection}
                   >
                     <Download size={12} />
                   </button>
                   <button
                     className="p-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
-                    title={t(lang, 'clearSelection')}
+                    title={translate('clearSelection', lang)}
                     onClick={onClearSelection}
                   >
                     <X size={12} />
@@ -109,11 +109,11 @@ export function WaveformChartOverlays({
                 <button
                   className={`absolute bottom-1.5 right-2 z-[100] px-2.5 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded cursor-pointer select-none shadow whitespace-nowrap transition-all duration-150 hover:bg-bg-hover hover:border-border/50 ${dynamicSeries ? 'text-orange border-orange/50 bg-orange/10' : ''}`}
                   onClick={onToggleDynamicSeries}
-                  title={t(lang, 'dynamicSeriesToggle')}
+                  title={translate('dynamicSeriesToggle', lang)}
                 >
                   {dynamicSeries
-                    ? t(lang, 'dynamicSeriesOn')
-                    : t(lang, 'dynamicSeriesOff')}
+                    ? translate('dynamicSeriesOn', lang)
+                    : translate('dynamicSeriesOff', lang)}
                 </button>
               )}
 
@@ -125,13 +125,13 @@ export function WaveformChartOverlays({
               />
               {snapshotError && !running && (
                 <div className="absolute bottom-2 left-2 z-[100] max-w-[70%] rounded border border-orange/50 bg-bg-editor/95 px-2 py-1 text-[10px] text-orange shadow">
-                  {t(lang, 'waveformSnapshotUnavailable')}: {snapshotError}
+                  {translate('waveformSnapshotUnavailable', lang)}: {snapshotError}
                 </div>
               )}
 
       {!isConnected && (
         <div className="absolute inset-0 flex items-center justify-center text-text-secondary text-sm pointer-events-none">
-          <span>{t(lang, 'emptyWaveform')}</span>
+          <span>{translate('emptyWaveform', lang)}</span>
         </div>
       )}
     </>

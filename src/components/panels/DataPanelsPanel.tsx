@@ -20,7 +20,7 @@ import {
 import { panelIconForTabType } from './registry/panelDefs';
 import { panelContractIssues, unsupportedPanels, useReconciledPanels } from './registry/reconcile';
 import { openDataPanelAndReveal, openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useEffect } from 'react';
 
 export function DataPanelsPanel() {
@@ -66,7 +66,7 @@ export function DataPanelsPanel() {
   return (
     <div className="flex flex-col h-full overflow-hidden gap-3">
       <Section
-        title={t(lang, 'dataPanelsStandaloneTitle')}
+        title={translate('dataPanelsStandaloneTitle', lang)}
         entries={standalone}
         onClick={(entry) => {
           // 属性面板: 创建时同步在画布右侧拆分专属小卡 (非并入数据卡)
@@ -80,7 +80,7 @@ export function DataPanelsPanel() {
       />
 
       <Section
-        title={t(lang, 'dataPanelsDerivedTitle')}
+        title={translate('dataPanelsDerivedTitle', lang)}
         entries={derived}
         onClick={(entry) => {
           // 派生面板: 已有同类 Tab 轮转 (多个 Waveform 时),
@@ -109,7 +109,7 @@ function UnsupportedSection({ panels }: { panels: ReturnType<typeof unsupportedP
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-text-secondary px-1">
-        {t(lang, 'dataPanelsUnsupportedTitle')}
+        {translate('dataPanelsUnsupportedTitle', lang)}
       </div>
       <div className="flex flex-col gap-1">
         {panels.map((panel) => (
@@ -121,7 +121,7 @@ function UnsupportedSection({ panels }: { panels: ReturnType<typeof unsupportedP
           >
             <AlertTriangle size={14} />
             <span className="truncate">
-              {panel.labelKey === null ? panel.panelKind : t(lang, panel.labelKey)}
+              {panel.labelKey === null ? panel.panelKind : translate(panel.labelKey, lang)}
             </span>
           </button>
         ))}
@@ -154,10 +154,10 @@ function Section({ title, entries, onClick }: SectionProps) {
               disabled={!e.available}
               onClick={() => onClick(e)}
               className="flex items-center gap-2 px-2 h-8 bg-bg-input border border-border-subtle rounded text-[12px] text-text-secondary transition-colors hover:text-text-bright hover:border-accent/50 disabled:opacity-disabled disabled:cursor-not-allowed text-left"
-              title={e.available ? t(lang, e.labelKey) : `${t(lang, e.labelKey)} (${t(lang, 'panelOpenNoWidget')})`}
+              title={e.available ? translate(e.labelKey, lang) : `${translate(e.labelKey, lang)} (${translate('panelOpenNoWidget', lang)})`}
             >
               <Icon size={14} />
-              <span className="truncate">{t(lang, e.labelKey)}</span>
+              <span className="truncate">{translate(e.labelKey, lang)}</span>
             </button>
           );
         })}

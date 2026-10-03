@@ -1,4 +1,4 @@
-import type { Lang } from '../../i18n';
+import { changeLanguage, type Lang } from '../../i18n';
 import type { PaletteCategoryId } from '../../types';
 import type { AppSlice } from './types';
 
@@ -21,7 +21,10 @@ export interface SidebarSlice {
 export const createSidebarSlice: AppSlice<SidebarSlice> = (set, get) => {
   return {
     lang: 'zh',
-    setLang: (lang) => set({ lang }),
+    setLang: (lang) => {
+      set({ lang });
+      void changeLanguage(lang);
+    },
 
     sidebarView: 'category',
     sidebarVisible: true,

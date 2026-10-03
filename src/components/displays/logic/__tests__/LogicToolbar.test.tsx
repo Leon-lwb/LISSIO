@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';
+;
 import { describe, expect, it, vi } from 'vitest';
 import { DecodedEventList } from '../DecodedEventList';
 import { LogicTimingChart } from '../LogicTimingChart';
@@ -21,13 +22,13 @@ function expectHorizontalToolbar(container: HTMLElement) {
 
 describe('logic panel toolbars', () => {
   it('supports wheel scrolling and directional shadows in the timing toolbar', () => {
-    const { container } = render(<LogicTimingChart />);
+    const { container } = renderWithI18n(<LogicTimingChart />);
 
     expectHorizontalToolbar(container);
   });
 
   it('supports wheel scrolling and directional shadows in the decoded-event toolbar', () => {
-    const { container } = render(<DecodedEventList />);
+    const { container } = renderWithI18n(<DecodedEventList />);
 
     expectHorizontalToolbar(container);
   });

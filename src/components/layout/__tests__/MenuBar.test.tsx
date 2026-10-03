@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useAppStore } from '../../../store/appStore';
 import { MenuBar } from '../MenuBar';
 
@@ -51,7 +52,7 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
   });
 
   it('渲染五组菜单标题 (App/File/Edit/View/Window/Help)', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     expect(screen.getByRole('button', { name: 'Lissio' })).toBeInTheDocument();
     for (const label of ['File', 'Edit', 'View', 'Window', 'Help']) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument();
@@ -60,12 +61,12 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
 
   it('非 Windows 平台不渲染', () => {
     restoreUA();
-    const { container } = render(<MenuBar />);
+    const { container } = renderWithI18n(<MenuBar />);
     expect(container.firstChild).toBeNull();
   });
 
   it('File > New Tab 创建新标签页并关闭下拉', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     fireEvent.click(screen.getByRole('button', { name: 'File' }));
     const newTabItem = screen.getByRole('menuitem', { name: /New Tab/ });
     expect(newTabItem).toBeInTheDocument();
@@ -78,14 +79,14 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
   });
 
   it('View > Toggle Sidebar 切换侧边栏可见性', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     fireEvent.click(screen.getByRole('button', { name: 'View' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /Toggle Sidebar/ }));
     expect(useAppStore.getState().sidebarVisible).toBe(false);
   });
 
   it('View > Zoom In 调用 setZoom 且步进缩放', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     fireEvent.click(screen.getByRole('button', { name: 'View' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /Zoom In/ }));
     expect(windowApiMock.setZoom).toHaveBeenCalledTimes(1);
@@ -98,7 +99,7 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
   });
 
   it('Window > Minimize / Close 调用窗口 API', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Window' }));
     fireEvent.click(screen.getByRole('menuitem', { name: /Minimize/ }));
     expect(windowApiMock.minimize).toHaveBeenCalledTimes(1);
@@ -110,7 +111,7 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
   });
 
   it('Ctrl+T 快捷键新建标签页, Ctrl+B 切换侧边栏', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     const before = useAppStore.getState().controlTabs.length;
     act(() => {
       fireEvent.keyDown(window, { key: 't', ctrlKey: true });
@@ -124,7 +125,7 @@ describe('MenuBar (Windows 自定义菜单栏)', () => {
   });
 
   it('ESC 关闭打开的下拉面板', () => {
-    render(<MenuBar />);
+    renderWithI18n(<MenuBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Help' }));
     expect(screen.getByRole('menuitem', { name: /Documentation/ })).toBeInTheDocument();
     act(() => {

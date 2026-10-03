@@ -1,4 +1,4 @@
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import { EscapedText, formatTime } from './rawDataViewHelpers';
 import type { RawDataStringRow } from './useRawDataBuffer';
@@ -73,7 +73,7 @@ export function RawDataViewNumericContent({
           dropped: 'Ingress dropped',
         };
   const emptyLabel = isString
-    ? t(lang, 'rawDataStringEmpty')
+    ? translate('rawDataStringEmpty', lang)
     : error ?? (status === 'channel_out_of_range'
         ? labels.channel
         : status === 'disconnected'
@@ -82,7 +82,7 @@ export function RawDataViewNumericContent({
             ? labels.overrun
             : status === 'waiting'
               ? labels.waiting
-              : t(lang, 'rawDataEmpty'));
+              : translate('rawDataEmpty', lang));
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden font-mono animate-rawdata-enter select-text">
       {(previewSkipped > 0 || retentionEvicted > 0 || ingressDropped > 0) && (

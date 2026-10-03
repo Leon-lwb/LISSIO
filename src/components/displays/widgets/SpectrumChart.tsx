@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react';
 import type { WidgetConfig, SpectrumOutput } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { getThemeColor } from '../waveform/wavechartFormatters';
 import { selectWidgets } from '../../../store/appStoreHelpers';
 
@@ -113,9 +113,9 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
       ctx.fillStyle = '#888888';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(t(lang, 'spectrumNoSource'), w / 2, h / 2 - 8);
+      ctx.fillText(translate('spectrumNoSource', lang), w / 2, h / 2 - 8);
       ctx.fillStyle = '#666666';
-      ctx.fillText(t(lang, 'spectrumNoSourceHint'), w / 2, h / 2 + 10);
+      ctx.fillText(translate('spectrumNoSourceHint', lang), w / 2, h / 2 + 10);
       return;
     }
 
@@ -124,7 +124,7 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
       ctx.fillStyle = '#666666';
       ctx.font = '11px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(t(lang, 'spectrumWaiting'), w / 2, h / 2);
+      ctx.fillText(translate('spectrumWaiting', lang), w / 2, h / 2);
       return;
     }
 
@@ -254,38 +254,38 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
         />
         {/* 状态标签覆盖左上角 */}
         <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-accent/15 text-accent border border-accent/40 rounded-sm text-[10px] font-semibold pointer-events-none">
-          {sourceWidget ? `${sourceWidget.params.label} · ${windowSize} · ${output}` : t(lang, 'spectrumNoSource')}
+          {sourceWidget ? `${sourceWidget.params.label} · ${windowSize} · ${output}` : translate('spectrumNoSource', lang)}
         </div>
       </div>
       {/* 侧栏: 设置面板 (固定宽, 纵向滚动, 直接展开) */}
       <div className="w-[240px] flex-shrink-0 border-l border-border bg-bg-sidebar overflow-y-auto flex flex-col gap-2 p-2.5">
-        <div className="section-heading section-heading--micro px-1">{t(lang, 'spectrumSettings')}</div>
+        <div className="section-heading section-heading--micro px-1">{translate('spectrumSettings', lang)}</div>
         <div className="flex flex-col gap-1.5 px-1">
           <div className="field-grid field-grid--default text-[10px]">
-            <label className="text-text-secondary">{t(lang, 'spectrumSource')}</label>
+            <label className="text-text-secondary">{translate('spectrumSource', lang)}</label>
             <span className="font-mono text-text-primary truncate" title={sourceWidget?.params.label}>
-              {sourceWidget ? sourceWidget.params.label : t(lang, 'spectrumNoSource')}
+              {sourceWidget ? sourceWidget.params.label : translate('spectrumNoSource', lang)}
             </span>
           </div>
           {!sourceWidget && (
-            <div className="text-[10px] text-text-secondary px-1">{t(lang, 'spectrumNoSourceHint')}</div>
+            <div className="text-[10px] text-text-secondary px-1">{translate('spectrumNoSourceHint', lang)}</div>
           )}
           {sourceWidget && (
             <div className="flex flex-col gap-1 text-[10px] text-text-secondary px-1">
               <div className="flex justify-between">
-                <span>{t(lang, 'spectrumWindowSize')}</span>
+                <span>{translate('spectrumWindowSize', lang)}</span>
                 <span className="font-mono text-text-primary">{sourceWidget.params.windowSize}</span>
               </div>
               <div className="flex justify-between">
-                <span>{t(lang, 'spectrumWindowType')}</span>
+                <span>{translate('spectrumWindowType', lang)}</span>
                 <span className="font-mono text-text-primary">{sourceWidget.params.windowType}</span>
               </div>
               <div className="flex justify-between">
-                <span>{t(lang, 'spectrumOutputMode')}</span>
+                <span>{translate('spectrumOutputMode', lang)}</span>
                 <span className="font-mono text-text-primary">{sourceWidget.params.output}</span>
               </div>
               <div className="flex justify-between">
-                <span>{t(lang, 'filterSampleRate')}</span>
+                <span>{translate('filterSampleRate', lang)}</span>
                 <span className="font-mono text-text-primary">{sourceWidget.params.sampleRate} Hz</span>
               </div>
             </div>

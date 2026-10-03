@@ -20,7 +20,7 @@ import type {
 } from '../../lib/tauri/tauri';
 import { EMPTY_NODE_STATS } from './connection';
 import type { AppSlice } from './types';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import {
   notify,
   formatError,
@@ -339,12 +339,12 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
         const actions: NotificationAction[] = downloadUrl
           ? [
               {
-                label: t(lang, 'download'),
+                label: translate('download', lang),
                 run: () => {
                   void transport
                     .downloadFile?.(downloadUrl, 'export.csv')
                     .catch((error: unknown) => {
-                      notify.error(t(lang, 'downloadFailed'), formatError(error), {
+                      notify.error(translate('downloadFailed', lang), formatError(error), {
                         source: 'download',
                       });
                     });
@@ -353,7 +353,7 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
             ]
           : [];
         const options = { source: 'server', actions };
-        const title = t(lang, 'serverNotify');
+        const title = translate('serverNotify', lang);
         if (notification.level === 'error') {
           notify.error(title, notification.message, options);
         } else {

@@ -13,7 +13,7 @@ import { useEffect, useRef } from 'react';
 import { platform } from '../platform';
 import { api } from '../tauri/tauri';
 import { notify } from '../tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
@@ -99,7 +99,7 @@ export function useStartupDialogs(): void {
         // 这一段历史读不出来了」必须让用户看见并且来得及看清备份路径。
         // 这只是提示通道的级别, 不是录制故障 — 故障判定只认 `hub.fault()`。
         notify.error(
-          t(lang, 'recordingDatabaseRecovered'),
+          translate('recordingDatabaseRecovered', lang),
           health.warning,
           { source: 'recording-recovered' }
         );

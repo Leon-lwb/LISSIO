@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useState } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { useNumericInput, useNumericInputs } from '../useNumericPort';
@@ -43,7 +44,7 @@ describe('useNumericPort subscription stability', () => {
         </div>
       );
     }
-    render(<Harness />);
+    renderWithI18n(<Harness />);
     expect(subscribeCallCount()).toBe(1);
     for (let i = 0; i < 10; i++) {
       act(() => { screen.getByRole('button').click(); });
@@ -64,7 +65,7 @@ describe('useNumericPort subscription stability', () => {
         </div>
       );
     }
-    render(<Harness />);
+    renderWithI18n(<Harness />);
     expect(subscribeCallCount()).toBe(1);
     for (let i = 0; i < 10; i++) {
       act(() => { screen.getByRole('button').click(); });
@@ -84,7 +85,7 @@ describe('useNumericPort subscription stability', () => {
         </div>
       );
     }
-    render(<Harness />);
+    renderWithI18n(<Harness />);
     expect(subscribeCallCount()).toBe(1);
     // 端口解析结果变化 (连线切换到另一来源) 时才允许重建订阅
     act(() => {

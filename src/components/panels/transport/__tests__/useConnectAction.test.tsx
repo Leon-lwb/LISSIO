@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { useAppStore } from '../../../../store/appStore';
 import { useConnectAction } from '../useConnectAction';
 
@@ -42,7 +43,7 @@ describe('useConnectAction (transport node connect submit)', () => {
         })
     );
 
-    render(<Harness nodeId="transport-1" />);
+    renderWithI18n(<Harness nodeId="transport-1" />);
     fireEvent.click(screen.getByRole('button', { name: /connect/i }));
 
     await waitFor(() => {
@@ -64,7 +65,7 @@ describe('useConnectAction (transport node connect submit)', () => {
       }));
     });
 
-    render(<Harness nodeId="transport-1" />);
+    renderWithI18n(<Harness nodeId="transport-1" />);
     fireEvent.click(screen.getByRole('button', { name: /connect/i }));
 
     await waitFor(() => {

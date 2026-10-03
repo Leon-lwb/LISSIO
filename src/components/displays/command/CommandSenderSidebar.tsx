@@ -1,7 +1,7 @@
 import { Send, AlertTriangle } from 'lucide-react';
 import type { WidgetConfig, CommandFrame } from '../../../types';
 import type { Lang } from '../../../i18n';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { bytesToHex, bytesToAscii } from '../../../lib/utils/commandParser';
 
 interface Props {
@@ -46,7 +46,7 @@ export function CommandSenderSidebar({
   return (
     <div className="w-[300px] shrink-0 border-l border-border bg-bg-sidebar overflow-y-auto flex flex-col gap-2 p-3">
       {/* 预览 */}
-      <div className="section-heading section-heading--micro">{t(lang, 'cmdPreview')}</div>
+      <div className="section-heading section-heading--micro">{translate('cmdPreview', lang)}</div>
       <div className="bg-bg-editor border border-border rounded px-2 py-1.5 flex flex-col gap-1">
         <div className="flex items-center justify-between text-[10px] text-text-secondary uppercase tracking-wide">
           <span>HEX</span>
@@ -69,7 +69,7 @@ export function CommandSenderSidebar({
             </div>
           </>
         ) : (
-          <div className="text-xs text-text-secondary opacity-muted italic py-1">{t(lang, 'cmdPreviewEmpty')}</div>
+          <div className="text-xs text-text-secondary opacity-muted italic py-1">{translate('cmdPreviewEmpty', lang)}</div>
         )}
       </div>
 
@@ -80,27 +80,27 @@ export function CommandSenderSidebar({
         disabled={sendDisabled}
         title={
           notRunning
-            ? t(lang, 'cmdSendRequiresRun')
+            ? translate('cmdSendRequiresRun', lang)
             : routeMissing
-              ? t(lang, 'cmdNoByteRoute')
+              ? translate('cmdNoByteRoute', lang)
               : undefined
         }
       >
         <Send size={12} />
-        <span>{t(lang, 'cmdSend')}</span>
+        <span>{translate('cmdSend', lang)}</span>
       </button>
 
       {notRunning ? (
         <div className="flex items-center gap-1 bg-yellow/10 border border-yellow/30 text-yellow px-1.5 py-1 rounded-sm text-xs">
           <AlertTriangle size={11} />
-          <span>{t(lang, 'cmdSendRequiresRun')}</span>
+          <span>{translate('cmdSendRequiresRun', lang)}</span>
         </div>
       ) : null}
 
       {routeMissing && (
         <div className="flex items-center gap-1 bg-yellow/10 border border-yellow/30 text-yellow px-1.5 py-1 rounded-sm text-xs">
           <AlertTriangle size={11} />
-          <span>{t(lang, 'cmdNoByteRoute')}</span>
+          <span>{translate('cmdNoByteRoute', lang)}</span>
         </div>
       )}
 
@@ -112,16 +112,16 @@ export function CommandSenderSidebar({
       )}
       {lastSent && (
         <div className="flex items-center gap-1 px-1.5 py-1 bg-bg-editor rounded-sm text-[10px]" title={lastSent}>
-          <span className="text-text-secondary shrink-0">{t(lang, 'cmdLastSent')}:</span>
+          <span className="text-text-secondary shrink-0">{translate('cmdLastSent', lang)}:</span>
           <span className="font-mono text-text-primary whitespace-nowrap overflow-hidden text-ellipsis">{lastSent}</span>
         </div>
       )}
 
       {/* 全局设置 */}
-      <div className="section-heading section-heading--micro pt-1">{t(lang, 'cmdSettings')}</div>
+      <div className="section-heading section-heading--micro pt-1">{translate('cmdSettings', lang)}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
         <div className="field-grid field-grid--default">
-          <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
+          <label className="text-xs text-text-secondary">{translate('cmdLabel', lang)}</label>
           <input
             type="text"
             value={params.label}
@@ -132,32 +132,32 @@ export function CommandSenderSidebar({
       </div>
 
       {/* 帧设置 (当前选中帧) */}
-      <div className="section-heading section-heading--micro pt-1">{t(lang, 'cmdFrameSettings')}</div>
+      <div className="section-heading section-heading--micro pt-1">{translate('cmdFrameSettings', lang)}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
         <div className="field-grid field-grid--default">
-          <label className="text-xs text-text-secondary">{t(lang, 'cmdAppendNewline')}</label>
+          <label className="text-xs text-text-secondary">{translate('cmdAppendNewline', lang)}</label>
           <button
             className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${frame.appendNewline ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
             onClick={() => onUpdateFrame({ appendNewline: !frame.appendNewline })}
           >
-            {frame.appendNewline ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
+            {frame.appendNewline ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
           </button>
         </div>
         <div className="field-grid field-grid--default">
-          <label className="text-xs text-text-secondary">{t(lang, 'cmdSendMode')}</label>
+          <label className="text-xs text-text-secondary">{translate('cmdSendMode', lang)}</label>
           <select
             value={sendMode}
             onChange={(e) => onUpdateFrame({ sendMode: e.target.value as 'manual' | 'onChange' | 'timer' })}
             className="text-xs w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent"
           >
-            <option value="manual">{t(lang, 'cmdSendModeManual')}</option>
-            <option value="onChange">{t(lang, 'cmdSendModeOnChange')}</option>
-            <option value="timer">{t(lang, 'cmdSendModeTimer')}</option>
+            <option value="manual">{translate('cmdSendModeManual', lang)}</option>
+            <option value="onChange">{translate('cmdSendModeOnChange', lang)}</option>
+            <option value="timer">{translate('cmdSendModeTimer', lang)}</option>
           </select>
         </div>
         {sendMode === 'timer' && (
           <div className="field-grid field-grid--default">
-            <label className="text-xs text-text-secondary">{t(lang, 'cmdSendModeInterval')}</label>
+            <label className="text-xs text-text-secondary">{translate('cmdSendModeInterval', lang)}</label>
             <input
               type="number"
               min={10}
@@ -171,15 +171,15 @@ export function CommandSenderSidebar({
       </div>
 
       {/* 回环模式设置 */}
-      <div className="section-heading section-heading--micro pt-2">{t(lang, 'cmdLoopback')}</div>
+      <div className="section-heading section-heading--micro pt-2">{translate('cmdLoopback', lang)}</div>
       <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
         <div className="field-grid field-grid--default">
-          <label className="text-xs text-text-secondary">{t(lang, 'cmdLoopback')}</label>
+          <label className="text-xs text-text-secondary">{translate('cmdLoopback', lang)}</label>
           <button
             className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${params.loopbackEnabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
             onClick={() => onUpdateParams({ loopbackEnabled: !params.loopbackEnabled })}
           >
-            {params.loopbackEnabled ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
+            {params.loopbackEnabled ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
           </button>
         </div>
       </div>

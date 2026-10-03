@@ -1,4 +1,5 @@
-import { act, render, fireEvent } from '@testing-library/react';
+import { act, fireEvent } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SearchInput } from '../SearchInput';
@@ -29,21 +30,21 @@ describe('SearchInput', () => {
   });
 
   it('渲染 placeholder 与搜索图标', () => {
-    const { container } = render(<SearchInput value="" onChange={() => undefined} placeholder="搜索..." />);
+    const { container } = renderWithI18n(<SearchInput value="" onChange={() => undefined} placeholder="搜索..." />);
     expect(container.querySelector('input')).toHaveAttribute('placeholder', '搜索...');
     expect(container.querySelector('svg')).not.toBeNull();
   });
 
   it('无防抖时每键即时上报', () => {
     const onChange = vi.fn();
-    const { container } = render(<SearchInput value="" onChange={onChange} />);
+    const { container } = renderWithI18n(<SearchInput value="" onChange={onChange} />);
     fireEvent.change(container.querySelector('input')!, { target: { value: 'A3' } });
     expect(onChange).toHaveBeenCalledWith('A3');
   });
 
   it('debounceMs 期间不上报, 停止输入后才上报一次', () => {
     const onChange = vi.fn();
-    const { container } = render(<SearchInput value="" onChange={onChange} debounceMs={150} />);
+    const { container } = renderWithI18n(<SearchInput value="" onChange={onChange} debounceMs={150} />);
     const input = container.querySelector('input')!;
     fireEvent.change(input, { target: { value: 'A' } });
     fireEvent.change(input, { target: { value: 'AA' } });
@@ -57,7 +58,7 @@ describe('SearchInput', () => {
 
   it('清除按钮: 有值时出现, 点击立即清空上报 (不走防抖)', () => {
     const onChange = vi.fn();
-    const { container } = render(<SearchInput value="AA" onChange={onChange} debounceMs={150} />);
+    const { container } = renderWithI18n(<SearchInput value="AA" onChange={onChange} debounceMs={150} />);
     const clear = container.querySelector('button[aria-label]')!;
     expect(clear).not.toBeNull();
     fireEvent.click(clear);
@@ -67,7 +68,7 @@ describe('SearchInput', () => {
 
   it('ESC 有值时清空并阻止冒泡, 空值时冒泡到外层', () => {
     const onEscape = vi.fn();
-    const { container, getByTestId } = render(
+    const { container, getByTestId } = renderWithI18n(
       <ControlledSearchInput value="AA" onEscape={onEscape} />
     );
     const input = container.querySelector('input')!;
@@ -82,7 +83,7 @@ describe('SearchInput', () => {
   });
 
   it('外部清空 (父级重置已上报的值) 立即同步回显', () => {
-    const { container, getByTestId } = render(<ControlledSearchInput debounceMs={150} />);
+    const { container, getByTestId } = renderWithI18n(<ControlledSearchInput debounceMs={150} />);
     const input = container.querySelector('input')!;
     fireEvent.change(input, { target: { value: 'AA' } });
     act(() => {
@@ -94,7 +95,7 @@ describe('SearchInput', () => {
   });
 
   it('disabled 时输入禁用且不渲染清除按钮', () => {
-    const { container } = render(<SearchInput value="AA" onChange={() => undefined} disabled />);
+    const { container } = renderWithI18n(<SearchInput value="AA" onChange={() => undefined} disabled />);
     expect(container.querySelector('input')).toBeDisabled();
     expect(container.querySelector('button')).toBeNull();
   });

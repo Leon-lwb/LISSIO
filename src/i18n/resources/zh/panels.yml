@@ -1,0 +1,195 @@
+# CAN
+canFrames: CAN 帧
+canInvalidFilterId: CAN ID 过滤值无效，请输入 0x000–0x1FFFFFFF 范围内的 HEX ID
+canFilterById: 按 ID 过滤 (HEX)
+canSender: CAN 发送器
+frameList: 帧列表
+canLatestById: ID 最新值
+canFrameCount: 帧数
+busActivity: 总线活动
+idDistribution: ID 分布统计
+extendedFrame: 扩展帧
+remoteFrame: 远程帧
+dataHex: 数据 (HEX)
+sendHistory: 发送历史
+noSendHistory: 暂无发送记录
+noCanFrames: 暂无 CAN 帧
+all: 全部
+time: 时间
+addCanTab: 添加 CAN 帧 Tab
+slcan: Slcan
+candleLight: CandleLight
+canBitrate: CAN 波特率
+candleDevice: USB 设备
+noCandleDevices: 未发现设备
+# Compile Errors Panel
+compileErrorsTitle: 编译错误
+compileErrors: 编译错误面板
+noCompileErrors: 当前没有编译错误
+flyToNode: 定位节点
+addCompileErrorsTab: 添加编译错误 Tab
+compileErrorNodes: "{{count}} 个节点"
+compileErrorTabs: "{{count}} 个 Tab"
+slcanDesc: 通过 slcan ASCII 协议与 CANable 设备通信 (串口转 CAN)
+candleLightDesc: 通过 candleLight 二进制协议与 CANable 设备通信 (原生 USB)
+
+# Compile Results Panel (编译结果面板)
+connectionResultsTitle: 连接结果
+colEdgeClass: 边分类
+colSourceDomain: 源端口域
+colTargetDomain: 目标端口域
+colDualRole: 双角色
+dualRoleMarker: 双角色
+modalAddEdge: 添加连接
+modalModifyEdge: 编辑连接
+fieldSourceNode: 源节点
+fieldTargetNode: 目标节点
+fieldSourceHandle: 源端口
+fieldTargetHandle: 目标端口
+confirmAdd: 确认
+cancel: 取消
+
+# Data Panel Menu (菜单 — 数据面板)
+menuPanel: 数据面板
+menuPanelOpenCompileErrors: 打开编译错误
+menuPanelOpenCompileResults: 打开编译结果
+menuPanelOpenCan: 打开 CAN 帧
+menuPanelOpenLogic: 打开逻辑分析仪
+panelOpenNoWidget: "画布无对应控件"
+dataPanelsStandaloneTitle: 独立面板
+dataPanelsDerivedTitle: 派生面板
+dataPanelsUnsupportedTitle: 不可用面板
+dataTabWaveform: 波形
+dataTabSpectrum: 频谱
+dataTabRawData: 原始数据
+dataTabPie: 饼图
+dataTabImage: 图像
+dataTabModel3d: 3D 模型
+dataTabCommand: 命令发送
+dataTabFrameDecoder: 帧解码
+dataTabTrigger: 触发器
+menuPanelOpenOperationHistory: 打开操作历史
+menuPanelOpenNodeProperties: 打开属性面板
+operationHistoryTitle: 操作历史
+recordingDatabaseTitle: 历史数据库
+recordingDatabaseRefresh: 刷新
+recordingDatabaseIncludePayload: 解析数据内容
+recordingDatabaseExport: 导出
+recordingDatabaseExporting: 导出中
+recordingDatabaseDismiss: 关闭
+recordingDatabaseRecovered: 数据库曾损坏, 已自动恢复并继续录制 (原件已保留备份, 悬停查看路径)
+recordingDatabaseSessions: 录制会话
+recordingDatabaseBatches: 批次
+recordingDatabaseChannels: 通道
+recordingDatabaseNoSessions: 暂无录制会话
+recordingDatabaseBindings: 显示绑定
+recordingDatabaseAllBindings: 全部绑定
+recordingDatabaseSamples: 样本
+recordingDatabaseColumnTime: 时间
+recordingDatabaseColumnBinding: 绑定
+recordingDatabaseColumnDomain: 数据域
+recordingDatabaseColumnSequence: 序号
+recordingDatabaseColumnItems: 数量
+recordingDatabaseColumnPayload: 数据内容
+recordingDatabaseNoData: 当前分页无数据
+recordingDatabaseSelectSession: 请选择录制会话
+recordingDatabaseRows: 行
+recordingDatabaseLoading: 加载中
+recordingDatabaseLoadMore: 加载更多
+recordingDatabaseCleanupStopped: 清理已停止
+recordingDatabaseCleanupStoppedConfirm: 确定删除所有已停止和失败的录制会话？此操作不可撤销。
+recordingDatabaseKeepLatest: 保留最近条数
+recordingDatabaseCleanupKeep: 只保留最近 N 条
+recordingDatabaseCleanupKeepConfirm: 确定只保留最近 {count} 条已结束会话？更早的会话将被删除。
+recordingDatabaseDelete: 删除
+recordingDatabaseDeleteConfirm: 确定删除所选录制会话？此操作不可撤销。
+recordingDatabaseStateRunning: 录制中
+recordingDatabaseStatePaused: 已暂停
+recordingDatabaseStateStopped: 已停止
+recordingDatabaseStateFailed: 失败
+recordingDatabaseNewSession: 新建会话
+recordingDatabaseSetActive: 设为当前
+recordingDatabaseActiveBadge: 写入中
+recordingDatabasePausedOnlyHint: 仅在暂停时可用
+recordingDatabaseOpenSession: 打开查看
+recordingDatabaseCurrentTarget: 当前写入
+recordingDatabaseNoActiveTarget: 无
+recordingDatabaseHintAlreadyActive: 该会话已是当前写入目标
+recordingDatabaseHintNeedsPause: 仅暂停时可切换写入目标，请先暂停
+recordingDatabaseHintNeedsStopped: 只能切换到已停止的会话
+recordingDatabaseHintDeleteActive: 当前写入目标不能删除，请先切换
+recordingDatabaseRowSelectHint: 暂停时点击可设为写入目标，右键查看更多操作
+recordingDatabaseSessionCount: 会话
+recordingDatabaseBatchCount: 批次
+recordingDatabaseItemCount: 样本
+recordingDatabaseFileSize: 文件
+opHistoryInitial: 初始状态
+opHistoryEmpty: 暂无操作记录。
+opHistoryClear: 清空历史
+opHistoryClearConfirm: 确认清空？
+opHistoryRedoZone: 已撤销 · 可重做
+opHistoryCurrentPosition: 当前位置
+opAddWidget: 添加控件
+opRemoveWidget: 删除控件
+opUpdateWidgetParams: 调整控件参数
+opConnectNodes: 添加连线
+opDeleteEdges: 删除连线
+opMoveNodes: 移动节点
+opResizeNodes: 调整控件大小
+opRemoveNodes: 删除节点
+opAddTransportNode: 添加传输节点
+opAddProtocolNode: 添加协议节点
+opRemoveNode: 删除节点
+opUpdateTransportConfig: 修改传输配置
+opUpdateProtocolConfig: 修改协议配置
+opConvertProtocolTo: 协议转换
+opUpdateProtocolSchema: 编辑帧 Schema
+opAddControlTab: 新建控制页签
+opRemoveControlTab: 删除控制页签
+opRenameControlTab: 重命名页签
+opImportWorkspace: 导入工作区
+opApplyTemplate: 应用模板
+addConnection: 添加
+pasteConnection: 粘贴
+colSource: 源
+colTarget: 目标
+colActions: 操作
+noConnections: 未找到连接。
+defaultHandle: 默认
+editConnection: 编辑
+nodeTypeTransport: 传输
+nodeTypeProtocol: 协议
+
+# CAN 负载分析
+canLoadAnalysis: 负载分析
+canLoadWindow: 时间窗口
+canLoadAutoBitrate: 自动波特率
+canLoadClear: 清空统计
+canLoadBitrate: 波特率
+canLoadTotalBits: 总位数
+canLoadTotalBytes: 总字节数
+canLoadFps: 帧率
+canLoadHistory: 负载历史
+canLoadPerId: 按 ID 负载分布
+canLoadIdFilterHint: 点击切换时序图叠加
+canLoadThreshold: 阈值
+canLoadThresholdAlarm: 负载告警
+
+# 数据丢失警示 (状态栏 + 弹层) — 预览丢弃 (rawdata) 与真实丢失 (pipeline) 语义区分
+statusDropped: 检测到数据丢失, 点击查看说明
+notifDataDroppedTitle: 检测到数据丢失
+notifDataDroppedBody: "最近窗口丢失 {{count}} 条消息 (这些字节未进入解析, 波形存在缺口)。可尝试: 降低数据源速率; 在 设置→性能 中调大并行 worker 上限与缓冲; 关闭不需要的原始数据订阅"
+droppedInfoTitle: 数据丢失说明
+droppedInfoTitleRawdata: 预览丢弃说明
+droppedInfoWhatRawdata: 这是什么 — 原始数据预览的容量溢出计数。这些字节已被正常解析并进入波形, 只是预览没有全部保留显示。这不是数据丢失, 解析与波形不受影响。
+droppedInfoWhatPipeline: 这是什么 — 真实的数据丢失。接收速度超过解析管道的处理能力时, 部分消息在解析前被跳过 (broadcast Lagged), 波形与解析结果存在缺口。
+droppedInfoWhy: "为什么会发生 — 数据源速率过高, 或解析/渲染速度跟不上。管道使用有界缓冲, 缓冲满时多余的消息会被丢弃而不是阻塞数据流。提示: 原始数据预览的丢弃计数 (黄色) 不代表数据丢失。"
+droppedInfoHowRawdata: 怎么办 — 降低数据源速率, 或在 设置→数据缓存 中调大原始数据缓冲容量。
+droppedInfoHowPipeline: 怎么办 — 降低数据源速率; 在 设置→性能 中调大并行 worker 上限与缓冲容量; 或关闭不需要的原始数据订阅。
+droppedInfoOpenSettings: 打开设置
+canLoadExport: 导出 CSV
+canLoadExportFailed: 导出失败
+canLoadExportSuccess: 已导出
+download: 下载
+downloadFailed: 下载失败
+serverNotify: 服务端通知

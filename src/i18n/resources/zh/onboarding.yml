@@ -1,0 +1,141 @@
+# 使用引导
+helpCenterTitle: 帮助中心
+helpCenterOpen: 打开帮助中心
+dismissTip: 关闭提示
+canHintMessage: 当前协议引擎不是 CAN 协议。请先在“协议引擎”中选择 Slcan 或 CandleLight，并连接支持 CAN 的硬件。
+canHintAction: 打开协议引擎
+logicHintMessage: 当前协议引擎不是 LogicDecode。请先在“协议引擎”中切换到 LogicDecode，以采集并解码数字信号。
+logicHintAction: 打开协议引擎
+
+# 高亮引导
+tourStep: 步骤
+tourNext: 下一步
+tourPrev: 上一步
+tourSkip: 跳过
+tourFinish: 完成
+tourWelcomeTitle: 欢迎使用 Lissio
+tourWelcomeContent: 三分钟跑通核心工作流。高亮区是当前讲解对象，<strong>带勾选框的步骤需要动手完成</strong>；右上角 × 随时退出。
+tourQuickStartTitle: 快速开始 · 模板起步
+tourQuickStartContent: 左侧活动栏的<strong>火箭图标</strong>打开此面板——7 个模板一键生成画布与连线，应用后默认落在<strong>编译结果</strong>页核对。
+tourPaletteTitle: 控件分类 · 素材总览
+tourPaletteContent: 全部素材分<strong>九大分类</strong>——连接设备、解析与编码、发送、信号处理、文本处理、显示、交互输入、属性、自定义，图标常驻最左侧栏。
+tourJumpbarTitle: 控件分类 · 切换与搜索
+tourJumpbarContent: 点击最左栏的分类图标<strong>直接打开该分类的控件列表</strong>（再点一次收起）；列表顶部搜索框按名称即时过滤控件。
+tourActJumpbar: 点击跳转条上任一分类图标
+tourCreateTitle: 新建卡片 · 放进画布
+tourCreateContent: <strong>拖拽</strong>任意行到画布松手落位，或单击该行快速添加；接口与协议节点为全局共享。
+tourActCreate: 从左侧拖一个控件进画布（或单击行添加）
+tourConnectTitle: 连接边 · 数据流
+tourConnectContent: 节点左侧点＝输入、右侧点＝输出，<strong>同色同域才能相连</strong>，合法目标会变绿放大。
+tourActConnect: 把右侧输出点连到某个左侧输入点
+tourDeleteCardTitle: 删除卡片
+tourDeleteCardContent: 悬停头部点 <strong>×</strong>，或选中后按 <strong>Backspace</strong>；关窗≠删卡，双击节点可重开窗口。
+tourActDeleteCard: 用任一方式删除一个节点
+tourCompileErrorsTitle: 编译报错 · 自动定位
+tourCompileErrorsContent: 编辑即时触发后端编译。状态栏红三角一键打开本面板，<strong>定位按钮</strong>飞至红框节点，悬停可见具体原因。
+tourResultsTitle: 编译结果 · 管理连接
+tourResultsContent: 后端 HIR 权威连接表——增/删/改/复制粘贴皆可，点击节点名可在画布中蓝色高亮对应节点。
+tourActDeleteEdge: 点行尾垃圾桶删除一条连接
+tourHistoryTitle: 操作历史 · 撤销与回溯
+tourHistoryContent: 每次编辑都会记录于此——<strong>点击任意一条直接回到那个时刻</strong>，或用顶部按钮 / Ctrl+Z、Ctrl+Y 逐步撤销重做。
+tourActHistory: 点击历史列表里任意一条（或点顶部撤销按钮）
+tourDataTabsTitle: 数据窗口 · 自由布局
+tourDataTabsContent: 波形/CAN/逻辑/编译等窗口以 Tab 共存。<strong>拖 Tab 合并或拆分窗口</strong>，拖分隔条调宽窄，右键可关闭。
+tourCanTitle: CAN 帧 · 总线分析
+tourCanContent: 已为你自动打开视图。切到 Slcan/CandleLight 协议+硬件即可看真实总线，<strong>顶部提示条</strong>可一键设置协议。
+tourActCanTab: 点击底部任一子页签切换视图
+tourAiTitle: AI 助手 · 对话即操作
+tourAiContent: 状态栏右侧的 AI 图标随时开关此面板（可停靠左/右/下或拖成浮动）。在 设置 → AI 配好服务商与 API Key 后，<strong>AI 可直接搭建节点图、读取波形与 CAN 数据、向设备发送命令</strong>；在 设置 → AI → MCP 管理外部工具，本机 127.0.0.1:8765/mcp 也可供 Claude Desktop 等外部 AI 客户端控制本软件。
+tourHelpTitle: 帮助中心 · 随时回来
+tourHelpContent: 问号图标随时回到本中心或重放引导；设置里可关闭首启引导与上下文提示条。
+tourNoEdgeSkip: 跳过
+
+# 帮助中心章节
+helpCenterQuickStart: 快速入门
+helpCenterQuickStartDesc: 从模板起步，几分钟跑通第一条数据通路。
+helpCenterQuickStartSteps: |-
+  点击左侧活动栏的火箭图标打开「快速开始」，选择一个内置模板（推荐 CAN 或串口）并应用
+  应用后默认停在「编译结果」页——先核对生成的连线，每行都是一条真实生效的边
+  回到画布：从控件面板拖入新控件、连接端口，继续扩展你的数据流
+  底部状态栏实时显示连接与编译状态；出现红色三角点击即可进入「编译错误」面板定位问题
+  左下角问号图标随时可回到本帮助中心，或重放新手引导
+helpTransport: 数据接口
+helpTransportDesc: 配置设备与上位机之间的物理连接。
+helpTransportSteps: |-
+  串口：选择端口、波特率、数据位/校验/停止位，点击“连接”
+  CAN：选择 Slcan（串口转 CAN）或 CandleLight（原生 USB），配置波特率
+  网络：UDP 或 TCP 客户端/服务端，填写本地/远端地址与端口
+  测试数据：不连接硬件，使用内置信号发生器验证波形与控件
+helpProtocol: 协议引擎
+helpProtocolDesc: 将原始字节流解析为通道数据、CAN 帧或逻辑采样。
+helpProtocolSteps: |-
+  JustFloat / FireWater：通用浮点协议，可自动检测或手动指定通道数
+  RawData：不做解析，直接显示原始字节流
+  Slcan / CandleLight：CAN 协议，解析为 CAN 帧并在 CAN Tab 显示
+  LogicDecode：逻辑分析仪协议，采集数字通道并支持协议解码
+helpWidgets: 控件与节点编辑器
+helpWidgetsDesc: 九大分组素材库，拖拽放卡、端口连线搭建数据流。
+helpWidgetsSteps: |-
+  「控件面板」按九大分组收纳全部素材——输入控件 / 数据接口 / 协议引擎 / 显示 / 算术 / 滤波器 / 频域 / 字符串处理 / 自定义 JS 控件
+  顶部跳转条点击直达分组（自动展开折叠项），搜索框按名称即时过滤，分组头可折叠/展开
+  把任意一行拖进画布放置节点（落点即位置），或单击该行快速添加
+  按住右侧输出圆点拖到目标左侧输入圆点建立连线；只有同色（同域）端口可以相连，跨域会被弹窗拦截
+  删除节点：悬停头部点 ×，或选中后按 Backspace；关闭数据窗口不等于删节点，双击画布节点可重新打开它的窗口
+helpCompile: 编译反馈：错误与结果
+helpCompileDesc: 每次编辑即时重编译；错误自动高亮定位，结果表可直接增删改连接。
+helpCompileSteps: |-
+  底部状态栏常驻编译指示灯——转圈表示编译中、绿勾表示通过、红三角加计数表示出错，点击红三角直接打开「编译错误」面板
+  「编译错误」面板每个条目对应一个出错节点：点击定位按钮飞回画布，节点以红框标出，悬停红框可见具体原因（如信号域不匹配）
+  面板右上角的刷新按钮触发全量手动重编译；错误修复前条目持续保留，便于逐一处理
+  「编译结果」是固定标签页，展示后端 HIR 权威连接表：每行一条真实生效的边，标注源/目标端点与两侧数据域
+  结果表内可对连接做全生命周期操作：「添加连接」「粘贴连接」、行内编辑、复制与垃圾桶删除——删除会同步移除画布上的边并立即重编译
+  点击行内的节点名会聚焦对应画布卡片并将节点蓝色高亮，再点一次取消高亮
+helpCan: CAN 帧分析
+helpCanDesc: 接收、过滤、发送和分析 CAN 总线数据。
+helpCanSteps: |-
+  入口：左侧活动栏「面板」→独立面板→CAN 帧；菜单栏的面板菜单同样可打开
+  底部页签切换四个子视图——帧列表 / 发送器 / 总线活动 / 负载分析
+  协议引擎需设为 Slcan 或 CandleLight 并连接硬件；协议不符时顶部提示条可一键跳转设置
+  「帧列表」支持按 ID / 方向过滤、选中复制、导出 CSV
+  「发送器」手动构造帧并发送；「总线活动」查看各 ID 收发统计；「负载分析」评估总线占用率
+helpLogic: 逻辑分析仪
+helpLogicDesc: 采集多路数字信号并查看时序与解码事件。
+helpLogicSteps: |-
+  协议引擎需设置为 LogicDecode
+  点击底部“+”添加逻辑分析仪 Tab
+  “时序图”显示各通道数字波形，可缩放与自动滚动
+  “解码事件”列出协议解码结果，支持导出
+  采样率与通道数由后端根据硬件配置决定
+helpCustom: 自定义控件
+helpCustomDesc: 使用 JavaScript 创建专属显示或交互控件。
+helpCustomSteps: |-
+  在控件面板添加 Custom 控件，打开编辑器
+  返回包含 name / inputs / outputs / settings / render 的对象
+  render 函数通过 ctx.inputs / ctx.settings 读取数据并操作 ctx.el
+  使用 ctx.send 向下游输出端口发送值
+  自定义脚本在 iframe 沙箱中运行，受安全限制，首次使用会显示性能警告
+helpWindowOrganize: 多窗口组织
+helpWindowOrganizeDesc: 中央工作区由可停靠的窗口（卡片）组成，控件画布与数据视图可自由拆分、合并。
+helpWindowOrganizeSteps: |-
+  拖动单个 Tab 到另一窗口的标题栏，将其合并为该窗口的一个 Tab（仅限同类型窗口）
+  拖动 Tab 到某个窗口的边缘（上/下/左/右），将其拆分为独立窗口
+  拖动标题栏空白处可整体移动窗口，放到其他窗口边缘或页面四边
+  拖到页面四边的热区，可将窗口停靠为整行/整列条带
+  拖拽过程中会显示蓝色预览区，指示释放后的落点位置
+  清空所有 Tab 的窗口会自动移除
+helpWindowResize: 窗口调整
+helpWindowResizeDesc: 调整窗口大小与管理 Tab，布局会自动保存。
+helpWindowResizeSteps: |-
+  拖动相邻窗口之间的分隔条，调整各窗口的宽高占比
+  双击控件画布的 Tab 可重命名
+  右键 Tab 可关闭当前 Tab、关闭其他 Tab；控件画布 Tab 还支持复制
+  右键标题栏空白处可新建控件 Tab 或添加 CAN / 逻辑分析仪页面
+  窗口布局（拆分方式与大小）会自动持久化，重启应用后保持不变
+helpAi: AI 助手
+helpAiDesc: 内置 AI 对话可直接操作软件、读取数据；本应用也可作为 MCP 服务交给外部 AI 客户端控制。
+helpAiSteps: |-
+  在 设置 → AI 选择模型服务商并填写 API Key——默认 OrcaRouter 聚合网关，模型名需带厂商前缀（如 openai/gpt-4o-mini）；密钥只存系统钥匙串，不写入设置文件
+  点击状态栏右侧的 AI 图标打开「AI 对话」面板——可停靠在左/右/下或拖成浮动窗口，标题栏管理多会话
+  设置中开启「内置工具」后，AI 能直接搭建与修改节点图、读取波形/CAN/原始数据、向设备发送数据，并可查询内置使用知识库
+  设置 → AI → MCP 可添加外部 MCP server（stdio 命令或 http 地址），其工具随即提供给模型调用
+  本应用同时在 127.0.0.1:8765/mcp 提供 MCP 服务（仅监听本机回环，端口可在设置中修改），Claude Desktop 等外部客户端接入后即可控制本软件

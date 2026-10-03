@@ -1,6 +1,6 @@
 import { Database, Download, RotateCcw, Upload } from 'lucide-react';
 
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import { exportAppToFile, importAppFromFile } from '../lib/tauri/appExport';
 import { activateOnKeyboard } from '../lib/utils/a11y';
 import type { AppSettings } from '../settings/defaults';
@@ -36,36 +36,36 @@ export function SettingsSidebarNavigation({
             tabIndex={0}
           >
             {CATEGORY_ICONS[category]}
-            <span>{t(lang, CATEGORY_LABEL_KEY[category])}</span>
+            <span>{translate(CATEGORY_LABEL_KEY[category], lang)}</span>
           </div>
         );
       })}
       <div className="flex-1" />
       <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
-        <div className="section-heading mb-1">{t(lang, 'backupCategory')}</div>
+        <div className="section-heading mb-1">{translate('backupCategory', lang)}</div>
         <button
           className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
           onClick={() => void exportAppToFile()}
-          title={t(lang, 'exportConfig')}
+          title={translate('exportConfig', lang)}
         >
           <Download size={14} />
-          <span>{t(lang, 'exportConfig')}</span>
+          <span>{translate('exportConfig', lang)}</span>
         </button>
         <button
           className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
           onClick={() => void importAppFromFile()}
-          title={t(lang, 'importConfig')}
+          title={translate('importConfig', lang)}
         >
           <Upload size={14} />
-          <span>{t(lang, 'importConfig')}</span>
+          <span>{translate('importConfig', lang)}</span>
         </button>
         <button
           className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
           onClick={onOpenBackup}
-          title={t(lang, 'backupCustom')}
+          title={translate('backupCustom', lang)}
         >
           <Database size={14} />
-          <span>{t(lang, 'backupCustom')}</span>
+          <span>{translate('backupCustom', lang)}</span>
         </button>
       </div>
     </>
@@ -81,10 +81,10 @@ export function SettingsResetButton({ onClick }: { onClick: () => void }) {
       onKeyDown={activateOnKeyboard}
       role="button"
       tabIndex={0}
-      title={t(lang, 'settingsReset')}
+      title={translate('settingsReset', lang)}
     >
       <RotateCcw size={14} />
-      <span>{t(lang, 'settingsReset')}</span>
+      <span>{translate('settingsReset', lang)}</span>
     </div>
   );
 }

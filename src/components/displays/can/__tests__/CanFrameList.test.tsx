@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import userEvent from '@testing-library/user-event';
 import { CanFrameList } from '../CanFrameList';
 import { canFrameBuffer } from '../../../../lib/buffers/canBuffer';
@@ -46,12 +47,12 @@ describe('CanFrameList', () => {
   });
 
   it('renders the empty state before SLCAN frames arrive', () => {
-    render(<CanFrameList />);
+    renderWithI18n(<CanFrameList />);
     expect(screen.getByText('暂无 CAN 帧')).toBeInTheDocument();
   });
 
   it('renders received SLCAN frames with counters and payload', () => {
-    render(<CanFrameList />);
+    renderWithI18n(<CanFrameList />);
     act(() => canFrameBuffer.push([frame(0x123), frame(0x456, 'Tx')]));
 
     expect(screen.getByText('0x123')).toBeInTheDocument();
@@ -63,7 +64,7 @@ describe('CanFrameList', () => {
 
   it('sends a typed backend filter request for ID and direction', async () => {
     const user = userEvent.setup();
-    render(<CanFrameList />);
+    renderWithI18n(<CanFrameList />);
     await user.type(screen.getByLabelText('按 ID 过滤 (HEX)'), '123');
     await user.click(screen.getByRole('button', { name: 'Rx' }));
 
@@ -87,7 +88,7 @@ describe('CanFrameList', () => {
   });
 
   it('keeps its toolbar horizontally wheel-scrollable with edge shadows', () => {
-    const { container } = render(<CanFrameList />);
+    const { container } = renderWithI18n(<CanFrameList />);
     const toolbar = container.querySelector('.horizontal-scroll-area');
 
     expect(toolbar).toHaveClass('flex-nowrap');
@@ -98,7 +99,7 @@ describe('CanFrameList', () => {
 
   it('shows an error instead of silently showing an empty filtered list', async () => {
     const user = userEvent.setup();
-    render(<CanFrameList />);
+    renderWithI18n(<CanFrameList />);
     await user.type(screen.getByLabelText('按 ID 过滤 (HEX)'), 'xyz');
 
     expect(screen.getByRole('alert')).toHaveTextContent('CAN ID 过滤值无效');

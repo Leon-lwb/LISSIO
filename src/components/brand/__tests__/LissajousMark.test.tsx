@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { buildLissajousParticles, buildLissajousPath, LissajousMark } from '../LissajousMark';
 
 describe('LissajousMark', () => {
@@ -17,7 +18,7 @@ describe('LissajousMark', () => {
   });
 
   it('exposes an accessible label when used as a loading indicator', () => {
-    render(<LissajousMark label="Loading" animated={false} />);
+    renderWithI18n(<LissajousMark label="Loading" animated={false} />);
     expect(screen.getByRole('img', { name: 'Loading' })).toBeInTheDocument();
   });
 });

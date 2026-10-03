@@ -9,7 +9,7 @@ import { memo, useCallback } from 'react';
 import type { Node } from '@xyflow/react';
 import { X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import type { WidgetConfig } from '../../types';
 import { SimulationProperties } from '../acquisition/SimulationProperties';
 import { TextField } from '../ui/fields';
@@ -22,9 +22,9 @@ function panelTitle(lang: Lang, node: Node): string {
     const widget = node.data.widget as WidgetConfig | undefined;
     return widget?.kind ?? 'Widget';
   }
-  if (node.type === 'acquisition') return t(lang, 'dataInterface');
+  if (node.type === 'acquisition') return translate('dataInterface', lang);
   if (node.type === 'point-selector') return 'Point Selector';
-  return t(lang, 'protocolEngine');
+  return translate('protocolEngine', lang);
 }
 
 /// 面板副标题 — 控件节点的用户命名 label
@@ -77,26 +77,26 @@ export const NodePropertiesPanel = memo(function NodePropertiesPanel() {
               type="button"
               className="w-5 h-5 shrink-0 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover transition-colors"
               onClick={deselect}
-              title={t(lang, 'propertiesClose')}
-              aria-label={t(lang, 'propertiesClose')}
+              title={translate('propertiesClose', lang)}
+              aria-label={translate('propertiesClose', lang)}
             >
               <X size={12} />
             </button>
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto p-3">
-            <h3 className="text-xs text-text-secondary mb-2">{t(lang, 'propertiesSectionGeneral')}</h3>
-            <TextField label={t(lang, 'widgetName')} value={(node.data.widget as WidgetConfig | undefined)?.params.label ?? node.data.label as string ?? ''}
+            <h3 className="text-xs text-text-secondary mb-2">{translate('propertiesSectionGeneral', lang)}</h3>
+            <TextField label={translate('widgetName', lang)} value={(node.data.widget as WidgetConfig | undefined)?.params.label ?? node.data.label as string ?? ''}
               onCommit={(label) => useAppStore.getState().renameNode(node.id, label)} />
             <SizeSection nodeId={node.id} kind={(node.data.widget as WidgetConfig | undefined)?.kind} />
-            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{t(lang, 'propertiesSectionBusiness')}</h3>
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{translate('propertiesSectionBusiness', lang)}</h3>
             {Properties && <Properties node={node} />}
-            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{t(lang, 'propertiesSectionExtra')}</h3>
-            {node.type === 'acquisition' ? <SimulationProperties node={node} /> : <span className="text-xs text-text-secondary">{t(lang, 'propertiesNoExtraAttributes')}</span>}
+            <h3 className="text-xs text-text-secondary border-t border-border pt-3 my-3">{translate('propertiesSectionExtra', lang)}</h3>
+            {node.type === 'acquisition' ? <SimulationProperties node={node} /> : <span className="text-xs text-text-secondary">{translate('propertiesNoExtraAttributes', lang)}</span>}
           </div>
         </>
       ) : (
         <div className="flex-1 flex items-center justify-center px-4 text-center text-xs text-text-secondary">
-          {t(lang, 'nodePropertiesEmpty')}
+          {translate('nodePropertiesEmpty', lang)}
         </div>
       )}
     </div>

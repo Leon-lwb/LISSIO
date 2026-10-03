@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 interface SearchInputProps {
   value: string;
@@ -136,8 +136,8 @@ export function SearchInput({
         <button
           type="button"
           className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform duration-150 motion-safe:active:scale-95 cursor-pointer animate-search-clear-in"
-          title={t(lang, 'clearSearch')}
-          aria-label={t(lang, 'clearSearch')}
+          title={translate('clearSearch', lang)}
+          aria-label={translate('clearSearch', lang)}
           onClick={handleClear}
         >
           <X size={iconSize} />

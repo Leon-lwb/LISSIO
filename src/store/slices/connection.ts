@@ -4,7 +4,7 @@ import { clearRawDataTransportBuffers } from '../../lib/buffers/rawDataBuffers';
 import { resetPortSampleStoresForSource } from '../../lib/data/dataClient';
 import { notify } from '../../lib/tauri/notifications';
 import { nodeError } from '../../lib/tauri/errorGuidance';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { downstreamProtocolOf } from '../appStoreHelpers';
 import { resolveSimulation } from '../../lib/acquisition/simulation';
 import { simulationConfig, withSimulation, type AcquisitionNodeData } from '../../lib/acquisition/acquisitionNodes';
@@ -54,11 +54,11 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
       } catch (e) {
         const lang = get().lang;
         notify.error(
-          t(lang, 'notifRefreshPortsFailed'),
+          translate('notifRefreshPortsFailed', lang),
           nodeError(lang, e),
           {
             source: 'refreshPorts',
-            actions: [{ label: t(lang, 'notifRetry'), run: () => { void get().refreshPorts(); } }],
+            actions: [{ label: translate('notifRetry', lang), run: () => { void get().refreshPorts(); } }],
           }
         );
       }
@@ -116,11 +116,11 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
           connectionStates: { ...s.connectionStates, [nodeId]: 'Error' as ConnectionState },
         }));
         notify.error(
-          t(lang, 'notifConnectFailed'),
+          translate('notifConnectFailed', lang),
           nodeError(lang, e),
           {
             source: 'connect',
-            actions: [{ label: t(lang, 'notifRetry'), run: () => { void get().connectNode(nodeId); } }],
+            actions: [{ label: translate('notifRetry', lang), run: () => { void get().connectNode(nodeId); } }],
           }
         );
       }
@@ -141,11 +141,11 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
           connectionStates: { ...s.connectionStates, [nodeId]: 'Error' as ConnectionState },
         }));
         notify.error(
-          t(lang, 'notifDisconnectFailed'),
+          translate('notifDisconnectFailed', lang),
           nodeError(lang, e),
           {
             source: 'disconnect',
-            actions: [{ label: t(lang, 'notifRetry'), run: () => { void get().disconnectNode(nodeId); } }],
+            actions: [{ label: translate('notifRetry', lang), run: () => { void get().disconnectNode(nodeId); } }],
           }
         );
       }
@@ -156,7 +156,7 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         await api.sendRaw(nodeId, data);
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifSendFailed'), nodeError(lang, e), { source: 'sendData' });
+        notify.error(translate('notifSendFailed', lang), nodeError(lang, e), { source: 'sendData' });
       }
     },
 
@@ -188,7 +188,7 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         }));
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifSendFailed'), nodeError(lang, e), { source: 'sendAndCapture' });
+        notify.error(translate('notifSendFailed', lang), nodeError(lang, e), { source: 'sendAndCapture' });
       }
     },
 
@@ -197,7 +197,7 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         await api.sendString(nodeId, text);
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifSendFailed'), nodeError(lang, e), { source: 'sendText' });
+        notify.error(translate('notifSendFailed', lang), nodeError(lang, e), { source: 'sendText' });
       }
     },
 
@@ -206,7 +206,7 @@ export const createConnectionSlice: AppSlice<ConnectionSlice> = (set, get) => {
         await api.sendWidgetValue(nodeId, protocolNode, binding, value);
       } catch (e) {
         const lang = get().lang;
-        notify.error(t(lang, 'notifSendFailed'), nodeError(lang, e), { source: 'sendWidget' });
+        notify.error(translate('notifSendFailed', lang), nodeError(lang, e), { source: 'sendWidget' });
       }
     },
   };

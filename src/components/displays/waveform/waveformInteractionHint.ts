@@ -2,7 +2,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useOnboardingStore } from '../../../store/onboardingStore';
 import { notify } from '../../../lib/tauri/notifications';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 /// Show the one-time waveform interaction hint when context tips are enabled.
 export function maybeShowInteractHint(): void {
@@ -12,8 +12,8 @@ export function maybeShowInteractHint(): void {
   state.markWaveformInteractHintShown();
   const lang = useAppStore.getState().lang;
   notify.info(
-    t(lang, 'waveformInteractHintTitle'),
-    t(lang, 'waveformInteractHintMessage'),
-    { actions: [{ label: t(lang, 'closeHintGotIt'), run: () => undefined }] }
+    translate('waveformInteractHintTitle', lang),
+    translate('waveformInteractHintMessage', lang),
+    { actions: [{ label: translate('closeHintGotIt', lang), run: () => undefined }] }
   );
 }

@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../../../store/appStore';
 import { useAiChatStore } from '../../../store/aiChatStore';
@@ -30,7 +31,7 @@ afterEach(() => act(() => useAiChatStore.setState(originalChatState)));
 
 describe('AiChatPanel composer', () => {
   it('does not send when Enter confirms an IME candidate, including the Enter after compositionend', () => {
-    render(<AiChatPanel />);
+    renderWithI18n(<AiChatPanel />);
     const composer = screen.getByRole('textbox', { name: /输入消息/ });
     fireEvent.change(composer, { target: { value: '你好' } });
     fireEvent.compositionStart(composer);
@@ -48,7 +49,7 @@ describe('AiChatPanel composer', () => {
   });
 
   it('sends on an ordinary Enter and keeps Shift+Enter for a newline', () => {
-    render(<AiChatPanel />);
+    renderWithI18n(<AiChatPanel />);
     const composer = screen.getByRole('textbox', { name: /输入消息/ });
     fireEvent.change(composer, { target: { value: '你好' } });
     fireEvent.keyDown(composer, { key: 'Enter', code: 'Enter', shiftKey: true });
@@ -64,7 +65,7 @@ describe('AiChatPanel composer', () => {
     useAiChatStore.setState({
       viewItems: [{ role: 'user', text: `https://example.com/${'segment-'.repeat(40)}` }],
     });
-    const { container } = render(<AiChatPanel />);
+    const { container } = renderWithI18n(<AiChatPanel />);
     const text = container.querySelector('.whitespace-pre-wrap');
     expect(text).toHaveClass('[overflow-wrap:anywhere]');
     expect(text?.parentElement).toHaveClass('min-w-0');
@@ -72,7 +73,7 @@ describe('AiChatPanel composer', () => {
   });
 
   it('输入框在面板宽度内折行 (长 token 不产生横向滚动)', () => {
-    render(<AiChatPanel />);
+    renderWithI18n(<AiChatPanel />);
     const composer = screen.getByRole('textbox', { name: /输入消息/ });
     expect(composer).toHaveClass('[overflow-wrap:anywhere]');
     expect(composer).toHaveClass('overflow-y-auto');

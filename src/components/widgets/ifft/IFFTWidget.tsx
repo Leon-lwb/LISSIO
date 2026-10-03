@@ -2,7 +2,7 @@ import { memo } from 'react';
 import type { WidgetConfig } from '../../../types';
 import { useNumericOutput } from '../../../lib/hooks/useNumericPort';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { selectWidgets } from '../../../store/appStoreHelpers';
 
 interface IFFTWidgetProps {
@@ -42,9 +42,9 @@ export const IFFTWidget = memo(function IFFTWidget({ widget }: IFFTWidgetProps) 
         </span>
       </div>
       <div className="flex justify-between items-center text-xs px-1 py-0.5 bg-bg-subtle rounded-sm">
-        <span className="text-text-secondary">{t(lang, 'ifftSource')}</span>
+        <span className="text-text-secondary">{translate('ifftSource', lang)}</span>
         <span className="text-text-primary font-mono">
-          {sourceWidget ? sourceWidget.params.label : t(lang, 'ifftNoSource')}
+          {sourceWidget ? sourceWidget.params.label : translate('ifftNoSource', lang)}
         </span>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import type { WidgetBinding } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { snapControlValue, validateNumericRange } from '../../../lib/utils/numericControl';
 import { sendBindingValue } from './binding';
 import { NumberField } from '../../ui/fields';
@@ -41,15 +41,15 @@ export const ControlRangeEditor = memo(function ControlRangeEditor({ params, onP
   };
   return (
     <>
-      <NumberField label={t(lang, 'minValue')} value={params.min} onCommit={(min) => patchRange({ min })} error={t(lang, 'invalidRange')} />
-      <NumberField label={t(lang, 'maxValue')} value={params.max} onCommit={(max) => patchRange({ max })} error={t(lang, 'invalidRange')} />
-      <NumberField label={t(lang, 'step')} value={params.step} onCommit={(step) => patchRange({ step })} error={t(lang, 'invalidStep')} />
-      <NumberField label={t(lang, 'currentValue')} value={params.value} onCommit={(value) => {
+      <NumberField label={translate('minValue', lang)} value={params.min} onCommit={(min) => patchRange({ min })} error={translate('invalidRange', lang)} />
+      <NumberField label={translate('maxValue', lang)} value={params.max} onCommit={(max) => patchRange({ max })} error={translate('invalidRange', lang)} />
+      <NumberField label={translate('step', lang)} value={params.step} onCommit={(step) => patchRange({ step })} error={translate('invalidStep', lang)} />
+      <NumberField label={translate('currentValue', lang)} value={params.value} onCommit={(value) => {
         const normalized = snapControlValue(value, params);
         commitInputValue(params.id, normalized);
         sendBindingValue(params.binding, normalized);
         return true;
-      }} error={t(lang, 'invalidValue')} />
+      }} error={translate('invalidValue', lang)} />
     </>
   );
 });

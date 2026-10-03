@@ -28,7 +28,7 @@ import clsx from 'clsx';
 import { useAppStore } from '../../../store/appStore';
 import { useHistoryStore, beginHistoryOp, type HistoryEntry } from '../../../store/historyStore';
 import { NEUTRAL_VISUAL, nodeVisualOf } from '../../../lib/utils/nodeKindVisuals';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 /// 清空确认的自动复位时长 (ms)
@@ -137,21 +137,21 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
       >
         <HistoryIcon size={13} className="text-text-secondary shrink-0" />
         <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-text-primary">
-          {t(lang, 'operationHistoryTitle')}
+          {translate('operationHistoryTitle', lang)}
         </span>
         {entries.length > 0 && (
           <span
-            title={t(lang, 'opHistoryCurrentPosition')}
+            title={translate('opHistoryCurrentPosition', lang)}
             className="inline-flex shrink-0 items-center h-5 px-1.5 rounded-full bg-bg-input border border-border-subtle text-[10px] font-mono text-text-secondary tabular-nums"
           >
             {stepProgress(lang, index, entries.length)}
           </span>
         )}
         <div className="ml-auto flex flex-shrink-0 items-center gap-0.5">
-          <button type="button" disabled={!canUndo} onClick={() => undo()} title={`${t(lang, 'menuUndo')} (Ctrl+Z)`} className={iconBtnCls}>
+          <button type="button" disabled={!canUndo} onClick={() => undo()} title={`${translate('menuUndo', lang)} (Ctrl+Z)`} className={iconBtnCls}>
             <Undo2 size={14} />
           </button>
-          <button type="button" disabled={!canRedo} onClick={() => redo()} title={`${t(lang, 'menuRedo')} (Ctrl+Y)`} className={iconBtnCls}>
+          <button type="button" disabled={!canRedo} onClick={() => redo()} title={`${translate('menuRedo', lang)} (Ctrl+Y)`} className={iconBtnCls}>
             <Redo2 size={14} />
           </button>
           <button
@@ -165,7 +165,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
                 setConfirmClear(true);
               }
             }}
-            title={t(lang, confirmClear ? 'opHistoryClearConfirm' : 'opHistoryClear')}
+            title={translate(confirmClear ? 'opHistoryClearConfirm' : 'opHistoryClear', lang)}
             className={clsx(iconBtnCls, confirmClear && 'text-text-danger hover:text-text-danger-strong')}
           >
             <Trash2 size={14} />
@@ -177,14 +177,14 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
       <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
         {ordered.length === 0 ? (
           <div className="h-full w-full flex items-center justify-center">
-            <div className="text-text-secondary text-sm select-none">{t(lang, 'opHistoryEmpty')}</div>
+            <div className="text-text-secondary text-sm select-none">{translate('opHistoryEmpty', lang)}</div>
           </div>
         ) : (
           <div className="flex flex-col gap-px p-1.5">
             {ordered.map(({ entry, idx }, rowIdx) => {
               const isCurrent = idx === index;
               const isFuture = idx > index;
-              const detail = entry.detailKey ? t(lang, entry.detailKey) : entry.detailText ?? '';
+              const detail = entry.detailKey ? translate(entry.detailKey, lang) : entry.detailText ?? '';
               const badge = badgeOf(entry);
               // 游标分隔条紧跟最后一条「未来」行之后
               const showDivider = rowIdx === futureCount - 1;
@@ -229,7 +229,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
                       )}
                     </span>
                     <span className="min-w-0 flex-1 truncate">
-                      {t(lang, entry.opKey)}
+                      {translate(entry.opKey, lang)}
                       {detail && <span className="text-text-secondary"> · {detail}</span>}
                     </span>
                     <span className="shrink-0 font-mono text-[10px] text-text-secondary tabular-nums">
@@ -241,7 +241,7 @@ export const OperationHistoryView = memo(function OperationHistoryView() {
                     <div className="flex items-center gap-2 px-3 py-1.5 my-0.5" aria-hidden>
                       <span className="h-px flex-1 bg-border-subtle" />
                       <span className="text-[10px] tracking-wide text-text-secondary whitespace-nowrap">
-                        ▲ {t(lang, 'opHistoryRedoZone')}
+                        ▲ {translate('opHistoryRedoZone', lang)}
                       </span>
                       <span className="h-px flex-1 bg-border-subtle" />
                     </div>

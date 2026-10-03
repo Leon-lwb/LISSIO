@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 import { WIDGET_DEFS, WIDGET_REGISTRY, type WidgetKind } from '../registry';
 import { widgetInputValue } from '../../../lib/utils/widgetValue';
 import { WIDGET_SIZE_LIMITS } from '../../../lib/utils/widgetSize';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { WIDGET_TEST_KINDS } from '../../../test/modelCatalog';
 import type { WidgetConfig } from '../../../types';
 
@@ -23,8 +23,8 @@ describe('widget registry completeness', () => {
       expect(def.icon, `${def.kind}.icon`).toBeDefined();
       expect(def.labelKey, `${def.kind}.labelKey`).toBeTypeOf('string');
       // i18n t 缺键回退 key 本身 — 回退即视为漏配
-      expect(t('en', def.labelKey as never), `${def.kind}.labelKey(en)`).not.toBe(def.labelKey);
-      expect(t('zh', def.labelKey as never), `${def.kind}.labelKey(zh)`).not.toBe(def.labelKey);
+      expect(translate(def.labelKey as never, 'en'), `${def.kind}.labelKey(en)`).not.toBe(def.labelKey);
+      expect(translate(def.labelKey as never, 'zh'), `${def.kind}.labelKey(zh)`).not.toBe(def.labelKey);
     }
   });
 

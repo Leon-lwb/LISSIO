@@ -5,7 +5,7 @@
 //! 助手条目附带工具调用摘要行, 错误条目渲染为引用块警告。
 //! 文案随界面语言 (t), 纯函数便于测试。
 
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import { formatAiKindError } from './aiErrors';
 import type { AiViewItem } from '../../types';
 
@@ -24,7 +24,7 @@ function formatTimestamp(d: Date): string {
 function toolLines(item: AiViewItem, lang: Lang): string[] {
   if (!item.tools?.length) return [];
   return item.tools.map((run) => {
-    const status = !run.done ? t(lang, 'aiToolRunning') : run.is_error ? t(lang, 'aiToolFailed') : t(lang, 'aiToolDone');
+    const status = !run.done ? translate('aiToolRunning', lang) : run.is_error ? translate('aiToolFailed', lang) : translate('aiToolDone', lang);
     return `- 🔧 \`${shortToolName(run.name)}\` ${status}`;
   });
 }
@@ -32,7 +32,7 @@ function toolLines(item: AiViewItem, lang: Lang): string[] {
 /// 附件块 — 以标注标题 + 代码围栏呈现 (完整存档, 保留原文内容)
 function attachmentLines(item: AiViewItem, lang: Lang): string[] {
   if (!item.attachments?.length) return [];
-  const title = t(lang, 'aiChatExportAttachment');
+  const title = translate('aiChatExportAttachment', lang);
   const lines: string[] = [];
   for (const att of item.attachments) {
     lines.push(`**${title}: \`${att.name}\`**`, '', '```', att.content, '```', '');
@@ -43,7 +43,7 @@ function attachmentLines(item: AiViewItem, lang: Lang): string[] {
 /// 单条消息 → `## 角色` + 正文 (+ 附件 / 工具摘要 / 错误警告)
 function itemLines(item: AiViewItem, lang: Lang): string[] {
   const roleKey = item.role === 'user' ? 'aiChatExportUser' : 'aiChatExportAssistant';
-  const lines = ['', `## ${t(lang, roleKey)}`, ''];
+  const lines = ['', `## ${translate(roleKey, lang)}`, ''];
   if (item.error) {
     // 错误条目: 按 kind 本地化为主行, 后端原始描述为次要行 (与气泡展示一致)
     const view = formatAiKindError(item.error_kind ?? '', item.error_data, item.text, lang);
@@ -76,7 +76,7 @@ export function sessionToMarkdown(
   const lines = [
     `# ${title}`,
     '',
-    `> ${t(lang, 'aiChatExportMeta').replace('{time}', formatTimestamp(now))}`,
+    `> ${translate('aiChatExportMeta', lang).replace('{time}', formatTimestamp(now))}`,
     ...items.flatMap((item) => itemLines(item, lang)),
   ];
   return `${lines.join('\n')}\n`;

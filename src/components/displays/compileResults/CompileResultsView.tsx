@@ -16,7 +16,7 @@ import {
   Edit2,
   ClipboardPaste,
 } from 'lucide-react';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { Edge } from '@xyflow/react';
 import { EdgeEditDialog } from './EdgeEditDialog';
 import {
@@ -92,8 +92,8 @@ export const CompileResultsView = memo(function CompileResultsView() {
   const getNodeName = (id: string): string => {
     const node = rfNodes.find((n) => n.id === id);
     if (!node) return id;
-    if (node.type === 'acquisition') return t(lang, 'nodeTypeTransport');
-    if (node.type === 'protocol') return t(lang, 'nodeTypeProtocol');
+    if (node.type === 'acquisition') return translate('nodeTypeTransport', lang);
+    if (node.type === 'protocol') return translate('nodeTypeProtocol', lang);
     const widget = (node.data as { widget?: { params?: { label?: string }; kind?: string } } | undefined)?.widget;
     return (widget?.params?.label ?? widget?.kind) ?? id;
   };
@@ -205,7 +205,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
     <div className="flex flex-col h-full w-full bg-bg-editor p-4">
       <div className="flex flex-wrap justify-between items-center mb-3 gap-2">
         <h2 className="text-sm font-semibold text-text-primary">
-          {t(lang, 'connectionResultsTitle')}
+          {translate('connectionResultsTitle', lang)}
         </h2>
         <div className="flex gap-2 flex-wrap">
           <button
@@ -213,14 +213,14 @@ export const CompileResultsView = memo(function CompileResultsView() {
             onClick={handleAdd}
             disabled={hirLoading || !hir || (hir.nodes?.length ?? 0) < 2}
           >
-            <PlusIcon size={14} /> {t(lang, 'addConnection')}
+            <PlusIcon size={14} /> {translate('addConnection', lang)}
           </button>
           <button
             className="flex items-center gap-1 px-2 py-1 bg-bg-button hover:bg-bg-hover text-text-primary rounded text-xs disabled:opacity-disabled"
             onClick={() => { void handlePaste(); }}
             disabled={!clipboardEdge || hirLoading}
           >
-            <ClipboardPaste size={14} /> {t(lang, 'pasteConnection')}
+            <ClipboardPaste size={14} /> {translate('pasteConnection', lang)}
           </button>
         </div>
       </div>
@@ -231,20 +231,20 @@ export const CompileResultsView = memo(function CompileResultsView() {
         <table className="w-full text-left text-xs text-text-secondary">
           <thead className="bg-bg-panel-header sticky top-0 border-b border-border">
             <tr>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colSource')}</th>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colTarget')}</th>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colSourceDomain')}</th>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colTargetDomain')}</th>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colEdgeClass')}</th>
-              <th className="px-4 py-2 font-medium">{t(lang, 'colDualRole')}</th>
-              <th className="px-4 py-2 font-medium text-right">{t(lang, 'colActions')}</th>
+              <th className="px-4 py-2 font-medium">{translate('colSource', lang)}</th>
+              <th className="px-4 py-2 font-medium">{translate('colTarget', lang)}</th>
+              <th className="px-4 py-2 font-medium">{translate('colSourceDomain', lang)}</th>
+              <th className="px-4 py-2 font-medium">{translate('colTargetDomain', lang)}</th>
+              <th className="px-4 py-2 font-medium">{translate('colEdgeClass', lang)}</th>
+              <th className="px-4 py-2 font-medium">{translate('colDualRole', lang)}</th>
+              <th className="px-4 py-2 font-medium text-right">{translate('colActions', lang)}</th>
             </tr>
           </thead>
           <tbody>
             {!hasAnyEdge ? (
               <tr>
                 <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
-                  {t(lang, 'noConnections')}
+                  {translate('noConnections', lang)}
                 </td>
               </tr>
             ) : (
@@ -288,7 +288,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                           {getNodeName(edge.sourceNode)}
                         </button>
                         <span className="text-text-muted font-mono bg-bg-input px-1 rounded inline-block w-fit">
-                          {edge.sourceHandle || t(lang, 'defaultHandle')}
+                          {edge.sourceHandle || translate('defaultHandle', lang)}
                         </span>
                       </div>
                     </td>
@@ -305,7 +305,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                           {getNodeName(edge.targetNode)}
                         </button>
                         <span className="text-text-muted font-mono bg-bg-input px-1 rounded inline-block w-fit">
-                          {edge.targetHandle || t(lang, 'defaultHandle')}
+                          {edge.targetHandle || translate('defaultHandle', lang)}
                         </span>
                       </div>
                     </td>
@@ -337,7 +337,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                     <td className="px-4 py-2">
                       {isDual ? (
                         <span className="px-2 py-0.5 rounded text-[10px] font-mono border state-special">
-                          {t(lang, 'dualRoleMarker')}
+                          {translate('dualRoleMarker', lang)}
                         </span>
                       ) : (
                         <span className="text-text-muted">—</span>
@@ -347,7 +347,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                       <div className="flex justify-end gap-2">
                         <button
                           className="p-1 text-text-muted hover:text-text-primary transition-colors"
-                          title={t(lang, 'editConnection')}
+                          title={translate('editConnection', lang)}
                           onClick={() => handleModify(edge)}
                           disabled={hirLoading}
                         >
@@ -355,7 +355,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                         </button>
                         <button
                           className="p-1 text-text-muted hover:text-text-primary transition-colors"
-                          title={t(lang, 'contextMenuCopy')}
+                          title={translate('contextMenuCopy', lang)}
                           onClick={() => handleCopy(edge)}
                           disabled={hirLoading}
                         >
@@ -363,7 +363,7 @@ export const CompileResultsView = memo(function CompileResultsView() {
                         </button>
                         <button
                           className="p-1 text-text-danger hover:text-text-danger-strong transition-colors"
-                          title={t(lang, 'contextMenuDelete')}
+                          title={translate('contextMenuDelete', lang)}
                           onClick={() => { void handleDelete(edge.edgeId); }}
                           disabled={hirLoading}
                         >

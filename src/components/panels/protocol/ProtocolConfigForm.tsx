@@ -3,7 +3,7 @@
 //!
 //! schema/onSchemaChange 仅主配置传入: 支持把预设转为 custom 块编辑;
 //! convertTo 二级配置不传 schema → 保持纯预设表单 (convertTo 不在 schema 化范围)
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { Info } from 'lucide-react';
 import type { ProtocolConfig, ProtocolSchema, LogicDecoderConfig } from '../../../types';
 import { useModelCatalogStore } from '../../../store/modelCatalogStore';
@@ -114,12 +114,12 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
   };
 
   const kinds: { value: ProtocolConfig['kind']; label: string }[] = [
-    { value: 'JustFloat', label: t(lang, 'justfloat') },
-    { value: 'FireWater', label: t(lang, 'firewater') },
-    { value: 'RawData', label: t(lang, 'rawdata') },
-    { value: 'Slcan', label: t(lang, 'slcan') },
-    { value: 'CandleLight', label: t(lang, 'candleLight') },
-    { value: 'LogicDecode', label: t(lang, 'logicAnalyzer') },
+    { value: 'JustFloat', label: translate('justfloat', lang) },
+    { value: 'FireWater', label: translate('firewater', lang) },
+    { value: 'RawData', label: translate('rawdata', lang) },
+    { value: 'Slcan', label: translate('slcan', lang) },
+    { value: 'CandleLight', label: translate('candleLight', lang) },
+    { value: 'LogicDecode', label: translate('logicAnalyzer', lang) },
   ];
 
   const selectClass = 'form-select';
@@ -129,7 +129,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
     <div>
       {/* 协议类型 (schema 受控时追加"自定义块"选项) */}
       <div className="mb-2.5 mt-1">
-        <label className="block text-xs text-text-secondary mb-1">{t(lang, 'protocolEngine')}</label>
+        <label className="block text-xs text-text-secondary mb-1">{translate('protocolEngine', lang)}</label>
         <select
           value={isCustom ? 'custom' : value.kind}
           onChange={(e) => {
@@ -142,7 +142,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
           {kinds.map((k) => (
             <option key={k.value} value={k.value}>{k.label}</option>
           ))}
-          {onSchemaChange && <option value="custom">{t(lang, 'protocolCustom')}</option>}
+          {onSchemaChange && <option value="custom">{translate('protocolCustom', lang)}</option>}
         </select>
       </div>
 
@@ -151,13 +151,13 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
         <>
           <div className="mb-2.5">
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs text-text-secondary">{t(lang, 'protocolCustomBlocks')}</label>
+              <label className="block text-xs text-text-secondary">{translate('protocolCustomBlocks', lang)}</label>
               <button
                 type="button"
                 className="text-[10px] text-accent hover:underline"
                 onClick={resetToPreset}
               >
-                {t(lang, 'protocolResetToPreset')}
+                {translate('protocolResetToPreset', lang)}
               </button>
             </div>
             <ProtocolBlocksEditor
@@ -167,7 +167,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
             />
           </div>
           <div className="mb-2.5 px-2 py-1.5 bg-bg-input rounded text-xs text-text-secondary flex justify-between items-center">
-            <span>{t(lang, 'protocolDerivedPorts')}:</span>
+            <span>{translate('protocolDerivedPorts', lang)}:</span>
             <span className="text-blue font-mono">
               {schemaPortNames(schema.decode).join(', ') || '--'}
             </span>
@@ -179,7 +179,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
       {!isCustom && hasChannels && (
         <>
           <div className="mb-2.5">
-            <label className="block text-xs text-text-secondary mb-1">{t(lang, 'channels')}</label>
+            <label className="block text-xs text-text-secondary mb-1">{translate('channels', lang)}</label>
             <div className="flex flex-col gap-1">
               <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
@@ -189,7 +189,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                   onChange={() => setAutoMode(true)}
                   className="accent-accent"
                 />
-                <span>{t(lang, 'channelsAuto')}</span>
+                <span>{translate('channelsAuto', lang)}</span>
               </label>
               <label className="flex items-center gap-1.5 cursor-pointer text-sm">
                 <input
@@ -199,7 +199,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                   onChange={() => setAutoMode(false)}
                   className="accent-accent"
                 />
-                <span>{t(lang, 'channelsManual')}</span>
+                <span>{translate('channelsManual', lang)}</span>
               </label>
             </div>
           </div>
@@ -218,7 +218,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
 
           {isAuto && (
             <div className="mb-2.5 px-2 py-1.5 bg-bg-input rounded text-xs text-text-secondary flex justify-between items-center">
-              <span>{t(lang, 'detectedChannels')}:</span>
+              <span>{translate('detectedChannels', lang)}:</span>
               <span className="text-blue font-mono">
                 {detectedChannels ?? '--'}
               </span>
@@ -231,22 +231,22 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
       {!isCustom && value.kind === 'LogicDecode' && (
         <>
           <div className="mb-2.5">
-            <label className="block text-xs text-text-secondary mb-1">{t(lang, 'decoderType')}</label>
+            <label className="block text-xs text-text-secondary mb-1">{translate('decoderType', lang)}</label>
             <select
               value={value.decoder.kind}
               onChange={(e) => switchDecoderKind(e.target.value as LogicDecoderConfig['kind'])}
               className={selectClass}
             >
-              <option value="Uart">{t(lang, 'uartConfig')}</option>
-              <option value="I2c">{t(lang, 'i2cConfig')}</option>
-              <option value="Spi">{t(lang, 'spiConfig')}</option>
+              <option value="Uart">{translate('uartConfig', lang)}</option>
+              <option value="I2c">{translate('i2cConfig', lang)}</option>
+              <option value="Spi">{translate('spiConfig', lang)}</option>
             </select>
           </div>
 
           {value.decoder.kind === 'Uart' && (
             <>
               <div className="mb-2.5">
-                <label className="block text-xs text-text-secondary mb-1">{t(lang, 'baudRate')}</label>
+                <label className="block text-xs text-text-secondary mb-1">{translate('baudRate', lang)}</label>
                 <select
                   value={value.decoder.params.baud_rate}
                   onChange={(e) => updateDecoderParams('Uart', { baud_rate: parseInt(e.target.value) || 115200 })}
@@ -259,7 +259,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
               </div>
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'dataBits')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('dataBits', lang)}</label>
                   <select
                     value={value.decoder.params.data_bits}
                     onChange={(e) => updateDecoderParams('Uart', { data_bits: parseInt(e.target.value) || 8 })}
@@ -271,32 +271,32 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                   </select>
                 </div>
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'parity')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('parity', lang)}</label>
                   <select
                     value={value.decoder.params.parity}
                     onChange={(e) => updateDecoderParams('Uart', { parity: e.target.value as 'none' | 'odd' | 'even' })}
                     className={selectClass}
                   >
-                    <option value="none">{t(lang, 'parityNone')}</option>
-                    <option value="even">{t(lang, 'parityEven')}</option>
-                    <option value="odd">{t(lang, 'parityOdd')}</option>
+                    <option value="none">{translate('parityNone', lang)}</option>
+                    <option value="even">{translate('parityEven', lang)}</option>
+                    <option value="odd">{translate('parityOdd', lang)}</option>
                   </select>
                 </div>
               </div>
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'stopBits')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('stopBits', lang)}</label>
                   <select
                     value={value.decoder.params.stop_bits}
                     onChange={(e) => updateDecoderParams('Uart', { stop_bits: e.target.value as 'one' | 'two' })}
                     className={selectClass}
                   >
-                    <option value="one">{t(lang, 'stopBits1')}</option>
-                    <option value="two">{t(lang, 'stopBits2')}</option>
+                    <option value="one">{translate('stopBits1', lang)}</option>
+                    <option value="two">{translate('stopBits2', lang)}</option>
                   </select>
                 </div>
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'channel')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('channel', lang)}</label>
                   <DraftNumberInput
                     min={0}
                     max={15}
@@ -313,7 +313,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
           {value.decoder.kind === 'I2c' && (
             <div className="flex gap-2">
               <div className="mb-2.5 flex-1">
-                <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sdaChannel')}</label>
+                <label className="block text-xs text-text-secondary mb-1">{translate('sdaChannel', lang)}</label>
                 <DraftNumberInput
                   min={0}
                   max={15}
@@ -324,7 +324,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                 />
               </div>
               <div className="mb-2.5 flex-1">
-                <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sclChannel')}</label>
+                <label className="block text-xs text-text-secondary mb-1">{translate('sclChannel', lang)}</label>
                 <DraftNumberInput
                   min={0}
                   max={15}
@@ -341,7 +341,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
             <>
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'sclkChannel')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('sclkChannel', lang)}</label>
                   <DraftNumberInput
                     min={0}
                     max={15}
@@ -352,7 +352,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                   />
                 </div>
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'mosiChannel')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('mosiChannel', lang)}</label>
                   <DraftNumberInput
                     min={0}
                     max={15}
@@ -365,7 +365,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
               </div>
               <div className="flex gap-2">
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'misoChannel')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('misoChannel', lang)}</label>
                   <DraftNumberInput
                     min={0}
                     max={15}
@@ -376,7 +376,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                   />
                 </div>
                 <div className="mb-2.5 flex-1">
-                  <label className="block text-xs text-text-secondary mb-1">{t(lang, 'csChannel')}</label>
+                  <label className="block text-xs text-text-secondary mb-1">{translate('csChannel', lang)}</label>
                   <DraftNumberInput
                     min={0}
                     max={15}
@@ -388,7 +388,7 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
                 </div>
               </div>
               <div className="mb-2.5">
-                <label className="block text-xs text-text-secondary mb-1">{t(lang, 'spiMode')}</label>
+                <label className="block text-xs text-text-secondary mb-1">{translate('spiMode', lang)}</label>
                 <select
                   value={value.decoder.params.mode}
                   onChange={(e) => updateDecoderParams('Spi', { mode: parseInt(e.target.value) || 0 })}
@@ -408,9 +408,9 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
       <div className="mt-1 p-2 bg-bg-input rounded text-xs text-text-secondary leading-relaxed">
         {isCustom && (
           <>
-            <strong className="text-text-primary">{t(lang, 'protocolCustom')}</strong>
+            <strong className="text-text-primary">{translate('protocolCustom', lang)}</strong>
             <br />
-            {t(lang, 'protocolCustomDesc')}
+            {translate('protocolCustomDesc', lang)}
           </>
         )}
         {!isCustom && value.kind === 'JustFloat' && (
@@ -443,13 +443,13 @@ export function ProtocolConfigForm({ value, onChange, lang, detectedChannels, na
         {!isCustom && value.kind === 'Slcan' && (
           <span className="inline-flex items-start gap-1.5">
             <Info size={14} className="flex-shrink-0 mt-0.25" />
-            <span>{t(lang, 'slcanDesc')}</span>
+            <span>{translate('slcanDesc', lang)}</span>
           </span>
         )}
         {!isCustom && value.kind === 'CandleLight' && (
           <span className="inline-flex items-start gap-1.5">
             <Info size={14} className="flex-shrink-0 mt-0.25" />
-            <span>{t(lang, 'candleLightDesc')}</span>
+            <span>{translate('candleLightDesc', lang)}</span>
           </span>
         )}
         {!isCustom && value.kind === 'LogicDecode' && (

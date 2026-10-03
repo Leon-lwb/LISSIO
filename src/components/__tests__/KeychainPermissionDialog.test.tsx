@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../test/renderWithI18n';;
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { KeychainPermissionDialog } from '../KeychainPermissionDialog';
 import { useAppStore } from '../../store/appStore';
@@ -21,7 +22,7 @@ describe('KeychainPermissionDialog', () => {
   it('解释权限作用并把不再提醒选择交给稍后处理动作', () => {
     const dismiss = vi.fn();
     useSettingsStore.setState({ dismissKeychainPermissionPrompt: dismiss });
-    render(<KeychainPermissionDialog />);
+    renderWithI18n(<KeychainPermissionDialog />);
 
     expect(screen.getByRole('dialog')).toHaveTextContent('需要访问系统钥匙串');
     expect(screen.getByRole('dialog')).toHaveTextContent('不会写入设置文件');
@@ -38,7 +39,7 @@ describe('KeychainPermissionDialog', () => {
       keychainPermissionRetrying: true,
       keychainPermissionRetryError: 'denied',
     });
-    render(<KeychainPermissionDialog />);
+    renderWithI18n(<KeychainPermissionDialog />);
 
     expect(screen.getByRole('button', { name: 'Requesting…' })).toBeDisabled();
     expect(screen.getByRole('alert')).toHaveTextContent('still not authorized');

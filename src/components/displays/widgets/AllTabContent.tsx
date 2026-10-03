@@ -1,5 +1,5 @@
 import { Play, Square, Zap, Crosshair, Eye, EyeOff } from 'lucide-react';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import {
   TIME_BASES_SEC,
   V_PER_DIV,
@@ -69,24 +69,24 @@ export function AllTabContent({
         <button
           className={`inline-flex items-center gap-1 px-2 h-7 border rounded text-xs cursor-pointer transition-all duration-150 ${config.running ? 'bg-green border-green text-black' : 'bg-red border-red text-black'}`}
           onClick={() => patch(config.running ? { running: false } : { running: true, hPosition: 0 })}
-          title={config.running ? t(lang, 'stop') : t(lang, 'run')}
+          title={config.running ? translate('stop', lang) : translate('run', lang)}
         >
           {config.running ? <Square size={12} /> : <Play size={12} />}
-          <span>{config.running ? t(lang, 'stop') : t(lang, 'run')}</span>
+          <span>{config.running ? translate('stop', lang) : translate('run', lang)}</span>
         </button>
         <button
           className="inline-flex items-center gap-1 px-2 h-7 bg-bg-input text-text-primary border border-border rounded text-xs cursor-pointer transition-all duration-150 hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
           onClick={() => onAutoSet?.()}
-          title={t(lang, 'autoSet')}
+          title={translate('autoSet', lang)}
           disabled={!onAutoSet}
         >
           <Zap size={12} />
-          <span>{t(lang, 'autoSet')}</span>
+          <span>{translate('autoSet', lang)}</span>
         </button>
         <button
           className={`inline-flex items-center gap-1 px-1.5 h-7 border rounded text-xs cursor-pointer transition-all duration-150 ${config.grid ? 'bg-bg-active text-text-bright border-accent' : 'bg-bg-input text-text-primary border-border hover:bg-bg-hover hover:text-text-bright'}`}
           onClick={() => patch({ grid: !config.grid })}
-          title={t(lang, 'gridVisible')}
+          title={translate('gridVisible', lang)}
         >
           <Crosshair size={12} />
         </button>
@@ -94,7 +94,7 @@ export function AllTabContent({
 
       {/* 水平 */}
       <div className="flex flex-col gap-1 py-1.5 border-b border-border">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'horizontal')}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('horizontal', lang)}</div>
         <div className="flex items-center gap-1.5 mt-0.5">
           <StepKnobTimeBase config={config} patch={patch} lang={lang} />
           {renderStepSelect(
@@ -105,7 +105,7 @@ export function AllTabContent({
           )}
         </div>
         <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-[10px] text-text-secondary min-w-[24px]">{t(lang, 'hPosition')}</span>
+          <span className="text-[10px] text-text-secondary min-w-[24px]">{translate('hPosition', lang)}</span>
           <input
             type="number"
             className="form-input flex-1 min-w-0"
@@ -120,13 +120,13 @@ export function AllTabContent({
       {/* 每通道 — 含 独立/共用 Y 切换 */}
       <div className="flex flex-col gap-1 py-1.5 border-b border-border">
         <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center justify-between gap-1.5">
-          <span>{t(lang, 'channels')}</span>
+          <span>{translate('channels', lang)}</span>
           <button
             className={`inline-flex items-center px-2 h-6 text-[10px] border rounded cursor-pointer transition-all duration-150 whitespace-nowrap ${config.sharedY ? 'bg-blue text-black border-blue' : 'bg-bg-input text-text-secondary border-border hover:bg-bg-hover hover:text-text-primary'}`}
             onClick={() => patch({ sharedY: !config.sharedY })}
-            title={t(lang, 'sharedYDesc')}
+            title={translate('sharedYDesc', lang)}
           >
-            {config.sharedY ? t(lang, 'sharedY') : t(lang, 'independentY')}
+            {config.sharedY ? translate('sharedY', lang) : translate('independentY', lang)}
           </button>
         </div>
         <AnimatedSwitch switchKey={config.sharedY ? 'shared' : 'independent'} className="flex flex-col gap-1">
@@ -156,7 +156,7 @@ export function AllTabContent({
 
       {/* Y 轴单位 */}
       <div className="flex flex-col gap-1 py-1.5 border-b border-border">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'yUnit')}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('yUnit', lang)}</div>
         <div className="flex items-center gap-1 mt-0.5">
           <span className="text-[10px] text-text-secondary min-w-[24px]">Unit</span>
           <input
@@ -176,21 +176,21 @@ export function AllTabContent({
       {measurementBundle && (
         <div className="flex flex-col gap-1 py-1.5 border-b border-border last:border-b-0">
           <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{t(lang, 'measure')}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center gap-1">{translate('measure', lang)}</span>
             <div className="flex items-center gap-1">
               {measurementBundle.fromTier && (
                 <span
                   className="text-[9px] px-1 rounded bg-bg-active text-text-secondary border border-border whitespace-nowrap"
-                  title={t(lang, 'envelopeApproxHint')}
+                  title={translate('envelopeApproxHint', lang)}
                 >
-                  {t(lang, 'envelopeApprox')}
+                  {translate('envelopeApprox', lang)}
                 </span>
               )}
               <select
                 className="w-[64px] flex-none h-6 text-[10px] px-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent transition-colors"
                 value={selChannel}
                 onChange={(e) => onMeasureChannel?.(parseInt(e.target.value, 10))}
-                title={t(lang, 'measureChannelLabel')}
+                title={translate('measureChannelLabel', lang)}
               >
                 {channels.map((_, idx) => (
                   <option key={idx} value={idx}>CH{idx}</option>
@@ -216,7 +216,7 @@ export function AllTabContent({
               )}
             </div>
           ) : (
-            <div className="text-[10px] text-text-secondary">{t(lang, 'measureNoData')}</div>
+            <div className="text-[10px] text-text-secondary">{translate('measureNoData', lang)}</div>
           )}
         </div>
       )}
@@ -262,7 +262,7 @@ function SharedYControls({
         )}
       </div>
       <div className="flex items-center gap-1 mt-0.5">
-        <span className="text-[10px] text-text-secondary min-w-[24px]">{t(lang, 'position')}</span>
+        <span className="text-[10px] text-text-secondary min-w-[24px]">{translate('position', lang)}</span>
         <input
           type="number"
           className="form-input flex-1 min-w-0"
@@ -316,9 +316,9 @@ function ChannelVisibilityRow({
             onPatchChannel(idx, { coupling: e.target.value as Coupling })
           }
         >
-          <option value="DC">{t(lang, 'couplingDC')}</option>
-          <option value="AC">{t(lang, 'couplingAC')}</option>
-          <option value="GND">{t(lang, 'couplingGND')}</option>
+          <option value="DC">{translate('couplingDC', lang)}</option>
+          <option value="AC">{translate('couplingAC', lang)}</option>
+          <option value="GND">{translate('couplingGND', lang)}</option>
         </select>
         <span
           className="w-2 h-2 rounded-full flex-shrink-0"
@@ -352,7 +352,7 @@ function StepKnobTimeBase({
       onChange={(v: number) => patch({ timeBase: v })}
       defaultValue={100e-3}
       formatValue={formatTimeBase}
-      label={t(lang, 'timeBase')}
+      label={translate('timeBase', lang)}
       size={48}
     />
   );
@@ -381,7 +381,7 @@ function CursorSection({
               }
               className="accent-accent"
             />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary">{t(lang, 'cursors')}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary">{translate('cursors', lang)}</span>
           </label>
         </div>
       </div>
@@ -403,7 +403,7 @@ function CursorSection({
             }
             className="accent-accent"
           />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary">{t(lang, 'cursors')}</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary">{translate('cursors', lang)}</span>
         </label>
       </div>
       <div className="flex items-center gap-1 mt-0.5">

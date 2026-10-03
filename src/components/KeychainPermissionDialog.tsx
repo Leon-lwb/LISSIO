@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { KeyRound, RefreshCw, ShieldCheck } from 'lucide-react';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import { useAppStore } from '../store/appStore';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -31,10 +31,10 @@ export function KeychainPermissionDialog() {
               id="keychain-permission-title"
               className="text-base font-semibold text-text-bright m-0"
             >
-              {t(lang, 'keychainPermissionTitle')}
+              {translate('keychainPermissionTitle', lang)}
             </h2>
             <p className="text-sm text-text-secondary leading-relaxed m-0 mt-1">
-              {t(lang, 'keychainPermissionDescription')}
+              {translate('keychainPermissionDescription', lang)}
             </p>
           </div>
         </div>
@@ -42,23 +42,20 @@ export function KeychainPermissionDialog() {
         <div className="rounded-md border border-border bg-bg-input px-3 py-2.5 flex gap-2.5">
           <ShieldCheck size={17} className="text-accent shrink-0 mt-0.5" aria-hidden="true" />
           <div className="text-xs text-text-secondary leading-relaxed">
-            <p className="m-0">{t(lang, 'keychainPermissionPurpose')}</p>
-            <p className="m-0 mt-1">{t(lang, 'keychainPermissionImpact')}</p>
+            <p className="m-0">{translate('keychainPermissionPurpose', lang)}</p>
+            <p className="m-0 mt-1">{translate('keychainPermissionImpact', lang)}</p>
           </div>
         </div>
 
         <p className="text-xs text-text-secondary leading-relaxed m-0">
-          {t(lang, 'keychainPermissionRetryHint')}
+          {translate('keychainPermissionRetryHint', lang)}
         </p>
 
         {retryError && (
           <p className="text-xs text-text-danger leading-relaxed m-0" role="alert">
-            {t(
-              lang,
-              retryError === 'denied'
+            {translate(retryError === 'denied'
                 ? 'keychainPermissionDeniedAgain'
-                : 'keychainPermissionRetryFailed'
-            )}
+                : 'keychainPermissionRetryFailed', lang)}
           </p>
         )}
 
@@ -70,7 +67,7 @@ export function KeychainPermissionDialog() {
             disabled={retrying}
             onChange={(event) => setDontRemind(event.target.checked)}
           />
-          {t(lang, 'keychainPermissionDontRemind')}
+          {translate('keychainPermissionDontRemind', lang)}
         </label>
 
         <div className="flex justify-end gap-2">
@@ -80,7 +77,7 @@ export function KeychainPermissionDialog() {
             disabled={retrying}
             onClick={() => dismiss(dontRemind)}
           >
-            {t(lang, 'keychainPermissionLater')}
+            {translate('keychainPermissionLater', lang)}
           </button>
           <button
             type="button"
@@ -89,10 +86,7 @@ export function KeychainPermissionDialog() {
             onClick={() => void retry()}
           >
             {retrying && <RefreshCw size={12} className="animate-spin" aria-hidden="true" />}
-            {t(
-              lang,
-              retrying ? 'keychainPermissionRequesting' : 'keychainPermissionRequestAgain'
-            )}
+            {translate(retrying ? 'keychainPermissionRequesting' : 'keychainPermissionRequestAgain', lang)}
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { FolderOpen, Pencil } from 'lucide-react';
 import { platform } from '../lib/platform';
 import { transport } from '../lib/rpc';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import type { Lang } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
 import { BUILT_IN_THEMES, type ThemeDefinition } from '../settings/theme';
@@ -86,7 +86,7 @@ export function SettingsControl({ def, settings, update, setLang, onEditTheme }:
             min={ctrl.min}
             max={ctrl.max}
             step={ctrl.step}
-            label={t(lang, def.labelKey)}
+            label={translate(def.labelKey, lang)}
             onCommit={(n) => handleChange(n)}
           />
         );
@@ -106,7 +106,7 @@ export function SettingsControl({ def, settings, update, setLang, onEditTheme }:
               type="text"
               className="flex-1 min-w-0 px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm font-ui focus:outline-none focus:border-accent transition-colors"
               value={typeof value === 'string' ? value : ''}
-              placeholder={t(lang, 'settingRecDefaultDir')}
+              placeholder={translate('settingRecDefaultDir', lang)}
               onCommit={handleChange}
             />
             <button
@@ -114,15 +114,15 @@ export function SettingsControl({ def, settings, update, setLang, onEditTheme }:
               onClick={() => {
                 void platform.openFile({
                   directory: true,
-                  title: t(lang, 'settingRecDatabaseDir'),
+                  title: translate('settingRecDatabaseDir', lang),
                 }).then((dir) => {
                   if (typeof dir === 'string' && dir) handleChange(dir);
                 });
               }}
-              title={t(lang, 'settingRecBrowse')}
+              title={translate('settingRecBrowse', lang)}
             >
               <FolderOpen size={12} />
-              <span>{t(lang, 'settingRecBrowse')}</span>
+              <span>{translate('settingRecBrowse', lang)}</span>
             </button>
           </div>
         );
@@ -133,15 +133,15 @@ export function SettingsControl({ def, settings, update, setLang, onEditTheme }:
             className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
             onClick={() => {
               void transport.call<void>('open_settings_folder').catch((error: unknown) => {
-                notify.error(t(lang, 'settingAiOpenSettingsFolderFailed'), formatError(error), {
+                notify.error(translate('settingAiOpenSettingsFolderFailed', lang), formatError(error), {
                   source: 'settings-folder',
                 });
               });
             }}
-            title={t(lang, 'settingAiOpenSettingsFolder')}
+            title={translate('settingAiOpenSettingsFolder', lang)}
           >
             <FolderOpen size={12} />
-            <span>{t(lang, 'settingAiOpenSettingsFolder')}</span>
+            <span>{translate('settingAiOpenSettingsFolder', lang)}</span>
           </button>
         );
       case 'theme': {
@@ -171,10 +171,10 @@ export function SettingsControl({ def, settings, update, setLang, onEditTheme }:
             <button
               className="px-2 py-1 bg-bg-input text-text-primary border border-border rounded text-sm hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer inline-flex items-center gap-1"
               onClick={() => onEditTheme()}
-              title={t(lang, 'themeEdit')}
+              title={translate('themeEdit', lang)}
             >
               <Pencil size={12} />
-              <span>{t(lang, 'themeEdit')}</span>
+              <span>{translate('themeEdit', lang)}</span>
             </button>
           </div>
         );

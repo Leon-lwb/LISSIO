@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, InputHTMLAttributes, KeyboardEvent, TextareaHTMLAttributes } from 'react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { FormField } from './Form';
 
 export function TextField({ value, label, onCommit, allowEmpty = false }: {
@@ -28,7 +28,7 @@ export function TextField({ value, label, onCommit, allowEmpty = false }: {
     if (next !== value) onCommit(next);
   };
   return (
-    <FormField label={label} error={invalid ? t(lang, 'requiredValue') : null}>
+    <FormField label={label} error={invalid ? translate('requiredValue', lang) : null}>
       <input
         className={`form-input ${invalid ? 'border-red' : ''}`}
         value={draft}

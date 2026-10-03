@@ -15,7 +15,7 @@ import {
   model3dAttitudePortIds,
   resolveModel3DRotation,
 } from '../../../lib/utils/model3dAttitude';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { chipClass } from '../../ui/chip';
 import { AttitudeBox, Trajectory } from './model3dScene';
 
@@ -163,10 +163,10 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
 
   const modeLabel =
     mode === 'trajectory-attitude'
-      ? t(lang, 'model3dTrajectoryAttitude')
+      ? translate('model3dTrajectoryAttitude', lang)
       : mode === 'attitude'
-        ? t(lang, 'model3dAttitude')
-        : t(lang, 'model3dTrajectory');
+        ? translate('model3dAttitude', lang)
+        : translate('model3dTrajectory', lang);
 
   return (
     <div className="group widget-card-acrylic flex-1 min-w-0 min-h-0 flex relative overflow-hidden">
@@ -225,7 +225,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
         {/* [TEMP-DISABLED] 自定义模型导入已禁用, 加载失败 banner 暂时隐藏 — 恢复时取消下方注释
         {loadError && (
           <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-danger-surface/60 border border-danger/50 rounded-sm text-text-danger-strong text-[10px] font-medium pointer-events-none">
-            {t(lang, 'model3dModelLoadError')}
+            {translate('model3dModelLoadError', lang)}
           </div>
         )} */}
       </div>
@@ -252,10 +252,10 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </div>
           ))}
         </div>
-        <div className="section-heading section-heading--micro px-1 pt-1">{t(lang, 'model3dSettings')}</div>
+        <div className="section-heading section-heading--micro px-1 pt-1">{translate('model3dSettings', lang)}</div>
         <div className="flex flex-col gap-1.5 px-1">
           <div className="field-grid field-grid--wide">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'model3dMode')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('model3dMode', lang)}</label>
             <div className="flex gap-0.5">
               {MODE_TOGGLES.map((opt) => {
                 const active = opt.key === 'trajectory' ? isTrajectory : isAttitude;
@@ -266,7 +266,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
                     aria-pressed={active}
                     onClick={() => handleToggleMode(opt.key)}
                   >
-                    {t(lang, opt.labelKey)}
+                    {translate(opt.labelKey, lang)}
                   </button>
                 );
               })}
@@ -274,7 +274,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
           </div>
           {(mode === 'attitude' || mode === 'trajectory-attitude') && (
             <div className="field-grid field-grid--wide">
-              <label className="text-[10px] text-text-secondary">{t(lang, 'model3dAttitudeInput')}</label>
+              <label className="text-[10px] text-text-secondary">{translate('model3dAttitudeInput', lang)}</label>
               <select
                 value={attitudeInputMode}
                 onChange={(e) => handleAttitudeInputModeChange(e.target.value)}
@@ -286,7 +286,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
                   ['quaternion', 'model3dAttitudeQuaternion'],
                 ] as const satisfies readonly [Model3DAttitudeInputMode, string][]).map(([value, labelKey]) => (
                   <option key={value} value={value}>
-                    {t(lang, labelKey)}
+                    {translate(labelKey, lang)}
                   </option>
                 ))}
               </select>
@@ -294,7 +294,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
           )}
           {(mode === 'trajectory' || mode === 'trajectory-attitude') && (
             <div className="field-grid field-grid--wide">
-              <label className="text-[10px] text-text-secondary">{t(lang, 'model3dTrailLength')}</label>
+              <label className="text-[10px] text-text-secondary">{translate('model3dTrailLength', lang)}</label>
               <input
                 type="number"
                 value={trailLength}
@@ -306,7 +306,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
             </div>
           )}
           <div className="field-grid field-grid--wide">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'model3dColor')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('model3dColor', lang)}</label>
             <input
               type="color"
               value={color}
@@ -316,7 +316,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
           </div>
           {/* [TEMP-DISABLED] 自定义模型导入 UI 段暂时隐藏 — 恢复时取消下方注释
           <div className="field-grid field-grid--wide">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'model3dModel')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('model3dModel', lang)}</label>
             <div className="flex gap-1 items-center">
               <span
                 className="flex-1 truncate px-1 py-0.5 bg-bg-input border border-border rounded-sm text-text-primary text-xs"
@@ -327,7 +327,7 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
               {effectiveSource.kind === 'custom' && (
                 <button
                   onClick={handleResetModel}
-                  title={t(lang, 'model3dResetModel')}
+                  title={translate('model3dResetModel', lang)}
                   className="px-1.5 py-0.5 bg-bg-input border border-border rounded-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover text-xs"
                 >
                   ↺
@@ -338,12 +338,12 @@ export function Model3DWidget({ widget }: Model3DWidgetProps) {
               onClick={handlePickModel}
               className="col-span-2 mt-1 px-1.5 py-1 bg-bg-input border border-border rounded-sm text-text-primary hover:bg-bg-hover text-xs"
             >
-              {t(lang, 'model3dPickModel')}
+              {translate('model3dPickModel', lang)}
             </button>
           </div>
           */}
           <div className="field-grid field-grid--wide">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'model3dAxisLength')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('model3dAxisLength', lang)}</label>
             <input
               type="number"
               value={axisLength}

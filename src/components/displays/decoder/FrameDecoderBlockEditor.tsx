@@ -7,7 +7,7 @@ import type {
   FieldType,
 } from '../../../types';
 import type { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { DraftInput, DraftNumberInput, DraftTextarea, parseDraftNumber } from '../../ui/fields';
 import {
   CHECKSUM_OPTIONS,
@@ -33,13 +33,13 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
     <>
       {/* 通用: label */}
       <div className="field-grid field-grid--compact">
-        <label className={labelClass}>{t(lang, 'cmdBlockLabel')}</label>
+        <label className={labelClass}>{translate('cmdBlockLabel', lang)}</label>
         <DraftInput
           type="text"
           value={block.label ?? ''}
           onCommit={(label) => updateBlock(bid, { label })}
           className={inputClass}
-          placeholder={t(lang, 'cmdBlockLabelPlaceholder')}
+          placeholder={translate('cmdBlockLabelPlaceholder', lang)}
         />
       </div>
 
@@ -63,7 +63,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {(block.type === 'length' || block.type === 'id' || block.type === 'field') && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'cmdBlockType')}</label>
+            <label className={labelClass}>{translate('cmdBlockType', lang)}</label>
             <select
               value={block.fieldType ?? 'uint8'}
               onChange={(e) => updateBlock(bid, { fieldType: e.target.value as FieldType })}
@@ -75,7 +75,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             </select>
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
+            <label className={labelClass}>{translate('cmdBlockPortName', lang)}</label>
             <DraftInput
               type="text"
               value={block.portName ?? ''}
@@ -91,14 +91,14 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* length: unit */}
       {block.type === 'length' && (
         <div className="field-grid field-grid--compact">
-          <label className={labelClass}>{t(lang, 'fdLengthUnit')}</label>
+          <label className={labelClass}>{translate('fdLengthUnit', lang)}</label>
           <select
             value={block.unit ?? 'bytes'}
             onChange={(e) => updateBlock(bid, { unit: e.target.value as 'bytes' | 'fields' })}
             className={selectClass}
           >
-            <option value="bytes">{t(lang, 'fdLengthUnitBytes')}</option>
-            <option value="fields">{t(lang, 'fdLengthUnitFields')}</option>
+            <option value="bytes">{translate('fdLengthUnitBytes', lang)}</option>
+            <option value="fields">{translate('fdLengthUnitFields', lang)}</option>
           </select>
         </div>
       )}
@@ -106,13 +106,13 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* field: lengthRef (仅 bytes 类型有意义) */}
       {block.type === 'field' && (
         <div className="field-grid field-grid--compact">
-          <label className={labelClass}>{t(lang, 'fdLengthRef')}</label>
+          <label className={labelClass}>{translate('fdLengthRef', lang)}</label>
           <DraftInput
             type="text"
             value={block.lengthRef ?? ''}
             onCommit={(draft) => updateBlock(bid, { lengthRef: draft || null })}
             className={inputClass}
-            placeholder={t(lang, 'fdLengthRefPlaceholder')}
+            placeholder={translate('fdLengthRefPlaceholder', lang)}
             spellCheck={false}
           />
         </div>
@@ -122,7 +122,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {block.type === 'bitfield' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdByteOffset')}</label>
+            <label className={labelClass}>{translate('fdByteOffset', lang)}</label>
             <DraftNumberInput
               min={0}
               integer
@@ -132,7 +132,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             />
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdBitOffset')}</label>
+            <label className={labelClass}>{translate('fdBitOffset', lang)}</label>
             <DraftNumberInput
               min={0}
               max={7}
@@ -143,7 +143,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             />
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdBitLength')}</label>
+            <label className={labelClass}>{translate('fdBitLength', lang)}</label>
             <DraftNumberInput
               min={1}
               max={32}
@@ -154,16 +154,16 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             />
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdSigned')}</label>
+            <label className={labelClass}>{translate('fdSigned', lang)}</label>
             <button
               className={`px-2 py-0.5 text-xs rounded-sm border ${block.isSigned ? 'bg-bg-button text-text-inverse border-bg-button' : 'bg-bg-input text-text-secondary border-border'}`}
               onClick={() => updateBlock(bid, { isSigned: !block.isSigned })}
             >
-              {block.isSigned ? t(lang, 'fdSignedYes') : t(lang, 'fdSignedNo')}
+              {block.isSigned ? translate('fdSignedYes', lang) : translate('fdSignedNo', lang)}
             </button>
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'cmdBlockPortName')}</label>
+            <label className={labelClass}>{translate('cmdBlockPortName', lang)}</label>
             <DraftInput
               type="text"
               value={block.portName ?? ''}
@@ -180,7 +180,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {block.type === 'checksum' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'cmdChecksum')}</label>
+            <label className={labelClass}>{translate('cmdChecksum', lang)}</label>
             <select
               value={block.algorithm ?? 'sum8'}
               onChange={(e) => updateBlock(bid, { algorithm: e.target.value as ChecksumType })}
@@ -188,13 +188,13 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             >
               {CHECKSUM_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {t(lang, opt.labelKey)}
+                  {translate(opt.labelKey, lang)}
                 </option>
               ))}
             </select>
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdChecksumCover')}</label>
+            <label className={labelClass}>{translate('fdChecksumCover', lang)}</label>
             <select
               value={block.cover ?? 'all_prior'}
               onChange={(e) => updateBlock(bid, { cover: e.target.value as DecoderChecksumCover })}
@@ -202,7 +202,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             >
               {CHECKSUM_COVER_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {t(lang, opt.labelKey)}
+                  {translate(opt.labelKey, lang)}
                 </option>
               ))}
             </select>
@@ -210,7 +210,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
           {block.cover === 'range' && (
             <>
               <div className="field-grid field-grid--compact">
-                <label className={labelClass}>{t(lang, 'fdCoverStart')}</label>
+                <label className={labelClass}>{translate('fdCoverStart', lang)}</label>
                 <DraftNumberInput
                   min={0}
                   integer
@@ -220,7 +220,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
                 />
               </div>
               <div className="field-grid field-grid--compact">
-                <label className={labelClass}>{t(lang, 'fdCoverEnd')}</label>
+                <label className={labelClass}>{translate('fdCoverEnd', lang)}</label>
                 <DraftNumberInput
                   min={0}
                   integer
@@ -232,7 +232,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             </>
           )}
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'cmdChecksumPosition')}</label>
+            <label className={labelClass}>{translate('cmdChecksumPosition', lang)}</label>
             <select
               value={block.position ?? 'append'}
               onChange={(e) => updateBlock(bid, { position: e.target.value as DecoderChecksumPosition })}
@@ -240,14 +240,14 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             >
               {CHECKSUM_POSITION_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {t(lang, opt.labelKey)}
+                  {translate(opt.labelKey, lang)}
                 </option>
               ))}
             </select>
           </div>
           {block.algorithm === 'custom' && (
             <div className="flex flex-col gap-1">
-              <label className={labelClass}>{t(lang, 'cmdCustomScript')}</label>
+              <label className={labelClass}>{translate('cmdCustomScript', lang)}</label>
               <DraftTextarea
                 className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-1.5 py-1 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
                 value={block.customScript ?? ''}
@@ -258,7 +258,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
               />
               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow/10 border border-yellow/30 text-yellow text-[10px] rounded-sm">
                 <AlertTriangle size={10} />
-                <span>{t(lang, 'cmdCustomWarn')}</span>
+                <span>{translate('cmdCustomWarn', lang)}</span>
               </div>
             </div>
           )}
@@ -269,7 +269,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {block.type === 'csv' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdCsvSeparator')}</label>
+            <label className={labelClass}>{translate('fdCsvSeparator', lang)}</label>
             <DraftInput
               type="text"
               value={block.separator}
@@ -280,7 +280,7 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
             />
           </div>
           <div className="field-grid field-grid--compact">
-            <label className={labelClass}>{t(lang, 'fdCsvPorts')}</label>
+            <label className={labelClass}>{translate('fdCsvPorts', lang)}</label>
             <DraftInput
               type="text"
               value={block.ports.join(',')}
@@ -296,14 +296,14 @@ export function BlockEditor({ block, updateBlock, lang }: BlockEditorProps) {
       {/* matchId (id 块与扩展块 csv/asciiField/samples 不可设置) */}
       {block.type !== 'id' && block.type !== 'csv' && block.type !== 'asciiField' && block.type !== 'samples' && (
         <div className="field-grid field-grid--compact">
-          <label className={labelClass}>{t(lang, 'fdMatchId')}</label>
+          <label className={labelClass}>{translate('fdMatchId', lang)}</label>
           <DraftInput
             type="number"
             value={block.matchId != null ? String(block.matchId) : ''}
             validate={(draft) => draft.trim() === '' || parseDraftNumber(draft, { integer: true }) != null}
             onCommit={(draft) => updateBlock(bid, { matchId: parseDraftNumber(draft, { integer: true }) })}
             className={inputClass}
-            placeholder={t(lang, 'fdMatchIdPlaceholder')}
+            placeholder={translate('fdMatchIdPlaceholder', lang)}
           />
         </div>
       )}

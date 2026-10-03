@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, SelectField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -15,27 +15,27 @@ export const TextOutProperties = memo(function TextOutProperties({ widget, updat
   const transports = nodes.filter((n) => n.type === 'acquisition');
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'textOutSettings')}</div>
-      <SelectField label={t(lang, 'textOutTarget')} value={targetTransport}
+      <div className="section-heading section-heading--micro mb-2">{translate('textOutSettings', lang)}</div>
+      <SelectField label={translate('textOutTarget', lang)} value={targetTransport}
         options={[
-          { value: '', label: t(lang, 'textOutNoTarget') },
+          { value: '', label: translate('textOutNoTarget', lang) },
           ...transports.map((n) => ({
             value: n.id,
             label: typeof n.data?.label === 'string' && n.data.label ? n.data.label : n.id,
           })),
         ]}
         onChange={(v) => patch({ targetTransport: v })} />
-      <SelectField label={t(lang, 'textOutNewline')} value={newline}
+      <SelectField label={translate('textOutNewline', lang)} value={newline}
         options={([
           ['none', 'textOutNlNone'],
           ['lf', 'textOutNlLf'],
           ['crlf', 'textOutNlCrlf'],
           ['cr', 'textOutNlCr'],
-        ] as [typeof newline, string][]).map(([value, key]) => ({ value, label: t(lang, key) }))}
+        ] as [typeof newline, string][]).map(([value, key]) => ({ value, label: translate(key, lang) }))}
         onChange={(v) => patch({ newline: v as typeof newline })} />
-      <NumberField label={`${t(lang, 'textOutInterval')} (ms)`} value={minIntervalMs}
+      <NumberField label={`${translate('textOutInterval', lang)} (ms)`} value={minIntervalMs}
         onCommit={(v) => { if (v >= 0) { patch({ minIntervalMs: Math.round(v) }); return true; } return false; }}
-        error={t(lang, 'invalidStep')} />
+        error={translate('invalidStep', lang)} />
     </section>
   );
 });

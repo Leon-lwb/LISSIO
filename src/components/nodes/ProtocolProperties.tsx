@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { Node } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { ProtocolConfigForm } from '../panels/protocol/ProtocolConfigForm';
 import { isRawDataPreset } from '../../lib/utils/protocolSchema';
 import type { ProtocolNodeData } from '../../store/appStoreHelpers';
@@ -18,10 +18,10 @@ export const ProtocolProperties = memo(function ProtocolProperties({ node }: { n
   const convertTo = data.convertTo ?? null;
 
   const convertKinds: { value: string; label: string }[] = [
-    { value: '', label: t(lang, 'convertNone') },
-    { value: 'JustFloat', label: t(lang, 'justfloat') },
-    { value: 'FireWater', label: t(lang, 'firewater') },
-    { value: 'RawData', label: t(lang, 'rawdata') },
+    { value: '', label: translate('convertNone', lang) },
+    { value: 'JustFloat', label: translate('justfloat', lang) },
+    { value: 'FireWater', label: translate('firewater', lang) },
+    { value: 'RawData', label: translate('rawdata', lang) },
   ];
 
   const onConvertKindChange = (kind: string) => {
@@ -52,7 +52,7 @@ export const ProtocolProperties = memo(function ProtocolProperties({ node }: { n
 
       {/* 协议转换 (convert_to) — 默认无转换 */}
       <div className="mt-3 pt-2 border-t border-border">
-        <label className="block text-xs text-text-secondary mb-1">{t(lang, 'convertTo')}</label>
+        <label className="block text-xs text-text-secondary mb-1">{translate('convertTo', lang)}</label>
         <select
           value={convertTo?.kind ?? ''}
           onChange={(e) => onConvertKindChange(e.target.value)}
@@ -65,7 +65,7 @@ export const ProtocolProperties = memo(function ProtocolProperties({ node }: { n
         {/* RawData 预设不产帧: 提示 convert_to 不生效、原文透传 (后端语义) */}
         {isRawDataPreset(data) && (
           <div className="mt-1 text-[10px] text-text-secondary opacity-secondary break-all">
-            {t(lang, 'convertRawDataHint')}
+            {translate('convertRawDataHint', lang)}
           </div>
         )}
         {convertTo && (convertTo.kind === 'JustFloat' || convertTo.kind === 'FireWater') && (

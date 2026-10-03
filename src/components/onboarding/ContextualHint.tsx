@@ -9,7 +9,7 @@ import { X, Info } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 interface ContextualHintProps {
   id: string;
@@ -49,7 +49,7 @@ export function ContextualHint({ id, message, action, secondaryAction }: Context
         )}
         <button
           className="prompt-card-btn-ghost"
-          title={t(lang, 'dismissTip')}
+          title={translate('dismissTip', lang)}
           onClick={() => dismiss(id)}
         >
           <X size={12} />

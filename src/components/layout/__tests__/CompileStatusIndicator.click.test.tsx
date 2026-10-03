@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useAppStore } from '../../../store/appStore';
 import CompileStatusIndicator from '../CompileStatusIndicator';
 
@@ -16,7 +17,7 @@ describe('CompileStatusIndicator Click Behavior', () => {
 
   it('renders an ok-state green check button when errorTabs and pendingTabs are empty', () => {
     const onClickSpy = vi.fn();
-    const { container } = render(<CompileStatusIndicator onClickError={onClickSpy} />);
+    const { container } = renderWithI18n(<CompileStatusIndicator onClickError={onClickSpy} />);
     // 常驻设计: 无错误时仍显示绿色 CheckCircle 按钮 (点击打开编译面板)
     expect(container.firstChild).not.toBeNull();
     const button = screen.getByRole('button', { name: /0 compile errors?/i });
@@ -35,7 +36,7 @@ describe('CompileStatusIndicator Click Behavior', () => {
       tabStates: { 'tab-1': 'error' },
     });
 
-    render(<CompileStatusIndicator onClickError={onClickSpy} />);
+    renderWithI18n(<CompileStatusIndicator onClickError={onClickSpy} />);
     
     const button = screen.getByRole('button', { name: /1 compile error/i });
     expect(button).toBeInTheDocument();
@@ -52,7 +53,7 @@ describe('CompileStatusIndicator Click Behavior', () => {
       tabStates: { 'tab-1': 'error', 'tab-2': 'error' },
     });
 
-    render(<CompileStatusIndicator compact onClickError={onClickSpy} />);
+    renderWithI18n(<CompileStatusIndicator compact onClickError={onClickSpy} />);
     
     const button = screen.getByRole('button', { name: /2 compile errors/i });
     expect(button).toBeInTheDocument();

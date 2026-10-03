@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { DraftNumberInput } from '../ui/fields';
 
 interface AiMcpSettingsProps {
@@ -51,13 +51,13 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
   return (
     <section className="space-y-3 py-4 text-xs">
       <div className="space-y-0.5">
-        <h3 className="text-sm font-medium text-text-primary">{t(lang, 'settingsAiSectionMcp')}</h3>
-        <p className="text-xs text-text-secondary">{t(lang, 'settingAiMcpDesc')}</p>
+        <h3 className="text-sm font-medium text-text-primary">{translate('settingsAiSectionMcp', lang)}</h3>
+        <p className="text-xs text-text-secondary">{translate('settingAiMcpDesc', lang)}</p>
       </div>
       <div className="flex items-center justify-between gap-4 border-b border-border pb-3">
         <div className="min-w-0">
-          <div className="text-text-primary">{t(lang, 'settingAiMcpServerPort')}</div>
-          <div className="mt-0.5 text-text-secondary">{t(lang, 'settingAiMcpServerPortDesc')}</div>
+          <div className="text-text-primary">{translate('settingAiMcpServerPort', lang)}</div>
+          <div className="mt-0.5 text-text-secondary">{translate('settingAiMcpServerPortDesc', lang)}</div>
         </div>
         <DraftNumberInput
           className="w-[120px] rounded border border-border bg-bg-input px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
@@ -69,23 +69,23 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
         />
       </div>
       <div className="space-y-0.5">
-        <h3 className="text-sm font-medium text-text-primary">{t(lang, 'aiMcpServers')}</h3>
-        <p className="text-xs text-text-secondary">{t(lang, 'aiMcpServersHint')}</p>
+        <h3 className="text-sm font-medium text-text-primary">{translate('aiMcpServers', lang)}</h3>
+        <p className="text-xs text-text-secondary">{translate('aiMcpServersHint', lang)}</p>
       </div>
       <div className="flex items-center justify-between gap-3 rounded border border-border-subtle px-3 py-2">
         <span className="min-w-0 truncate text-text-secondary">
-          {serverRunning ? `127.0.0.1:${serverPort ?? ''}/mcp` : t(lang, 'aiServerStopped')}
+          {serverRunning ? `127.0.0.1:${serverPort ?? ''}/mcp` : translate('aiServerStopped', lang)}
         </span>
         <button
           type="button"
           className="shrink-0 rounded px-2 py-1 text-text-primary hover:bg-bg-hover"
           onClick={() => void (serverRunning ? stopLocalServer() : startLocalServer())}
         >
-          {t(lang, serverRunning ? 'aiServerStop' : 'aiServerStart')}
+          {translate(serverRunning ? 'aiServerStop' : 'aiServerStart', lang)}
         </button>
       </div>
       <div className="space-y-3">
-        {servers.length === 0 && <div className="text-text-secondary">{t(lang, 'aiNoServers')}</div>}
+        {servers.length === 0 && <div className="text-text-secondary">{translate('aiNoServers', lang)}</div>}
         {servers.map((srv) => (
           <div key={srv.id} className="flex items-center gap-2 rounded border border-border-subtle px-2 py-1.5">
             <input
@@ -103,7 +103,7 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
             <button
               className="ml-auto p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-danger"
               onClick={() => { void removeServer(srv.id); }}
-              title={t(lang, 'aiDeleteServer')}
+              title={translate('aiDeleteServer', lang)}
             >
               <Trash2 size={12} />
             </button>
@@ -111,7 +111,7 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
         ))}
 
         <div className="rounded border border-border-subtle px-2 py-1.5 space-y-1.5">
-          <div className="font-medium text-text-secondary">{t(lang, 'aiAddServer')}</div>
+          <div className="font-medium text-text-secondary">{translate('aiAddServer', lang)}</div>
           <div className="flex gap-1.5">
             <select
               value={kind}
@@ -124,7 +124,7 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t(lang, 'aiServerName')}
+              placeholder={translate('aiServerName', lang)}
               className="flex-1 min-w-0 bg-bg-hover rounded px-1.5 py-0.5 outline-none focus:ring-1 ring-accent"
             />
           </div>
@@ -132,7 +132,7 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
             <input
               value={command}
               onChange={(e) => setCommand(e.target.value)}
-              placeholder={t(lang, 'aiServerCommand')}
+              placeholder={translate('aiServerCommand', lang)}
               className="w-full bg-bg-hover rounded px-1.5 py-0.5 outline-none focus:ring-1 ring-accent"
             />
           ) : (
@@ -149,14 +149,14 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
             onClick={() => { void onAdd(); }}
           >
             <Plus size={11} />
-            {t(lang, 'aiAddServer')}
+            {translate('aiAddServer', lang)}
           </button>
         </div>
 
         {tools.length > 0 && (
           <div className="pt-1">
             <div className="font-medium text-text-secondary pb-1">
-              {t(lang, 'aiToolCount').replace('{n}', String(tools.length))}
+              {translate('aiToolCount', lang).replace('{n}', String(tools.length))}
             </div>
             <div className="flex flex-wrap gap-1">
               {tools.map((tool) => (

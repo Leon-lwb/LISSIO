@@ -5,7 +5,7 @@ import { useAppStore } from '../../store/appStore';
 import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 import { showContextMenu } from '../../lib/hooks/useContextMenu';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { RecordingSessionSummary } from '../../lib/tauri/tauri';
 
 interface RecordingDatabaseActionsOptions {
@@ -30,7 +30,7 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   }, []);
 
   function showHint(key: string): void {
-    setHint(t(lang, key));
+    setHint(translate(key, lang));
     if (hintTimer.current !== null) window.clearTimeout(hintTimer.current);
     hintTimer.current = window.setTimeout(() => setHint(null), 3200);
   }
@@ -79,7 +79,7 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   }
 
   async function deleteSession(sessionId: string): Promise<void> {
-    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseDeleteConfirm'), { kind: 'warning' });
+    const confirmed = await platform.confirm(translate('recordingDatabaseDeleteConfirm', lang), { kind: 'warning' });
     if (confirmed === false) return;
     setBusy(true);
     try {
@@ -111,20 +111,20 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
     showContextMenu(event.clientX, event.clientY, [
       {
         id: 'set-active',
-        label: t(lang, 'recordingDatabaseSetActive'),
+        label: translate('recordingDatabaseSetActive', lang),
         icon: <CornerUpLeft size={14} />,
         onClick: () => attemptSelect(summary),
       },
       {
         id: 'open-view',
-        label: t(lang, 'recordingDatabaseOpenSession'),
+        label: translate('recordingDatabaseOpenSession', lang),
         icon: <ExternalLink size={14} />,
         onClick: () => void openSession(summary.session.id),
       },
       { kind: 'separator' },
       {
         id: 'delete',
-        label: t(lang, 'recordingDatabaseDelete'),
+        label: translate('recordingDatabaseDelete', lang),
         icon: <Trash2 size={14} />,
         onClick: () => requestDelete(summary),
       },
@@ -132,7 +132,7 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   }
 
   async function cleanupStopped(): Promise<void> {
-    const confirmed = await platform.confirm(t(lang, 'recordingDatabaseCleanupStoppedConfirm'), { kind: 'warning' });
+    const confirmed = await platform.confirm(translate('recordingDatabaseCleanupStoppedConfirm', lang), { kind: 'warning' });
     if (confirmed === false) return;
     setBusy(true);
     try {
@@ -152,7 +152,7 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
 
   async function cleanupKept(): Promise<void> {
     const confirmed = await platform.confirm(
-      t(lang, 'recordingDatabaseCleanupKeepConfirm').replace('{count}', String(keepLatest)),
+      translate('recordingDatabaseCleanupKeepConfirm', lang).replace('{count}', String(keepLatest)),
       { kind: 'warning' },
     );
     if (confirmed === false) return;

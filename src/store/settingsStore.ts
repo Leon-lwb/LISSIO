@@ -21,6 +21,7 @@ import { canFrameBuffer } from '../lib/buffers/canBuffer';
 import { logicSampleBuffer } from '../lib/buffers/logicBuffer';
 import { transitionStore } from '../lib/utils/transitionStore';
 import { useAppStore } from './appStore';
+import type { Lang } from '../i18n';
 
 const STORE_FILE = 'settings.json';
 const STORE_KEY = 'app';
@@ -337,6 +338,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         applyAppearance(merged.appearance);
         applyDataCapacity(merged);
         applyPipelineConfig(merged);
+        useAppStore.getState().setLang(merged.general.language);
         void runRecordingApply(merged);
         // 迁移结果落盘, 避免每次启动重复改写
         if (migrated.changed) {
@@ -359,6 +361,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         applyAppearance(merged.appearance);
         applyDataCapacity(merged);
         applyPipelineConfig(merged);
+        useAppStore.getState().setLang(merged.general.language);
         void runRecordingApply(merged);
       }
     } catch (e) {
@@ -372,10 +375,14 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       applyAppearance(DEFAULT_SETTINGS.appearance);
       applyDataCapacity(DEFAULT_SETTINGS);
       applyPipelineConfig(DEFAULT_SETTINGS);
+      useAppStore.getState().setLang(DEFAULT_SETTINGS.general.language);
     }
   },
 
   update: (category, field, value) => {
+    if (category === 'general' && field === 'language') {
+      useAppStore.getState().setLang(value as Lang);
+    }
     // 外观/主题应用 (CSS 变量 + 全量重绘) 为非紧急更新 — 延迟到 transition 渲染。
     // 调用点 SettingsModal 不在本次变更范围, 故在 store 动作内包装。
     const commit = () => {

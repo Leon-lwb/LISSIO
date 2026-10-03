@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { canFrameBuffer } from '../../../lib/buffers/canBuffer';
 import { clearCanBuffer } from '../../../lib/buffers/canSubscription';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { Trash2 } from 'lucide-react';
 import type { CanFrame } from '../../../types';
@@ -43,17 +43,17 @@ export function CanIdLatestView() {
   return (
     <div className="h-full flex flex-col text-xs font-mono" data-testid="can-latest-view">
       <div className="flex justify-end border-b border-border px-2 py-1">
-        <ToolbarIconButton icon={<Trash2 />} variant="danger" title={t(lang, 'clear')} onClick={() => {
+        <ToolbarIconButton icon={<Trash2 />} variant="danger" title={translate('clear', lang)} onClick={() => {
           void clearCanBuffer();
           canFrameBuffer.clear();
         }} />
       </div>
       <div className="grid grid-cols-[100px_48px_48px_48px_64px_124px_1fr] border-b border-border bg-bg-panel-header text-text-secondary px-2 py-2">
         <span>ID</span><span>EXT</span><span>DIR</span><span>DLC</span>
-        <span>{t(lang, 'canFrameCount')}</span><span>{t(lang, 'time')}</span><span>DATA</span>
+        <span>{translate('canFrameCount', lang)}</span><span>{translate('time', lang)}</span><span>DATA</span>
       </div>
       <div ref={parent} className="flex-1 overflow-auto">
-        {rows.length === 0 && <div className="h-full flex items-center justify-center text-text-secondary">{t(lang, 'noCanFrames')}</div>}
+        {rows.length === 0 && <div className="h-full flex items-center justify-center text-text-secondary">{translate('noCanFrames', lang)}</div>}
         <div className="relative" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index];

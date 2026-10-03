@@ -4,7 +4,7 @@
 
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, TextField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -16,16 +16,16 @@ export const NumberDisplayProperties = memo(function NumberDisplayProperties({ w
     update({ kind: 'NumberDisplay', params: { ...widget.params, ...p } });
   return (
     <>
-      <TextField label={t(lang, 'unit')} value={unit} allowEmpty
+      <TextField label={translate('unit', lang)} value={unit} allowEmpty
         onCommit={(next) => patch({ unit: next })} />
-      <NumberField label={t(lang, 'precision')} value={precision}
+      <NumberField label={translate('precision', lang)} value={precision}
         onCommit={(v) => {
           const next = Math.round(v);
           if (next < 0 || next > 6) return false;
           patch({ precision: next });
           return true;
         }}
-        error={t(lang, 'invalidRange')} />
+        error={translate('invalidRange', lang)} />
     </>
   );
 });

@@ -6,7 +6,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useWaveformDetailBuffer } from '../../../lib/hooks/useWaveformDetailBuffer';
 import { waveformWindow, type WaveformWindowCache } from '../../../lib/buffers/dataBuffer';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type {
   WaveformSeriesSelection,
   WidgetConfig,
@@ -424,10 +424,10 @@ export function WaveformChart({
                 ? 'text-green bg-bg-editor border-green/50'
                 : 'text-text-secondary bg-bg-editor/95 border-border/30 hover:text-text-primary hover:bg-bg-hover'
             }`}
-            title={t(lang, 'envelopeModeTitle')}
+            title={translate('envelopeModeTitle', lang)}
             onClick={() => setEnvelopeMode((v) => !v)}
           >
-            {t(lang, 'envelopeMode')}
+            {translate('envelopeMode', lang)}
           </button>
         )}
         {envelopeMode && envelopeSourceId && (

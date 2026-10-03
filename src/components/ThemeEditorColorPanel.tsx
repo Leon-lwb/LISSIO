@@ -1,7 +1,7 @@
 import { useMemo, type Dispatch, type RefObject, type SetStateAction } from 'react';
 import { Copy, Download, RotateCcw, Trash2, Upload } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import {
   TOKEN_LABELS,
   applyTheme,
@@ -154,7 +154,7 @@ export function ThemeEditorColorPanel({
                           className="text-sm font-semibold text-text-primary hover:bg-bg-hover px-2 py-1 rounded cursor-pointer bg-transparent border-none"
                           onClick={startRename}
                           disabled={isBuiltIn}
-                          title={isBuiltIn ? undefined : t(lang, 'themeRename')}
+                          title={isBuiltIn ? undefined : translate('themeRename', lang)}
                         >
                           {selectedTheme.name}
                         </button>
@@ -165,18 +165,18 @@ export function ThemeEditorColorPanel({
                           <button
                             className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
                             onClick={handleDuplicate}
-                            title={t(lang, 'themeDuplicate')}
+                            title={translate('themeDuplicate', lang)}
                           >
                             <Copy size={12} />
-                            <span>{t(lang, 'themeDuplicate')}</span>
+                            <span>{translate('themeDuplicate', lang)}</span>
                           </button>
                           <button
                             className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-danger-hover hover:text-text-inverse rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
                             onClick={handleDelete}
-                            title={t(lang, 'themeDelete')}
+                            title={translate('themeDelete', lang)}
                           >
                             <Trash2 size={12} />
-                            <span>{t(lang, 'themeDelete')}</span>
+                            <span>{translate('themeDelete', lang)}</span>
                           </button>
                         </>
                       )}
@@ -184,7 +184,7 @@ export function ThemeEditorColorPanel({
                       <button
                         className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
                         onClick={handleImportClick}
-                        title={t(lang, 'themeImport')}
+                        title={translate('themeImport', lang)}
                       >
                         <Upload size={12} />
                       </button>
@@ -198,7 +198,7 @@ export function ThemeEditorColorPanel({
                       <button
                         className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
                         onClick={handleExport}
-                        title={t(lang, 'themeExport')}
+                        title={translate('themeExport', lang)}
                       >
                         <Download size={12} />
                       </button>
@@ -206,10 +206,10 @@ export function ThemeEditorColorPanel({
                         <button
                           className="px-2 py-1 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary rounded inline-flex items-center gap-1 cursor-pointer bg-transparent border-none"
                           onClick={handleReset}
-                          title={t(lang, 'themeReset')}
+                          title={translate('themeReset', lang)}
                         >
                           <RotateCcw size={12} />
-                          <span>{t(lang, 'themeReset')}</span>
+                          <span>{translate('themeReset', lang)}</span>
                         </button>
                       )}
                     </div>
@@ -217,7 +217,7 @@ export function ThemeEditorColorPanel({
                     {/* 只读提示 */}
                     {isBuiltIn && (
                       <div className="px-4 py-2 bg-bg-active text-text-primary text-xs flex-shrink-0">
-                        {t(lang, 'themeBuiltInReadOnly')}
+                        {translate('themeBuiltInReadOnly', lang)}
                       </div>
                     )}
 
@@ -258,8 +258,8 @@ export function ThemeEditorColorPanel({
                         />
                         <div className="text-xs text-text-secondary">
                           {selectedThemeId === activeThemeId
-                            ? t(lang, 'themeActivePreview')
-                            : t(lang, 'themeClickToPreview')}
+                            ? translate('themeActivePreview', lang)
+                            : translate('themeClickToPreview', lang)}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -271,14 +271,14 @@ export function ThemeEditorColorPanel({
                               applyTheme(selectedTheme);
                             }}
                           >
-                            {t(lang, 'themeActivate')}
+                            {translate('themeActivate', lang)}
                           </button>
                         )}
                         <button
                           className="px-3 py-1.5 bg-transparent text-text-primary border border-border rounded text-sm cursor-pointer hover:bg-bg-hover"
                           onClick={onClose}
                         >
-                          {t(lang, 'themeEditorClose')}
+                          {translate('themeEditorClose', lang)}
                         </button>
                       </div>
                     </div>

@@ -1,9 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { describe, expect, it, vi } from 'vitest';
 import { RawDataViewHeader } from '../RawDataViewHeader';
 
 function renderHeader(overrides: Partial<React.ComponentProps<typeof RawDataViewHeader>> = {}) {
-  return render(
+  return renderWithI18n(
     <RawDataViewHeader
       grouping="grid"
       repr="hex"

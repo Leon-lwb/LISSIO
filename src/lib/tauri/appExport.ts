@@ -29,7 +29,7 @@ import { setRawDataPreviewCapacity } from '../buffers/rawDataPreviewRegistry';
 import { canFrameBuffer } from '../buffers/canBuffer';
 import { logicSampleBuffer } from '../buffers/logicBuffer';
 import { notify, formatError } from './notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { removeTabGraphFromBackend } from '../../store/appStoreHelpers';
 import { getAllRawDataViewPrefs, useRawDataViewStore, type RawDataViewPrefs } from '../buffers/rawDataViewStore';
 
@@ -101,7 +101,7 @@ export async function readSnapshotFromFile(): Promise<AppSnapshot | null> {
     return parseSnapshot(json);
   } catch (e) {
     const lang = useAppStore.getState().lang;
-    notify.error(t(lang, 'backupImportFailed'), formatError(e), { source: 'importConfig' });
+    notify.error(translate('backupImportFailed', lang), formatError(e), { source: 'importConfig' });
     return null;
   }
 }
@@ -356,13 +356,13 @@ export async function exportAppToFile(): Promise<void> {
     const json = serializeSnapshot(snap);
     const ok = await saveJsonFile('lissio-backup', json);
     if (ok) {
-      notify.info(t(lang, 'backupExportSuccess'), t(lang, 'backupExportSuccessDesc'), {
+      notify.info(translate('backupExportSuccess', lang), translate('backupExportSuccessDesc', lang), {
         source: 'exportConfig',
       });
     }
     // 用户取消时不提示
   } catch (e) {
-    notify.error(t(lang, 'backupExportFailed'), formatError(e), { source: 'exportConfig' });
+    notify.error(translate('backupExportFailed', lang), formatError(e), { source: 'exportConfig' });
   }
 }
 
@@ -377,12 +377,12 @@ export async function importAppFromFile(): Promise<void> {
     // 若当前有任一连接, 提示用户重新连接以应用导入的传输配置 (不自动连接)
     const isConnected = Object.values(useAppStore.getState().connectionStates).some((v) => v === 'Connected');
     notify.info(
-      t(lang, 'backupImportSuccess'),
-      isConnected ? t(lang, 'backupImportSuccessDescReconnect') : t(lang, 'backupImportSuccessDesc'),
+      translate('backupImportSuccess', lang),
+      isConnected ? translate('backupImportSuccessDescReconnect', lang) : translate('backupImportSuccessDesc', lang),
       { source: 'importConfig' }
     );
   } catch (e) {
-    notify.error(t(lang, 'backupImportFailed'), formatError(e), { source: 'importConfig' });
+    notify.error(translate('backupImportFailed', lang), formatError(e), { source: 'importConfig' });
   }
 }
 
@@ -393,13 +393,13 @@ export async function exportSectionsToFile(sections: BackupSection[]): Promise<b
     const snap = collectPartialSnapshot(sections);
     const ok = await saveJsonFile('lissio-backup', serializeSnapshot(snap));
     if (ok) {
-      notify.info(t(lang, 'backupExportSuccess'), t(lang, 'backupExportSuccessDesc'), {
+      notify.info(translate('backupExportSuccess', lang), translate('backupExportSuccessDesc', lang), {
         source: 'exportConfig',
       });
     }
     return ok;
   } catch (e) {
-    notify.error(t(lang, 'backupExportFailed'), formatError(e), { source: 'exportConfig' });
+    notify.error(translate('backupExportFailed', lang), formatError(e), { source: 'exportConfig' });
     return false;
   }
 }
@@ -415,13 +415,13 @@ export async function importSectionsFromFile(
     await applySnapshot(snap, sections ? { sections } : undefined);
     const isConnected = Object.values(useAppStore.getState().connectionStates).some((v) => v === 'Connected');
     notify.info(
-      t(lang, 'backupImportSuccess'),
-      isConnected ? t(lang, 'backupImportSuccessDescReconnect') : t(lang, 'backupImportSuccessDesc'),
+      translate('backupImportSuccess', lang),
+      isConnected ? translate('backupImportSuccessDescReconnect', lang) : translate('backupImportSuccessDesc', lang),
       { source: 'importConfig' }
     );
     return true;
   } catch (e) {
-    notify.error(t(lang, 'backupImportFailed'), formatError(e), { source: 'importConfig' });
+    notify.error(translate('backupImportFailed', lang), formatError(e), { source: 'importConfig' });
     return false;
   }
 }

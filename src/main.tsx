@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { I18nextProvider, i18n } from "./i18n";
 import { BackendConnectionGate } from './components/BackendConnectionGate';
 import "./styles/theme.css";
 import "./styles/components.css";
@@ -22,8 +23,10 @@ window.addEventListener("error", (e) => {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BackendConnectionGate>
-      <App />
-    </BackendConnectionGate>
+    <I18nextProvider i18n={i18n}>
+      <BackendConnectionGate>
+        <App />
+      </BackendConnectionGate>
+    </I18nextProvider>
   </React.StrictMode>,
 );

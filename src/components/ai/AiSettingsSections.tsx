@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { ChevronRight, Globe2, Network, Puzzle } from 'lucide-react';
 
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { AppSettings } from '../../settings/defaults';
 import { useAppStore } from '../../store/appStore';
 
@@ -74,22 +74,22 @@ export function AiSettingsSections({
   const lang = useAppStore((state) => state.lang);
   return (
     <section className="mt-4">
-      <div className="section-heading pb-2">{t(lang, 'settingsAiSections')}</div>
+      <div className="section-heading pb-2">{translate('settingsAiSections', lang)}</div>
       <SectionLink
         icon={<Puzzle size={16} />}
-        title={t(lang, 'settingAiPlugins')}
-        description={t(lang, 'settingAiPluginsDesc')}
+        title={translate('settingAiPlugins', lang)}
+        description={translate('settingAiPluginsDesc', lang)}
         enabled={settings.ai.pluginsEnabled}
-        openLabel={t(lang, 'settingsOpenPlugins')}
+        openLabel={translate('settingsOpenPlugins', lang)}
         onToggle={(value) => update('pluginsEnabled', value)}
         onOpen={onOpenPlugins}
       />
       <SectionLink
         icon={<Network size={16} />}
-        title={t(lang, 'settingAiMcp')}
-        description={t(lang, 'settingAiMcpDesc')}
+        title={translate('settingAiMcp', lang)}
+        description={translate('settingAiMcpDesc', lang)}
         enabled={settings.ai.mcpToolsEnabled}
-        openLabel={t(lang, 'settingsOpenMcp')}
+        openLabel={translate('settingsOpenMcp', lang)}
         onToggle={(value) => update('mcpToolsEnabled', value)}
         onOpen={onOpenMcp}
       />
@@ -149,25 +149,25 @@ export function AiPluginSettings({ settings, update }: AiPluginSettingsProps) {
   return (
     <section className="space-y-3">
       <div>
-        <h3 className="text-sm font-medium text-text-primary">{t(lang, 'settingAiPlugins')}</h3>
+        <h3 className="text-sm font-medium text-text-primary">{translate('settingAiPlugins', lang)}</h3>
         <p className="mt-0.5 text-xs leading-relaxed text-text-secondary">
           {disabled
-            ? t(lang, 'settingAiPluginMasterDisabled')
-            : t(lang, 'settingAiPluginsDesc')}
+            ? translate('settingAiPluginMasterDisabled', lang)
+            : translate('settingAiPluginsDesc', lang)}
         </p>
       </div>
       <PluginCard
         icon={<Puzzle size={16} />}
-        title={t(lang, 'settingAiBuiltinTools')}
-        description={t(lang, 'settingAiBuiltinToolsDesc')}
+        title={translate('settingAiBuiltinTools', lang)}
+        description={translate('settingAiBuiltinToolsDesc', lang)}
         enabled={settings.ai.builtinToolsEnabled}
         disabled={disabled}
         onChange={(value) => update('builtinToolsEnabled', value)}
       />
       <PluginCard
         icon={<Globe2 size={16} />}
-        title={t(lang, 'settingAiWebTools')}
-        description={t(lang, 'settingAiWebToolsDesc')}
+        title={translate('settingAiWebTools', lang)}
+        description={translate('settingAiWebToolsDesc', lang)}
         enabled={settings.ai.webToolsEnabled}
         disabled={disabled}
         onChange={(value) => update('webToolsEnabled', value)}

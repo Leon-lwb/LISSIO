@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 
 // 共享 mock 状态
 const mockState = vi.hoisted(() => ({
@@ -67,7 +68,7 @@ beforeEach(() => {
 
 describe('Trigger widget', () => {
   it('renders default config with one rule and manual mode', () => {
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     expect(screen.getByText('TestTrigger')).toBeInTheDocument();
     expect(screen.getByText('手动')).toBeInTheDocument();
     expect(screen.getByText('自动')).toBeInTheDocument();
@@ -77,7 +78,7 @@ describe('Trigger widget', () => {
   });
 
   it('switches to auto mode and persists via updateWidget', () => {
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     fireEvent.click(screen.getByText('自动'));
     expect(mockState.updateWidgetCalls.length).toBeGreaterThan(0);
     const calls = mockState.updateWidgetCalls.map((c) => c.widget) as { params: { mode: string } }[];
@@ -85,7 +86,7 @@ describe('Trigger widget', () => {
   });
 
   it('adds a new rule when + button clicked (regex type)', () => {
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     const addButtons = screen.getAllByRole('button', { name: /正则/ });
     fireEvent.click(addButtons[0]);
     expect(mockState.updateWidgetCalls.length).toBeGreaterThan(0);
@@ -94,7 +95,7 @@ describe('Trigger widget', () => {
   });
 
   it('removes a rule when delete button clicked', () => {
-    render(<Trigger widget={makeWidget({
+    renderWithI18n(<Trigger widget={makeWidget({
       rules: [
         { id: 'r1', pattern: 'A', matchType: 'exact', outputValue: 1, enabled: true },
         { id: 'r2', pattern: 'B', matchType: 'exact', outputValue: 2, enabled: true },
@@ -109,7 +110,7 @@ describe('Trigger widget', () => {
   });
 
   it('manual 模式: 编辑 command 经 updateWidget 同步 (后端每帧以当前 command 求值)', () => {
-    render(<Trigger widget={makeWidget({ command: 'HELLO' })} />);
+    renderWithI18n(<Trigger widget={makeWidget({ command: 'HELLO' })} />);
     const textarea = screen.getByPlaceholderText(/GET_TEMP/i);
     fireEvent.change(textarea, { target: { value: 'PING' } });
     const calls = mockState.updateWidgetCalls.map((c) => c.widget) as { params: { command: string } }[];
@@ -117,25 +118,25 @@ describe('Trigger widget', () => {
   });
 
   it('不再渲染 Fire 按钮 (求值由后端驱动, 前端无触发入口)', () => {
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     expect(screen.queryByRole('button', { name: /Fire/ })).toBeNull();
   });
 
   it('结果区读后端图输出快照 (graphOutputs[自己id].value/matched)', () => {
     mockState.graphOutputs = { [TRIGGER_ID]: { value: 8, matched: 1 } };
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     expect(screen.getByText('✓ YES')).toBeInTheDocument();
     expect(screen.getByText('8.0000')).toBeInTheDocument();
   });
 
   it('后端尚未产出 (graphOutputs 无该节点) 时不显示结果区', () => {
-    render(<Trigger widget={makeWidget()} />);
+    renderWithI18n(<Trigger widget={makeWidget()} />);
     expect(screen.queryByText('✓ YES')).toBeNull();
     expect(screen.queryByText('✗ NO')).toBeNull();
   });
 
   it('renders AutoPanel when mode is auto', () => {
-    render(<Trigger widget={makeWidget({ mode: 'auto' })} />);
+    renderWithI18n(<Trigger widget={makeWidget({ mode: 'auto' })} />);
     expect(screen.getByText(/上游 trigger/)).toBeInTheDocument();
     expect(screen.getByText(/电平/)).toBeInTheDocument();
     expect(screen.getByText(/上升沿/)).toBeInTheDocument();
@@ -143,7 +144,7 @@ describe('Trigger widget', () => {
 
   it('auto 模式: 面板展示上游 trigger 端口实时值 (匹配本身在后端)', () => {
     mockState.graphInputValue = 143.7361;
-    render(<Trigger widget={makeWidget({ mode: 'auto', edge: 'level' })} />);
+    renderWithI18n(<Trigger widget={makeWidget({ mode: 'auto', edge: 'level' })} />);
     expect(screen.getAllByText(/143\.7361/).length).toBeGreaterThan(0);
   });
 });

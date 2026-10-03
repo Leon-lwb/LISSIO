@@ -6,7 +6,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useRecordingDatabaseStore } from '../../../store/recordingDatabaseStore';
 import { api, type RecordingExportFormat } from '../../../lib/tauri/tauri';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { RecordingDisabledNotice } from './RecordingDisabledNotice';
 import { formatBytes, formatDurationUs, formatTimestampUs, payloadPreview } from './recordingFormat';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
@@ -119,14 +119,14 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
         >
           <div className="flex items-start gap-1">
             <span className="min-w-0 flex-1 break-words">
-              {t(lang, 'recordingDatabaseRecovered')}
+              {translate('recordingDatabaseRecovered', lang)}
             </span>
             <button
               type="button"
               onClick={clearHealthWarning}
               className="shrink-0 text-text-warning-strong hover:text-text-inverse"
             >
-              {t(lang, 'recordingDatabaseDismiss')}
+              {translate('recordingDatabaseDismiss', lang)}
             </button>
           </div>
         </div>
@@ -137,7 +137,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
       >
         <Database size={14} className="shrink-0 text-accent" />
         <span className="flex-shrink-0 whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-text-primary">
-          {t(lang, 'recordingDatabaseTitle')}
+          {translate('recordingDatabaseTitle', lang)}
         </span>
         {databaseInfo != null && (
           <span className="w-[240px] shrink-0 truncate font-mono text-[10px] text-text-secondary" title={databaseInfo.path}>
@@ -151,7 +151,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-[11px] text-text-secondary hover:text-text-bright"
           >
             <RefreshCw size={12} />
-            {t(lang, 'recordingDatabaseRefresh')}
+            {translate('recordingDatabaseRefresh', lang)}
           </button>
           <label className="inline-flex items-center gap-1 text-[11px] text-text-secondary">
             <input
@@ -159,7 +159,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
               checked={includePayload}
               onChange={(event) => setIncludePayload(event.target.checked)}
             />
-            {t(lang, 'recordingDatabaseIncludePayload')}
+            {translate('recordingDatabaseIncludePayload', lang)}
           </label>
           <select
             value={exportFormat}
@@ -177,7 +177,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             className="inline-flex h-7 items-center gap-1 rounded border border-border-subtle bg-bg-input px-2 text-[11px] text-text-secondary hover:text-text-bright disabled:opacity-disabled"
           >
             <Download size={12} />
-            {exporting ? t(lang, 'recordingDatabaseExporting') : t(lang, 'recordingDatabaseExport')}
+            {exporting ? translate('recordingDatabaseExporting', lang) : translate('recordingDatabaseExport', lang)}
           </button>
         </div>
       </HorizontalScrollArea>
@@ -186,7 +186,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
         <div className="flex items-center gap-2 border-b border-danger/30 bg-danger/10 px-3 py-1 text-[11px] text-text-danger">
           <span className="truncate">{error}</span>
           <button type="button" onClick={clearError} className="ml-auto text-text-danger-strong hover:text-text-inverse">
-            {t(lang, 'recordingDatabaseDismiss')}
+            {translate('recordingDatabaseDismiss', lang)}
           </button>
         </div>
       )}
@@ -194,7 +194,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
       <div className="flex min-h-0 flex-1">
         <div className="flex w-64 shrink-0 flex-col border-r border-border-subtle">
           <div className="flex h-8 items-center border-b border-border-subtle px-2 section-heading section-heading--micro">
-            {t(lang, 'recordingDatabaseSessions')}
+            {translate('recordingDatabaseSessions', lang)}
             <span className="ml-auto font-mono">{sessions.length}</span>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-1">
@@ -224,15 +224,15 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
                     {summary.session.id}
                   </div>
                   <div className="mt-0.5 flex items-center gap-2 text-[9px] text-text-secondary">
-                    <span>{summary.batch_count} {t(lang, 'recordingDatabaseBatches')}</span>
-                    <span>{summary.binding_count} {t(lang, 'recordingDatabaseChannels')}</span>
+                    <span>{summary.batch_count} {translate('recordingDatabaseBatches', lang)}</span>
+                    <span>{summary.binding_count} {translate('recordingDatabaseChannels', lang)}</span>
                   </div>
                 </button>
               );
             })}
             {sessions.length === 0 && (
               <div className="p-3 text-center text-[11px] text-text-secondary">
-                {t(lang, 'recordingDatabaseNoSessions')}
+                {translate('recordingDatabaseNoSessions', lang)}
               </div>
             )}
           </div>
@@ -244,14 +244,14 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
               className="flex min-h-9 flex-nowrap items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2 py-1"
             >
               <span className="flex-shrink-0 whitespace-nowrap text-[10px] uppercase tracking-wider text-text-secondary">
-                {t(lang, 'recordingDatabaseBindings')}
+                {translate('recordingDatabaseBindings', lang)}
               </span>
               <select
                 value={selectedBindingId ?? ''}
                 onChange={(event) => selectBinding(event.target.value || null)}
                 className="h-7 min-w-[180px] max-w-[340px] flex-shrink-0 rounded border border-border-subtle bg-bg-input px-1.5 text-[11px] text-text-primary"
               >
-                <option value="">{t(lang, 'recordingDatabaseAllBindings')}</option>
+                <option value="">{translate('recordingDatabaseAllBindings', lang)}</option>
                 {bindings.map((binding) => (
                   <option key={binding.id} value={binding.id}>
                     {binding.component_id} · {binding.domain}
@@ -259,7 +259,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
                 ))}
               </select>
               <span className="flex-shrink-0 whitespace-nowrap text-[10px] text-text-secondary">
-                {selectedSession.item_count} {t(lang, 'recordingDatabaseSamples')} ·{' '}
+                {selectedSession.item_count} {translate('recordingDatabaseSamples', lang)} ·{' '}
                 {formatDurationUs(
                   selectedSession.first_timestamp_us != null && selectedSession.last_timestamp_us != null
                     ? selectedSession.last_timestamp_us - selectedSession.first_timestamp_us
@@ -273,12 +273,12 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             <table className="w-full border-collapse text-left text-[11px]">
               <thead className="sticky top-0 z-10 bg-bg-panel-header text-[10px] uppercase tracking-wider text-text-secondary">
                 <tr>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnTime')}</th>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnBinding')}</th>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnDomain')}</th>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnSequence')}</th>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnItems')}</th>
-                  <th className="border-b border-border-subtle px-2 py-1.5">{t(lang, 'recordingDatabaseColumnPayload')}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnTime', lang)}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnBinding', lang)}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnDomain', lang)}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnSequence', lang)}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnItems', lang)}</th>
+                  <th className="border-b border-border-subtle px-2 py-1.5">{translate('recordingDatabaseColumnPayload', lang)}</th>
                 </tr>
               </thead>
               <tbody>
@@ -313,20 +313,20 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
             {currentCache?.rows.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-10 text-[11px] text-text-secondary">
                 <FileText size={18} />
-                {t(lang, 'recordingDatabaseNoData')}
+                {translate('recordingDatabaseNoData', lang)}
               </div>
             )}
             {currentCache == null && selectedSessionId == null && (
               <div className="flex flex-col items-center gap-2 py-10 text-[11px] text-text-secondary">
                 <Database size={18} />
-                {t(lang, 'recordingDatabaseSelectSession')}
+                {translate('recordingDatabaseSelectSession', lang)}
               </div>
             )}
           </div>
 
           <div className="flex h-9 shrink-0 items-center justify-between border-t border-border-subtle px-2 text-[10px] text-text-secondary">
             <span>
-              {currentCache?.rows.length ?? 0} {t(lang, 'recordingDatabaseRows')}
+              {currentCache?.rows.length ?? 0} {translate('recordingDatabaseRows', lang)}
             </span>
             <button
               type="button"
@@ -334,7 +334,7 @@ export const RecordingDatabaseView = memo(function RecordingDatabaseView() {
               onClick={() => void loadHistory(false)}
               className="inline-flex h-6 items-center rounded border border-border-subtle bg-bg-input px-2 text-[10px] text-text-secondary hover:text-text-bright disabled:opacity-disabled"
             >
-              {loading ? t(lang, 'recordingDatabaseLoading') : t(lang, 'recordingDatabaseLoadMore')}
+              {loading ? translate('recordingDatabaseLoading', lang) : translate('recordingDatabaseLoadMore', lang)}
             </button>
           </div>
         </div>

@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { notify } from '../../lib/tauri/notifications';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
@@ -74,20 +74,20 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   const onCanvasContextMenu = useContextMenu([
     {
       id: 'fit-view',
-      label: t(lang, 'fitView'),
+      label: translate('fitView', lang),
       icon: <Maximize />,
       onClick: () => { void reactFlow.fitView({ padding: 0.2 }); },
     },
     {
       id: 'reset-zoom',
-      label: t(lang, 'resetZoom'),
+      label: translate('resetZoom', lang),
       icon: <Maximize />,
       onClick: () => { void reactFlow.zoomTo(1); },
     },
     { kind: 'separator' },
     {
       id: 'open-widget-palette',
-      label: t(lang, 'widgetPalette'),
+      label: translate('widgetPalette', lang),
       icon: <LayoutGrid />,
       onClick: () => transitionStore(() => openCategory('display')),
     },
@@ -202,7 +202,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
         }
       );
       if (!check.ok) {
-        notify.warn(t(lang, 'connectionRejectedTitle'), check.message ?? t(lang, 'domainMismatchMsg'), {
+        notify.warn(translate('connectionRejectedTitle', lang), check.message ?? translate('domainMismatchMsg', lang), {
           source: 'domain-mismatch',
         });
         return false;
@@ -250,7 +250,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
         />
         <Panel position="top-left">
           {!tabNodes.some((n) => n.data.tabId === tabId) && (
-            <div className="bg-bg-panel-header border border-dashed border-border rounded px-2.5 py-1.5 text-xs text-text-secondary pointer-events-none">{t(lang, 'dragWidgetHint')}</div>
+            <div className="bg-bg-panel-header border border-dashed border-border rounded px-2.5 py-1.5 text-xs text-text-secondary pointer-events-none">{translate('dragWidgetHint', lang)}</div>
           )}
         </Panel>
       </ReactFlow>

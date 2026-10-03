@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { describe, expect, it } from 'vitest';
 import { useAppStore } from '../../../store/appStore';
 import { AiTurnTimeline } from '../AiTurnTimeline';
@@ -6,7 +7,7 @@ import { AiTurnTimeline } from '../AiTurnTimeline';
 describe('AiTurnTimeline', () => {
   it('renders a completed tool group between the text chunks and folds it', () => {
     useAppStore.setState({ lang: 'zh' });
-    const { container } = render(
+    const { container } = renderWithI18n(
       <AiTurnTimeline
         text="先检查。再回答。"
         tools={[{
@@ -23,7 +24,7 @@ describe('AiTurnTimeline', () => {
 
   it('keeps an executing tool group open with running animation state', () => {
     useAppStore.setState({ lang: 'zh' });
-    const { container } = render(
+    const { container } = renderWithI18n(
       <AiTurnTimeline
         text=""
         streaming
@@ -40,7 +41,7 @@ describe('AiTurnTimeline', () => {
 
   it('shows an active waiting row before any output arrives', () => {
     useAppStore.setState({ lang: 'zh' });
-    const { container } = render(<AiTurnTimeline text="" timeline={[]} streaming />);
+    const { container } = renderWithI18n(<AiTurnTimeline text="" timeline={[]} streaming />);
     expect(screen.getByText(/已运行|运行中/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '查看过程' })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('button', { name: '正在思考' })).toBeInTheDocument();
@@ -50,7 +51,7 @@ describe('AiTurnTimeline', () => {
 
   it('keeps reasoning, tools and output in event order with one duration at the top', () => {
     useAppStore.setState({ lang: 'zh' });
-    const { container } = render(
+    const { container } = renderWithI18n(
       <AiTurnTimeline
         text="先说明。最终回答。"
         reasoning="检查先检查后"
@@ -84,7 +85,7 @@ describe('AiTurnTimeline', () => {
     useAppStore.setState({ lang: 'zh' });
     const first = `第一段。${'内容。'.repeat(400)}`;
     const second = `第二段。${'内容。'.repeat(400)}`;
-    const { container } = render(<AiTurnTimeline text={`${first}\n\n${second}`} streaming />);
+    const { container } = renderWithI18n(<AiTurnTimeline text={`${first}\n\n${second}`} streaming />);
     const text = container.textContent ?? '';
     expect(text).toContain('第一段。');
     expect(text).toContain('第二段。');

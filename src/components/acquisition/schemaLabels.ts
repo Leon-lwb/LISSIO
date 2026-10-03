@@ -1,4 +1,4 @@
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import type { CanBitrate } from '../../types';
 
 const FIELD_KEYS: Record<string, string> = {
@@ -100,10 +100,10 @@ export function schemaEnumLabelKey(value: string): string | undefined {
 
 export function schemaFieldLabel(lang: Lang, name: string): string | undefined {
   const key = schemaFieldLabelKey(name);
-  return key ? t(lang, key) : undefined;
+  return key ? translate(key, lang) : undefined;
 }
 
 export function schemaEnumLabel(lang: Lang, value: string): string | undefined {
   const key = schemaEnumLabelKey(value);
-  return key ? t(lang, key) : undefined;
+  return key ? translate(key, lang) : undefined;
 }

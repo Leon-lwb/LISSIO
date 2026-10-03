@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { platform } from '../../lib/platform';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { QUICK_START_TEMPLATES, type QuickStartTemplate } from '../../lib/quickstart/templates';
 import { applyTemplate, type TemplateApplyMode } from '../../lib/quickstart/applyTemplate';
 import { readSnapshotFromFile, type AppSnapshot } from '../../lib/tauri/appExport';
@@ -44,9 +44,9 @@ export function QuickStartPanel() {
 
   /// 通过系统对话框确认应用方式: 先询问「替换」(推荐), 取消则再询问「合并」
   const chooseAndApply = async (snap: AppSnapshot, name: string) => {
-    const title = t(lang, 'templateApplyTitle');
+    const title = translate('templateApplyTitle', lang);
     const replace = await platform.confirm(
-      `${name}\n\n${t(lang, 'templateApplyReplaceConfirm')}`,
+      `${name}\n\n${translate('templateApplyReplaceConfirm', lang)}`,
       { title, kind: 'warning' }
     );
     if (replace) {
@@ -54,7 +54,7 @@ export function QuickStartPanel() {
       return;
     }
     const merge = await platform.ask(
-      `${name}\n\n${t(lang, 'templateApplyMergePrompt')}`,
+      `${name}\n\n${translate('templateApplyMergePrompt', lang)}`,
       { title, kind: 'info' }
     );
     if (merge) await apply(snap, 'merge');
@@ -62,20 +62,20 @@ export function QuickStartPanel() {
 
   const requestApply = (tpl: QuickStartTemplate) => {
     // 模板经后端 prepare 批量产出文档 — 构建为异步
-    void tpl.build().then((snap) => chooseAndApply(snap, t(lang, tpl.nameKey)));
+    void tpl.build().then((snap) => chooseAndApply(snap, translate(tpl.nameKey, lang)));
   };
 
   const requestImport = async () => {
     const snap = await readSnapshotFromFile();
     if (!snap) return;
-    const name = snap.workspace?.tabs[0]?.name ?? t(lang, 'templateImportName');
+    const name = snap.workspace?.tabs[0]?.name ?? translate('templateImportName', lang);
     await chooseAndApply(snap, name);
   };
 
   return (
     <div className="flex flex-col h-full overflow-hidden gap-3" data-tour="quickstart-panel">
       <div className="text-xs text-text-secondary leading-relaxed">
-        {t(lang, 'quickStartDesc')}
+        {translate('quickStartDesc', lang)}
       </div>
 
       {/* 模板列表 */}
@@ -91,16 +91,16 @@ export function QuickStartPanel() {
                 <Icon size={16} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-text-bright">{t(lang, tpl.nameKey)}</div>
+                <div className="text-sm font-medium text-text-bright">{translate(tpl.nameKey, lang)}</div>
                 <div className="text-[11px] text-text-secondary leading-snug mt-0.5">
-                  {t(lang, tpl.descKey)}
+                  {translate(tpl.descKey, lang)}
                 </div>
               </div>
               <button
                 className="shrink-0 px-2.5 h-7 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs transition-colors hover:bg-bg-button-hover"
                 onClick={() => requestApply(tpl)}
               >
-                {t(lang, 'templateApply')}
+                {translate('templateApply', lang)}
               </button>
             </div>
           );
@@ -113,7 +113,7 @@ export function QuickStartPanel() {
         onClick={() => void requestImport()}
       >
         <Upload size={14} />
-        <span>{t(lang, 'templateImportFile')}</span>
+        <span>{translate('templateImportFile', lang)}</span>
       </button>
     </div>
   );

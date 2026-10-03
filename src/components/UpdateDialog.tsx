@@ -7,7 +7,7 @@ import { useEffect } from 'react';
 import { X, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUpdateStore } from '../store/updateStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 
 export function UpdateDialog() {
   const lang = useAppStore((s) => s.lang);
@@ -50,14 +50,14 @@ export function UpdateDialog() {
           <button
             className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer bg-transparent border-none"
             onClick={closeDialog}
-            title={t(lang, 'updateLater')}
+            title={translate('updateLater', lang)}
           >
             <X size={16} />
           </button>
         )}
 
         <h2 className="text-base font-semibold text-text-bright m-0">
-          {t(lang, 'updateAvailableTitle')}
+          {translate('updateAvailableTitle', lang)}
         </h2>
 
         {updateInfo && (
@@ -69,14 +69,14 @@ export function UpdateDialog() {
         )}
         {updateInfo?.date && (
           <p className="text-xs text-text-secondary m-0">
-            {t(lang, 'updateReleaseDate')}: {updateInfo.date}
+            {translate('updateReleaseDate', lang)}: {updateInfo.date}
           </p>
         )}
 
         {updateInfo?.notes && (
           <>
             <div className="section-heading mt-2">
-              {t(lang, 'updateReleaseNotes')}
+              {translate('updateReleaseNotes', lang)}
             </div>
             <div className="text-xs text-text-primary leading-relaxed whitespace-pre-wrap max-h-[240px] overflow-y-auto bg-bg-input rounded px-3 py-2 border border-border">
               {updateInfo.notes}
@@ -97,12 +97,12 @@ export function UpdateDialog() {
         )}
 
         {status === 'ready' && (
-          <p className="text-xs text-text-secondary m-0 mt-2">{t(lang, 'updateReadyHint')}</p>
+          <p className="text-xs text-text-secondary m-0 mt-2">{translate('updateReadyHint', lang)}</p>
         )}
 
         {status === 'error' && (
           <p className="text-xs text-text-danger m-0 mt-2 break-all">
-            {t(lang, 'updateError')}: {error}
+            {translate('updateError', lang)}: {error}
           </p>
         )}
 
@@ -113,26 +113,26 @@ export function UpdateDialog() {
                 className="bg-transparent text-text-secondary border-none px-2.5 py-1 text-xs cursor-pointer rounded transition-colors hover:bg-bg-hover hover:text-text-primary"
                 onClick={skipVersion}
               >
-                {t(lang, 'updateSkipVersion')}
+                {translate('updateSkipVersion', lang)}
               </button>
               <button
                 className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
                 onClick={closeDialog}
               >
-                {t(lang, 'updateLater')}
+                {translate('updateLater', lang)}
               </button>
               <button
                 className="px-3 py-1 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs inline-flex items-center gap-1.5 transition-colors hover:bg-bg-button-hover"
                 onClick={() => void downloadAndInstall()}
               >
-                {t(lang, 'updateNow')}
+                {translate('updateNow', lang)}
               </button>
             </>
           )}
           {status === 'downloading' && (
             <span className="text-xs text-text-secondary inline-flex items-center gap-1.5">
               <RefreshCw size={12} className="animate-spin" />
-              {t(lang, 'updateDownloading')}
+              {translate('updateDownloading', lang)}
             </span>
           )}
           {status === 'ready' && (
@@ -140,7 +140,7 @@ export function UpdateDialog() {
               className="px-3 py-1 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs transition-colors hover:bg-bg-button-hover"
               onClick={() => void relaunch()}
             >
-              {t(lang, 'updateRestart')}
+              {translate('updateRestart', lang)}
             </button>
           )}
           {status === 'error' && (
@@ -148,7 +148,7 @@ export function UpdateDialog() {
               className="px-3 py-1 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-xs transition-colors hover:bg-bg-button-hover"
               onClick={() => void downloadAndInstall()}
             >
-              {t(lang, 'updateRetry')}
+              {translate('updateRetry', lang)}
             </button>
           )}
         </div>

@@ -4,7 +4,7 @@ import { useContextMenuStore } from '../../store/contextMenuStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../tauri/tauri';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { Lang } from '../../i18n';
 import type { ContextMenuEntry, ContextMenuItem } from '../../types';
 
@@ -15,7 +15,7 @@ const NATIVE_RIGHT_CLICK_TAGS = new Set(['INPUT', 'TEXTAREA']);
 function buildInspectItem(lang: Lang): ContextMenuItem {
   return {
     id: 'inspect-element',
-    label: t(lang, 'contextMenuInspectElement'),
+    label: translate('contextMenuInspectElement', lang),
     icon: <Bug size={14} />,
     onClick: () => {
       api.inspectElement().catch((e: unknown) => {

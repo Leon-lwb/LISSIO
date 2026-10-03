@@ -1,4 +1,4 @@
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import type { DiscoveredEndpoint } from '../../types';
 
 export function isEndpointApplied(
@@ -52,10 +52,10 @@ function isObject(value: unknown): value is Record<string, unknown> {
 /** Device type comes from the backend's OS enumeration, never from its path. */
 export function endpointTypeLabel(endpoint: DiscoveredEndpoint, lang: Lang): string | undefined {
   switch (endpoint.metadata?.portType) {
-    case 'Bluetooth': return t(lang, 'deviceTypeBluetooth');
-    case 'USB': return t(lang, 'deviceTypeUsb');
-    case 'PCI': return t(lang, 'deviceTypePci');
-    case 'Unknown': return t(lang, 'deviceTypeSystem');
+    case 'Bluetooth': return translate('deviceTypeBluetooth', lang);
+    case 'USB': return translate('deviceTypeUsb', lang);
+    case 'PCI': return translate('deviceTypePci', lang);
+    case 'Unknown': return translate('deviceTypeSystem', lang);
     default: return undefined;
   }
 }

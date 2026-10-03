@@ -1,7 +1,7 @@
 //! 共享连接 action — 设备节点属性面板的 connect 提交流程
 import { useActionState } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 export interface ConnectActionState {
   ok: boolean;
@@ -22,7 +22,7 @@ export function useConnectAction(nodeId: string) {
       await connectNode(nodeId);
       const { connectionStates, lang } = useAppStore.getState();
       if (connectionStates[nodeId] === 'Error') {
-        return { ok: false, error: t(lang, 'notifConnectFailed') };
+        return { ok: false, error: translate('notifConnectFailed', lang) };
       }
       return { ok: true };
     },

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import type { Node } from '@xyflow/react';
 import { useAppStore } from '../../../store/appStore';
 import { api } from '../../../lib/tauri/tauri';
@@ -58,7 +59,7 @@ describe('SimulationProperties 生成格式', () => {
   it('无下游解析器时可选 Slcan/CandleLight (测试数据要能产出 CAN 帧)', () => {
     const node = nodeOf(declWithSimulation(null));
     useAppStore.setState({ rfNodes: [node] });
-    render(<SimulationProperties node={node} />);
+    renderWithI18n(<SimulationProperties node={node} />);
 
     const select = screen.getByLabelText('生成格式');
     const options = within(select).getAllByRole('option').map((option) => (option as HTMLOptionElement).value);
@@ -68,7 +69,7 @@ describe('SimulationProperties 生成格式', () => {
   it('选择 Slcan 后编码写入设备文档', () => {
     const node = nodeOf(declWithSimulation(null));
     useAppStore.setState({ rfNodes: [node] });
-    render(<SimulationProperties node={node} />);
+    renderWithI18n(<SimulationProperties node={node} />);
 
     fireEvent.change(screen.getByLabelText('生成格式'), { target: { value: 'Slcan' } });
 
@@ -84,7 +85,7 @@ describe('SimulationProperties 生成格式', () => {
       { protocol: { kind: 'Slcan' }, schema: null },
     ));
     useAppStore.setState({ rfNodes: [slcan] });
-    const slcanView = render(<SimulationProperties node={slcan} />);
+    const slcanView = renderWithI18n(<SimulationProperties node={slcan} />);
 
     const frameRate = screen.getByLabelText<HTMLInputElement>('生成速率 (帧/秒)');
     expect(frameRate.max).toBe('20000');
@@ -94,7 +95,7 @@ describe('SimulationProperties 生成格式', () => {
       { protocol: { kind: 'JustFloat', channels: 4 }, schema: null },
     ));
     useAppStore.setState({ rfNodes: [justFloat] });
-    render(<SimulationProperties node={justFloat} />);
+    renderWithI18n(<SimulationProperties node={justFloat} />);
 
     const sampleRate = screen.getByLabelText<HTMLInputElement>('生成速率 (采样/秒)');
     expect(sampleRate.max).toBe('5000000');

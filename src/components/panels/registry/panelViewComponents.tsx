@@ -18,7 +18,7 @@
 
 import { Suspense, lazy, memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { RawDataView } from '../../displays/rawdata/RawDataView';
 import { PieChart } from '../../widgets/pieChart/PieChartWidget';
 import { ImageViewer } from '../../widgets/image/ImageWidget';
@@ -42,7 +42,7 @@ export const PanelHostMissing = memo(function PanelHostMissing() {
   const lang = useAppStore((s) => s.lang);
   return (
     <div className="flex items-center justify-center h-full text-text-secondary text-sm">
-      {t(lang, 'noWidgets')}
+      {translate('noWidgets', lang)}
     </div>
   );
 });

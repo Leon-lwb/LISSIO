@@ -1,0 +1,123 @@
+# 帧解码器 (FrameDecoder)
+frameDecoder: 帧解码器
+trigger: 触发器
+paletteSearchPlaceholder: 搜索控件…
+paletteNoResults: 无匹配控件
+paletteClearSearch: 清空
+clearSearch: 清除搜索
+fdModeLive: 实时模式
+fdModeManual: 手动测试
+fdSettings: 全局设置
+fdEnableValid: 输出 valid 端口
+fdEnableFrameCount: 输出 frame_count 端口
+fdEnableLastTimestamp: 输出 last_timestamp 端口
+fdEnableFps: 输出 fps 端口
+fdBlocksEmpty: 暂无块, 点击下方按钮添加
+fdLiveOutputs: 实时输出
+fdLiveHint: 连接传输后, 解析结果将实时显示在下方端口
+fdNoPorts: 无输出端口
+fdManualInput: 手动输入
+fdFormat: 格式
+fdAutoFormat: 自动
+fdParse: 解析
+fdClear: 清空
+fdHexPlaceholder: "HEX 字节流 (例如: AA 01 02 BB 或 AA0102BB, 支持 0x 前缀和逗号)"
+fdAsciiPlaceholder: "ASCII 文本 (支持转义: \\n \\r \\t \\xHH \\0 \\\\)"
+fdShortcutHint: 按 Ctrl/Cmd + Enter 立即解析
+fdExamples: 示例
+fdHistory: 历史
+fdClearHistory: 清空历史
+fdHistoryEmpty: 暂无历史
+fdParseResult: 解析结果
+fdResultValid: 校验通过
+fdConsumedBytes: 消耗字节
+fdNoOutputs: 无输出字段
+fdLengthUnit: 长度单位
+fdLengthUnitBytes: 字节
+fdLengthUnitFields: 字段数
+fdLengthRef: 变长引用
+fdLengthRefPlaceholder: 引用 length 块的 id (可选)
+fdByteOffset: 字节偏移
+fdBitOffset: 位偏移
+fdBitLength: 位长度
+fdSigned: 是否带符号
+fdSignedYes: 带符号
+
+# 触发器 (Trigger)
+triggerTitle: 触发器
+triggerModeManual: 手动
+triggerModeAuto: 自动
+triggerEdge: 边沿
+triggerEdgeLevel: 电平
+triggerEdgeRising: 上升沿
+triggerMatchExact: 精确
+triggerMatchPrefix: 前缀
+triggerMatchContains: 包含
+triggerMatchRegex: 正则
+triggerMatchRange: 范围
+triggerHintExact: 字符串完全相等
+triggerHintPrefix: 命令以模式开头
+triggerHintContains: 命令包含模式
+triggerHintRegex: JavaScript/PCRE 风格正则, 支持 flags (i/m/s/U)
+triggerHintRange: 数值范围 min..max, 支持 Infinity
+triggerMatchType: 匹配类型
+triggerPattern: 命令模板
+triggerOutputValue: 输出值
+triggerFlags: 正则 flags
+triggerFlagsHint: 如 i (忽略大小写) / im / ims
+triggerEnabled: 启用
+triggerRulesCount: 条规则
+triggerRulesEmpty: 暂无规则, 点击下方按钮添加
+triggerManualInput: 手动输入命令
+triggerAutoInput: 自动触发
+triggerCmdPlaceholder: "输入待匹配命令, 例如: GET_TEMP"
+triggerPort: 上游 trigger
+triggerCommand: 当前命令
+triggerMatchResult: 匹配结果
+triggerLastResult: 最近匹配
+triggerMatched: 是否命中
+triggerValue: 输出值
+triggerMissValue: 未命中值
+triggerGlobalSettings: 全局设置
+triggerOutputType: 输出类型
+triggerOutputNumber: 数字
+triggerOutputString: 字符串
+triggerOutputText: 输出文本
+triggerMissText: 默认未命中文本
+triggerMatchGlob: Glob
+triggerHintGlob: 标准 shell glob 模式, 支持 * ? [abc] {a,b,c}
+textDisplay: 文本显示
+textInput: 文本框
+fdSignedNo: 无符号
+fdChecksumCover: 校验范围
+fdCoverStart: 起始字节
+fdCoverEnd: 结束字节
+fdMatchId: 匹配 ID
+fdMatchIdPlaceholder: 仅当 id_value 等于此值时执行 (可选)
+fdBlockHeader: 帧头
+fdBlockLength: 长度
+fdBlockId: ID
+fdBlockField: 字段
+fdBlockBitfield: 位域
+fdBlockChecksum: 校验
+fdBlockTail: 帧尾
+fdAddBlockHeader: 添加帧头
+fdAddBlockLength: 添加长度
+fdAddBlockId: 添加ID
+fdAddBlockField: 添加字段
+fdAddBlockBitfield: 添加位域
+fdAddBlockChecksum: 添加校验
+fdAddBlockTail: 添加帧尾
+fdBlockCsv: CSV
+fdBlockAsciiField: ASCII字段
+fdBlockSamples: 采样
+fdAddBlockCsv: 添加CSV
+fdAddBlockAsciiField: 添加ASCII字段
+fdAddBlockSamples: 添加采样
+fdCsvSeparator: 分隔符
+fdCsvPorts: 端口列表
+fdChecksumPosAppend: 末尾
+fdChecksumPosInline: 行内
+fdChecksumPosPrepend: 开头
+fdChecksumCoverAllPrior: 所有前置块
+fdChecksumCoverRange: 指定范围

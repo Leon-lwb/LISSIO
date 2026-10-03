@@ -3,7 +3,7 @@ import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 export function SessionMenu() {
   const lang = useAppStore((s) => s.lang);
@@ -14,7 +14,7 @@ export function SessionMenu() {
   const [draft, setDraft] = useState('');
 
   const sorted = useMemo(() => [...sessions].sort((a, b) => b.updated_at - a.updated_at), [sessions]);
-  const activeTitle = sessions.find((s) => s.id === activeSessionId)?.title ?? t(lang, 'aiSessionNew');
+  const activeTitle = sessions.find((s) => s.id === activeSessionId)?.title ?? translate('aiSessionNew', lang);
 
   const commitRename = async () => {
     if (renamingId && draft.trim()) await renameSession(renamingId, draft.trim());
@@ -25,7 +25,7 @@ export function SessionMenu() {
     await deleteSession(id);
     // 删空后自动补一个默认会话, 面板保持可用
     if (useAiChatStore.getState().sessions.length === 0) {
-      await createSession(t(lang, 'aiSessionNew'));
+      await createSession(translate('aiSessionNew', lang));
     }
   };
 
@@ -34,7 +34,7 @@ export function SessionMenu() {
       <button
         className="flex w-full min-w-0 items-center gap-1 px-1.5 h-5 rounded text-[11px] text-text-secondary hover:bg-bg-hover hover:text-text-primary"
         onClick={() => setOpen((v) => !v)}
-        title={`${t(lang, 'aiSessionSwitch')}: ${activeTitle}`}
+        title={`${translate('aiSessionSwitch', lang)}: ${activeTitle}`}
       >
         <span className="truncate">{activeTitle}</span>
         <ChevronDown size={11} className={`shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -43,14 +43,14 @@ export function SessionMenu() {
         <>
           <button
             type="button"
-            aria-label={t(lang, 'aiSessionSwitch')}
+            aria-label={translate('aiSessionSwitch', lang)}
             className="fixed inset-0 z-20 border-0 bg-transparent"
             onClick={() => setOpen(false)}
           />
           <div className="absolute left-0 top-6 z-30 w-56 max-w-[80vw] popover-surface py-1 flex flex-col animate-ai-menu-in">
             <div className="max-h-56 overflow-y-auto">
               {sorted.length === 0 && (
-                <div className="px-2 py-1.5 text-[11px] text-text-secondary">{t(lang, 'aiSessionEmpty')}</div>
+                <div className="px-2 py-1.5 text-[11px] text-text-secondary">{translate('aiSessionEmpty', lang)}</div>
               )}
               {sorted.map((s) => (
                 <div
@@ -88,7 +88,7 @@ export function SessionMenu() {
                           setRenamingId(s.id);
                           setDraft(s.title);
                         }}
-                        title={t(lang, 'aiSessionRename')}
+                        title={translate('aiSessionRename', lang)}
                       >
                         <Pencil size={10} />
                       </button>
@@ -98,7 +98,7 @@ export function SessionMenu() {
                           e.stopPropagation();
                           void onDelete(s.id);
                         }}
-                        title={t(lang, 'aiSessionDelete')}
+                        title={translate('aiSessionDelete', lang)}
                       >
                         <Trash2 size={10} />
                       </button>
@@ -110,12 +110,12 @@ export function SessionMenu() {
             <button
               className="w-full flex items-center gap-1 px-2 py-1.5 text-xs text-text-secondary hover:bg-bg-hover hover:text-text-primary border-t border-border-subtle"
               onClick={() => {
-                void createSession(t(lang, 'aiSessionNew'));
+                void createSession(translate('aiSessionNew', lang));
                 setOpen(false);
               }}
             >
               <Plus size={11} />
-              {t(lang, 'aiSessionNew')}
+              {translate('aiSessionNew', lang)}
             </button>
           </div>
         </>

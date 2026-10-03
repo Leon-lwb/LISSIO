@@ -1,7 +1,7 @@
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import type { BlockType, CommandBlock } from '../../../types';
 import type { Lang } from '../../../i18n';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { BLOCK_TYPE_CONFIG, blockSummary } from './commandSenderShared';
 import { CommandBlockEditor } from './CommandSenderBlockEditor';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
@@ -71,7 +71,7 @@ export function CommandSenderBlockList({
       >
         {blocks.length === 0 && (
           <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">
-            {t(lang, 'cmdBlocksEmpty')}
+            {translate('cmdBlocksEmpty', lang)}
           </div>
         )}
         {blocks.map((block, idx) => {
@@ -98,7 +98,7 @@ export function CommandSenderBlockList({
               >
                 <div
                   className="inline-flex items-center justify-center p-0.5 cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary shrink-0"
-                  title={t(lang, 'cmdDragToReorder')}
+                  title={translate('cmdDragToReorder', lang)}
                   draggable
                   onDragStart={onDragStart(block.id)}
                   onDragEnd={onDragEnd}
@@ -109,7 +109,7 @@ export function CommandSenderBlockList({
                   className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-semibold uppercase tracking-wide shrink-0 border ${cfg.badgeClass}`}
                 >
                   {cfg.icon}
-                  {t(lang, cfg.labelKey)}
+                  {translate(cfg.labelKey, lang)}
                 </span>
                 {block.label && (
                   <span className="text-xs text-text-primary truncate shrink-0">{block.label}</span>
@@ -128,7 +128,7 @@ export function CommandSenderBlockList({
                 <button
                   className="text-text-secondary hover:text-red shrink-0 p-0.5"
                   onClick={(e) => { e.stopPropagation(); onRemoveBlock(block.id); }}
-                  title={t(lang, 'removeWidget')}
+                  title={translate('removeWidget', lang)}
                 >
                   <Trash2 size={11} />
                 </button>
@@ -157,13 +157,13 @@ export function CommandSenderBlockList({
               key={bt}
               className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
               onClick={() => onAddBlock(bt)}
-              title={t(lang, cfg.addLabelKey)}
+              title={translate(cfg.addLabelKey, lang)}
             >
               <Plus size={11} />
               <span className={`inline-flex items-center gap-0.5 ${cfg.iconClass}`}>
                 {cfg.icon}
               </span>
-              <span>{t(lang, cfg.addLabelKey)}</span>
+              <span>{translate(cfg.addLabelKey, lang)}</span>
             </button>
           );
         })}

@@ -51,7 +51,7 @@ cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / �
 - `src/components/` — UI(controls / displays / layout / nodes / panels / onboarding)
 - `src/lib/` — 前端逻辑(hooks / tauri IPC 封装 / utils)
 - `src/types/` — 与后端对齐的 TS 类型(改 Rust 侧 serde 结构时必须同步)
-- `src/i18n/locales/{zh,en}.yml` — 所有用户可见文案走 i18n,中英双语同步添加
+- `src/i18n/resources/{zh,en}/<capability>.yml` — 所有用户可见文案走 i18n,中英双语同步添加; 按产品能力域拆分
 - `src-tauri/src/lib.rs` — Tauri 平台壳组合根;业务能力经 sidecar HTTP/WS 进入 `control-api` / `rpc-api`
 - `src-tauri/crates/<domain>/<crate>` — 二级目录按功能域直观分区;依赖层由 manifest metadata 表达
 - `src-tauri/crates/protocol/schema/src/{frame_field,frame_checksum,command_frame}.rs` — 命令帧字节打包权威

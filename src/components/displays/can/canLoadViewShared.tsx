@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import { CAN_BITRATE_BPS } from '../../../lib/can/canBitrate';
 import type { CanLoadSnapshot, CanIdLoadHistory } from '../../../types';
@@ -85,15 +85,15 @@ export function IdLoadDistribution({
     <div className="bg-bg-panel-header rounded border border-border p-3">
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs text-text-secondary uppercase tracking-wider">
-          {t(lang, 'canLoadPerId')}
+          {translate('canLoadPerId', lang)}
         </span>
         <span className="text-xs text-text-secondary font-mono">
-          {perId.length} IDs{selectedId ? ` · ${t(lang, 'canLoadIdFilterHint')}` : ''}
+          {perId.length} IDs{selectedId ? ` · ${translate('canLoadIdFilterHint', lang)}` : ''}
         </span>
       </div>
       {perId.length === 0 ? (
         <div className="flex items-center justify-center h-32 text-text-secondary text-xs rounded border border-dashed border-border">
-          {t(lang, 'noCanFrames')}
+          {translate('noCanFrames', lang)}
         </div>
       ) : (
         <div className="space-y-1.5 max-h-[280px] overflow-y-auto">
@@ -116,7 +116,7 @@ export function IdLoadDistribution({
                 onKeyDown={activateOnKeyboard}
                 role="button"
                 tabIndex={0}
-                title={t(lang, 'canLoadIdFilterHint')}
+                title={translate('canLoadIdFilterHint', lang)}
               >
                 <span className="text-text-bright truncate">
                   0x{s.extended

@@ -5,7 +5,7 @@ import { X, Github, ExternalLink } from 'lucide-react';
 import { platform } from '../lib/platform';
 import { FONT_ATTRIBUTIONS } from '../lib/fontAttributions';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import { LissajousMark } from './brand/LissajousMark';
 
 interface AboutModalProps {
@@ -56,7 +56,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         <button
           className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer bg-transparent border-none"
           onClick={onClose}
-          title={t(lang, 'aboutClose')}
+          title={translate('aboutClose', lang)}
         >
           <X size={16} />
         </button>
@@ -67,26 +67,26 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
         <h2 className="text-xl font-semibold text-text-bright m-0">{appName}</h2>
         <p className="text-sm text-text-secondary m-0">
-          {t(lang, 'aboutVersion')}: <code className="bg-bg-input px-1.5 py-0.5 rounded-sm text-text-primary font-mono">v{appVersion}</code>
+          {translate('aboutVersion', lang)}: <code className="bg-bg-input px-1.5 py-0.5 rounded-sm text-text-primary font-mono">v{appVersion}</code>
         </p>
         <p className="text-sm text-text-primary text-center leading-relaxed my-2 mb-3">
-          {t(lang, 'aboutDescription')}
+          {translate('aboutDescription', lang)}
         </p>
 
         <div className="w-full flex flex-col gap-1.5 py-2 border-t border-b border-border my-2 mb-4">
           <div className="flex justify-between text-sm">
-            <span className="text-text-secondary">{t(lang, 'aboutAuthor')}</span>
+            <span className="text-text-secondary">{translate('aboutAuthor', lang)}</span>
             <span className="text-text-primary">{APP_AUTHOR}</span>
           </div>
           <div className="flex justify-between text-sm">
-            <span className="text-text-secondary">{t(lang, 'aboutLicense')}</span>
+            <span className="text-text-secondary">{translate('aboutLicense', lang)}</span>
             <span className="text-text-primary">{APP_LICENSE}</span>
           </div>
         </div>
 
         <div className="w-full text-left mb-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.5px] text-text-secondary mb-1.5">
-            {t(lang, 'aboutFonts')}
+            {translate('aboutFonts', lang)}
           </div>
           <ul className="m-0 p-0 list-none flex flex-col gap-1">
             {FONT_ATTRIBUTIONS.map((font) => (
@@ -104,14 +104,14 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             onClick={() => void platform.openUrl(APP_GITHUB)}
           >
             <Github size={14} />
-            <span>{t(lang, 'aboutGithub')}</span>
+            <span>{translate('aboutGithub', lang)}</span>
             <ExternalLink size={10} className="opacity-muted" />
           </button>
           <button
             className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
             onClick={() => void platform.openUrl(APP_DOCS)}
           >
-            <span>{t(lang, 'aboutDocs')}</span>
+            <span>{translate('aboutDocs', lang)}</span>
             <ExternalLink size={10} className="opacity-muted" />
           </button>
         </div>
@@ -121,7 +121,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover"
             onClick={onClose}
           >
-            {t(lang, 'aboutClose')}
+            {translate('aboutClose', lang)}
           </button>
         </div>
       </div>

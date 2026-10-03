@@ -14,7 +14,7 @@
 
 import { memo, useCallback, useEffect, useMemo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { WaveformChart } from './WaveformChart';
 import { AxisSettings } from './AxisSettings';
 import { api } from '../../../lib/tauri/tauri';
@@ -260,11 +260,11 @@ export const WaveformTabView = memo(function WaveformTabView({ widget }: PanelTa
         // 钳位/压扁风险提示 (一次性, 显示在面板顶部)
         let warning: string | null = null;
         if (suggestion.clamped) {
-          warning = t(lang, 'autosetClampedWarning')
+          warning = translate('autosetClampedWarning', lang)
             .replace('{actual}', formatTimeBase(suggestion.time_base_sec))
             .replace('{requested}', formatTimeBase(suggestion.requested_window_sec / 10));
         } else if (suggestion.shared_y_span_risk) {
-          warning = t(lang, 'autosetSpanRiskWarning');
+          warning = translate('autosetSpanRiskWarning', lang);
         }
         setAutosetWarning(wid, channelCount, warning);
       })

@@ -1,4 +1,4 @@
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { DataTab, WidgetConfig } from '../../types';
 import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { useAppStore } from '../appStore';
@@ -73,7 +73,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: `can-${Date.now()}`,
         type: 'can',
-        name: t(get().lang, 'canFrames'),
+        name: translate('canFrames', get().lang),
         closable: true,
       };
       set({
@@ -91,7 +91,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: `logic-${Date.now()}`,
         type: 'logic',
-        name: t(get().lang, 'logicAnalyzer'),
+        name: translate('logicAnalyzer', get().lang),
         closable: true,
       };
       set({
@@ -109,7 +109,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: `compile-errors-${Date.now()}`,
         type: 'compile-errors',
-        name: t(get().lang, 'compileErrorsTitle'),
+        name: translate('compileErrorsTitle', get().lang),
         closable: true,
       };
       set({
@@ -131,7 +131,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: 'compile-results-fixed',
         type: 'compile-results',
-        name: t(get().lang, 'connectionResultsTitle'),
+        name: translate('connectionResultsTitle', get().lang),
         closable: false,
       };
       set({
@@ -149,7 +149,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: `operation-history-${Date.now()}`,
         type: 'operation-history',
-        name: t(get().lang, 'operationHistoryTitle'),
+        name: translate('operationHistoryTitle', get().lang),
         closable: true,
       };
       set({
@@ -167,7 +167,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: 'recording-database',
         type: 'recording-database',
-        name: t(get().lang, 'recordingDatabaseTitle'),
+        name: translate('recordingDatabaseTitle', get().lang),
         closable: true,
       };
       set({
@@ -187,7 +187,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: NODE_PROPERTIES_TAB_ID,
         type: 'node-properties',
-        name: t(get().lang, 'nodeProperties'),
+        name: translate('nodeProperties', get().lang),
         closable: true,
       };
       set({
@@ -205,7 +205,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
       const tab: DataTab = {
         id: 'performance-monitor',
         type: 'performance-monitor',
-        name: t(get().lang, 'performanceMonitor'),
+        name: translate('performanceMonitor', get().lang),
         closable: true,
       };
       set({

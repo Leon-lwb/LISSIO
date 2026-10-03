@@ -6,7 +6,7 @@
 import { X, HelpCircle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { HELP_SECTIONS } from './helpContent';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
 
@@ -31,7 +31,7 @@ export function HelpCenterModal() {
       >
         <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">
           <HelpCircle size={16} />
-          <span>{t(lang, 'helpCenterTitle')}</span>
+          <span>{translate('helpCenterTitle', lang)}</span>
           <button
             className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer ml-auto"
             onClick={close}
@@ -43,15 +43,15 @@ export function HelpCenterModal() {
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5">
           {HELP_SECTIONS.map((section) => {
             const Icon = section.icon;
-            const steps = (t(lang, section.stepsKey) || '').split('\n').filter(Boolean);
+            const steps = (translate(section.stepsKey, lang) || '').split('\n').filter(Boolean);
             return (
               <section key={section.id} className="flex flex-col gap-2">
                 <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
                   <Icon size={14} className="text-accent flex-shrink-0" />
-                  {t(lang, section.titleKey)}
+                  {translate(section.titleKey, lang)}
                 </h2>
                 <p className="m-0 text-sm text-text-secondary leading-[1.5]">
-                  {t(lang, section.descKey)}
+                  {translate(section.descKey, lang)}
                 </p>
                 {steps.length > 0 && (
                   <ol className="m-0 pl-5 text-sm text-text-primary leading-[1.7] list-decimal">
@@ -70,7 +70,7 @@ export function HelpCenterModal() {
             className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover"
             onClick={close}
           >
-            {t(lang, 'helpClose')}
+            {translate('helpClose', lang)}
           </button>
         </div>
       </div>

@@ -4,7 +4,7 @@
 
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -27,10 +27,10 @@ export const LEDProperties = memo(function LEDProperties({ widget, update }: Wid
     update({ kind: 'LED', params: { ...widget.params, ...p } });
   return (
     <>
-      <NumberField label={t(lang, 'ledThreshold')} value={threshold}
+      <NumberField label={translate('ledThreshold', lang)} value={threshold}
         onCommit={(v) => { patch({ threshold: v }); return true; }} />
-      <ColorField label={t(lang, 'ledOnColor')} value={on_color} onChange={(next) => patch({ on_color: next })} />
-      <ColorField label={t(lang, 'ledOffColor')} value={off_color} onChange={(next) => patch({ off_color: next })} />
+      <ColorField label={translate('ledOnColor', lang)} value={on_color} onChange={(next) => patch({ on_color: next })} />
+      <ColorField label={translate('ledOffColor', lang)} value={off_color} onChange={(next) => patch({ off_color: next })} />
     </>
   );
 });

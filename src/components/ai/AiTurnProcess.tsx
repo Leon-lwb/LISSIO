@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Think, ThoughtChain, XProvider, type ThoughtChainItemType } from '@ant-design/x';
 import { BookOpen, BrainCircuit, Globe2, Pencil, Search, Terminal, Wrench } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import { shortToolName } from '../../lib/ai/chatMarkdown';
 import { toolActivityKind, type ActivityKind } from '../../lib/ai/activityKind';
 import type { AiToolRun } from '../../types';
@@ -52,7 +52,7 @@ export function AiTurnDuration({ durationMs, streaming }: { durationMs?: number;
   const lang = useAppStore((s) => s.lang);
   const elapsed = useElapsedTime(streaming);
   if (!streaming && durationMs == null) return null;
-  const title = t(lang, streaming ? 'aiRunningFor' : 'aiElapsed')
+  const title = translate(streaming ? 'aiRunningFor' : 'aiElapsed', lang)
     .replace('{time}', formatDuration(streaming ? elapsed : durationMs ?? 0, lang));
   return <div className="flex items-center gap-1.5 text-xs text-text-secondary">{title}</div>;
 }
@@ -60,7 +60,7 @@ export function AiTurnDuration({ durationMs, streaming }: { durationMs?: number;
 function ReasoningStep({ reasoning, streaming }: { reasoning?: string; streaming: boolean }) {
   const lang = useAppStore((s) => s.lang);
   const [expanded, setExpanded] = useState(streaming);
-  const label = t(lang, streaming ? 'aiThinking' : 'aiReasoning');
+  const label = translate(streaming ? 'aiThinking' : 'aiReasoning', lang);
   return (
     <Think
       title={<button type="button" aria-label={label} aria-expanded={expanded} className="text-left">{label}</button>}
@@ -86,7 +86,7 @@ function toolItem(run: AiToolRun, expanded: boolean, lang: Lang): ThoughtChainIt
   const status = !run.done ? 'running' : run.is_error ? 'error' : 'done';
   const kindKey = kind.charAt(0).toUpperCase() + kind.slice(1);
   const statusKey = status.charAt(0).toUpperCase() + status.slice(1);
-  const label = t(lang, `aiActivity${kindKey}${statusKey}`).replace('{name}', name);
+  const label = translate(`aiActivity${kindKey}${statusKey}`, lang).replace('{name}', name);
 
   return {
     key: run.id,
@@ -96,13 +96,13 @@ function toolItem(run: AiToolRun, expanded: boolean, lang: Lang): ThoughtChainIt
     title: <button type="button" aria-label={label} aria-expanded={expanded} className="text-left">{label}</button>,
     content: (
       <div className="min-w-0 space-y-1 text-xs">
-        <div>{t(lang, 'aiToolInput')}</div>
+        <div>{translate('aiToolInput', lang)}</div>
         <pre className="max-h-64 overflow-y-auto overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere]">
           {JSON.stringify(run.arguments, null, 2)}
         </pre>
         {run.content && (
           <>
-            <div>{t(lang, 'aiToolOutput')}</div>
+            <div>{translate('aiToolOutput', lang)}</div>
             <pre className="max-h-64 overflow-y-auto overflow-x-hidden whitespace-pre-wrap [overflow-wrap:anywhere]">
               {run.content}
             </pre>
@@ -147,9 +147,9 @@ export function AiTurnProcess({
   return (
     <XProvider theme={processTheme}>
       <Think
-        title={<button type="button" aria-label={t(lang, 'aiViewProcess')} aria-expanded={expanded} className="text-left">
-          {t(lang, 'aiViewProcess')}
-          {streaming && ` · ${t(lang, isWorking ? 'aiUsingTools' : 'aiThinking')}`}
+        title={<button type="button" aria-label={translate('aiViewProcess', lang)} aria-expanded={expanded} className="text-left">
+          {translate('aiViewProcess', lang)}
+          {streaming && ` · ${translate(isWorking ? 'aiUsingTools' : 'aiThinking', lang)}`}
         </button>}
         blink={streaming}
         expanded={expanded}

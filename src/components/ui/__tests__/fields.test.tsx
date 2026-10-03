@@ -1,4 +1,5 @@
-import { fireEvent, render } from '@testing-library/react';
+import { fireEvent } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { describe, expect, it, vi } from 'vitest';
 import { DraftInput, DraftNumberInput, OpacitySliderControl, parseDraftNumber } from '../fields';
 
@@ -24,7 +25,7 @@ describe('parseDraftNumber', () => {
 describe('DraftInput', () => {
   it('输入过程不提交, 失焦才提交', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftInput value="a" onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftInput value="a" onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'ab' } });
@@ -36,7 +37,7 @@ describe('DraftInput', () => {
 
   it('回车提交且阻止默认行为', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftInput value="a" onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftInput value="a" onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'b' } });
@@ -47,7 +48,7 @@ describe('DraftInput', () => {
 
   it('值未变化时失焦不提交', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftInput value="a" onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftInput value="a" onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.blur(input);
@@ -56,7 +57,7 @@ describe('DraftInput', () => {
 
   it('validate 失败标红保留草稿且不提交', () => {
     const onCommit = vi.fn();
-    const { container } = render(
+    const { container } = renderWithI18n(
       <DraftInput value="" onCommit={onCommit} validate={(draft) => /^\d*$/.test(draft)} />
     );
     const input = container.querySelector('input')!;
@@ -71,7 +72,7 @@ describe('DraftInput', () => {
 
   it('未聚焦时外部值变化同步草稿', () => {
     const onCommit = vi.fn();
-    const { container, rerender } = render(<DraftInput value="a" onCommit={onCommit} />);
+    const { container, rerender } = renderWithI18n(<DraftInput value="a" onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     expect(input.value).toBe('a');
     rerender(<DraftInput value="b" onCommit={onCommit} />);
@@ -80,7 +81,7 @@ describe('DraftInput', () => {
 
   it('聚焦中忽略外部值同步, 不打断输入', () => {
     const onCommit = vi.fn();
-    const { container, rerender } = render(<DraftInput value="a" onCommit={onCommit} />);
+    const { container, rerender } = renderWithI18n(<DraftInput value="a" onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'draft' } });
@@ -92,7 +93,7 @@ describe('DraftInput', () => {
 describe('DraftNumberInput', () => {
   it('输入中间态不解析, 失焦提交合法值', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftNumberInput value={7} min={1} integer onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftNumberInput value={7} min={1} integer onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '' } });
@@ -106,7 +107,7 @@ describe('DraftNumberInput', () => {
 
   it('非法值红框提示且不写入 (number 输入原生丢弃非数字文本)', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftNumberInput value={7} onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftNumberInput value={7} onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'abc' } });
@@ -118,7 +119,7 @@ describe('DraftNumberInput', () => {
 
   it('越界值标红不写入', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftNumberInput value={7} min={1} max={10} onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftNumberInput value={7} min={1} max={10} onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '99' } });
@@ -129,7 +130,7 @@ describe('DraftNumberInput', () => {
 
   it('提交相同数值不触发 onCommit', () => {
     const onCommit = vi.fn();
-    const { container } = render(<DraftNumberInput value={7} onCommit={onCommit} />);
+    const { container } = renderWithI18n(<DraftNumberInput value={7} onCommit={onCommit} />);
     const input = container.querySelector('input')!;
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: '7' } });
@@ -144,7 +145,7 @@ describe('OpacitySliderControl', () => {
 
   it('滑动条即时回调, 百分比换算为浮点', () => {
     const onCommit = vi.fn();
-    const { container } = render(
+    const { container } = renderWithI18n(
       <OpacitySliderControl {...base} value={0.6} onCommit={onCommit} />
     );
     const range = container.querySelector('input[type="range"]')!;
@@ -154,7 +155,7 @@ describe('OpacitySliderControl', () => {
 
   it('数值框输入提交换算为浮点', () => {
     const onCommit = vi.fn();
-    const { container } = render(
+    const { container } = renderWithI18n(
       <OpacitySliderControl {...base} value={0.6} onCommit={onCommit} />
     );
     const numberInput = container.querySelector('input[type="number"]')!;
@@ -165,7 +166,7 @@ describe('OpacitySliderControl', () => {
   });
 
   it('显示值为百分比整数', () => {
-    const { container } = render(
+    const { container } = renderWithI18n(
       <OpacitySliderControl {...base} value={0.455} onCommit={() => undefined} />
     );
     const range = container.querySelector('input[type="range"]')!;
@@ -176,7 +177,7 @@ describe('OpacitySliderControl', () => {
 
   it('越界输入被拒绝', () => {
     const onCommit = vi.fn();
-    const { container } = render(
+    const { container } = renderWithI18n(
       <OpacitySliderControl {...base} value={0.5} onCommit={onCommit} />
     );
     const numberInput = container.querySelector('input[type="number"]')!;

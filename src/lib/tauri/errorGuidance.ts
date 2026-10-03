@@ -4,7 +4,7 @@
 //! - Unknown 类型无专属引导, 跳过
 //! - 遵循 settings.general.showContextualTips 开关 (内部读取, 调用方不传)
 
-import { t, type Lang } from '../../i18n';
+import { translate, type Lang } from '../../i18n';
 import { NodeErrorKind, parseNodeError, type NodeError } from '../../types/errors';
 import { useSettingsStore } from '../../store/settingsStore';
 
@@ -49,7 +49,7 @@ export function withErrorGuidance(lang: Lang, err: NodeError, tipsEnabled: boole
   if (shown.has(err.kind)) return err.message;
   shown.add(err.kind);
   saveShown(shown);
-  return `${err.message}\n\n${t(lang, 'errorGuidePrefix')}: ${t(lang, guideKey)}`;
+  return `${err.message}\n\n${translate('errorGuidePrefix', lang)}: ${translate(guideKey, lang)}`;
 }
 
 /// 当前设置下的引导开关 (settings.general.showContextualTips)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Node } from '@xyflow/react';
 import { Plug, PlugZap } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { CAPABILITY_CONTRACT_VERSION } from '../../types';
 import { api } from '../../lib/tauri/tauri';
 import { formatError } from '../../lib/tauri/notifications';
@@ -51,7 +51,7 @@ export function AcquisitionProperties({ node }: { node: Node }) {
     finally { setPending(false); }
   };
 
-  if (!card) return <div className="text-xs text-text-secondary" role="status">{error || t(lang, 'capabilityUnavailable')}</div>;
+  if (!card) return <div className="text-xs text-text-secondary" role="status">{error || translate('capabilityUnavailable', lang)}</div>;
   const disabled = pending || hasSession;
   return (
     <div className="flex flex-col gap-3">
@@ -62,7 +62,7 @@ export function AcquisitionProperties({ node }: { node: Node }) {
         onChange={(payload) => updateAcquisitionNode(node.id, { ...device, config: payload })}
       />
       <div className="mt-3 pt-2 border-t border-border">
-        {card.adapter.contractVersion !== CAPABILITY_CONTRACT_VERSION && <div className="mb-2 text-xs text-text-secondary">{t(lang, 'capabilityVersionFallback')}</div>}
+        {card.adapter.contractVersion !== CAPABILITY_CONTRACT_VERSION && <div className="mb-2 text-xs text-text-secondary">{translate('capabilityVersionFallback', lang)}</div>}
         <button
           type="button"
           disabled={pending || (!hasSession && (card.endpoint.status.state === 'unavailable' || card.adapter.contractVersion !== CAPABILITY_CONTRACT_VERSION))}
@@ -70,7 +70,7 @@ export function AcquisitionProperties({ node }: { node: Node }) {
           className={`w-full px-3 h-8 border-none rounded text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-disabled ${hasSession ? 'bg-bg-danger text-text-bright hover:bg-bg-danger-hover' : 'bg-bg-button text-text-inverse hover:bg-bg-button-hover'}`}
         >
           {hasSession ? <PlugZap size={14} /> : <Plug size={14} />}
-          {t(lang, pending ? 'connecting' : hasSession ? 'disconnect' : 'connect')}
+          {translate(pending ? 'connecting' : hasSession ? 'disconnect' : 'connect', lang)}
         </button>
         {error && <div className="mt-1.5 text-xs text-red break-all" role="alert">{error}</div>}
       </div>

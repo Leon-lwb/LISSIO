@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { TextField } from '../../ui/fields';
 import { RangeSection } from '../shared/RangeSection';
 import type { WidgetPropertiesProps } from '../registryTypes';
@@ -11,7 +11,7 @@ export const GaugeProperties = memo(function GaugeProperties({ widget, update }:
   const { range, unit } = widget.params;
   return (
     <>
-      <TextField label={t(lang, 'unit')} value={unit} allowEmpty
+      <TextField label={translate('unit', lang)} value={unit} allowEmpty
         onCommit={(next) => update({ kind: 'Gauge', params: { ...widget.params, unit: next } })} />
       <RangeSection lang={lang} range={range} widgetId={widget.params.id}
         onChange={(nextRange) => update({ kind: 'Gauge', params: { ...widget.params, range: nextRange } })} />

@@ -1,7 +1,7 @@
 import { memo, useSyncExternalStore } from 'react';
 import { Crosshair } from 'lucide-react';
 import type { Lang } from '../../../i18n';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { DisplayRangeConfig } from '../../../types';
 import { getAutoRangeStore } from '../../../lib/data/autoRange';
 import { NumberField, SelectField } from '../../ui/fields';
@@ -35,23 +35,23 @@ export const RangeSection = memo(function RangeSection({ lang, range, widgetId, 
 
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'displayRange')}</div>
+      <div className="section-heading section-heading--micro mb-2">{translate('displayRange', lang)}</div>
       <select className="form-select mb-2" value={range.mode} onChange={(e) => patch({ mode: e.target.value as DisplayRangeConfig['mode'] })}>
-        <option value="manual">{t(lang, 'manual')}</option>
-        <option value="auto">{t(lang, 'auto')}</option>
+        <option value="manual">{translate('manual', lang)}</option>
+        <option value="auto">{translate('auto', lang)}</option>
       </select>
       {range.mode === 'manual' ? (
         <div className="flex gap-2">
-          <NumberField label={t(lang, 'minValue')} value={range.min} onCommit={(min) => commitBounds({ min })} error={t(lang, 'invalidRange')} />
-          <NumberField label={t(lang, 'maxValue')} value={range.max} onCommit={(max) => commitBounds({ max })} error={t(lang, 'invalidRange')} />
+          <NumberField label={translate('minValue', lang)} value={range.min} onCommit={(min) => commitBounds({ min })} error={translate('invalidRange', lang)} />
+          <NumberField label={translate('maxValue', lang)} value={range.max} onCommit={(max) => commitBounds({ max })} error={translate('invalidRange', lang)} />
         </div>
       ) : (
         <>
-          <NumberField label={t(lang, 'rangeWindow')} value={range.windowSec}
+          <NumberField label={translate('rangeWindow', lang)} value={range.windowSec}
             onCommit={(windowSec) => { if (windowSec >= 1 && windowSec <= 3600) { patch({ windowSec }); return true; } return false; }}
-            error={t(lang, 'invalidStep')} />
+            error={translate('invalidStep', lang)} />
           <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-[10px] text-text-secondary">{t(lang, 'autoRangeLive')}</span>
+            <span className="text-[10px] text-text-secondary">{translate('autoRangeLive', lang)}</span>
             <span className="font-mono text-[10px] text-text-primary">
               {hasSamples
                 ? `[${snapshot.range.min}, ${snapshot.range.max}]`
@@ -64,21 +64,21 @@ export const RangeSection = memo(function RangeSection({ lang, range, widgetId, 
               if (!hasSamples) return;
               onChange({ ...range, mode: 'manual', min: snapshot.range.min, max: snapshot.range.max });
             }}>
-            <Crosshair size={12} /> {t(lang, 'captureRange')}
+            <Crosshair size={12} /> {translate('captureRange', lang)}
           </button>
         </>
       )}
       <div className="flex gap-2">
-        <NumberField label={t(lang, 'majorTicks')} value={range.majorTicks}
+        <NumberField label={translate('majorTicks', lang)} value={range.majorTicks}
           onCommit={(majorTicks) => {
             const n = Math.round(majorTicks);
             if (n >= 2 && n <= 11) { patch({ majorTicks: n }); return true; }
             return false;
           }}
-          error={t(lang, 'invalidStep')} />
-        <SelectField label={t(lang, 'tickPrecision')} value={String(range.precision)}
+          error={translate('invalidStep', lang)} />
+        <SelectField label={translate('tickPrecision', lang)} value={String(range.precision)}
           options={[
-            { value: 'auto', label: t(lang, 'precisionAuto') },
+            { value: 'auto', label: translate('precisionAuto', lang) },
             ...[0, 1, 2, 3, 4, 5, 6].map((n) => ({ value: String(n), label: String(n) })),
           ]}
           onChange={(v) => patch({ precision: v === 'auto' ? 'auto' : Number(v) })} />

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import type { JsonValue } from '../../../types/generated/serde_json/JsonValue';
 import { SchemaFields } from '../SchemaFields';
 
@@ -17,7 +18,7 @@ const SERIAL_SCHEMA = {
 } as unknown as JsonValue;
 
 function renderFields(value: unknown, onChange: (next: unknown) => void = vi.fn()) {
-  render(<SchemaFields schema={SERIAL_SCHEMA} value={value} onChange={onChange} />);
+  renderWithI18n(<SchemaFields schema={SERIAL_SCHEMA} value={value} onChange={onChange} />);
 }
 
 function selectFor(label: string): HTMLSelectElement {

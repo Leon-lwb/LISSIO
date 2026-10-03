@@ -34,7 +34,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { PaletteCategoryId } from '../../../types';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { WIDGET_REGISTRY } from '../../widgets/registry';
 import type { WidgetKind } from '../../widgets/registryTypes';
 import type { DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
@@ -48,15 +48,15 @@ export const PALETTE_CATEGORY_IDS: readonly PaletteCategoryId[] = [
 
 export function categoryLabel(lang: Lang, id: PaletteCategoryId): string {
   switch (id) {
-    case 'transport': return t(lang, 'catConnections');
-    case 'protocol': return t(lang, 'catCodecs');
-    case 'send': return t(lang, 'catSending');
-    case 'math': return t(lang, 'catSignalProcessing');
-    case 'string': return t(lang, 'catTextProcessing');
-    case 'display': return t(lang, 'catDisplay');
-    case 'input': return t(lang, 'catInput');
-    case 'attributes': return t(lang, 'catAttributes');
-    case 'custom': return t(lang, 'catCustom');
+    case 'transport': return translate('catConnections', lang);
+    case 'protocol': return translate('catCodecs', lang);
+    case 'send': return translate('catSending', lang);
+    case 'math': return translate('catSignalProcessing', lang);
+    case 'string': return translate('catTextProcessing', lang);
+    case 'display': return translate('catDisplay', lang);
+    case 'input': return translate('catInput', lang);
+    case 'attributes': return translate('catAttributes', lang);
+    case 'custom': return translate('catCustom', lang);
   }
 }
 
@@ -80,8 +80,8 @@ function entriesForKinds(lang: Lang, kinds: readonly WidgetKind[]): PaletteEntry
       kind,
       modelId: `widget:${kind}`,
       icon: <def.icon size={14} />,
-      label: t(lang, def.labelKey),
-      title: t(lang, def.labelKey),
+      label: translate(def.labelKey, lang),
+      title: translate(def.labelKey, lang),
     };
   });
 }
@@ -129,7 +129,7 @@ const STR_VARIANT_DESC_KEYS: Record<string, string> = {
 
 function variantLabel(lang: Lang, variant: ModelVariant, labelKeys: Record<string, string>): string {
   const key = labelKeys[variant.id];
-  return key ? t(lang, key) : variant.display.fallbackLabel;
+  return key ? translate(key, lang) : variant.display.fallbackLabel;
 }
 
 function variantEntries(
@@ -179,12 +179,12 @@ export function buildPaletteSections(
     lang, modelById.get('widget:Math'), 'Math', MATH_VARIANT_ICONS, MATH_VARIANT_LABEL_KEYS, Sigma,
     (label, variant) => {
       const unary = (variant.configPatch as { inputCount?: number } | undefined)?.inputCount === 1;
-      return `${label} (${t(lang, unary ? 'mathUnary' : 'mathBinary')})`;
+      return `${label} (${translate(unary ? 'mathUnary' : 'mathBinary', lang)})`;
     },
   );
   const filterItems = variantEntries(
     lang, modelById.get('widget:Filter'), 'Filter', FILTER_VARIANT_ICONS, FILTER_VARIANT_LABEL_KEYS, ArrowDownToLine,
-    (label) => `${t(lang, 'filter')}: ${label}`,
+    (label) => `${translate('filter', lang)}: ${label}`,
   );
   const fftItems = entriesForKinds(lang, ['FFT', 'IFFT']);
 
@@ -192,7 +192,7 @@ export function buildPaletteSections(
     lang, modelById.get('widget:Str'), 'Str', STR_VARIANT_ICONS, STR_VARIANT_LABEL_KEYS, Type,
     (label, variant) => {
       const descKey = STR_VARIANT_DESC_KEYS[variant.id];
-      return descKey ? `${label} — ${t(lang, descKey)}` : label;
+      return descKey ? `${label} — ${translate(descKey, lang)}` : label;
     },
   );
 
@@ -215,21 +215,21 @@ export function buildPaletteSections(
       key: 'protocol',
       nodeType: 'protocol' as const,
       icon: <Binary size={14} />,
-      label: t(lang, 'protocolEngine'),
-      title: t(lang, 'protocolEngine'),
+      label: translate('protocolEngine', lang),
+      title: translate('protocolEngine', lang),
     },
   ];
 
   return [
     { id: 'transport', header: categoryLabel(lang, 'transport'), category: 'transport', entries: capabilityItems },
-    { id: 'protocol', header: categoryLabel(lang, 'protocol'), category: 'protocol', entries: [...protocolItems, ...entriesForKinds(lang, ['FrameDecoder']), { key: 'point-selector', nodeType: 'point-selector', icon: <ListOrdered size={14} />, label: t(lang, 'pointSelector'), title: t(lang, 'pointSelector') }] },
+    { id: 'protocol', header: categoryLabel(lang, 'protocol'), category: 'protocol', entries: [...protocolItems, ...entriesForKinds(lang, ['FrameDecoder']), { key: 'point-selector', nodeType: 'point-selector', icon: <ListOrdered size={14} />, label: translate('pointSelector', lang), title: translate('pointSelector', lang) }] },
     { id: 'send', header: categoryLabel(lang, 'send'), category: 'send', entries: entriesForKinds(lang, ['Command', 'TextOut']) },
     { id: 'math', header: categoryLabel(lang, 'math'), category: 'math', entries: [...mathItems, ...filterItems, ...fftItems] },
     { id: 'string', header: categoryLabel(lang, 'string'), category: 'string', entries: strItems },
     { id: 'display', header: categoryLabel(lang, 'display'), category: 'display', entries: displayItems },
     { id: 'input', header: categoryLabel(lang, 'input'), category: 'input', entries: inputItems },
     { id: 'attributes', header: categoryLabel(lang, 'attributes'), category: 'custom', entries: [
-      { key: 'test-data', attribute: 'test-data', icon: <Sigma size={14} />, label: t(lang, 'testData'), title: t(lang, 'testData') },
+      { key: 'test-data', attribute: 'test-data', icon: <Sigma size={14} />, label: translate('testData', lang), title: translate('testData', lang) },
     ] },
     { id: 'custom', header: categoryLabel(lang, 'custom'), category: 'custom', entries: customItems },
   ];

@@ -1,6 +1,6 @@
 import { BookOpen, ChevronDown, History, Play, AlertTriangle } from 'lucide-react';
 import type { InputFormat, FrameDecoderManualResult } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import { FRAME_EXAMPLES } from './frameDecoderShared';
 import type { HistoryEntry, ExampleEntry } from './frameDecoderShared';
@@ -34,10 +34,10 @@ export function ManualModePanel({
 }: ManualModePanelProps) {
   return (
     <>
-      <div className="section-heading section-heading--micro">{t(lang, 'fdManualInput')}</div>
+      <div className="section-heading section-heading--micro">{translate('fdManualInput', lang)}</div>
 
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-text-secondary">{t(lang, 'fdFormat')}</span>
+        <span className="text-text-secondary">{translate('fdFormat', lang)}</span>
         <div className="flex bg-bg-input rounded border border-border overflow-hidden">
           {(['hex', 'ascii', 'auto'] as InputFormat[]).map((f) => (
             <button
@@ -45,7 +45,7 @@ export function ManualModePanel({
               className={`px-2 py-0.5 transition-colors ${f !== 'hex' ? 'border-l border-border' : ''} ${format === f ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => setFormat(f)}
             >
-              {f === 'auto' ? t(lang, 'fdAutoFormat') : f.toUpperCase()}
+              {f === 'auto' ? translate('fdAutoFormat', lang) : f.toUpperCase()}
             </button>
           ))}
         </div>
@@ -53,7 +53,7 @@ export function ManualModePanel({
           <button
             className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors ${showExamples ? 'bg-bg-hover text-text-bright' : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'}`}
             onClick={() => { setShowExamples(!showExamples); setShowHistory(false); }}
-            title={t(lang, 'fdExamples')}
+            title={translate('fdExamples', lang)}
           >
             <BookOpen size={11} />
             <ChevronDown size={9} />
@@ -80,7 +80,7 @@ export function ManualModePanel({
           <button
             className={`flex items-center gap-1 px-2 py-0.5 rounded transition-colors ${showHistory ? 'bg-bg-hover text-text-bright' : 'text-text-secondary hover:text-text-primary hover:bg-bg-hover'}`}
             onClick={() => { setShowHistory(!showHistory); setShowExamples(false); }}
-            title={t(lang, 'fdHistory')}
+            title={translate('fdHistory', lang)}
           >
             <History size={11} />
             <ChevronDown size={9} />
@@ -88,7 +88,7 @@ export function ManualModePanel({
           {showHistory && (
             <div className="absolute top-full left-0 mt-1 z-50 w-72 max-h-80 overflow-y-auto popover-surface">
               {history.length === 0 ? (
-                <div className="px-3 py-2 text-xs text-text-secondary italic">{t(lang, 'fdHistoryEmpty')}</div>
+                <div className="px-3 py-2 text-xs text-text-secondary italic">{translate('fdHistoryEmpty', lang)}</div>
               ) : (
                 <>
                   {history.map((h, i) => (
@@ -105,7 +105,7 @@ export function ManualModePanel({
                     className="w-full text-left px-3 py-1.5 text-xs text-red hover:bg-bg-hover transition-colors"
                     onClick={onClearHistory}
                   >
-                    {t(lang, 'fdClearHistory')}
+                    {translate('fdClearHistory', lang)}
                   </button>
                 </>
               )}
@@ -118,14 +118,14 @@ export function ManualModePanel({
         className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-2 py-1.5 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder={format === 'hex' ? t(lang, 'fdHexPlaceholder') : t(lang, 'fdAsciiPlaceholder')}
+        placeholder={format === 'hex' ? translate('fdHexPlaceholder', lang) : translate('fdAsciiPlaceholder', lang)}
         spellCheck={false}
         rows={3}
         onKeyDown={(e) => {
           if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onParse(); }
         }}
       />
-      <div className="text-[10px] text-text-secondary opacity-secondary">{t(lang, 'fdShortcutHint')}</div>
+      <div className="text-[10px] text-text-secondary opacity-secondary">{translate('fdShortcutHint', lang)}</div>
 
       <div className="flex gap-1.5">
         <button
@@ -134,19 +134,19 @@ export function ManualModePanel({
           disabled={loading || !input.trim()}
         >
           <Play size={12} />
-          <span>{t(lang, 'fdParse')}</span>
+          <span>{translate('fdParse', lang)}</span>
         </button>
         <button
           className="px-3 py-1.5 bg-transparent text-text-secondary border border-border rounded cursor-pointer text-xs hover:text-text-primary hover:border-accent transition-colors"
           onClick={onClear}
         >
-          {t(lang, 'fdClear')}
+          {translate('fdClear', lang)}
         </button>
       </div>
 
       {result && (
         <div className="flex flex-col gap-1.5">
-          <div className="section-heading section-heading--micro">{t(lang, 'fdParseResult')}</div>
+          <div className="section-heading section-heading--micro">{translate('fdParseResult', lang)}</div>
           {result.error ? (
             <div className="flex items-start gap-1 bg-red/10 border border-red/30 text-red px-2 py-1.5 rounded-sm text-xs">
               <AlertTriangle size={11} className="shrink-0 mt-0.5" />
@@ -155,17 +155,17 @@ export function ManualModePanel({
           ) : (
             <>
               <div className="flex items-center gap-2 px-2 py-1 bg-bg-editor rounded-sm">
-                <span className="text-[10px] text-text-secondary">{t(lang, 'fdResultValid')}</span>
+                <span className="text-[10px] text-text-secondary">{translate('fdResultValid', lang)}</span>
                 <span className={`text-xs font-mono ${result.valid ? 'text-green' : 'text-red'}`}>
                   {result.valid ? '✓ PASS' : '✗ FAIL'}
                 </span>
                 <span className="text-[10px] text-text-secondary ml-auto">
-                  {t(lang, 'fdConsumedBytes')}: <span className="font-mono text-text-primary">{result.consumedBytes}</span>
+                  {translate('fdConsumedBytes', lang)}: <span className="font-mono text-text-primary">{result.consumedBytes}</span>
                 </span>
               </div>
               <div className="bg-bg-editor border border-border rounded p-2 flex flex-col gap-1">
                 {Object.keys(result.outputs).length === 0 ? (
-                  <div className="text-xs text-text-secondary opacity-muted italic py-1 text-center">{t(lang, 'fdNoOutputs')}</div>
+                  <div className="text-xs text-text-secondary opacity-muted italic py-1 text-center">{translate('fdNoOutputs', lang)}</div>
                 ) : (
                   Object.entries(result.outputs).map(([port, val]) => (
                     <div key={port} className="flex items-center justify-between gap-2 px-1.5 py-0.5 bg-bg-editor rounded-sm">

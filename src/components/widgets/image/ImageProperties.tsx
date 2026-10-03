@@ -5,7 +5,7 @@
 import { memo } from 'react';
 import type { ImageConfig } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, SelectField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -17,28 +17,28 @@ export const ImageProperties = memo(function ImageProperties({ widget, update }:
     update({ kind: 'Image', params: { ...widget.params, ...p } });
   return (
     <>
-      <NumberField label={t(lang, 'imageWidth')} value={width}
+      <NumberField label={translate('imageWidth', lang)} value={width}
         onCommit={(v) => {
           const next = Math.round(v);
           if (next < 16) return false;
           patch({ width: next });
           return true;
         }}
-        error={t(lang, 'invalidRange')} />
-      <NumberField label={t(lang, 'imageHeight')} value={height}
+        error={translate('invalidRange', lang)} />
+      <NumberField label={translate('imageHeight', lang)} value={height}
         onCommit={(v) => {
           const next = Math.round(v);
           if (next < 16) return false;
           patch({ height: next });
           return true;
         }}
-        error={t(lang, 'invalidRange')} />
-      <SelectField label={t(lang, 'imageFormat')} value={format}
+        error={translate('invalidRange', lang)} />
+      <SelectField label={translate('imageFormat', lang)} value={format}
         options={([
           ['rgb888', 'formatRgb888'],
           ['rgb565', 'formatRgb565'],
           ['gray8', 'formatGray8'],
-        ] as [ImageConfig['format'], string][]).map(([value, key]) => ({ value, label: t(lang, key) }))}
+        ] as [ImageConfig['format'], string][]).map(([value, key]) => ({ value, label: translate(key, lang) }))}
         onChange={(v) => patch({ format: v as ImageConfig['format'] })} />
     </>
   );

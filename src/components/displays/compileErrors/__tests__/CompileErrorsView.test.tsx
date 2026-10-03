@@ -18,7 +18,8 @@ vi.hoisted(() => {
   g.localStorage = localStorageMock;
 });
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { useAppStore } from '../../../../store/appStore';
 import { useDockStore } from '../../../../store/dockStore';
 import { CompileErrorsView } from '../CompileErrorsView';
@@ -51,7 +52,7 @@ describe('CompileErrorsView', () => {
   });
 
   it('renders empty state when there are no compile errors', () => {
-    render(<CompileErrorsView />);
+    renderWithI18n(<CompileErrorsView />);
     expect(screen.getByText('No compile errors')).toBeInTheDocument();
   });
 
@@ -68,7 +69,7 @@ describe('CompileErrorsView', () => {
       tabStates: { 'tab-1': 'error' },
     });
 
-    render(<CompileErrorsView />);
+    renderWithI18n(<CompileErrorsView />);
 
     // Header info
     expect(screen.getByText('Compile Errors')).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe('CompileErrorsView', () => {
       tabStates: { 'tab-1': 'ok' },
     });
 
-    render(<CompileErrorsView />);
+    renderWithI18n(<CompileErrorsView />);
 
     // Since the error is repaired, activeErrors should be empty, showing "No compile errors" empty state
     expect(screen.getByText('No compile errors')).toBeInTheDocument();
@@ -135,7 +136,7 @@ describe('CompileErrorsView', () => {
       setFocusedCard: setFocusedCardSpy,
     });
 
-    render(<CompileErrorsView />);
+    renderWithI18n(<CompileErrorsView />);
 
     const mapPinBtn = screen.getByRole('button', { name: 'Fly to node' });
     expect(mapPinBtn).toBeInTheDocument();
@@ -163,7 +164,7 @@ describe('CompileErrorsView', () => {
       tabStates: { 'tab-1': 'error' },
     });
 
-    render(<CompileErrorsView />);
+    renderWithI18n(<CompileErrorsView />);
 
     // Initially open, details visible
     expect(screen.getByText('nodeC')).toBeInTheDocument();

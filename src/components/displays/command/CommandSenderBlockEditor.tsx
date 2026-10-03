@@ -1,6 +1,6 @@
 import { AlertTriangle } from 'lucide-react';
 import type { CommandBlock, FieldType, ChecksumType } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { Lang } from '../../../i18n';
 import { FIELD_TYPE_OPTIONS, CHECKSUM_OPTIONS } from './commandSenderShared';
 
@@ -22,13 +22,13 @@ export function CommandBlockEditor({
     <div className="px-2 pb-2 flex flex-col gap-1.5">
       {/* 通用: label */}
       <div className="field-grid field-grid--compact">
-        <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockLabel')}</label>
+        <label className="text-[10px] text-text-secondary">{translate('cmdBlockLabel', lang)}</label>
         <input
           type="text"
           value={block.label ?? ''}
           onChange={(e) => updateBlock(block.id, { label: e.target.value })}
           className="w-full px-1.5 py-0.5 bg-bg-input text-text-primary border border-border rounded-sm text-xs focus:outline-none focus:border-accent"
-          placeholder={t(lang, 'cmdBlockLabelPlaceholder')}
+          placeholder={translate('cmdBlockLabelPlaceholder', lang)}
         />
       </div>
 
@@ -52,7 +52,7 @@ export function CommandBlockEditor({
       {block.type === 'var_ref' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockPortName')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('cmdBlockPortName', lang)}</label>
             <input
               type="text"
               value={block.portName ?? ''}
@@ -63,7 +63,7 @@ export function CommandBlockEditor({
             />
           </div>
           <div className="field-grid field-grid--compact">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockType')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('cmdBlockType', lang)}</label>
             <select
               value={block.fieldType ?? 'uint16LE'}
               onChange={(e) => updateBlock(block.id, { fieldType: e.target.value as FieldType })}
@@ -75,7 +75,7 @@ export function CommandBlockEditor({
             </select>
           </div>
           <div className="text-[10px] text-text-secondary opacity-secondary px-1">
-            {t(lang, 'cmdBlockVarRefHint')}: {String(graphInputs[block.portName ?? 'value'] ?? 0)}
+            {translate('cmdBlockVarRefHint', lang)}: {String(graphInputs[block.portName ?? 'value'] ?? 0)}
           </div>
         </>
       )}
@@ -84,7 +84,7 @@ export function CommandBlockEditor({
       {block.type === 'typed_const' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockType')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('cmdBlockType', lang)}</label>
             <select
               value={block.fieldType ?? 'uint8'}
               onChange={(e) => updateBlock(block.id, { fieldType: e.target.value as FieldType })}
@@ -96,7 +96,7 @@ export function CommandBlockEditor({
             </select>
           </div>
           <div className="field-grid field-grid--compact">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'cmdBlockValue')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('cmdBlockValue', lang)}</label>
             <input
               type="text"
               value={block.value ?? ''}
@@ -113,7 +113,7 @@ export function CommandBlockEditor({
       {block.type === 'checksum' && (
         <>
           <div className="field-grid field-grid--compact">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'cmdChecksum')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('cmdChecksum', lang)}</label>
             <select
               value={block.checksum ?? 'sum8'}
               onChange={(e) => updateBlock(block.id, { checksum: e.target.value as ChecksumType })}
@@ -121,14 +121,14 @@ export function CommandBlockEditor({
             >
               {CHECKSUM_OPTIONS.map((opt) => (
                 <option key={opt.value} value={opt.value}>
-                  {t(lang, opt.labelKey)}
+                  {translate(opt.labelKey, lang)}
                 </option>
               ))}
             </select>
           </div>
           {block.checksum === 'custom' && (
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-text-secondary">{t(lang, 'cmdCustomScript')}</label>
+              <label className="text-[10px] text-text-secondary">{translate('cmdCustomScript', lang)}</label>
               <textarea
                 className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-1.5 py-1 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
                 value={block.customScript ?? ''}
@@ -139,12 +139,12 @@ export function CommandBlockEditor({
               />
               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow/10 border border-yellow/30 text-yellow text-[10px] rounded-sm">
                 <AlertTriangle size={10} />
-                <span>{t(lang, 'cmdCustomWarn')}</span>
+                <span>{translate('cmdCustomWarn', lang)}</span>
               </div>
             </div>
           )}
           <div className="text-[10px] text-text-secondary opacity-secondary px-1">
-            {t(lang, 'cmdBlockChecksumHint')}
+            {translate('cmdBlockChecksumHint', lang)}
           </div>
         </>
       )}

@@ -4,7 +4,7 @@ import { useCanLoadAlarmStore } from '../../../store/canLoadAlarmStore';
 import { api } from '../../../lib/tauri/tauri';
 import { notify, formatError } from '../../../lib/tauri/notifications';
 import { usePrimaryCanTransportNodeId } from '../../../lib/hooks/usePrimaryNodes';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { Trash2, Activity, Download, Bell, BellOff } from 'lucide-react';
 import type { CanLoadSnapshot, CanIdLoadHistory } from '../../../types';
 import {
@@ -91,9 +91,9 @@ export function CanLoadView() {
     try {
       const effectiveBitrate = autoBitrate ? null : bitrateOverride;
       const path = await api.exportCanLoadCsv(canNodeId, effectiveBitrate);
-      notify.info(t(lang, 'canLoadExportSuccess'), path, { source: 'can-load-export' });
+      notify.info(translate('canLoadExportSuccess', lang), path, { source: 'can-load-export' });
     } catch (e) {
-      notify.error(t(lang, 'canLoadExportFailed'), formatError(e), { source: 'can-load-export' });
+      notify.error(translate('canLoadExportFailed', lang), formatError(e), { source: 'can-load-export' });
     } finally {
       setExporting(false);
     }
@@ -110,7 +110,7 @@ export function CanLoadView() {
       {/* 工具栏 */}
       <div className="flex items-center gap-4 px-3 py-2 border-b border-border bg-bg-panel-header text-xs">
         <div className="flex items-center gap-2">
-          <span className="text-text-secondary">{t(lang, 'canLoadWindow')}</span>
+          <span className="text-text-secondary">{translate('canLoadWindow', lang)}</span>
           <select
             className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary text-xs"
             value={windowUs}
@@ -132,7 +132,7 @@ export function CanLoadView() {
               onChange={(e) => setAutoBitrate(e.target.checked)}
               className="cursor-pointer"
             />
-            <span className="text-text-secondary">{t(lang, 'canLoadAutoBitrate')}</span>
+            <span className="text-text-secondary">{translate('canLoadAutoBitrate', lang)}</span>
             {autoBitrate && (
               <span className="text-text-bright font-mono text-[10px] px-1.5 py-0.5 rounded bg-bg-input">
                 {detectedBitrate.bps >= 1_000_000
@@ -167,11 +167,11 @@ export function CanLoadView() {
                 : 'text-text-secondary hover:bg-bg-hover'
             }`}
             onClick={() => setAlarmEnabled(!alarmEnabled)}
-            title={t(lang, 'canLoadThresholdAlarm')}
+            title={translate('canLoadThresholdAlarm', lang)}
           >
             {alarmEnabled ? <Bell size={12} /> : <BellOff size={12} />}
           </button>
-          <span className="text-text-secondary">{t(lang, 'canLoadThreshold')}</span>
+          <span className="text-text-secondary">{translate('canLoadThreshold', lang)}</span>
           <select
             className="bg-bg-input border border-border rounded px-2 py-1 text-text-primary text-xs"
             value={threshold}
@@ -190,19 +190,19 @@ export function CanLoadView() {
           className="flex items-center gap-1 px-2 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors disabled:opacity-disabled"
           onClick={() => { void handleExport(); }}
           disabled={exporting || !snapshot}
-          title={t(lang, 'canLoadExport')}
+          title={translate('canLoadExport', lang)}
         >
           <Download size={12} />
-          <span>{t(lang, 'canLoadExport')}</span>
+          <span>{translate('canLoadExport', lang)}</span>
         </button>
 
         <button
           className="flex items-center gap-1 px-2 py-1 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
           onClick={handleClear}
-          title={t(lang, 'canLoadClear')}
+          title={translate('canLoadClear', lang)}
         >
           <Trash2 size={12} />
-          <span>{t(lang, 'canLoadClear')}</span>
+          <span>{translate('canLoadClear', lang)}</span>
         </button>
       </div>
 
@@ -220,10 +220,10 @@ export function CanLoadView() {
 
         {/* 概要统计 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <StatCard label={t(lang, 'canLoadBitrate')} value={formatBitrate(effectiveBitrate)} />
-          <StatCard label={t(lang, 'canLoadTotalBits')} value={(snapshot?.total_bits ?? 0).toLocaleString()} />
-          <StatCard label={t(lang, 'canLoadTotalBytes')} value={(snapshot?.total_bytes ?? 0).toLocaleString()} />
-          <StatCard label={t(lang, 'canLoadFps')} value={formatFps(fps)} />
+          <StatCard label={translate('canLoadBitrate', lang)} value={formatBitrate(effectiveBitrate)} />
+          <StatCard label={translate('canLoadTotalBits', lang)} value={(snapshot?.total_bits ?? 0).toLocaleString()} />
+          <StatCard label={translate('canLoadTotalBytes', lang)} value={(snapshot?.total_bytes ?? 0).toLocaleString()} />
+          <StatCard label={translate('canLoadFps', lang)} value={formatFps(fps)} />
         </div>
 
         {/* ID 负载分布 */}
@@ -450,7 +450,7 @@ function LoadHistoryChart({
     <div className="bg-bg-panel-header rounded border border-border p-3 flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-text-secondary uppercase tracking-wider">
-          {t(useAppStore.getState().lang, 'canLoadHistory')}
+          {translate('canLoadHistory', useAppStore.getState().lang)}
         </span>
         <Activity size={12} className="text-text-secondary" />
       </div>

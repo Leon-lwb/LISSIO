@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { NodeFrame } from './NodeFrame';
 
 interface UnsupportedNodeProps {
@@ -28,7 +28,7 @@ export const UnsupportedNode = memo(function UnsupportedNode({ id, data, selecte
     onRemove={() => removeWidget(id)}>
     <div className="flex items-center gap-2 px-2 py-1 text-xs text-text-secondary">
       <AlertTriangle size={14} className="flex-shrink-0 text-yellow" />
-      <span>{t(lang, 'unsupportedWidget')} {widgetKind ? <code className="font-mono">{widgetKind}</code> : null}</span>
+      <span>{translate('unsupportedWidget', lang)} {widgetKind ? <code className="font-mono">{widgetKind}</code> : null}</span>
     </div>
   </NodeFrame>;
 });

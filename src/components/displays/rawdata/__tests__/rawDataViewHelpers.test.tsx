@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';
+;
 import { describe, expect, it } from 'vitest';
 import {
   EscapedText,
@@ -71,7 +72,7 @@ describe('segmentEscapedText', () => {
 
 describe('EscapedText', () => {
   it('转义符号渲染为弱化 span, 原样文本不加包装', () => {
-    const { container } = render(<EscapedText text={'a\nb'} />);
+    const { container } = renderWithI18n(<EscapedText text={'a\nb'} />);
     const spans = container.querySelectorAll('span');
     expect(spans).toHaveLength(3);
     expect(spans[0].textContent).toBe('a');
@@ -81,7 +82,7 @@ describe('EscapedText', () => {
   });
 
   it('纯文本零开销路径', () => {
-    const { container } = render(<EscapedText text="plain" />);
+    const { container } = renderWithI18n(<EscapedText text="plain" />);
     expect(container.querySelectorAll('span')).toHaveLength(0);
     expect(container.textContent).toBe('plain');
   });

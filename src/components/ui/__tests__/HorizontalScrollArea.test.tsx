@@ -1,4 +1,5 @@
-import { createEvent, fireEvent, render, screen } from '@testing-library/react';
+import { createEvent, fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { describe, expect, it } from 'vitest';
 import { HorizontalScrollArea } from '../HorizontalScrollArea';
 
@@ -15,7 +16,7 @@ function setScrollMetrics(
 
 describe('HorizontalScrollArea', () => {
   it('maps mouse wheel movement to horizontal scrolling', () => {
-    render(
+    renderWithI18n(
       <HorizontalScrollArea data-testid="scroll-area">
         <div style={{ width: 800 }}>content</div>
       </HorizontalScrollArea>
@@ -31,7 +32,7 @@ describe('HorizontalScrollArea', () => {
   });
 
   it('shows a shadow only in directions that still have content', () => {
-    const { container } = render(
+    const { container } = renderWithI18n(
       <HorizontalScrollArea data-testid="scroll-area">
         <div style={{ width: 800 }}>content</div>
       </HorizontalScrollArea>
@@ -57,7 +58,7 @@ describe('HorizontalScrollArea', () => {
   });
 
   it('does not intercept wheel input when there is no overflow', () => {
-    render(
+    renderWithI18n(
       <HorizontalScrollArea data-testid="scroll-area">
         <div>content</div>
       </HorizontalScrollArea>

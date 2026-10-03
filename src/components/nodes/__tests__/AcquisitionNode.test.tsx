@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import type { NodeProps } from '@xyflow/react';
 import type { AdapterCapability, CapabilitySet } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
@@ -95,7 +96,7 @@ describe('AcquisitionNode ports', () => {
   });
 
   it('renders every backend port on the side declared by its direction', () => {
-    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data() } as unknown as NodeProps)} />);
+    renderWithI18n(<AcquisitionNode {...({ id: 'acquisition-1', data: data() } as unknown as NodeProps)} />);
 
     expect(screen.getByTestId('target-request')).toBeInTheDocument();
     expect(screen.queryByTestId('source-request')).not.toBeInTheDocument();
@@ -107,7 +108,7 @@ describe('AcquisitionNode ports', () => {
 
   it('restores ports from the backend catalog when a persisted node has no cached card', async () => {
     mocks.loadAdapterCapabilities.mockResolvedValue([adapter()]);
-    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
+    renderWithI18n(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
 
     await waitFor(() => expect(screen.getByTestId('source-points')).toBeInTheDocument());
     expect(mocks.loadAdapterCapabilities).toHaveBeenCalledOnce();
@@ -116,7 +117,7 @@ describe('AcquisitionNode ports', () => {
 
   it('falls back to byte ports and surfaces an error when the driver is absent from the catalog', async () => {
     mocks.loadAdapterCapabilities.mockResolvedValue([]);
-    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
+    renderWithI18n(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
 
     await waitFor(() => expect(screen.getByTestId('source-rx')).toBeInTheDocument());
     expect(screen.getByTestId('target-tx')).toBeInTheDocument();
@@ -125,7 +126,7 @@ describe('AcquisitionNode ports', () => {
 
   it('falls back to byte ports when the capability catalog request fails', async () => {
     mocks.loadAdapterCapabilities.mockRejectedValue(new Error('rpc unavailable'));
-    render(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
+    renderWithI18n(<AcquisitionNode {...({ id: 'acquisition-1', data: data(false) } as unknown as NodeProps)} />);
 
     await waitFor(() => expect(screen.getByTestId('source-rx')).toBeInTheDocument());
     expect(screen.getByText('Capability catalog mismatch; ports unavailable')).toBeInTheDocument();

@@ -1,0 +1,341 @@
+# Settings system
+settings: Settings
+settingsTitle: Settings
+settingsBreadcrumb: Settings breadcrumb
+settingsSearch: Search settings…
+settingsReset: Reset to Defaults
+settingsResetCategory: Reset this category
+settingsDone: Done
+settingsClose: Close
+settingsGeneral: General
+settingsAppearance: Appearance
+settingsEditor: Editor
+settingsData: Data
+settingsSerial: Serial Defaults
+settingsNotifications: Notifications
+settingsPerformance: Performance
+settingRecEnabled: Enable recording database
+settingRecEnabledDesc: When off, DuckDB is never opened or written; acquisition and run control stay unaffected. Hot-swappable at any time, and existing files and history are always kept
+recordingDisabledNotice: 'The recording database is disabled in settings: no new data is written, and history is not readable while it is off (files and history are kept). Re-enable it to browse again.'
+recordingDisabledShort: Recording database is off — no new data is written.
+recordingDisabledOpenSettings: Settings
+settingRecDatabaseDir: Recording database directory
+settingRecDatabaseDirDesc: DuckDB storage directory for acquisition data (empty = default location); changes apply while paused/stopped or on next launch, the old file is kept
+settingRecDefaultDir: Default location
+settingRecBrowse: Browse
+settingRecContinueEmpty: Continue empty session on startup
+settingRecContinueEmptyDesc: Keep writing the previous session while it holds no data, avoiding empty-session buildup (crash leftovers included)
+settingRecCleanupFailed: Clean up failed sessions on startup
+settingRecCleanupFailedDesc: Delete failed sessions (crash leftovers, including ones with data) on every startup
+settingRecCleanupStopped: Clean up stopped sessions on startup
+settingRecCleanupStoppedDesc: Delete stopped sessions (and their recorded data) on every startup — use with care
+settingRecCleanupOlderDays: Expire sessions after days
+settingRecCleanupOlderDaysDesc: Delete sessions ended more than N days ago on every startup (0 = off)
+settingRecCleanupKeepLatest: Keep latest sessions
+settingRecCleanupKeepLatestDesc: Keep only the latest N sessions on every startup (0 = off; the active session is always kept)
+backupCategory: Backup
+exportConfig: Export Config
+importConfig: Import Config
+updateCategory: App Update
+updateCurrentVersion: Current version
+updateCheck: Check for Updates
+updateChecking: Checking…
+updateDownload: Download Update
+updateDownloading: Downloading
+updateReady: Update installed, takes effect after restart
+updateRelaunch: Relaunch App
+updateUpToDate: You're up to date
+updateError: Update failed
+updateAutoCheck: Automatically check for updates
+updateAutoCheckDesc: Check for new versions on startup
+updateChannel: Update Channel
+updateChannelDesc: Choose to receive stable or pre-release updates
+updateChannelStable: Stable
+updateChannelBeta: Beta
+updateChannelConfirmTitle: Switch Update Channel
+updateChannelToBetaMsg: After switching to the Beta channel, you will receive pre-release updates that may contain unstable features. Continue?
+updateChannelToStableMsg: After switching to the Stable channel, you will only receive stable updates. Continue?
+updateAvailableTitle: New Version Available
+updateReleaseDate: Release date
+updateReleaseNotes: Release Notes
+updateNow: Update Now
+updateLater: Later
+updateSkipVersion: Skip This Version
+updateRestart: Restart to Update
+updateRetry: Retry
+updateReadyHint: Update ready, takes effect after restart
+updateConfirm: OK
+updateCancel: Cancel
+backupExportSuccess: Config exported
+backupExportSuccessDesc: Full app config saved to file
+backupImportSuccess: Config imported
+backupImportSuccessDesc: Restored from backup file
+backupImportSuccessDescReconnect: Restored from backup file. Reconnect the transport to apply the imported connection settings.
+backupExportFailed: Export failed
+backupImportFailed: Import failed
+backupCustom: Split Backup…
+backupModalTitle: Split Backup
+backupSelectHint: Select sections to include
+backupSelectAll: Select all
+backupSelectNone: Clear
+backupSectionWorkspace: Workspace
+backupSectionWorkspaceDesc: Tab-owned node documents, connections, data tabs, and active views
+backupSectionWindowLayout: Window Layout
+backupSectionWindowLayoutDesc: Card split layout and sidebar dock position
+backupSectionSettings: Settings
+backupSectionSettingsDesc: Language, theme, appearance, data caches, etc.
+backupExportSelected: Export Selected
+backupImportFromFile: Import from File
+backupImportReady: File loaded. Select sections to restore, then confirm.
+backupConfirmImport: Confirm Import
+quickStart: Quick Start
+quickStartDesc: Pick a template to scaffold a node graph and window layout. Templates include transport & protocol config for one-click readiness.
+templateApply: Apply
+templateImportFile: Import template file…
+templateImportName: Imported template
+templateMath: Math
+templateMathDesc: Demonstrates sin / sum arithmetic nodes with a simulated Serial device attribute
+templateFilter: Filter
+templateFilterDesc: Lowpass filtering demo, compare raw vs filtered waveform
+templateFft: Spectrum
+templateFftDesc: FFT solver → spectrum view → IFFT back to time domain using a simulated Serial device attribute
+templateCan: CAN
+templateCanDesc: Slcan transport + CAN frame view, connect a CAN analyzer to send/receive
+templateSerial: Serial
+templateSerialDesc: Serial float stream + gauge / number display widgets
+templateCustomProtocol: Custom Protocol
+templateCustomProtocolDesc: Custom block protocol (named channels speed/temp) plus command sender, using a simulated Serial device attribute
+templateDemo: Combined Demo
+templateDemoDesc: Full pipeline example with filter + math + waveform / gauge
+templateApplyTitle: Apply Template
+templateApplyReplaceConfirm: Replacing will clear the current node graph and window layout (settings are kept). Continue?
+templateApplyMergePrompt: Merge the template as a new control tab into the current workspace?
+templateApplySuccess: Template applied
+templateApplySuccessDesc: Template applied
+templateApplySuccessDescReconnect: Template applied. Reconnect the transport to apply the template's connection settings.
+templateApplyFailed: Failed to apply template
+
+# Setting items - General
+settingLanguage: Language
+settingLanguageDesc: User interface language
+settingAutoConnectOnStart: Auto-connect on start
+settingAutoConnectOnStartDesc: Try connecting with the last transport config when the app starts
+settingConfirmBeforeQuit: Confirm before quit
+settingConfirmBeforeQuitDesc: Show a confirmation dialog when closing the window
+settingShowOnboarding: Show onboarding
+settingShowOnboardingDesc: Show the onboarding guide on first launch
+settingShowContextualTips: Show contextual tips
+settingShowContextualTipsDesc: Show operation tips in CAN / logic analyzer views
+settingDebug: Debug mode
+settingDebugDesc: Show debug features such as Inspect Element in context menus
+
+# Setting items - Appearance
+settingTheme: Theme
+settingThemeDesc: Application color scheme
+colorTheme: Color Theme
+cssTheme: CSS Style Theme
+
+# Theme editor
+themeEditor: Theme Editor
+themeEditorClose: Close
+themeList: Themes
+themeAdd: New Theme
+themeRename: Rename
+themeDuplicate: Duplicate
+themeDelete: Delete
+themeImport: Import
+themeExport: Export
+themeReset: Reset to Default
+themeBuiltInReadOnly: Built-in themes are read-only. Click Duplicate to create a custom theme.
+themeActivePreview: This is the active theme. Edits preview live.
+themeClickToPreview: Click Activate below to preview this theme.
+themeActivate: Activate Theme
+themeEdit: Edit Theme
+cssThemeList: CSS Themes
+cssThemeDelete: Delete
+cssThemeBuiltInReadOnly: Built-in CSS themes are read-only and cannot be deleted.
+cssThemeInfo: Theme Info
+cssThemeName: Name
+cssThemeUrl: CSS URL
+cssThemeType: Type
+cssThemeBuiltIn: Built-in
+cssThemeCustom: Custom
+cssThemeAddCustom: Add Custom Theme
+cssThemeLoad: Load
+cssThemeHelp: CSS Theme Guide
+cssThemeHelpDesc1: CSS themes override application styles by loading external CSS files.
+cssThemeHelpDesc2: "Use CSS variables in your CSS file to customize the appearance:"
+cssThemeActive: This is the active theme
+cssThemeClickToActivate: Click Activate below to apply this theme
+cssThemeActivate: Apply Theme
+settingUiFontFamily: UI Font Family
+settingUiFontFamilyDesc: Font family used for interface text
+settingUiFontSize: UI Font Size
+settingUiFontSizeDesc: Interface text size (px)
+settingMonoFontFamily: Monospace Font
+settingMonoFontFamilyDesc: Font family for raw data / code areas
+settingMonoFontSize: Monospace Font Size
+settingMonoFontSizeDesc: Raw data / code area font size (px)
+settingStatusBarVisible: Show Status Bar
+settingStatusBarVisibleDesc: Display the status bar at the bottom of the window
+settingActivityBarVisible: Show Activity Bar
+settingActivityBarVisibleDesc: Display the activity bar on the left of the window
+settingAcrylicBackground: Acrylic Background
+settingAcrylicBackgroundDesc: Use the system frosted-glass effect as the window background; panels become translucent
+settingAcrylicOpacity: Acrylic Opacity
+settingAcrylicOpacityDesc: Drag the slider or type a value to adjust panel translucency; lower is more transparent (0.6 is the default look)
+settingFloatingGlass: Frosted Secondary Cards
+settingFloatingGlassDesc: Use frosted glass on secondary cards opened from settings and panels; independent of the acrylic background
+settingFloatingGlassOpacity: Secondary Card Opacity
+settingFloatingGlassOpacityDesc: Adjust secondary-card translucency; lower is more transparent (0.72 is the default look)
+settingWindowOpacity: Window Opacity
+settingWindowOpacityDesc: Adjust the overall window transparency; lower is more transparent. Independent of the acrylic background
+settingReducedMotion: Reduce Motion
+settingReducedMotionDesc: Disable animations and transitions in the interface to improve performance
+
+# Setting items - Editor
+settingWaveformFps: Waveform FPS
+settingWaveformFpsDesc: Waveform chart refresh rate (FPS)
+settingScopeDefaultTimeBase: Default Time Base
+settingScopeDefaultTimeBaseDesc: Default horizontal time base for new waveform charts
+settingScopeDefaultVPerDiv: Default Vertical Scale
+settingScopeDefaultVPerDivDesc: Default vertical scale for new waveform charts
+settingGridVisible: Show Grid by Default
+settingGridVisibleDesc: Whether new waveform charts show grid by default
+settingCursorReadoutVisible: Show Cursor Readout
+settingCursorReadoutVisibleDesc: Show the value readout tooltip that follows the mouse on waveform charts
+settingCursorSnap: Cursor Snap
+settingCursorSnapDesc: Snap Y to the curve value interpolated at the mouse X (X still follows the mouse, not to the sample point); hold Ctrl/Cmd to temporarily disable
+settingCrosshairVisible: Show Crosshair
+settingCrosshairVisibleDesc: Show the horizontal/vertical crosshair lines that follow the mouse
+settingHoverPointsVisible: Show Hover Points
+settingHoverPointsVisibleDesc: Show the nearest-sample markers on the curve on hover (auto-hidden when cursor snap is on)
+settingPauseOnInteract: Auto-pause on Interact
+settingPauseOnInteractDesc: Pause live refresh when zooming or dragging the waveform; when off, interactions never pause and you can drag back through history while running (drag back to the right edge to resume live follow)
+
+# Setting items - Data Cache
+settingWaveformBufferPoints: Waveform Buffer Points
+settingWaveformBufferPointsDesc: Maximum points retained per channel; history duration is approximately points ÷ sample rate
+settingRawDataBufferBytes: Raw Data Buffer Bytes
+settingRawDataBufferBytesDesc: Maximum bytes retained by raw data view
+settingCanBufferFrames: CAN Buffer Frames
+settingCanBufferFramesDesc: Maximum frames retained by CAN view
+settingLogicBufferSamples: Logic Buffer Samples
+settingLogicBufferSamplesDesc: Maximum samples retained by logic analyzer
+
+# Setting items - Serial
+settingDefaultBaudRate: Default Baud Rate
+settingDefaultBaudRateDesc: Default baud rate for new serial connections
+settingDefaultDataBits: Default Data Bits
+settingDefaultDataBitsDesc: Default data bits for new serial connections
+settingDefaultParity: Default Parity
+settingDefaultParityDesc: Default parity for new serial connections
+settingDefaultStopBits: Default Stop Bits
+settingDefaultStopBitsDesc: Default stop bits for new serial connections
+settingDefaultFlowControl: Default Flow Control
+settingDefaultFlowControlDesc: Default flow control for new serial connections
+
+# Setting items - Notifications
+settingNotifEnabled: Enable Notifications
+settingNotifEnabledDesc: Show desktop notifications
+settingNotifDuration: Notification Duration
+settingNotifDurationDesc: Notification display duration (ms, 0 = persistent)
+settingNotifShowOnConnect: Connect Notification
+settingNotifShowOnConnectDesc: Show a notification when transport connects
+settingNotifShowOnDisconnect: Disconnect Notification
+settingNotifShowOnDisconnectDesc: Show a notification when transport disconnects
+settingNotifShowOnError: Error Notification
+settingNotifShowOnErrorDesc: Show a notification when an error occurs
+
+# Setting items - Performance
+settingMaxFeedWorkers: Auto Worker Limit
+settingMaxFeedWorkersDesc: Backend workers scale with backlog and never exceed CPU count or this safety limit
+settingEvalWorkers: Graph Eval Workers
+settingEvalWorkersDesc: Evaluate independent graph paths in parallel; 1 = serial, raise for multi-path high-rate graphs
+settingCoalesceMaxBytesKb: Pipeline Memory Budget (MB)
+settingCoalesceMaxBytesKbDesc: Safety memory budget for backend topic history and queued data
+settingMaxStreamShards: Preview FPS Limit
+settingMaxStreamShardsDesc: Maximum frontend preview rate; backend capture and parsing remain full-speed
+settingParseChannelCap: Preview Bandwidth (MB/s)
+settingParseChannelCapDesc: IPC preview safety limit; overload skips stale previews only
+
+# AI (settings category + chat panel)
+settingsAi: AI
+settingAiAdapter: Model Provider
+settingAiAdapterDesc: LLM provider protocol (OpenAI-compatible works with any self-hosted gateway)
+settingAiBaseUrl: Custom Base URL
+settingAiBaseUrlDesc: Service API endpoint; leave empty for the provider default; required for OpenAI-compatible (e.g. https://api.deepseek.com/v1)
+settingAiApiKey: API Key
+settingAiApiKeyDesc: Provider secret (stored in the system keychain, never written to settings; only sent to the configured provider)
+settingAiModel: Model
+settingAiModelDesc: e.g. gpt-4o-mini / deepseek-chat / glm-4.7 / qwen-max
+settingAiTemperature: Temperature
+settingAiTemperatureDesc: Sampling temperature (0-2); leave empty for the provider default
+settingAiMaxTokens: Max Output Tokens
+settingAiMaxTokensDesc: Maximum tokens per reply; leave empty for the provider default
+settingAiSystemPrompt: System Prompt
+settingAiSystemPromptDesc: Edit ai-system-prompt.md in the app settings folder. Changes take effect with your next AI message.
+settingAiOpenSettingsFolder: Open Settings Folder
+settingAiOpenSettingsFolderFailed: Failed to open settings folder
+settingAiPlugins: Plugins
+settingAiPluginsDesc: Manage built-in app plugins and Web Fetch
+settingsAiSections: Plugins & Services
+settingsOpenPlugins: Open plugin settings
+settingsOpenMcp: Open MCP settings
+settingAiBuiltinTools: Enable Built-in App Plugins
+settingAiBuiltinToolsDesc: Let the AI use node graph, device data, app operations, and built-in knowledge skills
+settingAiWebTools: Enable Web Fetch
+settingAiWebToolsDesc: Let the AI fetch HTTP/HTTPS pages and read the main content without navigation, scripts, or styles
+settingAiMcp: MCP
+settingAiMcpDesc: Manage the local MCP service and external MCP servers
+settingAiMcpTools: Enable MCP Tools
+settingAiMcpToolsDesc: Expose tools from enabled external MCP servers to the model during chat
+settingAiMcpServerPort: Local MCP Port
+settingAiMcpServerPortDesc: Port of the MCP server exposing this app's capabilities (listens on 127.0.0.1 only)
+settingAiOrcaHint: OrcaRouter gateway — model names need a vendor prefix, e.g. openai/gpt-4o-mini or anthropic/claude-sonnet-4
+settingAiOrcaGetKey: Get an API Key · support the project
+settingAiOrcaFreeModels: "Free models: available once you have an API key"
+settingsAiSectionPlugins: Plugins
+settingsAiSectionMcp: MCP
+settingAiPluginMasterDisabled: The plugin master switch is off
+
+# About dialog
+about: About
+aboutVersion: Version
+aboutAuthor: Author
+aboutLicense: License
+aboutGithub: GitHub Repository
+aboutDocs: Documentation
+aboutDescription: See every signal. Understand what matters. Act with confidence.
+aboutFonts: This software bundles these fonts
+aboutClose: Close
+
+# Menu event labels
+menuNewTab: New Tab
+menuCloseTab: Close Tab
+menuToggleSidebar: Toggle Sidebar
+menuAbout: About
+menuSettings: Settings
+
+# Windows custom menu bar (native menu bar cannot render on transparent windows, so the frontend takes over)
+menuFile: File
+menuEdit: Edit
+menuView: View
+menuWindow: Window
+menuHelp: Help
+menuUndo: Undo
+menuRedo: Redo
+menuCut: Cut
+menuCopy: Copy
+menuPaste: Paste
+menuSelectAll: Select All
+menuReload: Reload
+menuZoomIn: Zoom In
+menuZoomOut: Zoom Out
+menuZoomReset: Actual Size
+menuMinimize: Minimize
+menuMaximize: Maximize
+menuCloseWindow: Close Window
+menuQuit: Quit
+menuDocs: Documentation
+menuGithub: Open on GitHub

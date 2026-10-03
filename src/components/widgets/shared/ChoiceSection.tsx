@@ -7,7 +7,7 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { ChoiceOption, WidgetConfig } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { useAppStore } from '../../../store/appStore';
 import { widgetInputValue } from '../../../lib/utils/widgetValue';
 import { sendBindingValue } from './binding';
@@ -49,10 +49,10 @@ export function ChoiceSection<K extends ChoiceKind>({ widget: narrowedWidget, up
   return (
     <section className="mt-3 pt-3 border-t border-border">
       <div className="flex items-center justify-between mb-2">
-        <span className="section-heading section-heading--micro">{t(lang, 'options')}</span>
+        <span className="section-heading section-heading--micro">{translate('options', lang)}</span>
         <button type="button" className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={() => changeOptions([...widget.params.options, { id: nanoid(8), label: `Option ${widget.params.options.length + 1}`, value: widget.params.options.length }])}
-          title={t(lang, 'addOption')}><Plus size={13} /></button>
+          title={translate('addOption', lang)}><Plus size={13} /></button>
       </div>
       <div className="flex flex-col gap-2">{widget.params.options.map((option, index) => (
         <div key={option.id} className="p-2 rounded border border-border bg-bg-input/40">
@@ -92,10 +92,10 @@ export function ChoiceSection<K extends ChoiceKind>({ widget: narrowedWidget, up
                 }
               }}><Trash2 size={12} /></button>
           </div>
-          <TextField label={t(lang, 'optionName')} value={option.label} onCommit={(label) => {
+          <TextField label={translate('optionName', lang)} value={option.label} onCommit={(label) => {
             changeOptions(widget.params.options.map((item) => item.id === option.id ? { ...item, label } : item));
           }} />
-          <NumberField label={t(lang, 'optionValue')} value={option.value} onCommit={(value) => {
+          <NumberField label={translate('optionValue', lang)} value={option.value} onCommit={(value) => {
             changeOptions(widget.params.options.map((item) => item.id === option.id ? { ...item, value } : item), true); return true;
           }} />
         </div>

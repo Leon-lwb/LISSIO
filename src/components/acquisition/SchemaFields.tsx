@@ -1,6 +1,6 @@
 import type { JsonValue } from '../../types/generated/serde_json/JsonValue';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { DraftInput, DraftNumberInput } from '../ui/fields';
 import { asFormSchema, defaultsFromSchema } from '../../lib/acquisition/schemaForm';
 import { schemaEnumLabel, schemaFieldLabel } from './schemaLabels';
@@ -23,7 +23,7 @@ export function SchemaFields(props: SchemaFieldsProps) {
   const uiHints = asHints(props.uiHints);
   if (!schema) {
     // schema 不是本项目支持的表单子集 — 显式提示, 不假装校验成功
-    return <p className="text-[11px] text-warning">{t(lang, 'schemaUnsupported')}</p>;
+    return <p className="text-[11px] text-warning">{translate('schemaUnsupported', lang)}</p>;
   }
   if (schema.type === 'object') {
     const object = asObject(value);
@@ -69,7 +69,7 @@ export function SchemaFields(props: SchemaFieldsProps) {
               disabled={disabled}
               onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
             >
-              {t(lang, 'removeWidget')}
+              {translate('removeWidget', lang)}
             </button>
           </div>
         ))}
@@ -79,7 +79,7 @@ export function SchemaFields(props: SchemaFieldsProps) {
           disabled={disabled}
           onClick={() => onChange([...items, defaultsFromSchema(schema.items ?? { type: 'string' })])}
         >
-          + {t(lang, 'addConnection')}
+          + {translate('addConnection', lang)}
         </button>
       </div>
     );
@@ -103,7 +103,7 @@ export function SchemaFields(props: SchemaFieldsProps) {
         }}
       >
         {!matched && (
-          <option value="" disabled>{t(lang, 'schemaValueUnset')}</option>
+          <option value="" disabled>{translate('schemaValueUnset', lang)}</option>
         )}
         {schema.enum.map((option) => {
           const raw = optionText(option);

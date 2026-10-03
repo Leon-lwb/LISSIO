@@ -1,0 +1,187 @@
+# 布局编排 (模块拖拽重排)
+dragToRearrange: 拖动到其他模块边缘以重新排列
+dragToDock: 拖动到窗口左/右边缘以切换停靠侧
+
+# 窗口关闭提示
+closeHintTitle: 窗口已关闭
+closeHintMessage: "「{{name}}」窗口已关闭，控件节点仍保留在画布上。双击节点即可重新打开窗口。"
+closeHintGotIt: 知道了
+nodeOpenWindowHint: 双击打开窗口
+domainBytes: 字节域
+convertTo: 协议转换 (convert_to)
+convertRawDataHint: RawData 不产帧 — convert_to 不生效，原始字节仍从 out 口透传
+convertNone: 无转换
+cmdNoByteRoute: 未连接字节路由 — 请将 loopbackOut 端口连到 Transport.tx 或 FrameDecoder.in
+noTransportNode: 无数据接口节点 — 请先从控件面板拖入「数据接口」
+targetTransport: 目标数据接口
+
+# 波形包络模式 (wgpu 降采样原型)
+envelopeModeTitle: "包络模式: 后端逐列 min/max 降采样 (GPU 加速), 前端仅绘制缎带 (原型)"
+envelopeMode: 包络
+envelopeStats: "窗口 {n} 点 → {columns} 列包络"
+
+# 工作区运行控制 (状态栏 RunControls + 统一发送门控)
+runStateStopped: 已停止
+runStateRunning: 运行中
+runStatePaused: 已暂停
+runStartHint: 启动工作区 (采集/缓存/求值开始; 从暂停恢复时保持数据连续)
+runPauseHint: 暂停工作区 (保持连接与采集, 数据继续入缓存与录制; 仅停自动发送与设备写)
+runStopHint: 停止工作区 (在途数据直接丢弃且不入缓存; 清空待发送任务, 已有缓存保留)
+runRecordingActive: 录制中
+runRecordingActiveHint: 工作区已暂停, 采集与录制仍在继续写入数据库
+runRecordingDisabled: 录制已关闭
+runRecordingDisabledHint: 录制数据库已在设置中关闭, 采集与运行控制不受影响; 可在「设置 → 数据」重新开启
+runRecordingDropped: 录制丢批 {{count}}
+runRecordingDroppedHint: 磁盘/checkpoint 一时跟不上, 写线程队列打满已丢弃部分批次 — 采集与运行控制不受影响, 但这段录制不完整
+displayFrozen: 非实时
+displayFrozenHint: 工作区未运行, 或该面板已离开最新 — 从暂停恢复时会自动跳到最新
+cmdSendRequiresRun: 工作区未运行 — 手动发送要求运行态, 请先在状态栏启动
+capabilityVersionFallback: 当前应用版本暂不支持连接该接口。
+capabilityDiscoveredEndpoint: 已发现的端点
+capabilityDiscovering: 发现中…
+capabilityNoEndpointsDiscovered: 未发现设备
+capabilityLabel: 名称
+capabilityUnavailable: 当前构建中不可用该接口。
+propertiesSectionGeneral: 通用
+propertiesSectionBusiness: 业务配置
+propertiesSectionExtra: 附加属性
+propertiesNoExtraAttributes: 暂无可用属性
+schemaFieldPortName: 串口
+schemaFieldBaudRate: 波特率
+schemaFieldDataBits: 数据位
+schemaFieldStopBits: 停止位
+schemaFieldParity: 校验位
+schemaFieldFlowControl: 流控
+schemaFieldHost: 主机
+schemaFieldPort: 端口
+schemaFieldPath: 路径
+schemaFieldAddress: 地址
+schemaFieldUnitId: 从站地址
+schemaFieldLocalAddr: 本地地址
+schemaFieldRemoteAddr: 远程地址
+schemaFieldLocalPort: 本地端口
+schemaFieldRemotePort: 远程端口
+schemaFieldListenAddr: 监听地址
+schemaFieldListenPort: 监听端口
+schemaFieldChannels: 通道数
+schemaFieldSampleRate: 采样率
+schemaFieldSignal: 信号类型
+schemaFieldCanBitrate: CAN 波特率
+schemaFieldBus: 总线
+schemaFieldChannel: 通道
+schemaFieldTimeoutMs: 超时 (ms)
+schemaFieldReconnect: 自动重连
+schemaFieldMaxAttempts: 最大重试次数
+schemaFieldInitialDelayMs: 初始延迟 (ms)
+schemaFieldMaxDelayMs: 最大延迟 (ms)
+schemaFieldPoints: 点位
+schemaFieldId: 标识
+schemaFieldArea: 区域
+schemaFieldDataType: 数据类型
+schemaFieldByteOrder: 字节序
+schemaFieldWordOrder: 字序
+schemaFieldScale: 缩放系数
+schemaFieldOffset: 偏移
+schemaFieldPollPeriodMs: 轮询周期 (ms)
+schemaFieldPlcType: PLC 型号
+schemaFieldRack: 机架号
+schemaFieldSlot: 槽位号
+schemaFieldDbNumber: 数据块编号
+schemaFieldByteOffset: 字节偏移
+schemaFieldBit: 位偏移
+schemaEnumNone: 无
+schemaEnumOdd: 奇校验
+schemaEnumEven: 偶校验
+schemaEnumOne: 1 位
+schemaEnumTwo: 2 位
+schemaEnumSoftware: 软件
+schemaEnumHardware: 硬件
+schemaEnumSeven: 7 位
+schemaEnumEight: 8 位
+schemaEnumBig: 大端
+schemaEnumLittle: 小端
+schemaEnumCoils: 线圈
+schemaEnumDiscreteInputs: 离散输入
+schemaEnumInputRegisters: 输入寄存器
+schemaEnumHoldingRegisters: 保持寄存器
+schemaEnumInputs: 输入 (I)
+schemaEnumOutputs: 输出 (Q)
+schemaEnumMarkers: 中间寄存器 (M)
+schemaEnumDb: 数据块 (DB)
+schemaEnumBps10k: 10 kbps
+schemaEnumBps20k: 20 kbps
+schemaEnumBps50k: 50 kbps
+schemaEnumBps100k: 100 kbps
+schemaEnumBps125k: 125 kbps
+schemaEnumBps250k: 250 kbps
+schemaEnumBps500k: 500 kbps
+schemaEnumBps800k: 800 kbps
+schemaEnumBps1m: 1 Mbps
+
+devicePanelHint: 点击或拖动设备到画布，再配置通信参数并连接。
+devicePanelSearch: 搜索名称、端口、VID/PID…
+devicePanelAdd: 添加设备
+devicePanelManual: 手动配置
+devicePanelAdded: 已添加
+
+deviceTypeBluetooth: 蓝牙串口
+deviceTypeUsb: USB 串口
+deviceTypePci: PCI 串口
+deviceTypeSystem: 系统串口
+deviceBluetoothNoUsbIds: 非 USB 设备，无 USB VID/PID
+
+devicePanelDevices: 设备
+devicePanelManualConnections: 手动添加连接
+devicePanelConnectVia: 连接方式
+
+paletteSearchAll: 搜索设备、控件、分类…
+paletteJumpTo: 跳转到分类
+
+addDefaultCanvas: 添加默认画布
+defaultCanvas: 默认画布
+defaultCanvasUnavailable: 无法添加默认画布，请检查串口设备目录后重试。
+
+deviceTreeTitle: 设备树
+deviceTreeHint: 将连接、协议引擎和测试数据装配成设备树。协议输出可在画布连接到显示控件。
+deviceTreeEmpty: 尚无设备。添加连接或测试数据源开始设计。
+deviceTreeSearch: 搜索设备、协议或节点 ID
+deviceTreeAddRoot: 添加设备
+deviceTreeAddProtocol: 添加协议引擎
+deviceTreeAddSimulation: 添加测试数据
+deviceTreeEnabled: 启用节点
+deviceTreeRemove: 删除子树
+deviceTreeConfigure: 节点配置
+deviceTreeSelect: 选择节点以编辑配置
+schemaUnsupported: 该配置 schema 含暂不支持的字段形式，请使用 JSON 编辑。
+schemaValueUnset: 未设置
+deviceTreeReconnect: 修改配置或拓扑会关闭所属设备，请重新连接以应用更改。
+deviceTreeCanvasNode: 此节点由画布连线归属设备，点击下方按钮编辑。
+deviceTreeEditCanvas: 打开画布节点属性
+deviceTreeUnavailable: 无法读取设备目录
+deviceTreePath: 节点路径
+deviceTreeDisabled: 已禁用
+deviceTreeClosed: 未连接
+deviceTreeOnline: 已连接
+deviceTreeBusy: 正在连接
+deviceTreeFailed: 连接异常
+deviceTreeCollapse: 折叠
+deviceTreeExpand: 展开
+deviceTreeInvalidName: 名称不能为空、不能包含 /，且不能与兄弟节点重名。
+deviceTreeSimulationHint: 启用后用测试数据替代父设备输入，不访问真实硬件。
+deviceTreeSignal: 波形
+deviceTreeFrequency: 频率 (Hz)
+deviceTreeAmplitude: 幅值
+deviceTreeOffset: 偏移
+deviceTreeSampleRate: 采样率 (Hz)
+deviceTreeSeed: 随机种子
+deviceTreeEncoding: 生成格式
+deviceTreeAutoEncoding: 自动匹配协议引擎
+deviceTreeJsonConfig: 驱动配置 (JSON)
+deviceTreeApply: 应用配置
+deviceTreeDriver: 驱动
+deviceTreeCatalog: 发现硬件设备
+deviceTreeSubtreeHint: 删除节点及其子节点，并移除相关数据连线。
+deviceTreeAddChild: 添加子节点
+deviceTreeCanvasBadge: 画布
+catalogCreateFailed: 节点创建失败
+unsupportedWidget: 未知控件

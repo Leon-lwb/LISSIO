@@ -20,7 +20,7 @@ import { platform } from '../lib/platform';
 import { hasTauriRuntime } from '../lib/rpc';
 import { useSettingsStore } from '../store/settingsStore';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
 import { ThemeEditor } from './ThemeEditor';
 import type { SettingFieldDef} from './settingFields';
@@ -122,9 +122,9 @@ export function SettingsModal() {
     if (!searchActive) return baseFields;
     const q = searchQuery.toLowerCase();
     return baseFields.filter((f) => {
-      const label = t(lang, f.labelKey).toLowerCase();
-      const desc = t(lang, f.descKey).toLowerCase();
-      const category = t(lang, CATEGORY_LABEL_KEY[f.category]).toLowerCase();
+      const label = translate(f.labelKey, lang).toLowerCase();
+      const desc = translate(f.descKey, lang).toLowerCase();
+      const category = translate(CATEGORY_LABEL_KEY[f.category], lang).toLowerCase();
       return (
         label.includes(q) ||
         desc.includes(q) ||
@@ -175,14 +175,14 @@ export function SettingsModal() {
   const updateBusy = updateStatus === 'checking' || updateStatus === 'downloading';
   const updateLabel =
     updateStatus === 'checking'
-      ? t(lang, 'updateChecking')
+      ? translate('updateChecking', lang)
       : updateStatus === 'available' && updateInfo
-        ? `${t(lang, 'updateDownload')} v${updateInfo.version}`
+        ? `${translate('updateDownload', lang)} v${updateInfo.version}`
         : updateStatus === 'downloading'
-          ? `${t(lang, 'updateDownloading')} ${updateProgress}%`
+          ? `${translate('updateDownloading', lang)} ${updateProgress}%`
           : updateStatus === 'ready'
-            ? t(lang, 'updateRelaunch')
-            : t(lang, 'updateCheck');
+            ? translate('updateRelaunch', lang)
+            : translate('updateCheck', lang);
   const handleUpdateClick = () => {
     if (updateStatus === 'ready') void relaunchApp();
     else if (updateStatus === 'available') void downloadAndInstall();
@@ -208,9 +208,9 @@ export function SettingsModal() {
     (update as (c: keyof AppSettings, f: string, v: unknown) => void)('ai', field, value);
   };
   const aiSectionLabel = aiSection === 'plugins'
-    ? t(lang, 'settingsAiSectionPlugins')
+    ? translate('settingsAiSectionPlugins', lang)
     : aiSection === 'mcp'
-      ? t(lang, 'settingsAiSectionMcp')
+      ? translate('settingsAiSectionMcp', lang)
       : null;
 
   return (
@@ -223,27 +223,27 @@ export function SettingsModal() {
     >
       <DialogSurface
         className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] animate-[settings-slide-in_0.2s_ease-out]"
-        label={t(lang, 'settingsTitle')}
+        label={translate('settingsTitle', lang)}
       >
         {/* 顶部 — 标题 + 搜索框 + 关闭 */}
         <DialogHeader className="gap-3">
           <div className="flex items-center gap-1.5 text-text-bright text-base font-semibold flex-shrink-0">
             <Type size={16} />
-            <span>{t(lang, 'settingsTitle')}</span>
+            <span>{translate('settingsTitle', lang)}</span>
           </div>
           {/* ESC 先清空搜索, 空值才冒泡到 window 关闭弹窗 (SearchInput 内处理) */}
           <SearchInput
             size="md"
             className="flex-1"
             inputRef={searchInputRef}
-            placeholder={t(lang, 'settingsSearch')}
+            placeholder={translate('settingsSearch', lang)}
             value={searchQuery}
             onChange={(value) => {
               setAiSection('main');
               setSearchQuery(value);
             }}
           />
-          <button className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer" onClick={close} title={t(lang, 'settingsClose')}>
+          <button className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer" onClick={close} title={translate('settingsClose', lang)}>
             <X size={16} />
           </button>
         </DialogHeader>
@@ -263,11 +263,11 @@ export function SettingsModal() {
             />
             <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
               <div className="section-heading mb-1">
-                {t(lang, 'updateCategory')}
+                {translate('updateCategory', lang)}
               </div>
               {appVersion && (
                 <div className="text-xs text-text-secondary pb-1">
-                  {t(lang, 'updateCurrentVersion')}: v{appVersion}
+                  {translate('updateCurrentVersion', lang)}: v{appVersion}
                 </div>
               )}
               <button
@@ -282,8 +282,8 @@ export function SettingsModal() {
                 <span>{updateLabel}</span>
               </button>
               <div className="flex items-center justify-between gap-2 py-1.5">
-                <span className="text-xs text-text-secondary" title={t(lang, 'updateChannelDesc')}>
-                  {t(lang, 'updateChannel')}
+                <span className="text-xs text-text-secondary" title={translate('updateChannelDesc', lang)}>
+                  {translate('updateChannel', lang)}
                 </span>
                 <select
                   className="px-2 py-0.5 bg-bg-input text-text-primary border border-border rounded text-xs focus:outline-none focus:border-accent transition-colors cursor-pointer"
@@ -293,8 +293,8 @@ export function SettingsModal() {
                     if (next !== effectiveChannel) setPendingChannel(next);
                   }}
                 >
-                  <option value="stable">{t(lang, 'updateChannelStable')}</option>
-                  <option value="beta">{t(lang, 'updateChannelBeta')}</option>
+                  <option value="stable">{translate('updateChannelStable', lang)}</option>
+                  <option value="beta">{translate('updateChannelBeta', lang)}</option>
                 </select>
               </div>
               {updateStatus === 'downloading' && (
@@ -306,14 +306,14 @@ export function SettingsModal() {
                 </div>
               )}
               {updateStatus === 'up-to-date' && (
-                <div className="text-xs text-text-secondary pb-1">{t(lang, 'updateUpToDate')}</div>
+                <div className="text-xs text-text-secondary pb-1">{translate('updateUpToDate', lang)}</div>
               )}
               {updateStatus === 'ready' && (
-                <div className="text-xs text-text-secondary pb-1">{t(lang, 'updateReady')}</div>
+                <div className="text-xs text-text-secondary pb-1">{translate('updateReady', lang)}</div>
               )}
               {updateStatus === 'error' && updateError && (
                 <div className="text-xs text-text-danger pb-1 break-all">
-                  {t(lang, 'updateError')}: {updateError}
+                  {translate('updateError', lang)}: {updateError}
                 </div>
               )}
             </div>
@@ -324,16 +324,16 @@ export function SettingsModal() {
             {activeCategory === 'ai' && !searchQuery.trim() && (
               <nav
                 className="flex items-center gap-1.5 pb-3 text-xs text-text-secondary"
-                aria-label={t(lang, 'settingsBreadcrumb')}
+                aria-label={translate('settingsBreadcrumb', lang)}
               >
-                <span>{t(lang, 'settingsTitle')}</span>
+                <span>{translate('settingsTitle', lang)}</span>
                 <ChevronRight size={12} aria-hidden="true" />
                 <button
                   type="button"
                   className={aiSection === 'main' ? 'text-text-primary' : 'hover:text-text-primary'}
                   onClick={() => setAiSection('main')}
                 >
-                  {t(lang, CATEGORY_LABEL_KEY.ai)}
+                  {translate(CATEGORY_LABEL_KEY.ai, lang)}
                 </button>
                 {aiSectionLabel && (
                   <>
@@ -364,15 +364,15 @@ export function SettingsModal() {
                 <div key={cat} className="mb-6">
                   {searchQuery.trim() && (
                     <div className="section-heading pb-2 mb-3 border-b border-border">
-                      {t(lang, CATEGORY_LABEL_KEY[cat])}
+                      {translate(CATEGORY_LABEL_KEY[cat], lang)}
                     </div>
                   )}
                   {fields.map((def) => (
                     <Fragment key={`${def.category}-${def.field}`}>
                       <div className="flex items-start justify-between gap-6 py-2.5 border-b border-border last:border-b-0">
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-text-primary mb-0.5">{t(lang, def.labelKey)}</div>
-                          <div className="text-xs text-text-secondary leading-relaxed">{t(lang, def.descKey)}</div>
+                          <div className="text-sm text-text-primary mb-0.5">{translate(def.labelKey, lang)}</div>
+                          <div className="text-xs text-text-secondary leading-relaxed">{translate(def.descKey, lang)}</div>
                         </div>
                         <div className="flex-shrink-0 min-w-[200px] flex items-center justify-end">{renderControl(def)}</div>
                       </div>
@@ -398,7 +398,7 @@ export function SettingsModal() {
                   disabled={isResettingCategory}
                 >
                   <RotateCcw size={12} />
-                  <span>{t(lang, 'settingsResetCategory')}</span>
+                  <span>{translate('settingsResetCategory', lang)}</span>
                 </button>
                 {resetCategoryState.error && (
                   <div className="text-xs text-text-danger break-all">{resetCategoryState.error}</div>
@@ -418,7 +418,7 @@ export function SettingsModal() {
               disabled={isSaving}
             >
               <Check size={14} />
-              <span>{t(lang, 'settingsDone')}</span>
+              <span>{translate('settingsDone', lang)}</span>
             </button>
             {saveState.error && (
               <div className="text-xs text-text-danger break-all">{saveState.error}</div>

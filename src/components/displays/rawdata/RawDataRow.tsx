@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { type RawDataLineSource, RAWDATA_BYTES_PER_ROW } from '../../../lib/buffers/dataBuffer';
 import { decodeText, isTextEncoding } from '../../../lib/utils/textEncoding';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { ROW_HEIGHT, GROUP_SIZE, formatTime, byteToHex, byteToAscii, isPrintable, hexColorClass, directionColorClass, directionSymbol, EscapedText, type HexColorMode, type RawDataGrouping, type RawDataRepr } from './rawDataViewHelpers';
 
 export interface RowProps {
@@ -110,7 +110,7 @@ export const Row = memo(function Row({
     >
       <span
         className={`text-xs font-mono min-w-[14px] text-center ${continued ? 'text-text-disabled' : directionColorClass(line.direction)}`}
-        title={`${line.direction === 'tx' ? 'TX' : 'RX'}${continued ? ` · ${t(lang, 'rawDataWrappedContinuation')}` : ''}`}
+        title={`${line.direction === 'tx' ? 'TX' : 'RX'}${continued ? ` · ${translate('rawDataWrappedContinuation', lang)}` : ''}`}
       >
         {continued ? '↳' : directionSymbol(line.direction)}
       </span>

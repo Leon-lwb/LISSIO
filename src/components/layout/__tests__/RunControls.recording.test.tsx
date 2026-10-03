@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { RunControls } from '../RunControls';
 import { useAppStore } from '../../../store/appStore';
 import { api, type RecordingHealth } from '../../../lib/tauri/tauri';
@@ -23,7 +24,7 @@ const HEALTHY: RecordingHealth = {
 async function renderWithRunState(runState: 'running' | 'paused' | 'stopped') {
   await act(async () => {
     useAppStore.setState({ runState });
-    render(<RunControls />);
+    renderWithI18n(<RunControls />);
     await Promise.resolve();
   });
 }

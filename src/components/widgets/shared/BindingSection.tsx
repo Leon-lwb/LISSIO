@@ -1,7 +1,7 @@
 import type { Node } from '@xyflow/react';
 import { useAppStore } from '../../../store/appStore';
 import type { WidgetBinding, WidgetConfig } from '../../../types';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, TextField } from '../../ui/fields';
 
 export type BindableKind = 'Knob' | 'Slider' | 'Button' | 'Radio' | 'Checkbox';
@@ -40,17 +40,17 @@ export function BindingSection<K extends BindableKind>({ widget, update }: Bindi
 
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'bindingMode')}</div>
+      <div className="section-heading section-heading--micro mb-2">{translate('bindingMode', lang)}</div>
       <select className="form-select mb-2" value={binding.mode} onChange={(event) => {
         const mode = event.target.value;
         if (mode === 'None') setBinding({ mode: 'None' });
         else if (mode === 'Manual') setBinding({ mode: 'Manual', params: { transportId: '', template: '{value}' } });
         else setBinding({ mode: 'Auto', params: { transportId: '', protocolId: '', channel: 0 } });
       }}>
-        <option value="None">{t(lang, 'none')}</option><option value="Auto">{t(lang, 'auto')}</option><option value="Manual">{t(lang, 'manual')}</option>
+        <option value="None">{translate('none', lang)}</option><option value="Auto">{translate('auto', lang)}</option><option value="Manual">{translate('manual', lang)}</option>
       </select>
       {binding.mode !== 'None' && <>
-        <label className="block text-xs text-text-secondary mb-1">{t(lang, 'bindingTransport')}</label>
+        <label className="block text-xs text-text-secondary mb-1">{translate('bindingTransport', lang)}</label>
         <select className="form-select mb-2" value={binding.params.transportId} onChange={(event) => {
           const nextTransport = event.target.value;
           if (binding.mode === 'Manual') setBinding({ ...binding, params: { ...binding.params, transportId: nextTransport } });
@@ -61,23 +61,23 @@ export function BindingSection<K extends BindableKind>({ widget, update }: Bindi
         </select>
       </>}
       {binding.mode === 'Auto' && <>
-        <label className="block text-xs text-text-secondary mb-1">{t(lang, 'bindingProtocol')}</label>
+        <label className="block text-xs text-text-secondary mb-1">{translate('bindingProtocol', lang)}</label>
         <select className="form-select mb-2" value={binding.params.protocolId}
           onChange={(event) => setBinding({ ...binding, params: { ...binding.params, protocolId: event.target.value } })}>
           <option value="">—</option>{protocols.map((node) => <option key={node.id} value={node.id}>{nodeDisplayName(node)}</option>)}
         </select>
-        <NumberField label={t(lang, 'channel')} value={binding.params.channel} onCommit={(channel) => {
+        <NumberField label={translate('channel', lang)} value={binding.params.channel} onCommit={(channel) => {
           if (!Number.isInteger(channel) || channel < 0) return false;
           setBinding({ ...binding, params: { ...binding.params, channel } }); return true;
         }} />
       </>}
       {binding.mode === 'Manual' && <>
-        <TextField label={t(lang, 'template')} value={binding.params.template}
+        <TextField label={translate('template', lang)} value={binding.params.template}
           onCommit={(template) => setBinding({ ...binding, params: { ...binding.params, template } })} />
-        <div className="text-[10px] text-text-secondary">{t(lang, 'bindingTemplateHint')}</div>
+        <div className="text-[10px] text-text-secondary">{translate('bindingTemplateHint', lang)}</div>
       </>}
       {(invalidTarget || invalidProtocol) &&
-        <div className="mt-1 text-[10px] text-red">{t(lang, 'bindingInvalidTarget')}</div>}
+        <div className="mt-1 text-[10px] text-red">{translate('bindingInvalidTarget', lang)}</div>}
     </section>
   );
 }

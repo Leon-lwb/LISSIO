@@ -6,7 +6,7 @@ import { memo } from 'react';
 import type { MathOp } from '../../../types';
 import { isUnaryMathOp } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, SelectField, TextField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -37,29 +37,29 @@ export const MathProperties = memo(function MathProperties({ widget, update }: W
     update({ kind: 'Math', params: { ...widget.params, ...p } });
   return (
     <>
-      <SelectField label={t(lang, 'mathOp')} value={op}
-        options={OP_OPTIONS.map(([value, key]) => ({ value, label: t(lang, key) }))}
+      <SelectField label={translate('mathOp', lang)} value={op}
+        options={OP_OPTIONS.map(([value, key]) => ({ value, label: translate(key, lang) }))}
         onChange={(v) => patch({ op: v as MathOp })} />
       {!isUnaryMathOp(op) && (
-        <NumberField label={t(lang, 'mathInputs')} value={inputCount}
+        <NumberField label={translate('mathInputs', lang)} value={inputCount}
           onCommit={(v) => {
             const next = Math.round(v);
             if (next < 1 || next > 8) return false;
             patch({ inputCount: next });
             return true;
           }}
-          error={t(lang, 'invalidRange')} />
+          error={translate('invalidRange', lang)} />
       )}
-      <TextField label={t(lang, 'unit')} value={unit} allowEmpty
+      <TextField label={translate('unit', lang)} value={unit} allowEmpty
         onCommit={(next) => patch({ unit: next })} />
-      <NumberField label={t(lang, 'precision')} value={precision}
+      <NumberField label={translate('precision', lang)} value={precision}
         onCommit={(v) => {
           const next = Math.round(v);
           if (next < 0 || next > 6) return false;
           patch({ precision: next });
           return true;
         }}
-        error={t(lang, 'invalidRange')} />
+        error={translate('invalidRange', lang)} />
     </>
   );
 });

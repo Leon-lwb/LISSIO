@@ -10,7 +10,7 @@ import {
   makeEmptyFrame,
   type ComputedFrame,
 } from '../../../lib/utils/commandFrames';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import { nanoid } from 'nanoid';
 import { Plus, X } from 'lucide-react';
@@ -66,7 +66,7 @@ function CommandFrameTabBar({
   return (
     <div className="flex items-center gap-1 px-2 py-1 border-b border-border shrink-0 overflow-x-auto">
       <span className="section-heading section-heading--micro pr-1 shrink-0">
-        {t(lang, 'cmdFrames')}
+        {translate('cmdFrames', lang)}
       </span>
       {frames.map((f) => {
         const active = f.id === activeId;
@@ -86,7 +86,7 @@ function CommandFrameTabBar({
               setEditingId(f.id);
               setEditingLabel(f.label);
             }}
-            title={t(lang, 'cmdRenameFrameHint')}
+            title={translate('cmdRenameFrameHint', lang)}
           >
             {editingId === f.id ? (
               <input
@@ -107,7 +107,7 @@ function CommandFrameTabBar({
             {frames.length > 1 && (
               <button
                 className="p-0.5 opacity-muted hover:opacity-100 hover:text-red shrink-0"
-                title={t(lang, 'cmdRemoveFrame')}
+                title={translate('cmdRemoveFrame', lang)}
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(f.id);
@@ -121,7 +121,7 @@ function CommandFrameTabBar({
       })}
       <button
         className="inline-flex items-center justify-center p-1 rounded-sm border border-dashed border-border text-text-secondary hover:text-text-primary hover:border-accent transition-colors shrink-0"
-        title={t(lang, 'cmdAddFrame')}
+        title={translate('cmdAddFrame', lang)}
         onClick={onAdd}
       >
         <Plus size={11} />
@@ -231,7 +231,7 @@ export function CommandSender({ widget }: CommandSenderProps) {
   const handleSend = async () => {
     setError(null);
     if (!canSend) {
-      setError(t(lang, 'cmdSendRequiresRun'));
+      setError(translate('cmdSendRequiresRun', lang));
       return;
     }
     try {
@@ -273,7 +273,7 @@ export function CommandSender({ widget }: CommandSenderProps) {
   };
 
   const addFrame = () => {
-    const frame = makeEmptyFrame(id, `${t(lang, 'cmdNewFrame')} ${frames.length + 1}`);
+    const frame = makeEmptyFrame(id, `${translate('cmdNewFrame', lang)} ${frames.length + 1}`);
     applyFrames([...frames, frame]);
     setActiveFrameId(frame.id);
   };

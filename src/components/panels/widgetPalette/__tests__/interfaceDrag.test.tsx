@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { PaletteRow } from '../PaletteRow';
 import type { PaletteEntry } from '../paletteModel';
 import { dockDrag, __resetForTests } from '../../../../lib/dockDrag';
@@ -62,7 +63,7 @@ afterEach(async () => { cleanup(); __resetForTests(); resetModelCatalogForTests(
 describe('all interface palette entries', () => {
   it.each(entries)('$label creates one independent node per click/drop and consumes the trailing click', async (entry) => {
     const activate = (item: PaletteEntry) => { addPaletteNode(item, { x: 60, y: 60 }); };
-    render(<PaletteRow entry={entry} category="transport" entering={false} exiting={false} onActivate={activate} onEnterPlayed={() => undefined} />);
+    renderWithI18n(<PaletteRow entry={entry} category="transport" entering={false} exiting={false} onActivate={activate} onEnterPlayed={() => undefined} />);
     const row = screen.getByRole('button', { name: entry.label });
     fireEvent.click(row);
     const canvas = document.createElement('div');
@@ -143,7 +144,7 @@ describe('all interface palette entries', () => {
     await vi.waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(2));
     const firstId = useAppStore.getState().rfNodes[0].id;
     useAppStore.getState().onNodesChange([{ type: 'select', id: firstId, selected: true }]);
-    render(<NodePropertiesPanel />);
+    renderWithI18n(<NodePropertiesPanel />);
     const name = await screen.findByRole('textbox', { name: 'Widget Name' });
     fireEvent.change(name, { target: { value: 'PLC A' } });
     fireEvent.blur(name);

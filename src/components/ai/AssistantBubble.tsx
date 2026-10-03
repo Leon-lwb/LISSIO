@@ -3,7 +3,7 @@ import { Check, Copy, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { formatAiKindError } from '../../lib/ai/aiErrors';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiViewItem } from '../../types';
 
@@ -56,7 +56,7 @@ export const AssistantBubble = memo(function AssistantBubble({ item, canRetry }:
             <button
               className="p-0.5 rounded text-text-secondary hover:text-text-primary"
               onClick={() => void onCopy()}
-              title={t(lang, 'aiCopy')}
+              title={translate('aiCopy', lang)}
             >
               {copied ? <Check size={11} className="text-success" /> : <Copy size={11} />}
             </button>
@@ -66,7 +66,7 @@ export const AssistantBubble = memo(function AssistantBubble({ item, canRetry }:
               className="p-0.5 rounded text-text-secondary hover:text-text-primary disabled:opacity-disabled"
               onClick={() => void regenerate()}
               disabled={!canRetry}
-              title={t(lang, 'aiRetry')}
+              title={translate('aiRetry', lang)}
             >
               <RotateCcw size={11} />
             </button>

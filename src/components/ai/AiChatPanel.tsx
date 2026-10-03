@@ -28,7 +28,7 @@ import {
 } from '../../lib/tauri/attachments';
 import { checkAiProviderSettings } from '../../settings/aiProvider';
 import { notify, formatError } from '../../lib/tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiAttachment } from '../../types';
 import { AssistantBubble } from './AssistantBubble';
@@ -91,7 +91,7 @@ export function AiChatPanel() {
     void (async () => {
       await refreshSessions();
       if (useAiChatStore.getState().sessions.length === 0) {
-        await createSession(t(useAppStore.getState().lang, 'aiSessionNew'));
+        await createSession(translate('aiSessionNew', useAppStore.getState().lang));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -137,7 +137,7 @@ export function AiChatPanel() {
     for (const [key, i18nKey] of groups) {
       const names = rejections[key];
       if (names.length > 0) {
-        notify.warn(t(lang, 'aiAttach'), t(lang, i18nKey).replace('{n}', names.join(sep)), {
+        notify.warn(translate('aiAttach', lang), translate(i18nKey, lang).replace('{n}', names.join(sep)), {
           source: 'ai-attach',
         });
       }
@@ -157,7 +157,7 @@ export function AiChatPanel() {
     try {
       mergePicked(await pickAttachments(attachments));
     } catch (e) {
-      notify.error(t(lang, 'aiAttach'), formatError(e), { source: 'ai-attach' });
+      notify.error(translate('aiAttach', lang), formatError(e), { source: 'ai-attach' });
     }
   };
 
@@ -165,7 +165,7 @@ export function AiChatPanel() {
     try {
       mergePicked(await readDroppedFiles(files, attachments));
     } catch (e) {
-      notify.error(t(lang, 'aiAttach'), formatError(e), { source: 'ai-attach' });
+      notify.error(translate('aiAttach', lang), formatError(e), { source: 'ai-attach' });
     }
   };
 
@@ -174,12 +174,12 @@ export function AiChatPanel() {
     if (!activeSessionId || viewItems.length === 0) return;
     const title =
       useAiChatStore.getState().sessions.find((s) => s.id === activeSessionId)?.title ??
-      t(lang, 'aiSessionNew');
+      translate('aiSessionNew', lang);
     const result = await saveMdFile(sessionFilename(title), sessionToMarkdown(title, viewItems, lang));
     if (result === 'ok') {
-      notify.info(t(lang, 'aiChatExportSuccess'), t(lang, 'aiChatExportSuccessDesc'), { source: 'ai-export' });
+      notify.info(translate('aiChatExportSuccess', lang), translate('aiChatExportSuccessDesc', lang), { source: 'ai-export' });
     } else if (result === 'error') {
-      notify.error(t(lang, 'aiChatExportFailed'), t(lang, 'aiChatExportFailedDesc'), { source: 'ai-export' });
+      notify.error(translate('aiChatExportFailed', lang), translate('aiChatExportFailedDesc', lang), { source: 'ai-export' });
     }
     // 用户取消不提示
   };
@@ -190,12 +190,12 @@ export function AiChatPanel() {
       const text = await readMdFile();
       if (text == null) return; // 用户取消
       if (!text.trim()) {
-        notify.warn(t(lang, 'aiChatImportFailed'), t(lang, 'aiChatImportEmpty'), { source: 'ai-import' });
+        notify.warn(translate('aiChatImportFailed', lang), translate('aiChatImportEmpty', lang), { source: 'ai-import' });
         return;
       }
       setInput(text);
     } catch (e) {
-      notify.error(t(lang, 'aiChatImportFailed'), formatError(e), { source: 'ai-import' });
+      notify.error(translate('aiChatImportFailed', lang), formatError(e), { source: 'ai-import' });
     }
   };
 
@@ -215,7 +215,7 @@ export function AiChatPanel() {
         onPointerDown={(e) => {
           if (e.button !== 0) return;
           if ((e.target as HTMLElement).closest('button, input')) return;
-          dockDrag.begin(e, { kind: 'ai-panel', label: t(lang, 'aiChat') });
+          dockDrag.begin(e, { kind: 'ai-panel', label: translate('aiChat', lang) });
         }}
       >
         <Bot size={13} className="text-accent shrink-0" />
@@ -225,7 +225,7 @@ export function AiChatPanel() {
             className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void onImportChat()}
             disabled={streaming}
-            title={t(lang, 'aiImportChat')}
+            title={translate('aiImportChat', lang)}
           >
             <Upload size={12} />
           </button>
@@ -233,7 +233,7 @@ export function AiChatPanel() {
             className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void onExportChat()}
             disabled={streaming || viewItems.length === 0}
-            title={t(lang, 'aiExportChat')}
+            title={translate('aiExportChat', lang)}
           >
             <Download size={12} />
           </button>
@@ -241,14 +241,14 @@ export function AiChatPanel() {
             className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
             onClick={() => void clearSession()}
             disabled={streaming || viewItems.length === 0}
-            title={t(lang, 'aiClear')}
+            title={translate('aiClear', lang)}
           >
             <Eraser size={12} />
           </button>
           <button
             className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary"
             onClick={() => setAiPanelVisible(false)}
-            title={t(lang, 'aiClose')}
+            title={translate('aiClose', lang)}
           >
             <X size={13} />
           </button>
@@ -268,7 +268,7 @@ export function AiChatPanel() {
           }}
         >
           {viewItems.length === 0 && !showStreaming && (
-            <div className="h-full flex items-center justify-center text-text-secondary">{t(lang, 'aiPlaceholder')}</div>
+            <div className="h-full flex items-center justify-center text-text-secondary">{translate('aiPlaceholder', lang)}</div>
           )}
           {viewItems.map((item, i) =>
             item.role === 'user' ? (
@@ -321,8 +321,8 @@ export function AiChatPanel() {
                 });
               }
             }}
-            title={t(lang, 'aiScrollToBottom')}
-            aria-label={t(lang, 'aiScrollToBottom')}
+            title={translate('aiScrollToBottom', lang)}
+            aria-label={translate('aiScrollToBottom', lang)}
           >
             <ArrowDown size={16} />
           </button>
@@ -334,14 +334,14 @@ export function AiChatPanel() {
         <div className="flex items-center gap-2 px-3 py-1.5 border-t border-border-subtle bg-warning/10 text-warning text-[11px] shrink-0 animate-ai-banner-in">
           <AlertCircle size={11} className="shrink-0" />
           <span className="flex-1 min-w-0 truncate">
-            {t(lang, 'aiSendBlocked')}
+            {translate('aiSendBlocked', lang)}
             {formatAiKindError(sendIssue.kind, sendIssue.params, '', lang).summary}
           </span>
           <button
             className="px-1.5 py-0.5 rounded bg-warning/15 hover:bg-warning/25 shrink-0"
             onClick={() => openSettings('ai')}
           >
-            {t(lang, 'aiOpenSettings')}
+            {translate('aiOpenSettings', lang)}
           </button>
         </div>
       )}
@@ -384,7 +384,7 @@ export function AiChatPanel() {
                 <button
                   className="p-0.5 rounded text-text-secondary hover:text-text-primary shrink-0"
                   onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
-                  title={t(lang, 'aiRemoveAttachment')}
+                  title={translate('aiRemoveAttachment', lang)}
                 >
                   <X size={10} />
                 </button>
@@ -407,8 +407,8 @@ export function AiChatPanel() {
                 composerCompositionEndedAt.current = event.timeStamp;
               }}
               onKeyDown={onComposerKeyDown}
-              placeholder={t(lang, 'inputMessage')}
-              aria-label={t(lang, 'inputMessage')}
+              placeholder={translate('inputMessage', lang)}
+              aria-label={translate('inputMessage', lang)}
               rows={1}
               className="ai-composer-textarea block w-full min-w-0 max-h-32 resize-none overflow-y-auto border-0 bg-transparent px-1.5 pt-1 pb-2 text-xs leading-5 text-text-primary placeholder:text-text-secondary outline-none [overflow-wrap:anywhere]"
             />
@@ -418,8 +418,8 @@ export function AiChatPanel() {
                 className="grid size-8 shrink-0 place-items-center rounded-full text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
                 onClick={() => void onPickAttachments()}
                 disabled={streaming}
-                title={t(lang, 'aiAttach')}
-                aria-label={t(lang, 'aiAttach')}
+                title={translate('aiAttach', lang)}
+                aria-label={translate('aiAttach', lang)}
               >
                 <Plus size={19} />
               </button>
@@ -428,8 +428,8 @@ export function AiChatPanel() {
                 className={`grid size-8 shrink-0 place-items-center rounded-full text-text-inverse transition-colors disabled:opacity-disabled ${streaming ? 'bg-danger hover:bg-bg-danger-hover' : 'bg-accent hover:bg-accent-hover'}`}
                 onClick={streaming ? () => void cancel() : () => onSend()}
                 disabled={!streaming && ((!input.trim() && attachments.length === 0) || !activeSessionId || !!sendIssue)}
-                title={t(lang, streaming ? 'aiStop' : 'aiSend')}
-                aria-label={t(lang, streaming ? 'aiStop' : 'aiSend')}
+                title={translate(streaming ? 'aiStop' : 'aiSend', lang)}
+                aria-label={translate(streaming ? 'aiStop' : 'aiSend', lang)}
               >
                 {streaming ? <Square size={13} fill="currentColor" /> : <ArrowUp size={18} />}
               </button>

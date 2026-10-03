@@ -5,7 +5,7 @@ import type { DiscoveredEndpoint } from '../../types';
 import { applyTestAttribute } from '../acquisition/simulation';
 import { createNodeFromCatalog, CatalogError } from '../models/createFromCatalog';
 import { notify, formatError } from '../tauri/notifications';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 
 /// 面板创建条目的公共形状 (PaletteEntry 与 WidgetDragSpec 的交集)
 export interface PaletteCreateSpec {
@@ -40,7 +40,7 @@ export function addPaletteNode(
     if (spec.acquisition) {
       void addAcquisitionNode(spec.acquisition, position, tabId, spec.discoveredEndpoint)
         .catch((error: unknown) => {
-          notify.error(t(useAppStore.getState().lang, 'catalogCreateFailed'), formatError(error), { source: 'paletteCreate' });
+          notify.error(translate('catalogCreateFailed', useAppStore.getState().lang), formatError(error), { source: 'paletteCreate' });
         });
     }
     return true;
@@ -51,10 +51,10 @@ export function addPaletteNode(
     void createNodeFromCatalog({ modelId, variantId, position, tabId, label })
       .catch((error: unknown) => {
         if (error instanceof CatalogError) {
-          notify.error(t(app.lang, 'catalogCreateFailed'), error.message, { source: 'paletteCreate' });
+          notify.error(translate('catalogCreateFailed', app.lang), error.message, { source: 'paletteCreate' });
           return;
         }
-        notify.error(t(app.lang, 'catalogCreateFailed'), formatError(error), { source: 'paletteCreate' });
+        notify.error(translate('catalogCreateFailed', app.lang), formatError(error), { source: 'paletteCreate' });
       });
   };
 

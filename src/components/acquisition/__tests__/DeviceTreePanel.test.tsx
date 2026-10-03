@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { seedModelCatalogForTests, mockPrepareEcho } from '../../../test/modelCatalog';
 import { resetModelCatalogForTests } from '../../../store/modelCatalogStore';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import type { AdapterCapability, DriverManifestProjection } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { api } from '../../../lib/tauri/tauri';
@@ -52,7 +53,7 @@ describe('DeviceTreePanel', () => {
       schemaVersion: 1, config: {}, enabled: true, children: [] }, undefined, undefined, 'default');
     root.data.ports = [{ id: 'rx', direction: 'output', domain: 'bytes' }];
     useAppStore.setState({ rfNodes: [root] });
-    render(<DeviceTreePanel />);
+    renderWithI18n(<DeviceTreePanel />);
     fireEvent.click(screen.getByRole('button', { name: /Serial 1/ }));
     const add = await screen.findByRole('button', { name: /添加协议引擎|Add protocol engine/ });
     fireEvent.click(add);

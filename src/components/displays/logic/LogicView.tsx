@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { LogicTimingChart } from './LogicTimingChart';
 import { DecodedEventList } from './DecodedEventList';
 import { PanelTabs } from '../../ui/PanelTabs';
@@ -18,8 +18,8 @@ export function LogicView() {
   const [mode, setMode] = useState<ViewMode>('timing');
 
   const tabs = [
-    { value: 'timing' as const, label: t(lang, 'timingDiagram'), icon: <Activity /> },
-    { value: 'events' as const, label: t(lang, 'decodedEvents'), icon: <List /> },
+    { value: 'timing' as const, label: translate('timingDiagram', lang), icon: <Activity /> },
+    { value: 'events' as const, label: translate('decodedEvents', lang), icon: <List /> },
   ];
 
   const isLogicProtocol = protocolConfig?.kind === 'LogicDecode';
@@ -29,9 +29,9 @@ export function LogicView() {
       {!isLogicProtocol && (
         <ContextualHint
           id="logic-protocol-mismatch"
-          message={t(lang, 'logicHintMessage')}
+          message={translate('logicHintMessage', lang)}
           action={{
-            label: t(lang, 'logicHintAction'),
+            label: translate('logicHintAction', lang),
             onClick: () => openCategory('protocol'),
           }}
         />

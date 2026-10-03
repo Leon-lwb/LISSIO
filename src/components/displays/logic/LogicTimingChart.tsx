@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { logicSampleBuffer } from '../../../lib/buffers/logicBuffer';
 import { clearLogicBuffer } from '../../../lib/buffers/logicSubscription';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 import { usePanelFollowing, usePanelGoLive } from '../common/PanelLiveness';
@@ -156,14 +156,14 @@ export function LogicTimingChart() {
           className="flex-shrink-0"
           icon={<ArrowDown />}
           active={autoScroll}
-          title={t(lang, 'autoScroll')}
+          title={translate('autoScroll', lang)}
           onClick={() => setAutoScroll(!autoScroll)}
         />
         <ToolbarIconButton
           className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
-          title={t(lang, 'clear')}
+          title={translate('clear', lang)}
           onClick={handleClear}
         />
       </HorizontalScrollArea>
@@ -175,7 +175,7 @@ export function LogicTimingChart() {
       >
         {samples.length === 0 ? (
           <div className="flex items-center justify-center h-full text-text-secondary text-xs">
-            {t(lang, 'noLogicSamples')}
+            {translate('noLogicSamples', lang)}
           </div>
         ) : (
           <svg

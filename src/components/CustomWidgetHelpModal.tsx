@@ -1,6 +1,6 @@
 import { X, BookOpen, Code, Lightbulb, Send, Settings, Workflow } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 
 interface CustomWidgetHelpModalProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
       >
         <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">
           <BookOpen size={16} />
-          <span>{t(lang, 'helpTitle')}</span>
+          <span>{translate('helpTitle', lang)}</span>
           <button
             className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer ml-auto"
             onClick={onClose}
@@ -40,14 +40,14 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Lightbulb size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpQuickStart')}
+              {translate('helpQuickStart', lang)}
             </h2>
             <ol className="m-0 pl-5 text-sm text-text-primary leading-[1.7] list-decimal">
-              <li>{t(lang, 'helpStep1')}</li>
-              <li>{t(lang, 'helpStep2')}</li>
-              <li>{t(lang, 'helpStep3')}</li>
-              <li>{t(lang, 'helpStep4')}</li>
-              <li>{t(lang, 'helpStep5')}</li>
+              <li>{translate('helpStep1', lang)}</li>
+              <li>{translate('helpStep2', lang)}</li>
+              <li>{translate('helpStep3', lang)}</li>
+              <li>{translate('helpStep4', lang)}</li>
+              <li>{translate('helpStep5', lang)}</li>
             </ol>
           </section>
 
@@ -55,33 +55,33 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Code size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpCodeStructure')}
+              {translate('helpCodeStructure', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpCodeStructureDesc')}</p>
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpCodeStructureDesc', lang)}</p>
             <pre className="m-0 px-3 py-2.5 bg-bg-input border border-border rounded font-mono text-xs text-text-primary leading-[1.5] overflow-x-auto whitespace-pre">{`({
-  name: 'MyWidget',           // ${t(lang, 'helpFieldName')}
-  description: '描述信息',     // ${t(lang, 'helpFieldDescription')}
-  inputs: [                    // ${t(lang, 'helpFieldInputs')}
+  name: 'MyWidget',           // ${translate('helpFieldName', lang)}
+  description: '描述信息',     // ${translate('helpFieldDescription', lang)}
+  inputs: [                    // ${translate('helpFieldInputs', lang)}
     { id: 'value', label: 'Value' },
     { id: 'setpoint', label: 'Setpoint' }
   ],
-  outputs: [                   // ${t(lang, 'helpFieldOutputs')}
+  outputs: [                   // ${translate('helpFieldOutputs', lang)}
     { id: 'alarm', label: 'Alarm' }
   ],
-  settings: [                  // ${t(lang, 'helpFieldSettings')}
+  settings: [                  // ${translate('helpFieldSettings', lang)}
     { id: 'threshold', label: '阈值', type: 'number', default: 50 },
     { id: 'color', label: '颜色', type: 'color', default: '#ff0000' },
     { id: 'text', label: '文本', type: 'text', default: 'ALARM' },
     { id: 'enabled', label: '启用', type: 'boolean', default: true }
   ],
-  onMount: function(ctx) {     // ${t(lang, 'helpFieldOnMount')}
+  onMount: function(ctx) {     // ${translate('helpFieldOnMount', lang)}
     ctx.state.count = 0;
   },
-  render: function(ctx) {      // ${t(lang, 'helpFieldRender')}
+  render: function(ctx) {      // ${translate('helpFieldRender', lang)}
     const v = ctx.inputs.value ?? 0;
     ctx.el.innerHTML = '<div>' + v + '</div>';
   },
-  onUnmount: function(ctx) {}  // ${t(lang, 'helpFieldOnUnmount')}
+  onUnmount: function(ctx) {}  // ${translate('helpFieldOnUnmount', lang)}
 })`}</pre>
           </section>
 
@@ -89,47 +89,47 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Workflow size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpCtxApi')}
+              {translate('helpCtxApi', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpCtxApiDesc')}</p>
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpCtxApiDesc', lang)}</p>
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="dialog-chrome text-text-secondary font-semibold text-left">
-                  <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiField')}</th>
-                  <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiType')}</th>
-                  <th className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiDesc')}</th>
+                  <th className="px-2 py-1.5 border-b border-border">{translate('helpApiField', lang)}</th>
+                  <th className="px-2 py-1.5 border-b border-border">{translate('helpApiType', lang)}</th>
+                  <th className="px-2 py-1.5 border-b border-border">{translate('helpApiDesc', lang)}</th>
                 </tr>
               </thead>
               <tbody className="text-text-primary">
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.el</code></td>
                   <td className="px-2 py-1.5 border-b border-border">HTMLElement</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiEl')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiEl', lang)}</td>
                 </tr>
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.inputs</code></td>
                   <td className="px-2 py-1.5 border-b border-border">{'Record<string, number>'}</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiInputs')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiInputs', lang)}</td>
                 </tr>
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.settings</code></td>
                   <td className="px-2 py-1.5 border-b border-border">{'Record<string, any>'}</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiSettings')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiSettings', lang)}</td>
                 </tr>
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.state</code></td>
                   <td className="px-2 py-1.5 border-b border-border">{'Record<string, any>'}</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiState')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiState', lang)}</td>
                 </tr>
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.send(port, value)</code></td>
                   <td className="px-2 py-1.5 border-b border-border">function</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiSend')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiSend', lang)}</td>
                 </tr>
                 <tr>
                   <td className="px-2 py-1.5 border-b border-border"><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">ctx.log(...args)</code></td>
                   <td className="px-2 py-1.5 border-b border-border">function</td>
-                  <td className="px-2 py-1.5 border-b border-border">{t(lang, 'helpApiLog')}</td>
+                  <td className="px-2 py-1.5 border-b border-border">{translate('helpApiLog', lang)}</td>
                 </tr>
               </tbody>
             </table>
@@ -139,14 +139,14 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Send size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpInputsOutputs')}
+              {translate('helpInputsOutputs', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpIoDesc')}</p>
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpIoDesc', lang)}</p>
             <ul className="m-0 pl-5 text-sm text-text-primary leading-[1.7] list-disc">
-              <li>{t(lang, 'helpIoInputItem')}</li>
-              <li>{t(lang, 'helpIoOutputItem')}</li>
-              <li>{t(lang, 'helpIoChannelSource')}</li>
-              <li>{t(lang, 'helpIoMathChain')}</li>
+              <li>{translate('helpIoInputItem', lang)}</li>
+              <li>{translate('helpIoOutputItem', lang)}</li>
+              <li>{translate('helpIoChannelSource', lang)}</li>
+              <li>{translate('helpIoMathChain', lang)}</li>
             </ul>
           </section>
 
@@ -154,14 +154,14 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Settings size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpSettingsTypes')}
+              {translate('helpSettingsTypes', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpSettingsDesc')}</p>
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpSettingsDesc', lang)}</p>
             <ul className="m-0 pl-5 text-sm text-text-primary leading-[1.7] list-disc">
-              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">number</code> — {t(lang, 'helpSettingsNumber')}</li>
-              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">text</code> — {t(lang, 'helpSettingsText')}</li>
-              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">color</code> — {t(lang, 'helpSettingsColor')}</li>
-              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">boolean</code> — {t(lang, 'helpSettingsBoolean')}</li>
+              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">number</code> — {translate('helpSettingsNumber', lang)}</li>
+              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">text</code> — {translate('helpSettingsText', lang)}</li>
+              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">color</code> — {translate('helpSettingsColor', lang)}</li>
+              <li><code className="bg-bg-input px-1 py-0.5 rounded-sm text-accent font-mono">boolean</code> — {translate('helpSettingsBoolean', lang)}</li>
             </ul>
           </section>
 
@@ -169,10 +169,10 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Code size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpExamples')}
+              {translate('helpExamples', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpExamplesDesc')}</p>
-            <pre className="m-0 px-3 py-2.5 bg-bg-input border border-border rounded font-mono text-xs text-text-primary leading-[1.5] overflow-x-auto whitespace-pre">{`// ${t(lang, 'helpExample1Title')}
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpExamplesDesc', lang)}</p>
+            <pre className="m-0 px-3 py-2.5 bg-bg-input border border-border rounded font-mono text-xs text-text-primary leading-[1.5] overflow-x-auto whitespace-pre">{`// ${translate('helpExample1Title', lang)}
 ({
   name: 'ThresholdAlarm',
   inputs: [
@@ -209,7 +209,7 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
   }
 })
 
-// ${t(lang, 'helpExample2Title')}
+// ${translate('helpExample2Title', lang)}
 ({
   name: 'Oscilloscope',
   inputs: [{ id: 'value', label: 'Value' }],
@@ -259,21 +259,21 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
           <section className="flex flex-col gap-2">
             <h2 className="flex items-center gap-1.5 text-base font-semibold text-text-primary m-0 pb-1 border-b border-border">
               <Lightbulb size={14} className="text-accent shrink-0" />
-              {t(lang, 'helpSecurity')}
+              {translate('helpSecurity', lang)}
             </h2>
-            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{t(lang, 'helpSecurityDesc')}</p>
+            <p className="m-0 text-sm text-text-secondary leading-[1.5]">{translate('helpSecurityDesc', lang)}</p>
             <ul className="m-0 pl-5 text-sm text-text-primary leading-[1.7] list-disc">
-              <li>{t(lang, 'helpSecuritySandbox')}</li>
-              <li>{t(lang, 'helpSecurityNoDom')}</li>
-              <li>{t(lang, 'helpSecurityPostMessage')}</li>
-              <li>{t(lang, 'helpSecurityError')}</li>
+              <li>{translate('helpSecuritySandbox', lang)}</li>
+              <li>{translate('helpSecurityNoDom', lang)}</li>
+              <li>{translate('helpSecurityPostMessage', lang)}</li>
+              <li>{translate('helpSecurityError', lang)}</li>
             </ul>
           </section>
         </div>
 
         <div className="px-3 py-2 flex justify-end dialog-chrome border-t border-border">
           <button className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover" onClick={onClose}>
-            {t(lang, 'helpClose')}
+            {translate('helpClose', lang)}
           </button>
         </div>
       </div>

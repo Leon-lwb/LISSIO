@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { useModelCatalogStore } from '../../../store/modelCatalogStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { PaletteCategoryId } from '../../../types';
 import type { PaletteEntry } from './paletteModel';
 import { filterSections } from './paletteModel';
@@ -113,7 +113,7 @@ export function CategoryPanel() {
       <div className="relative flex-shrink-0 px-1">
         <SearchInput
           className="w-full"
-          placeholder={t(lang, 'paletteSearchAll')}
+          placeholder={translate('paletteSearchAll', lang)}
           value={searchQuery}
           onChange={(value) => {
             setSearchQuery(value);
@@ -127,11 +127,11 @@ export function CategoryPanel() {
         />
       </div>
 
-      <nav aria-label={t(lang, 'paletteJumpTo')} className="flex flex-wrap gap-1 px-1 pb-2 border-b border-border-subtle">
+      <nav aria-label={translate('paletteJumpTo', lang)} className="flex flex-wrap gap-1 px-1 pb-2 border-b border-border-subtle">
         {sections.map((section) => (
           <button key={section.id} type="button" aria-current={activeCategory === section.id ? 'location' : undefined}
             onClick={() => { scrollSelection.current = null; openCategory(section.id); setJumpRequest((value) => value + 1); }}
-            className={`rounded px-2 py-1 text-[11px] transition-colors focus-visible:outline-accent ${activeCategory === section.id ? 'bg-bg-active text-text-bright' : 'text-text-secondary hover:bg-bg-hover'}`}>
+            className={`inline-flex min-h-6 items-center rounded bg-clip-padding px-2 py-1 text-[11px] leading-none appearance-none transition-colors focus-visible:outline-accent ${activeCategory === section.id ? 'bg-bg-active text-text-bright' : 'text-text-secondary hover:bg-bg-hover'}`}>
             {section.header}
           </button>
         ))}
@@ -150,8 +150,8 @@ export function CategoryPanel() {
                 {section.id !== 'transport' && <span aria-hidden="true" className="text-text-muted font-normal tabular-nums">{filtered?.entries.length}</span>}
               </h3>
               {section.id === 'transport' ? (
-                catalogPending ? <div role="status" className="flex justify-center gap-2 p-4 text-xs text-text-muted"><Loader2 size={14} className="animate-spin" />{t(lang, 'capabilityDiscovering')}</div>
-                  : catalogError ? <div role="alert" className="p-3 text-xs text-text-secondary">{t(lang, 'capabilityUnavailable')}<button type="button" className="ml-2 text-accent" onClick={() => setCatalogAttempt((value) => value + 1)}>{t(lang, 'refresh')}</button></div>
+                catalogPending ? <div role="status" className="flex justify-center gap-2 p-4 text-xs text-text-muted"><Loader2 size={14} className="animate-spin" />{translate('capabilityDiscovering', lang)}</div>
+                  : catalogError ? <div role="alert" className="p-3 text-xs text-text-secondary">{translate('capabilityUnavailable', lang)}<button type="button" className="ml-2 text-accent" onClick={() => setCatalogAttempt((value) => value + 1)}>{translate('refresh', lang)}</button></div>
                     : <DevicePanel cards={capabilityCards} query={section.header.toLowerCase().includes(trimmedQuery) ? '' : trimmedQuery} />
               ) : filtered?.entries.map((entry) => (
                 <PaletteRow key={entry.key} entry={entry} category={section.category}
@@ -161,7 +161,7 @@ export function CategoryPanel() {
           );
         })}
         {trimmedQuery && filteredSections.length === 0 && (catalogError || catalogPending) && (
-          <p role="status" className="p-3 text-xs text-text-secondary text-center">{t(lang, 'paletteNoResults')}</p>
+          <p role="status" className="p-3 text-xs text-text-secondary text-center">{translate('paletteNoResults', lang)}</p>
         )}
       </div>
     </div>

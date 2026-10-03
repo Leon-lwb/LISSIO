@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { useAppStore } from '../../../store/appStore';
 import { selectWidgets } from '../../../store/appStoreHelpers';
 import { widgetInputValue } from '../../../lib/utils/widgetValue';
@@ -33,7 +34,7 @@ describe('numeric input controls', () => {
     const widget = widgetFixture('Slider');
     if (widget.kind !== 'Slider') throw new Error('expected Slider');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
-    render(<Slider widget={widget} />);
+    renderWithI18n(<Slider widget={widget} />);
 
     const range = screen.getByRole('slider');
     expect(range).toHaveClass('nodrag', 'nowheel');
@@ -50,7 +51,7 @@ describe('numeric input controls', () => {
     const widget = widgetFixture('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
-    render(<Knob widget={widget} />);
+    renderWithI18n(<Knob widget={widget} />);
     const knob = screen.getByRole('slider');
 
     fireEvent.pointerDown(knob, { pointerId: 1, clientY: 100 });
@@ -64,7 +65,7 @@ describe('numeric input controls', () => {
   it('commits manual input once on Enter and keeps invalid drafts visible', () => {
     const onCommit = vi.fn();
     const onPreview = vi.fn();
-    const view = render(<NumericValueInput value={50} min={0} max={100} step={1} onPreview={onPreview} onCommit={onCommit} />);
+    const view = renderWithI18n(<NumericValueInput value={50} min={0} max={100} step={1} onPreview={onPreview} onCommit={onCommit} />);
     const input = screen.getByRole('spinbutton');
 
     fireEvent.focus(input);
@@ -88,7 +89,7 @@ describe('numeric input controls', () => {
     const widget = widgetFixture('Knob');
     if (widget.kind !== 'Knob') throw new Error('expected Knob');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
-    render(<Knob widget={widget} />);
+    renderWithI18n(<Knob widget={widget} />);
     const knob = screen.getByRole('slider');
     const input = screen.getByRole('spinbutton');
 
@@ -109,7 +110,7 @@ describe('choice input controls', () => {
     const widget = widgetFixture('Radio');
     if (widget.kind !== 'Radio') throw new Error('expected Radio');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
-    render(<Radio widget={widget} />);
+    renderWithI18n(<Radio widget={widget} />);
     fireEvent.click(screen.getByLabelText('B'));
     const stored = selectWidgets(useAppStore.getState())[0];
     expect(stored.kind).toBe('Radio');
@@ -122,7 +123,7 @@ describe('choice input controls', () => {
     const widget = widgetFixture('Checkbox');
     if (widget.kind !== 'Checkbox') throw new Error('expected Checkbox');
     useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
-    const view = render(<Checkbox widget={widget} />);
+    const view = renderWithI18n(<Checkbox widget={widget} />);
     fireEvent.click(screen.getByLabelText('A'));
     view.rerender(<Checkbox widget={selectWidgets(useAppStore.getState())[0] as typeof widget} />);
     fireEvent.click(screen.getByLabelText('B'));

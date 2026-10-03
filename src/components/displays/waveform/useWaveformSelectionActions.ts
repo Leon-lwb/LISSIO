@@ -5,7 +5,7 @@ import { notify, formatError } from '../../../lib/tauri/notifications';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { platform } from '../../../lib/platform';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { WaveformSeriesSelection } from '../../../types';
 import { absoluteTimeRangeUs } from './waveformChartExport';
 import { buildRawClipboardCsv } from './waveformChartClipboard';
@@ -59,7 +59,7 @@ export function useWaveformSelectionActions({
           detailSelection,
           path,
         );
-        notify.info('CSV', t(lang, 'waveformCsvExported').replace('{{count}}', String(rows)));
+        notify.info('CSV', translate('waveformCsvExported', lang).replace('{{count}}', String(rows)));
       } catch (error) {
         notify.error('CSV', formatError(error));
       }
@@ -85,7 +85,7 @@ export function useWaveformSelectionActions({
         setTimeout(() => setCopyFeedback(false), 1200);
       }
     } catch (error) {
-      notify.warn(t(lang, 'waveformCopyTitle'), formatError(error));
+      notify.warn(translate('waveformCopyTitle', lang), formatError(error));
     }
   }, [detailSelection, getAbsoluteSelection, lang, snapshotId, sourceId, setCopyFeedback, widgetId]);
 

@@ -16,7 +16,7 @@ import { useAppStore } from '../../store/appStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { TourSpotlight, type TourRect } from './TourSpotlight';
 import { TourPopover, type TourAlign, type TourSide } from './TourPopover';
 
@@ -330,7 +330,7 @@ export function OnboardingWizard() {
 
   if (!isOpen) return null;
 
-  const tr = (key: string) => t(lang, key);
+  const tr = (key: string) => translate(key, lang);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-tour">

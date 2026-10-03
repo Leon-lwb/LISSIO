@@ -1,4 +1,4 @@
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { loadAdapterCapabilities } from '../../lib/acquisition/capabilityCatalog';
 import { createNodeFromCatalog } from '../../lib/models/createFromCatalog';
 import { notify, formatError } from '../../lib/tauri/notifications';
@@ -42,10 +42,10 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
       try {
         const adapters = await loadAdapterCapabilities();
         if (!adapters.some(adapter => adapter.adapterId === 'serial' && adapter.endpoints.length > 0)) {
-          notify.error(t(get().lang, 'defaultCanvasUnavailable'), t(get().lang, 'defaultCanvasUnavailable'), { source: 'addDefaultCanvas' });
+          notify.error(translate('defaultCanvasUnavailable', get().lang), translate('defaultCanvasUnavailable', get().lang), { source: 'addDefaultCanvas' });
           return;
         }
-        get().addControlTab(t(get().lang, 'defaultCanvas'));
+        get().addControlTab(translate('defaultCanvas', get().lang));
         const tabId = get().activeControlTabId;
         const raw = await createNodeFromCatalog({
           modelId: 'widget:RawData',
@@ -54,7 +54,7 @@ export const createControlTabSlice: AppSlice<ControlTabSlice> = (set, get) => {
         });
         await get().seedInitialGraph(raw.id, 'user');
       } catch (error) {
-        notify.error(t(get().lang, 'defaultCanvasUnavailable'), formatError(error));
+        notify.error(translate('defaultCanvasUnavailable', get().lang), formatError(error));
       }
     },
 

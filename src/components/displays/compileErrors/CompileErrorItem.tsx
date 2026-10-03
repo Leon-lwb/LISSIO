@@ -4,7 +4,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useDockStore } from '../../../store/dockStore';
 import { transitionStore } from '../../../lib/utils/transitionStore';
 import { compileErrorMessage } from '../../ui/CanvasErrorTooltip';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { CompileError } from '../../../store/slices/compileError';
 
 interface CompileErrorItemProps {
@@ -53,8 +53,8 @@ export const CompileErrorItem = memo(function CompileErrorItem({
         type="button"
         onClick={handleFlyTo}
         className="p-1 text-text-secondary hover:text-text-primary rounded hover:bg-bg-editor active:bg-accent-active transition-colors shrink-0"
-        title={t(lang, 'flyToNode')}
-        aria-label={t(lang, 'flyToNode')}
+        title={translate('flyToNode', lang)}
+        aria-label={translate('flyToNode', lang)}
       >
         <MapPin size={14} />
       </button>

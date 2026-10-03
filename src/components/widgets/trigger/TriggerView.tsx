@@ -14,7 +14,7 @@ import { useCallback, useState } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight, Play, Radio } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { useNumericInput, useNumericOutput } from '../../../lib/hooks/useNumericPort';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 import { nanoid } from 'nanoid';
 import type { TriggerConfig, TriggerMatchType, TriggerRule } from '../../../types';
@@ -67,7 +67,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
       >
         <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-semibold uppercase border ${cfg.badgeClass}`}>
           <span className="font-mono">{cfg.icon}</span>
-          {t(lang, cfg.labelKey)}
+          {translate(cfg.labelKey, lang)}
         </span>
         <span className="text-[10px] text-text-secondary font-mono truncate flex-1 min-w-0">{ruleSummary(rule)}</span>
         <span className="text-text-secondary shrink-0 p-0.5 pointer-events-none">
@@ -76,7 +76,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
         <button
           className="text-text-secondary hover:text-red shrink-0 p-0.5"
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          title={t(lang, 'removeWidget')}
+          title={translate('removeWidget', lang)}
         >
           <Trash2 size={11} />
         </button>
@@ -84,39 +84,39 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
       {expanded && (
         <div className="px-2 pb-2 flex flex-col gap-1.5">
           <div className="field-grid field-grid--default">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'triggerEnabled')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('triggerEnabled', lang)}</label>
             <button
               className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary text-left ${rule.enabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
               onClick={() => onUpdate({ enabled: !rule.enabled })}
             >
-              {rule.enabled ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
+              {rule.enabled ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
             </button>
           </div>
           <div className="field-grid field-grid--default">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'triggerMatchType')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('triggerMatchType', lang)}</label>
             <select
               className="form-select text-xs w-full"
               value={rule.matchType}
               onChange={(e) => onUpdate({ matchType: e.target.value as TriggerMatchType })}
             >
               {MATCH_TYPES.map((mt) => (
-                <option key={mt} value={mt}>{t(lang, MATCH_TYPE_CONFIG[mt].labelKey)}</option>
+                <option key={mt} value={mt}>{translate(MATCH_TYPE_CONFIG[mt].labelKey, lang)}</option>
               ))}
             </select>
           </div>
           <div className="field-grid field-grid--default">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'triggerPattern')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('triggerPattern', lang)}</label>
             <input
               type="text"
               className="form-input text-xs font-mono w-full"
               value={rule.pattern}
               placeholder={cfg.placeholder}
               onChange={(e) => onUpdate({ pattern: e.target.value })}
-              title={t(lang, cfg.hintKey)}
+              title={translate(cfg.hintKey, lang)}
             />
           </div>
           <div className="field-grid field-grid--default">
-            <label className="text-[10px] text-text-secondary">{t(lang, 'triggerOutputType')}</label>
+            <label className="text-[10px] text-text-secondary">{translate('triggerOutputType', lang)}</label>
             <div className="flex bg-bg-input rounded border border-border overflow-hidden">
               {(['number', 'string'] as const).map((ot) => (
                 <button
@@ -124,14 +124,14 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
                   className={`flex-1 px-2 py-0.5 text-xs transition-colors ${ot !== 'number' ? 'border-l border-border' : ''} ${rule.outputType === ot ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
                   onClick={() => onUpdate({ outputType: ot })}
                 >
-                  {ot === 'number' ? t(lang, 'triggerOutputNumber') : t(lang, 'triggerOutputString')}
+                  {ot === 'number' ? translate('triggerOutputNumber', lang) : translate('triggerOutputString', lang)}
                 </button>
               ))}
             </div>
           </div>
           <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">
-              {rule.outputType === 'string' ? t(lang, 'triggerOutputText') : t(lang, 'triggerOutputValue')}
+              {rule.outputType === 'string' ? translate('triggerOutputText', lang) : translate('triggerOutputValue', lang)}
             </label>
             {rule.outputType === 'string' ? (
               <input
@@ -155,18 +155,18 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
           </div>
           {rule.matchType === 'regex' && (
             <div className="field-grid field-grid--default">
-              <label className="text-[10px] text-text-secondary">{t(lang, 'triggerFlags')}</label>
+              <label className="text-[10px] text-text-secondary">{translate('triggerFlags', lang)}</label>
               <input
                 type="text"
                 className="form-input text-xs font-mono w-full"
                 value={rule.flags ?? ''}
                 placeholder="i, im, ims"
                 onChange={(e) => onUpdate({ flags: e.target.value })}
-                title={t(lang, 'triggerFlagsHint')}
+                title={translate('triggerFlagsHint', lang)}
               />
             </div>
           )}
-          <div className="text-[10px] text-text-secondary opacity-secondary">{t(lang, cfg.hintKey)}</div>
+          <div className="text-[10px] text-text-secondary opacity-secondary">{translate(cfg.hintKey, lang)}</div>
         </div>
       )}
     </div>
@@ -185,12 +185,12 @@ interface ManualPanelProps {
 function ManualPanel({ command, onCommandChange, result, lang }: ManualPanelProps) {
   return (
     <>
-      <div className="section-heading section-heading--micro">{t(lang, 'triggerManualInput')}</div>
+      <div className="section-heading section-heading--micro">{translate('triggerManualInput', lang)}</div>
       <textarea
         className="w-full font-mono text-xs bg-bg-input text-text-primary border border-border rounded-sm px-2 py-1.5 outline-none focus:border-accent resize-y min-h-[60px] leading-relaxed"
         value={command}
         onChange={(e) => onCommandChange(e.target.value)}
-        placeholder={t(lang, 'triggerCmdPlaceholder')}
+        placeholder={translate('triggerCmdPlaceholder', lang)}
         spellCheck={false}
         rows={3}
       />
@@ -211,15 +211,15 @@ interface TriggerResultSnapshot {
 function ResultBlock({ result, titleKey, lang }: { result: TriggerResultSnapshot; titleKey: string; lang: Lang }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="section-heading section-heading--micro">{t(lang, titleKey)}</div>
+      <div className="section-heading section-heading--micro">{translate(titleKey, lang)}</div>
       <div className="flex items-center gap-2 px-2 py-1 bg-bg-editor rounded-sm">
-        <span className="text-[10px] text-text-secondary">{t(lang, 'triggerMatched')}</span>
+        <span className="text-[10px] text-text-secondary">{translate('triggerMatched', lang)}</span>
         <span className={`text-xs font-mono ${result.matched ? 'text-green' : 'text-red'}`}>
           {result.matched ? '✓ YES' : '✗ NO'}
         </span>
       </div>
       <div className="flex items-center justify-between gap-2 px-2 py-1 bg-bg-editor rounded-sm">
-        <span className="text-[10px] text-text-secondary">{t(lang, 'triggerValue')}</span>
+        <span className="text-[10px] text-text-secondary">{translate('triggerValue', lang)}</span>
         <span className="text-xs font-mono text-green">{result.value.toFixed(4)}</span>
       </div>
     </div>
@@ -240,11 +240,11 @@ function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanel
   return (
     <>
       <div className="section-heading section-heading--micro">
-        {t(lang, 'triggerAutoInput')}
+        {translate('triggerAutoInput', lang)}
       </div>
 
       <div className="flex items-center gap-2 px-2 py-1.5 bg-bg-editor border border-border rounded-sm">
-        <span className="text-[10px] text-text-secondary">{t(lang, 'triggerPort')}</span>
+        <span className="text-[10px] text-text-secondary">{translate('triggerPort', lang)}</span>
         <span className={`text-xs font-mono ${triggerValue !== 0 ? 'text-green' : 'text-text-secondary'}`}>
           {triggerValue.toFixed(4)}
         </span>
@@ -254,7 +254,7 @@ function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanel
       </div>
 
       <div className="field-grid field-grid--default">
-        <label className="text-[10px] text-text-secondary">{t(lang, 'triggerEdge')}</label>
+        <label className="text-[10px] text-text-secondary">{translate('triggerEdge', lang)}</label>
         <div className="flex bg-bg-input rounded border border-border overflow-hidden">
           {(['level', 'rising'] as const).map((e) => (
             <button
@@ -262,14 +262,14 @@ function AutoPanel({ triggerValue, edge, onEdgeChange, result, lang }: AutoPanel
               className={`flex-1 px-2 py-0.5 text-xs transition-colors ${e !== 'level' ? 'border-l border-border' : ''} ${edge === e ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
               onClick={() => onEdgeChange(e)}
             >
-              {t(lang, e === 'level' ? 'triggerEdgeLevel' : 'triggerEdgeRising')}
+              {translate(e === 'level' ? 'triggerEdgeLevel' : 'triggerEdgeRising', lang)}
             </button>
           ))}
         </div>
       </div>
 
       <div className="field-grid field-grid--default">
-        <label className="text-[10px] text-text-secondary">{t(lang, 'triggerCommand')}</label>
+        <label className="text-[10px] text-text-secondary">{translate('triggerCommand', lang)}</label>
         {/* 自动模式的匹配输入来自上游 trigger 端口, 只读展示 (手动命令文本不参与) */}
         <span className="text-xs font-mono text-text-primary px-2 py-1 bg-bg-input border border-border rounded truncate">
           {String(triggerValue)}
@@ -379,26 +379,26 @@ export function Trigger({ widget }: TriggerProps) {
       <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 p-3 overflow-y-auto bg-bg-sidebar">
         {/* 顶部: 标题 + 模式切换 */}
         <div className="flex items-center justify-between pb-1.5 border-b border-border shrink-0">
-          <span className="text-base font-semibold text-text-bright">{params.label || t(lang, 'triggerTitle')}</span>
+          <span className="text-base font-semibold text-text-bright">{params.label || translate('triggerTitle', lang)}</span>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] text-text-secondary">{rules.length} {t(lang, 'triggerRulesCount')}</span>
+            <span className="text-[10px] text-text-secondary">{rules.length} {translate('triggerRulesCount', lang)}</span>
             {/* 模式切换 */}
             <div className="flex bg-bg-input rounded border border-border overflow-hidden">
               <button
                 className={`px-2 py-0.5 text-[10px] transition-colors ${mode === 'manual' ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
                 onClick={() => updateParams({ mode: 'manual' })}
-                title={t(lang, 'triggerModeManual')}
+                title={translate('triggerModeManual', lang)}
               >
                 <Play size={10} className="inline mr-0.5" />
-                {t(lang, 'triggerModeManual')}
+                {translate('triggerModeManual', lang)}
               </button>
               <button
                 className={`px-2 py-0.5 text-[10px] transition-colors border-l border-border ${mode === 'auto' ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
                 onClick={() => updateParams({ mode: 'auto' })}
-                title={t(lang, 'triggerModeAuto')}
+                title={translate('triggerModeAuto', lang)}
               >
                 <Radio size={10} className="inline mr-0.5" />
-                {t(lang, 'triggerModeAuto')}
+                {translate('triggerModeAuto', lang)}
               </button>
             </div>
           </div>
@@ -407,7 +407,7 @@ export function Trigger({ widget }: TriggerProps) {
         {/* 规则列表 */}
         <div className="flex flex-col gap-1.5">
           {rules.length === 0 && (
-            <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">{t(lang, 'triggerRulesEmpty')}</div>
+            <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">{translate('triggerRulesEmpty', lang)}</div>
           )}
           {rules.map((rule) => (
             <TriggerRuleRow
@@ -430,12 +430,12 @@ export function Trigger({ widget }: TriggerProps) {
                 key={mt}
                 className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
                 onClick={() => handleAddRule(mt)}
-                title={t(lang, cfg.hintKey)}
+                title={translate(cfg.hintKey, lang)}
               >
                 <Plus size={11} />
                 <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-semibold border ${cfg.badgeClass}`}>
                   <span className="font-mono">{cfg.icon}</span>
-                  {t(lang, cfg.labelKey)}
+                  {translate(cfg.labelKey, lang)}
                 </span>
               </button>
             );
@@ -452,23 +452,23 @@ export function Trigger({ widget }: TriggerProps) {
             onEdgeChange={(e) => updateParams({ edge: e })} result={lastResult} lang={lang} />
         )}
 
-        <div className="section-heading section-heading--micro pt-1">{t(lang, 'triggerGlobalSettings')}</div>
+        <div className="section-heading section-heading--micro pt-1">{translate('triggerGlobalSettings', lang)}</div>
         <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
           <div className="field-grid field-grid--default">
-            <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
+            <label className="text-xs text-text-secondary">{translate('cmdLabel', lang)}</label>
             <input type="text" value={params.label}
               onChange={(e) => updateParams({ label: e.target.value })}
               className="text-xs w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent transition-colors" />
           </div>
           <div className="field-grid field-grid--default">
-            <label className="text-xs text-text-secondary">{t(lang, 'triggerMissValue')}</label>
+            <label className="text-xs text-text-secondary">{translate('triggerMissValue', lang)}</label>
             <input type="number" step="any"
               value={Number.isFinite(defaultMiss) ? defaultMiss : 0}
               onChange={(e) => { const n = parseFloat(e.target.value); updateParams({ defaultMiss: Number.isFinite(n) ? n : 0 }); }}
               className="text-xs w-full px-2 py-1 bg-bg-input text-text-primary border border-border rounded focus:outline-none focus:border-accent transition-colors font-mono" />
           </div>
           <div className="field-grid field-grid--default">
-            <label className="text-xs text-text-secondary">{t(lang, 'triggerMissText')}</label>
+            <label className="text-xs text-text-secondary">{translate('triggerMissText', lang)}</label>
             <input type="text"
               value={defaultMissText}
               onChange={(e) => updateParams({ defaultMissText: e.target.value })}

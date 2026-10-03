@@ -1,5 +1,5 @@
 /// 单条曲线渲染方式选择器 (lineMode + pointMode) - 供 AxisSettings 各通道行复用
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { LINE_MODE_OPTIONS, POINT_MODE_OPTIONS } from '../waveform/waveformRender';
 import { DEFAULT_RENDER, type LineMode, type PointMode, type SeriesRender } from '../../../types';
 
@@ -19,25 +19,25 @@ export function CurveRenderControls({ render, onChange, lang, compact = false }:
     : 'form-select text-xs flex-1 min-w-0';
   return (
     <div className="flex items-center gap-1">
-      <span className="text-[10px] text-text-secondary min-w-[24px]">{t(lang, 'curve')}</span>
+      <span className="text-[10px] text-text-secondary min-w-[24px]">{translate('curve', lang)}</span>
       <select
         className={selectCls}
         value={r.lineMode}
         onChange={(e) => onChange({ ...r, lineMode: e.target.value as LineMode })}
-        title={t(lang, 'lineMode')}
+        title={translate('lineMode', lang)}
       >
         {LINE_MODE_OPTIONS.map((m) => (
-          <option key={m} value={m}>{t(lang, 'lineMode_' + m)}</option>
+          <option key={m} value={m}>{translate('lineMode_' + m, lang)}</option>
         ))}
       </select>
       <select
         className={selectCls}
         value={r.pointMode}
         onChange={(e) => onChange({ ...r, pointMode: e.target.value as PointMode })}
-        title={t(lang, 'pointMode')}
+        title={translate('pointMode', lang)}
       >
         {POINT_MODE_OPTIONS.map((m) => (
-          <option key={m} value={m}>{t(lang, 'pointMode_' + m)}</option>
+          <option key={m} value={m}>{translate('pointMode_' + m, lang)}</option>
         ))}
       </select>
     </div>

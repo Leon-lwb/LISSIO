@@ -16,7 +16,7 @@ import {
   reportPanelFollowing,
   useDisplayLivenessStore,
 } from '../../../store/displayLiveness';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 const PanelKeyContext = createContext<string | null>(null);
 
@@ -99,10 +99,10 @@ export const LiveStatusBadge = memo(function LiveStatusBadge({ panelKey }: { pan
     <span
       className="absolute right-2 top-2 z-10 pointer-events-none inline-flex items-center gap-1 rounded border border-warning/40 bg-warning/15 px-1.5 py-0.5 text-[10px] leading-none font-medium text-warning"
       data-testid="display-frozen-badge"
-      title={t(lang, 'displayFrozenHint')}
+      title={translate('displayFrozenHint', lang)}
     >
       <TriangleAlert size={10} className="shrink-0" />
-      {t(lang, 'displayFrozen')}
+      {translate('displayFrozen', lang)}
     </span>
   );
 });

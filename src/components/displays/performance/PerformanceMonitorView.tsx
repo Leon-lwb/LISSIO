@@ -3,7 +3,7 @@ import { Activity, Cpu, Gauge, MemoryStick, Pause, Play, RefreshCw, Trash2, Tria
 import { useAppStore } from '../../../store/appStore';
 import { usePerformanceStore } from '../../../store/performanceStore';
 import { samplePerformanceOnce } from '../../../lib/performance/telemetry';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { FrontendPerformanceSnapshot } from '../../../types';
 
 function formatBytes(bytes: number | null): string {
@@ -118,18 +118,18 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2.5">
         <Gauge size={14} className="text-accent" />
         <span className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-wider text-text-primary">
-          {t(lang, 'performanceMonitor')}
+          {translate('performanceMonitor', lang)}
         </span>
         {paused && (
           <span className="rounded-full bg-bg-input px-2 py-0.5 text-[10px] text-text-warning">
-            {t(lang, 'performancePaused')}
+            {translate('performancePaused', lang)}
           </span>
         )}
         <div className="ml-auto flex items-center gap-0.5">
           <button
             type="button"
             className={iconButtonClass}
-            title={t(lang, paused ? 'performanceResume' : 'performancePause')}
+            title={translate(paused ? 'performanceResume' : 'performancePause', lang)}
             onClick={() => setPaused(!paused)}
           >
             {paused ? <Play size={14} /> : <Pause size={14} />}
@@ -137,7 +137,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
           <button
             type="button"
             className={iconButtonClass}
-            title={t(lang, 'performanceRefresh')}
+            title={translate('performanceRefresh', lang)}
             onClick={() => void samplePerformanceOnce()}
           >
             <RefreshCw size={14} />
@@ -145,7 +145,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
           <button
             type="button"
             className={iconButtonClass}
-            title={t(lang, 'performanceClear')}
+            title={translate('performanceClear', lang)}
             onClick={clearHistory}
           >
             <Trash2 size={14} />
@@ -163,7 +163,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         {!frontend && !backend ? (
           <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-            {t(lang, 'performanceWaiting')}
+            {translate('performanceWaiting', lang)}
           </div>
         ) : (
           <div className="flex flex-col gap-4">
@@ -171,34 +171,34 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
               <div className="mb-2 flex items-center gap-2">
                 <Activity size={14} className="text-accent" />
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
-                  {t(lang, 'performanceFrontend')}
+                  {translate('performanceFrontend', lang)}
                 </h3>
-                <span className="text-[10px] text-text-secondary">{t(lang, 'performanceFrontendSource')}</span>
+                <span className="text-[10px] text-text-secondary">{translate('performanceFrontendSource', lang)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                 <MetricCard
-                  label={t(lang, 'performanceFps')}
+                  label={translate('performanceFps', lang)}
                   value={(frontend?.fps ?? 0).toFixed(1)}
-                  detail={t(lang, 'performanceFramesPerSecond')}
+                  detail={translate('performanceFramesPerSecond', lang)}
                   values={frontSeries('fps')}
                   tone={(frontend?.fps ?? 0) >= 50 ? 'success' : (frontend?.fps ?? 0) >= 30 ? 'warning' : 'danger'}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceFrameTime')}
+                  label={translate('performanceFrameTime', lang)}
                   value={`${(frontend?.frameTimeP95Ms ?? 0).toFixed(1)} ms`}
-                  detail={`${t(lang, 'performanceAverage')}: ${(frontend?.frameTimeAverageMs ?? 0).toFixed(1)} ms`}
+                  detail={`${translate('performanceAverage', lang)}: ${(frontend?.frameTimeAverageMs ?? 0).toFixed(1)} ms`}
                   values={frontSeries('frameTimeP95Ms')}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceHeap')}
+                  label={translate('performanceHeap', lang)}
                   value={formatBytes(frontend?.jsHeapUsedBytes ?? null)}
-                  detail={`${t(lang, 'performanceLimit')}: ${formatBytes(frontend?.jsHeapLimitBytes ?? null)}`}
+                  detail={`${translate('performanceLimit', lang)}: ${formatBytes(frontend?.jsHeapLimitBytes ?? null)}`}
                   values={frontSeries('jsHeapUsedBytes')}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceLongTasks')}
+                  label={translate('performanceLongTasks', lang)}
                   value={formatCount(frontend?.longTasksPerSecond ?? 0)}
-                  detail={`${t(lang, 'performanceLongest')}: ${(frontend?.longestTaskMs ?? 0).toFixed(0)} ms`}
+                  detail={`${translate('performanceLongest', lang)}: ${(frontend?.longestTaskMs ?? 0).toFixed(0)} ms`}
                   values={frontSeries('longTasksPerSecond')}
                   tone={(frontend?.longTasksPerSecond ?? 0) === 0 ? 'success' : 'warning'}
                 />
@@ -209,35 +209,35 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
               <div className="mb-2 flex items-center gap-2">
                 <Cpu size={14} className="text-accent" />
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
-                  {t(lang, 'performanceBackend')}
+                  {translate('performanceBackend', lang)}
                 </h3>
-                <span className="text-[10px] text-text-secondary">{t(lang, 'performanceBackendSource')}</span>
+                <span className="text-[10px] text-text-secondary">{translate('performanceBackendSource', lang)}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                 <MetricCard
-                  label={t(lang, 'performanceCpu')}
+                  label={translate('performanceCpu', lang)}
                   value={`${(backend?.process.cpuPercent ?? 0).toFixed(1)}%`}
-                  detail={`${t(lang, 'performanceThreads')}: ${backend?.process.threadCount ?? 0}`}
+                  detail={`${translate('performanceThreads', lang)}: ${backend?.process.threadCount ?? 0}`}
                   values={backCpu}
                   tone={(backend?.process.cpuPercent ?? 0) < 50 ? 'success' : 'warning'}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceMemory')}
+                  label={translate('performanceMemory', lang)}
                   value={formatBytes(backend?.process.memoryBytes ?? null)}
-                  detail={`${t(lang, 'performanceUptime')}: ${Math.floor((backend?.process.uptimeMs ?? 0) / 60_000)} min`}
+                  detail={`${translate('performanceUptime', lang)}: ${Math.floor((backend?.process.uptimeMs ?? 0) / 60_000)} min`}
                   values={backMemory}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceRpcLatency')}
+                  label={translate('performanceRpcLatency', lang)}
                   value={`${(backend?.rpc.p95LatencyMs ?? 0).toFixed(1)} ms`}
-                  detail={`${t(lang, 'performanceAverage')}: ${(backend?.rpc.averageLatencyMs ?? 0).toFixed(1)} ms`}
+                  detail={`${translate('performanceAverage', lang)}: ${(backend?.rpc.averageLatencyMs ?? 0).toFixed(1)} ms`}
                   values={backRpc}
                   tone={(backend?.rpc.p95LatencyMs ?? 0) < 100 ? 'success' : 'warning'}
                 />
                 <MetricCard
-                  label={t(lang, 'performanceDropped')}
+                  label={translate('performanceDropped', lang)}
                   value={formatCount((backend?.pipeline.droppedFrames ?? 0) + (backend?.websocket.droppedFrames ?? 0))}
-                  detail={`${t(lang, 'performanceQueue')}: ${formatCount(backend?.pipeline.queuedFrames ?? 0)}`}
+                  detail={`${translate('performanceQueue', lang)}: ${formatCount(backend?.pipeline.queuedFrames ?? 0)}`}
                   values={backDropped}
                   tone={backDropped.some((value) => value > 0) ? 'danger' : 'success'}
                 />
@@ -247,32 +247,32 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
             <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
               <div className="overflow-hidden rounded-md border border-border-subtle">
                 <div className="flex h-8 items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2 text-xs font-semibold text-text-primary">
-                  <MemoryStick size={13} /> {t(lang, 'performancePipeline')}
+                  <MemoryStick size={13} /> {translate('performancePipeline', lang)}
                 </div>
-                <SummaryRow label={t(lang, 'performanceCompleted')} value={formatCount(backend?.pipeline.completedFrames ?? 0)} />
-                <SummaryRow label={t(lang, 'performanceQueue')} value={`${formatCount(backend?.pipeline.queuedFrames ?? 0)} / ${formatBytes(backend?.pipeline.queuedBytes ?? null)}`} />
-                <SummaryRow label={t(lang, 'performanceEvalWait')} value={`${(backend?.pipeline.evalServiceMaxMs ?? 0).toFixed(1)} ms`} />
-                <SummaryRow label={t(lang, 'performanceIngressDropped')} value={formatCount(backend?.pipeline.ingressDropped ?? 0)} />
+                <SummaryRow label={translate('performanceCompleted', lang)} value={formatCount(backend?.pipeline.completedFrames ?? 0)} />
+                <SummaryRow label={translate('performanceQueue', lang)} value={`${formatCount(backend?.pipeline.queuedFrames ?? 0)} / ${formatBytes(backend?.pipeline.queuedBytes ?? null)}`} />
+                <SummaryRow label={translate('performanceEvalWait', lang)} value={`${(backend?.pipeline.evalServiceMaxMs ?? 0).toFixed(1)} ms`} />
+                <SummaryRow label={translate('performanceIngressDropped', lang)} value={formatCount(backend?.pipeline.ingressDropped ?? 0)} />
               </div>
 
               <div className="overflow-hidden rounded-md border border-border-subtle">
                 <div className="flex h-8 items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2 text-xs font-semibold text-text-primary">
                   <Activity size={13} /> RPC / WebSocket
                 </div>
-                <SummaryRow label={t(lang, 'performanceRpcCalls')} value={formatCount(backend?.rpc.calls ?? 0)} />
-                <SummaryRow label={t(lang, 'performanceRpcErrors')} value={formatCount(backend?.rpc.errors ?? 0)} />
-                <SummaryRow label={t(lang, 'performanceWsConnections')} value={formatCount(backend?.websocket.activeConnections ?? 0)} />
-                <SummaryRow label={t(lang, 'performanceWsDropped')} value={`${formatCount(backend?.websocket.droppedFrames ?? 0)} / ${formatBytes(backend?.websocket.droppedBytes ?? null)}`} />
+                <SummaryRow label={translate('performanceRpcCalls', lang)} value={formatCount(backend?.rpc.calls ?? 0)} />
+                <SummaryRow label={translate('performanceRpcErrors', lang)} value={formatCount(backend?.rpc.errors ?? 0)} />
+                <SummaryRow label={translate('performanceWsConnections', lang)} value={formatCount(backend?.websocket.activeConnections ?? 0)} />
+                <SummaryRow label={translate('performanceWsDropped', lang)} value={`${formatCount(backend?.websocket.droppedFrames ?? 0)} / ${formatBytes(backend?.websocket.droppedBytes ?? null)}`} />
               </div>
 
               <div className="overflow-hidden rounded-md border border-border-subtle">
                 <div className="flex h-8 items-center gap-2 border-b border-border-subtle bg-bg-panel-header px-2 text-xs font-semibold text-text-primary">
-                  <Gauge size={13} /> {t(lang, 'performanceSampling')}
+                  <Gauge size={13} /> {translate('performanceSampling', lang)}
                 </div>
-                <SummaryRow label={t(lang, 'performanceSampleCount')} value={formatCount(frontendHistory.length)} />
-                <SummaryRow label={t(lang, 'performanceMonitorRpc')} value={`${(frontend?.monitorRpcLatencyMs ?? 0).toFixed(1)} ms`} />
-                <SummaryRow label={t(lang, 'performanceHeap')} value={formatBytes(frontend?.jsHeapUsedBytes ?? null)} />
-                <SummaryRow label={t(lang, 'performanceLastSample')} value={frontend ? new Date(frontend.sampledAtMs).toLocaleTimeString() : '—'} />
+                <SummaryRow label={translate('performanceSampleCount', lang)} value={formatCount(frontendHistory.length)} />
+                <SummaryRow label={translate('performanceMonitorRpc', lang)} value={`${(frontend?.monitorRpcLatencyMs ?? 0).toFixed(1)} ms`} />
+                <SummaryRow label={translate('performanceHeap', lang)} value={formatBytes(frontend?.jsHeapUsedBytes ?? null)} />
+                <SummaryRow label={translate('performanceLastSample', lang)} value={frontend ? new Date(frontend.sampledAtMs).toLocaleTimeString() : '—'} />
               </div>
             </section>
           </div>

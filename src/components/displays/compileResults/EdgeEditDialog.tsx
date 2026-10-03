@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 import { X } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { GraphHir } from '../../../store/slices/compileHir';
 import { DialogFooter, DialogHeader, DialogOverlay, DialogSurface } from '../../ui/Dialog';
 import { FormField } from '../../ui/Form';
@@ -32,14 +32,14 @@ export function EdgeEditDialog({
       <DialogSurface className="w-[420px] p-4">
         <DialogHeader className="justify-between border-0 p-0 mb-3">
           <h3 className="text-sm font-semibold text-text-primary">
-            {modal.mode === 'add' ? t(lang, 'modalAddEdge') : t(lang, 'modalModifyEdge')}
+            {modal.mode === 'add' ? translate('modalAddEdge', lang) : translate('modalModifyEdge', lang)}
           </h3>
           <button className="p-1 text-text-muted hover:text-text-primary" onClick={closeModal}>
             <X size={14} />
           </button>
         </DialogHeader>
         <div className="flex flex-col gap-2 text-xs">
-          <FormField label={t(lang, 'fieldSourceNode')}>
+          <FormField label={translate('fieldSourceNode', lang)}>
             <select
               className="form-select"
               value={modal.sourceNode}
@@ -50,7 +50,7 @@ export function EdgeEditDialog({
               ))}
             </select>
           </FormField>
-          <FormField label={t(lang, 'fieldSourceHandle')}>
+          <FormField label={translate('fieldSourceHandle', lang)}>
             <input
               type="text"
               className="form-input font-mono"
@@ -59,7 +59,7 @@ export function EdgeEditDialog({
               placeholder="value / result / ch0..."
             />
           </FormField>
-          <FormField label={t(lang, 'fieldTargetNode')}>
+          <FormField label={translate('fieldTargetNode', lang)}>
             <select
               className="form-select"
               value={modal.targetNode}
@@ -70,7 +70,7 @@ export function EdgeEditDialog({
               ))}
             </select>
           </FormField>
-          <FormField label={t(lang, 'fieldTargetHandle')}>
+          <FormField label={translate('fieldTargetHandle', lang)}>
             <input
               type="text"
               className="form-input font-mono"
@@ -82,14 +82,14 @@ export function EdgeEditDialog({
         </div>
         <DialogFooter className="justify-end border-0 p-0 mt-4">
           <button className="dialog-button dialog-button--ghost" onClick={closeModal}>
-            {t(lang, 'cancel')}
+            {translate('cancel', lang)}
           </button>
           <button
             className="dialog-button dialog-button--primary disabled:opacity-disabled"
             onClick={() => void submitModal()}
             disabled={!modal.sourceNode || !modal.targetNode || modal.sourceNode === modal.targetNode}
           >
-            {t(lang, 'confirmAdd')}
+            {translate('confirmAdd', lang)}
           </button>
         </DialogFooter>
       </DialogSurface>

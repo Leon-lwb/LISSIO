@@ -5,7 +5,7 @@ import { canFrameBuffer, CanFrameBuffer } from '../../../lib/buffers/canBuffer';
 import { clearCanBuffer, subscribeCanFramesFiltered } from '../../../lib/buffers/canSubscription';
 import { useSelection } from '../../../lib/hooks/useSelection';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { ToolbarIconButton } from '../../ui/ToolbarIconButton';
 import { SearchInput } from '../../ui/SearchInput';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
@@ -246,7 +246,7 @@ export function CanFrameList() {
         <SearchInput
           mono
           className="w-24 sm:w-28 flex-shrink-0"
-          placeholder={t(lang, 'canFilterById')}
+          placeholder={translate('canFilterById', lang)}
           value={filterId}
           onChange={setFilterId}
         />
@@ -263,7 +263,7 @@ export function CanFrameList() {
               }`}
               onClick={() => setFilterDir(d)}
             >
-              {d === 'all' ? t(lang, 'all') : d}
+              {d === 'all' ? translate('all', lang) : d}
             </button>
           ))}
         </div>
@@ -271,7 +271,7 @@ export function CanFrameList() {
         {hasSubscriptionError && (
           <div className="flex-shrink-0 whitespace-nowrap text-[11px] text-red" role="alert">
             {parsedFilterId.kind === 'error'
-              ? t(lang, 'canInvalidFilterId')
+              ? translate('canInvalidFilterId', lang)
               : formatSubscriptionError(subscriptionError)}
           </div>
         )}
@@ -291,14 +291,14 @@ export function CanFrameList() {
               className={`w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer ${
                 copyFeedback ? 'text-green' : ''
               }`}
-              title={t(lang, 'copySelected')}
+              title={translate('copySelected', lang)}
               onClick={() => void copySelected()}
             >
               {copyFeedback ? <Check size={14} /> : <Copy size={14} />}
             </button>
             <button
               className="w-7 h-7 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer"
-              title={t(lang, 'clearSelection')}
+              title={translate('clearSelection', lang)}
               onClick={selection.clear}
             >
               <X size={14} />
@@ -309,7 +309,7 @@ export function CanFrameList() {
         <ToolbarIconButton
           icon={<ArrowDown />}
           active={autoScroll && !detached}
-          title={t(lang, 'autoScroll')}
+          title={translate('autoScroll', lang)}
           onClick={() => {
             const next = !autoScroll;
             setAutoScroll(next);
@@ -330,7 +330,7 @@ export function CanFrameList() {
           className="flex-shrink-0"
           icon={<Trash2 />}
           variant="danger"
-          title={t(lang, 'clear')}
+          title={translate('clear', lang)}
           onClick={handleClear}
         />
       </HorizontalScrollArea>
@@ -338,7 +338,7 @@ export function CanFrameList() {
       {/* 表头 */}
       <div className="flex items-center text-[10px] uppercase text-text-secondary font-mono border-b border-border bg-bg-panel-header shrink-0 select-none">
         <span className="px-3 py-1.5 text-left font-medium whitespace-nowrap min-w-[132px]">
-          {t(lang, 'time')}
+          {translate('time', lang)}
         </span>
         <span className="px-2 py-1.5 text-left font-medium whitespace-nowrap min-w-[56px]">Dir</span>
         <span className="px-3 py-1.5 text-left font-medium whitespace-nowrap min-w-[76px]">ID</span>
@@ -361,7 +361,7 @@ export function CanFrameList() {
       >
         {frames.length === 0 ? (
           <div className="flex items-center justify-center h-48 text-text-secondary text-xs">
-            {t(lang, 'noCanFrames')}
+            {translate('noCanFrames', lang)}
           </div>
         ) : (
           <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>

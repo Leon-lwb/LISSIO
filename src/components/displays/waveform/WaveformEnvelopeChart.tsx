@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { subscribeWaveformEnvelope } from '../../../lib/buffers/envelopeClient';
 import type { WaveformEnvelopeFrame } from '../../../lib/data/envelopeProtocol';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { useAppStore } from '../../../store/appStore';
 
 interface WaveformEnvelopeChartProps {
@@ -169,7 +169,7 @@ export function WaveformEnvelopeChart({ sourceId, series }: WaveformEnvelopeChar
       </div>
       {stats && (
         <div className="absolute bottom-1.5 right-2 z-10 px-1.5 py-0.5 text-[10px] text-text-secondary bg-bg-editor/80 border border-border/30 rounded select-none font-mono">
-          {t(lang, 'envelopeStats')
+          {translate('envelopeStats', lang)
             .replace('{n}', stats.n.toLocaleString())
             .replace('{columns}', String(stats.columns))}
         </div>

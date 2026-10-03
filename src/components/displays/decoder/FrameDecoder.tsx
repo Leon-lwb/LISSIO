@@ -19,7 +19,7 @@ import type {
 import { useAppStore } from '../../../store/appStore';
 import { errorText } from '../../../types/errors';
 import { api } from '../../../lib/tauri/tauri';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { nanoid } from 'nanoid';
 import type {
   HistoryEntry,
@@ -248,18 +248,18 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               <button
                 className={`px-2 py-0.5 text-[10px] transition-colors ${mode === 'live' ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
                 onClick={() => updateParams({ mode: 'live' })}
-                title={t(lang, 'fdModeLive')}
+                title={translate('fdModeLive', lang)}
               >
                 <Radio size={10} className="inline mr-0.5" />
-                {t(lang, 'fdModeLive')}
+                {translate('fdModeLive', lang)}
               </button>
               <button
                 className={`px-2 py-0.5 text-[10px] transition-colors border-l border-border ${mode === 'manual' ? 'bg-accent text-bg-editor' : 'text-text-secondary hover:text-text-primary'}`}
                 onClick={() => updateParams({ mode: 'manual' })}
-                title={t(lang, 'fdModeManual')}
+                title={translate('fdModeManual', lang)}
               >
                 <Play size={10} className="inline mr-0.5" />
-                {t(lang, 'fdModeManual')}
+                {translate('fdModeManual', lang)}
               </button>
             </div>
           </div>
@@ -280,7 +280,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
         >
           {blocks.length === 0 && (
             <div className="text-xs text-text-secondary opacity-muted italic py-4 text-center">
-              {t(lang, 'fdBlocksEmpty')}
+              {translate('fdBlocksEmpty', lang)}
             </div>
           )}
           {blocks.map((block) => {
@@ -306,7 +306,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
                 >
                   <div
                     className="inline-flex items-center justify-center p-0.5 cursor-grab active:cursor-grabbing text-text-secondary hover:text-text-primary shrink-0"
-                    title={t(lang, 'cmdDragToReorder')}
+                    title={translate('cmdDragToReorder', lang)}
                     draggable
                     onDragStart={handleDragStart(block.id)}
                     onDragEnd={handleDragEnd}
@@ -317,7 +317,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
                     className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-sm text-[9px] font-semibold uppercase tracking-wide shrink-0 border ${cfg.badgeClass}`}
                   >
                     {cfg.icon}
-                    {t(lang, cfg.labelKey)}
+                    {translate(cfg.labelKey, lang)}
                   </span>
                   {block.label && (
                     <span className="text-xs text-text-primary truncate shrink-0">{block.label}</span>
@@ -331,7 +331,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
                   <button
                     className="text-text-secondary hover:text-red shrink-0 p-0.5"
                     onClick={(e) => { e.stopPropagation(); removeBlock(block.id); }}
-                    title={t(lang, 'removeWidget')}
+                    title={translate('removeWidget', lang)}
                   >
                     <Trash2 size={11} />
                   </button>
@@ -357,13 +357,13 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
                 key={bt}
                 className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
                 onClick={() => addBlock(bt)}
-                title={t(lang, cfg.addLabelKey)}
+                title={translate(cfg.addLabelKey, lang)}
               >
                 <Plus size={11} />
                 <span className={`inline-flex items-center gap-0.5 ${cfg.iconClass}`}>
                   {cfg.icon}
                 </span>
-                <span>{t(lang, cfg.addLabelKey)}</span>
+                <span>{translate(cfg.addLabelKey, lang)}</span>
               </button>
             );
           })}
@@ -407,10 +407,10 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
         )}
 
         {/* 全局设置 (与 CommandSender 同款 grid 行 + 开关按钮) */}
-        <div className="section-heading section-heading--micro pt-1">{t(lang, 'fdSettings')}</div>
+        <div className="section-heading section-heading--micro pt-1">{translate('fdSettings', lang)}</div>
         <div className="flex flex-col gap-2 p-2 bg-bg-editor border border-border rounded">
           <div className="field-grid field-grid--default">
-            <label className="text-xs text-text-secondary">{t(lang, 'cmdLabel')}</label>
+            <label className="text-xs text-text-secondary">{translate('cmdLabel', lang)}</label>
             <input
               type="text"
               value={params.label}
@@ -429,12 +429,12 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
             const on = params[paramKey] ?? false;
             return (
               <div key={paramKey} className="field-grid field-grid--default">
-                <label className="text-xs text-text-secondary">{t(lang, labelKey)}</label>
+                <label className="text-xs text-text-secondary">{translate(labelKey, lang)}</label>
                 <button
                   className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${on ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
                   onClick={() => updateParams({ [paramKey]: !on })}
                 >
-                  {on ? t(lang, 'cmdNewlineOn') : t(lang, 'cmdNewlineOff')}
+                  {on ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
                 </button>
               </div>
             );

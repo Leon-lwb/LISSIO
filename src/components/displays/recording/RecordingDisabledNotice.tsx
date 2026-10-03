@@ -1,7 +1,7 @@
 import { Database } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 /// 录制数据库被用户关闭时的说明条。
 ///
@@ -18,14 +18,14 @@ export function RecordingDisabledNotice({ compact = false }: { compact?: boolean
     >
       <Database size={12} className="mt-0.5 shrink-0 text-text-muted" />
       <span className="min-w-0 flex-1">
-        {t(lang, compact ? 'recordingDisabledShort' : 'recordingDisabledNotice')}
+        {translate(compact ? 'recordingDisabledShort' : 'recordingDisabledNotice', lang)}
       </span>
       <button
         type="button"
         className="shrink-0 rounded px-1.5 py-0.5 text-accent hover:bg-bg-hover"
         onClick={() => openSettings('data')}
       >
-        {t(lang, 'recordingDisabledOpenSettings')}
+        {translate('recordingDisabledOpenSettings', lang)}
       </button>
     </div>
   );

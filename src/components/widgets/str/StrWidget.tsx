@@ -11,7 +11,7 @@ import { useAppStore } from '../../../store/appStore';
 import { useStringInputs } from '../../../lib/hooks/useGraphInput';
 import { useNumericInputs, useNumericOutput } from '../../../lib/hooks/useNumericPort';
 import { isPortConnected } from '../../../lib/utils/stringPorts';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 
 interface StrWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'Str' }>;
@@ -99,14 +99,14 @@ export const StrWidget = memo(function StrWidget({ widget }: StrWidgetProps) {
           return (
             <div key={p.id} className="flex justify-between items-center gap-1 text-[10px] px-0.5 py-px">
               <span className="text-text-secondary font-mono flex-shrink-0">
-                {t(lang, labelKey)}
+                {translate(labelKey, lang)}
               </span>
               {connected ? (
                 <span className="text-text-primary font-mono">
                   {numInputs[p.id]?.latest?.value ?? '—'}
                 </span>
               ) : meta.inlineNumPorts.includes(p.id) ? (
-                <span className="text-text-secondary font-mono" title={t(lang, 'strInlineFallbackHint')}>
+                <span className="text-text-secondary font-mono" title={translate('strInlineFallbackHint', lang)}>
                   {inlineValue}
                 </span>
               ) : (

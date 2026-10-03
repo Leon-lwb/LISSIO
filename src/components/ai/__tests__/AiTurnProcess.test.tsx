@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import { describe, expect, it } from 'vitest';
 import { useAppStore } from '../../../store/appStore';
 import { toolActivityKind } from '../../../lib/ai/activityKind';
@@ -7,7 +8,7 @@ import { AiTurnProcess } from '../AiTurnProcess';
 describe('AiTurnProcess', () => {
   it('shows a compact summary and exposes reasoning and tool details on demand', () => {
     useAppStore.setState({ lang: 'en' });
-    const { container } = render(
+    const { container } = renderWithI18n(
       <AiTurnProcess
         steps={[
           { kind: 'reasoning', text: 'Checked the device state.' },
@@ -51,7 +52,7 @@ describe('AiTurnProcess', () => {
       is_error: false,
       done: false,
     };
-    const { container, rerender } = render(<AiTurnProcess steps={[{ kind: 'tool', run }]} streaming />);
+    const { container, rerender } = renderWithI18n(<AiTurnProcess steps={[{ kind: 'tool', run }]} streaming />);
     expect(screen.getByRole('button', { name: 'Reading get_workspace' })).toHaveAttribute('aria-expanded', 'false');
     expect(container.querySelector('.ant-thought-chain-motion-blink')).toBeInTheDocument();
     expect(container.querySelector('.ant-think-motion-blink')).toBeInTheDocument();
@@ -73,7 +74,7 @@ describe('AiTurnProcess', () => {
 
   it('keeps the tool icon when a call fails', () => {
     useAppStore.setState({ lang: 'en' });
-    const { container } = render(<AiTurnProcess steps={[{ kind: 'tool', run: {
+    const { container } = renderWithI18n(<AiTurnProcess steps={[{ kind: 'tool', run: {
       id: 'failed', name: 'mcp_local_read_status', arguments: {}, text_offset: 0,
       content: 'error', is_error: true, done: true,
     } }]} />);
@@ -95,7 +96,7 @@ describe('AiTurnProcess', () => {
   it('wraps reasoning text and tool JSON instead of scrolling horizontally', () => {
     useAppStore.setState({ lang: 'en' });
     const long = `https://example.com/${'segment-'.repeat(40)}`;
-    const { container } = render(
+    const { container } = renderWithI18n(
       <AiTurnProcess
         steps={[
           { kind: 'reasoning', text: long },

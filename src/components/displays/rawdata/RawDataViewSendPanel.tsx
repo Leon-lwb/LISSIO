@@ -1,6 +1,6 @@
 import { Send } from 'lucide-react';
 import type { AppendMode } from './rawDataViewHelpers';
-import { t, type Lang } from '../../../i18n';
+import { translate, type Lang } from '../../../i18n';
 import { ToolbarButton } from '../../ui/ToolbarIconButton';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
@@ -28,15 +28,15 @@ export function RawDataViewSendPanel({
   targetTransportLabel,
 }: Props) {
   const appendOptions: { mode: AppendMode; label: string }[] = [
-    { mode: 'none', label: t(lang, 'appendNone') },
-    { mode: 'nl', label: t(lang, 'appendNewline') },
-    { mode: 'tab', label: t(lang, 'appendTab') },
-    { mode: 'nl_tab', label: t(lang, 'appendNewlineTab') },
+    { mode: 'none', label: translate('appendNone', lang) },
+    { mode: 'nl', label: translate('appendNewline', lang) },
+    { mode: 'tab', label: translate('appendTab', lang) },
+    { mode: 'nl_tab', label: translate('appendNewlineTab', lang) },
   ];
 
   const renderAppendOptions = (vertical = false) => (
     <div className={`flex ${vertical ? 'flex-col' : 'items-center'} gap-0.5 ${vertical ? '' : 'flex-shrink-0'}`}>
-      {!vertical && <span className="text-xs text-text-secondary mr-0.5">{t(lang, 'appendSuffix')}:</span>}
+      {!vertical && <span className="text-xs text-text-secondary mr-0.5">{translate('appendSuffix', lang)}:</span>}
       {appendOptions.map((opt) => (
         <button
           key={opt.mode}
@@ -69,27 +69,27 @@ export function RawDataViewSendPanel({
       variant="primary"
       className="px-3"
       icon={<Send />}
-      label={t(lang, 'send')}
+      label={translate('send', lang)}
       labelMode="responsive-compact"
       onClick={onSend}
       disabled={!targetTransportLabel}
-      title={!targetTransportLabel ? t(lang, 'noTransportNode') : t(lang, 'send')}
+      title={!targetTransportLabel ? translate('noTransportNode', lang) : translate('send', lang)}
     />
   );
 
   const renderTargetLabel = () => (
     <span
       className="flex-shrink-0 text-xs text-text-secondary whitespace-nowrap font-mono max-w-[160px] truncate"
-      title={t(lang, 'targetTransport')}
+      title={translate('targetTransport', lang)}
     >
-      → {targetTransportLabel ?? t(lang, 'noTransportNode')}
+      → {targetTransportLabel ?? translate('noTransportNode', lang)}
     </span>
   );
 
   if (compact) {
     return (
       <div className="responsive-toolbar flex flex-col gap-1.5">
-        <span className="text-xs text-text-secondary">{t(lang, 'appendSuffix')}</span>
+        <span className="text-xs text-text-secondary">{translate('appendSuffix', lang)}</span>
         {renderAppendOptions(true)}
         {renderTargetLabel()}
         {renderSendInput()}

@@ -1,0 +1,147 @@
+# Node Editor
+newTab: New Tab
+tabName: Tab
+noConnection: No Connection
+channelSource: Channel Source
+dragWidgetHint: Drag widgets here from the left panel
+emptyWaveform: Waveform is empty. Connect an input channel.
+
+# Bottom Panel
+aiChat: AI Chat
+
+# Context Menu
+contextMenuCopy: Copy
+contextMenuDelete: Delete
+contextMenuRename: Rename
+contextMenuDuplicate: Duplicate
+contextMenuCloseTab: Close Tab
+contextMenuCloseOtherTabs: Close Other Tabs
+contextMenuHideSidebar: Hide Sidebar
+contextMenuShowSidebar: Show Sidebar
+contextMenuInspectElement: Inspect Element
+fitView: Fit View
+resetZoom: Reset Zoom
+
+# Waveform Timeline
+timeWindow: Time Window
+scrollLeft: Scroll Left
+startTime: Start
+endTime: End
+
+# Oscilloscope
+run: Run
+stop: Stop
+autoSet: Auto Set
+horizontal: Horizontal
+timeBase: Time Base
+hPosition: H.Position
+cursors: Cursors
+measure: Measure
+coupling: Coupling
+couplingDC: DC (Direct)
+couplingAC: AC (Alternating)
+couplingGND: GND (Ground)
+measureNoData: No measurement data for this channel yet
+envelopeApprox: envelope
+envelopeApproxHint: Long windows are served by pyramid envelope tiers — extrema exact, mean/RMS approximate
+autosetClampedWarning: Time base capped at {actual}; {requested} per div needed to show full cycles
+autosetSpanRiskWarning: Large DC offset differences — small-signal channels may be flattened on shared Y; switch to independent Y
+position: Position
+yUnit: Y-Axis Unit
+sharedY: Shared Y
+independentY: Independent Y
+sharedYDesc: Toggle whether all channels share a single Y axis (V/div and Position)
+sharedYHint: Shared Y mode — Set V/div and Position uniformly in the "Channels" tab
+cursorHideHint: hide cursor
+cursorHiddenHint: Cursor hidden (release key to restore)
+waveformDerated: Buffer derated (envelope view)
+waveformInteractHintTitle: Waveform interaction
+waveformInteractHintMessage: Left-drag to select a range for copying or CSV export. Right-drag or Shift+left-drag to pan the view.
+waveformSnapshotUnavailable: Frozen display retained; raw snapshot resampling is unavailable
+waveformCsvExported: Exported {{count}} rows of raw waveform data
+waveformCopyTitle: Waveform copy
+dynamicSeriesToggle: Toggle dynamic series mode (fixed channel slots ↔ dynamic by connections)
+dynamicSeriesOff: FIXED
+dynamicSeriesOn: DYNAMIC
+curve: Curve
+curveRender: Curve Render
+lineMode: Line Mode
+pointMode: Points
+lineMode_linear: Linear
+lineMode_spline: Spline
+lineMode_steppedBefore: Step (Before)
+lineMode_steppedAfter: Step (After)
+pointMode_none: None
+pointMode_dot: Dot
+pointMode_ring: Ring
+pointMode_square: Square
+
+# Notifications
+notifError: Error
+notifWarn: Warning
+notifInfo: Info
+notifRefreshPortsFailed: Failed to refresh ports
+notifConnectFailed: Connection failed
+notifDisconnectFailed: Disconnect failed
+notifSendFailed: Send failed
+notifSetProtocolFailed: Protocol setup failed
+notifClearBufferFailed: Clear buffer failed
+notifNodeGraphSyncFailed: Node graph sync failed
+notifTransportHotUpdateFailed: Connection hot-update failed
+notifReconnect: Reconnect
+notifRetry: Retry
+notifDismiss: Dismiss
+notifDismissAll: Dismiss All
+notifMore: "{{count}} more notifications"
+notifCollapsedHint: Same-source error count
+
+# First-error guidance for node errors (shown once per error kind, managed by errorGuidance.ts)
+errorGuidePrefix: Tip
+errorGuideTransport: Transport failed to open. Check the cable connection and drivers, then refresh the port list and retry
+errorGuideProtocol: Protocol engine failed to start. Check the protocol configuration and channel count
+errorGuidePortNotFound: Port not found. Make sure the device is connected, then refresh the port list
+errorGuidePortAlreadyOpen: The port is already in use. Close other programs using this port (e.g. serial tools) and retry
+errorGuidePortNotOpen: The port is not open yet. Connect the Transport node first
+errorGuideIo: System IO error. Check the device connection and your permission to access the port
+errorGuideConfig: Invalid node configuration. Check the node parameters (port / baud rate / protocol, etc.)
+errorGuideSerde: Data serialization failed. Check the payload or configuration format
+
+# Performance monitor
+performanceMonitor: Performance Monitor
+performanceFrontend: Frontend
+performanceBackend: Backend
+performanceFrontendSource: WebView / browser rendering and scripting
+performanceBackendSource: lissio-server process and data pipeline
+performancePause: Pause sampling
+performanceResume: Resume sampling
+performanceRefresh: Sample now
+performanceClear: Clear history
+performancePaused: Paused
+performanceWaiting: Collecting performance data…
+performanceFps: FPS
+performanceFramesPerSecond: Rendered frames per second
+performanceFrameTime: Frame time P95
+performanceAverage: Average
+performanceHeap: JS Heap
+performanceLimit: Limit
+performanceLongTasks: Long tasks
+performanceLongest: Longest
+performanceCpu: CPU
+performanceThreads: Threads
+performanceMemory: Memory
+performanceUptime: Uptime
+performanceRpcLatency: RPC P95
+performanceDropped: Dropped
+performancePipeline: Data pipeline
+performanceCompleted: Completed frames
+performanceQueue: Queue
+performanceEvalWait: Eval service peak
+performanceIngressDropped: Ingress dropped
+performanceRpcCalls: RPC calls
+performanceRpcErrors: RPC errors
+performanceWsConnections: WS connections
+performanceWsDropped: WS dropped
+performanceSampling: Sampling
+performanceSampleCount: Samples
+performanceMonitorRpc: Monitor request
+performanceLastSample: Last sample

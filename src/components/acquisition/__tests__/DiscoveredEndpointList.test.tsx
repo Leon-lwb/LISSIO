@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithI18n } from '../../../test/renderWithI18n';;
 import type { DiscoveredEndpoint } from '../../../types';
 import { DiscoveredEndpointList } from '../DiscoveredEndpointList';
 
@@ -30,7 +31,7 @@ function renderList(overrides: Partial<Parameters<typeof DiscoveredEndpointList>
     onSelect: vi.fn(),
     ...overrides,
   };
-  render(<DiscoveredEndpointList {...props} />);
+  renderWithI18n(<DiscoveredEndpointList {...props} />);
   return props;
 }
 

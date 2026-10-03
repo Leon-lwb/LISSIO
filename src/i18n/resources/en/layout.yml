@@ -1,0 +1,187 @@
+# Layout arrangement (drag to rearrange panels)
+dragToRearrange: Drag to another panel's edge to rearrange
+dragToDock: Drag to the window's left/right edge to change dock side
+
+# Window close hint
+closeHintTitle: Window closed
+closeHintMessage: "The \"{{name}}\" window is closed, but the widget node stays on the canvas. Double-click the node to reopen it."
+closeHintGotIt: Got it
+nodeOpenWindowHint: Double-click to open window
+domainBytes: Bytes
+convertTo: Convert to (convert_to)
+convertRawDataHint: RawData produces no frames — convert_to is ignored and original bytes pass through the out port
+convertNone: No conversion
+cmdNoByteRoute: No byte route — connect loopbackOut to Transport.tx or FrameDecoder.in
+noTransportNode: No transport node — drag a "Data Interface" node from the palette first
+targetTransport: Target transport
+
+# 波形包络模式 (wgpu 降采样原型)
+envelopeModeTitle: "Envelope mode: backend per-column min/max decimation (GPU-accelerated), frontend draws ribbon only (prototype)"
+envelopeMode: Envelope
+envelopeStats: "window {n} pts → {columns}-col envelope"
+
+# Workspace run control (status bar RunControls + unified send gating)
+runStateStopped: Stopped
+runStateRunning: Running
+runStatePaused: Paused
+runStartHint: Start workspace (acquisition/cache/eval begin; resuming from pause keeps data continuous)
+runPauseHint: Pause workspace (keeps connection and acquisition; data keeps filling caches and recording; only auto-send and device writes stop)
+runStopHint: Stop workspace (drops in-flight data without caching; clears pending send tasks, keeps existing caches)
+runRecordingActive: Recording
+runRecordingActiveHint: Workspace is paused — acquisition and recording keep writing to the database
+runRecordingDisabled: Recording off
+runRecordingDisabledHint: The recording database is disabled in settings; acquisition and run control are unaffected. Re-enable it under Settings → Data
+runRecordingDropped: Recording dropped {{count}}
+runRecordingDroppedHint: Disk/checkpoint could not keep up and the writer queue overflowed, so some batches were dropped — acquisition and run control are unaffected, but this recording is incomplete
+displayFrozen: Not live
+displayFrozenHint: The workspace is not running, or this panel left the latest — resuming from pause jumps back to the latest
+cmdSendRequiresRun: Workspace is not running — manual send requires running state, start it from the status bar
+capabilityVersionFallback: This interface cannot be connected with the current app version.
+capabilityDiscoveredEndpoint: Discovered endpoints
+capabilityDiscovering: Discovering…
+capabilityNoEndpointsDiscovered: No devices discovered
+capabilityLabel: Name
+capabilityUnavailable: This interface is not available in the current build.
+propertiesSectionGeneral: General
+propertiesSectionBusiness: Business configuration
+propertiesSectionExtra: Additional properties
+propertiesNoExtraAttributes: No additional properties available
+schemaFieldPortName: Serial port
+schemaFieldBaudRate: Baud rate
+schemaFieldDataBits: Data bits
+schemaFieldStopBits: Stop bits
+schemaFieldParity: Parity
+schemaFieldFlowControl: Flow control
+schemaFieldHost: Host
+schemaFieldPort: Port
+schemaFieldPath: Path
+schemaFieldAddress: Address
+schemaFieldUnitId: Unit ID
+schemaFieldLocalAddr: Local address
+schemaFieldRemoteAddr: Remote address
+schemaFieldLocalPort: Local port
+schemaFieldRemotePort: Remote port
+schemaFieldListenAddr: Listen address
+schemaFieldListenPort: Listen port
+schemaFieldChannels: Channels
+schemaFieldSampleRate: Sample rate
+schemaFieldSignal: Signal
+schemaFieldCanBitrate: CAN bitrate
+schemaFieldBus: Bus
+schemaFieldChannel: Channel
+schemaFieldTimeoutMs: Timeout (ms)
+schemaFieldReconnect: Reconnect
+schemaFieldMaxAttempts: Max attempts
+schemaFieldInitialDelayMs: Initial delay (ms)
+schemaFieldMaxDelayMs: Max delay (ms)
+schemaFieldPoints: Points
+schemaFieldId: ID
+schemaFieldArea: Area
+schemaFieldDataType: Data type
+schemaFieldByteOrder: Byte order
+schemaFieldWordOrder: Word order
+schemaFieldScale: Scale
+schemaFieldOffset: Offset
+schemaFieldPollPeriodMs: Poll period (ms)
+schemaFieldPlcType: PLC model
+schemaFieldRack: Rack
+schemaFieldSlot: Slot
+schemaFieldDbNumber: DB number
+schemaFieldByteOffset: Byte offset
+schemaFieldBit: Bit
+schemaEnumNone: None
+schemaEnumOdd: Odd
+schemaEnumEven: Even
+schemaEnumOne: One
+schemaEnumTwo: Two
+schemaEnumSoftware: Software
+schemaEnumHardware: Hardware
+schemaEnumSeven: Seven
+schemaEnumEight: Eight
+schemaEnumBig: Big-endian
+schemaEnumLittle: Little-endian
+schemaEnumCoils: Coils
+schemaEnumDiscreteInputs: Discrete inputs
+schemaEnumInputRegisters: Input registers
+schemaEnumHoldingRegisters: Holding registers
+schemaEnumInputs: Inputs (I)
+schemaEnumOutputs: Outputs (Q)
+schemaEnumMarkers: Markers (M)
+schemaEnumDb: Data blocks (DB)
+schemaEnumBps10k: 10 kbps
+schemaEnumBps20k: 20 kbps
+schemaEnumBps50k: 50 kbps
+schemaEnumBps100k: 100 kbps
+schemaEnumBps125k: 125 kbps
+schemaEnumBps250k: 250 kbps
+schemaEnumBps500k: 500 kbps
+schemaEnumBps800k: 800 kbps
+schemaEnumBps1m: 1 Mbps
+
+devicePanelHint: Click or drag a device onto the canvas, then configure and connect.
+devicePanelSearch: Search name, port, VID/PID…
+devicePanelAdd: Add device
+devicePanelManual: Configure manually
+devicePanelAdded: Added
+
+deviceTypeBluetooth: Bluetooth serial
+deviceTypeUsb: USB serial
+deviceTypePci: PCI serial
+deviceTypeSystem: System serial
+deviceBluetoothNoUsbIds: Not a USB device; no USB VID/PID
+
+devicePanelDevices: Devices
+devicePanelManualConnections: Add a connection manually
+devicePanelConnectVia: Connect via
+
+paletteSearchAll: Search devices, widgets, categories…
+paletteJumpTo: Jump to category
+
+addDefaultCanvas: Add default canvas
+defaultCanvas: Default canvas
+defaultCanvasUnavailable: Unable to add the default canvas. Check the serial device catalog and try again.
+
+deviceTreeTitle: Device tree
+deviceTreeHint: Assemble connections, protocol engines, and test data into a device tree. Connect protocol outputs to displays on the canvas.
+deviceTreeEmpty: No devices yet. Add a connection or a test data source to start.
+deviceTreeSearch: Search devices, protocols, or node IDs
+deviceTreeAddRoot: Add device
+deviceTreeAddProtocol: Add protocol engine
+deviceTreeAddSimulation: Add test data
+deviceTreeEnabled: Enable node
+deviceTreeRemove: Delete subtree
+deviceTreeConfigure: Node configuration
+deviceTreeSelect: Select a node to edit its configuration
+schemaUnsupported: This schema uses unsupported form fields. Use the JSON editor instead.
+schemaValueUnset: Not set
+deviceTreeReconnect: Changing configuration or topology closes the device. Reconnect to apply your changes.
+deviceTreeCanvasNode: This node belongs to the device through a canvas connection. Use the button below to edit it.
+deviceTreeEditCanvas: Open canvas node properties
+deviceTreeUnavailable: Could not load the device catalog
+deviceTreePath: Node path
+deviceTreeDisabled: Disabled
+deviceTreeClosed: Disconnected
+deviceTreeOnline: Connected
+deviceTreeBusy: Connecting
+deviceTreeFailed: Connection error
+deviceTreeCollapse: Collapse
+deviceTreeExpand: Expand
+deviceTreeInvalidName: Use a nonempty name without /, unique among sibling nodes.
+deviceTreeSimulationHint: When enabled, test data replaces the parent device input without accessing hardware.
+deviceTreeSignal: Waveform
+deviceTreeFrequency: Frequency (Hz)
+deviceTreeAmplitude: Amplitude
+deviceTreeOffset: Offset
+deviceTreeSampleRate: Sample rate (Hz)
+deviceTreeSeed: Random seed
+deviceTreeEncoding: Data format
+deviceTreeAutoEncoding: Match protocol engine automatically
+deviceTreeJsonConfig: Driver configuration (JSON)
+deviceTreeApply: Apply configuration
+deviceTreeDriver: Driver
+deviceTreeCatalog: Discover hardware devices
+deviceTreeSubtreeHint: Delete this node, its descendants, and their data connections.
+deviceTreeAddChild: Add child node
+deviceTreeCanvasBadge: Canvas
+catalogCreateFailed: Node creation failed
+unsupportedWidget: Unsupported widget

@@ -1,0 +1,105 @@
+# Widgets
+knob: Knob
+button: Button
+radio: Radio
+checkbox: Checkbox
+slider: Slider
+label: Label
+waveform: Waveform
+pieChart: Pie Chart
+image: Image
+gauge: Gauge
+led: LED
+numberDisplay: Number Display
+progressBar: Progress Bar
+math: Math
+str: String
+custom: Custom JS
+addWidget: Add Widget
+removeWidget: Remove
+bindingMode: Binding
+auto: Auto
+manual: Manual
+none: None
+channel: Channel
+template: Template
+minValue: Min
+maxValue: Max
+step: Step
+defaultValue: Default
+press: Press
+release: Release
+options: Options
+widgetName: Widget Name
+nodeRenameHint: Double-click the title bar to rename
+nodeSize: Node Size
+nodeWidth: W
+nodeHeight: H
+sizeAuto: auto
+resetSize: Reset size
+nodeSizeMinHint: min {w} × {h}
+propertiesClose: Close properties panel
+nodeProperties: Properties
+nodePropertiesEmpty: No node selected — click a node on the canvas to inspect it
+currentValue: Current Value
+labelText: Label Text
+optionValue: Return Value
+optionName: Option Name
+addOption: Add Option
+displayRange: Display Range
+rangeWindow: Auto Window (s)
+majorTicks: Major Ticks
+tickPrecision: Tick Precision
+precisionAuto: Auto
+captureRange: Capture Current Range
+autoRangeLive: Current Auto Range
+orientation: Orientation
+orientationHorizontal: Horizontal
+orientationVertical: Vertical
+showValue: Show Value
+unit: Unit
+fillColor: Fill Color
+precision: Precision
+ledThreshold: Threshold
+ledOnColor: ON Color
+ledOffColor: OFF Color
+pieChartSegments: Segments
+segmentName: Segment
+addSegment: Add Segment
+imageWidth: Width
+imageHeight: Height
+imageFormat: Pixel Format
+formatRgb888: RGB888
+formatRgb565: RGB565
+formatGray8: GRAY8
+mathOp: Operation
+mathInputs: Inputs
+invalidRange: Minimum must be less than maximum
+invalidStep: Step must be greater than 0
+invalidValue: Enter a valid number
+requiredValue: This field is required
+bindingTransport: Target Interface
+bindingProtocol: Encoding Protocol
+bindingTemplateHint: "{value} is replaced with the current control value"
+bindingInvalidTarget: Binding target is invalid; nothing will be sent
+
+# Data
+rawData: Raw Data
+gridView: Grid
+lineView: Line
+decodeMode: Decode mode
+hexView: HEX
+asciiView: ASCII
+utf8View: UTF-8
+gbkView: GBK
+terminalView: Terminal
+rawDataChannel: Channel
+send: Send
+clear: Clear
+autoScroll: Auto Scroll
+
+# Stats
+rxBytes: RX Bytes
+txBytes: TX Bytes
+rxFrames: RX Frames
+txFrames: TX Frames

@@ -3,7 +3,7 @@ import { Pause, Play, Square } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '../../store/appStore';
 import { api } from '../../lib/tauri/tauri';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { RunState } from '../../types';
 
 /// 运行状态徽标配色 + 标签
@@ -63,7 +63,7 @@ export const RunControls = memo(function RunControls() {
   return (
     <div className="flex items-center gap-1 h-full shrink-0" data-testid="run-controls">
       <span className={clsx('w-2 h-2 rounded-full inline-block', badge.dot)} />
-      <span className="whitespace-nowrap mr-0.5">{t(lang, badge.label)}</span>
+      <span className="whitespace-nowrap mr-0.5">{translate(badge.label, lang)}</span>
       <button
         className={clsx(
           'w-5 h-5 flex items-center justify-center rounded transition-colors duration-150',
@@ -71,8 +71,8 @@ export const RunControls = memo(function RunControls() {
             ? 'text-green bg-green/10'
             : 'text-text-secondary hover:bg-bg-hover hover:text-green'
         )}
-        title={t(lang, 'runStartHint')}
-        aria-label={t(lang, 'runStartHint')}
+        title={translate('runStartHint', lang)}
+        aria-label={translate('runStartHint', lang)}
         onClick={() => { void workspaceRun('start'); }}
       >
         <Play size={11} />
@@ -85,8 +85,8 @@ export const RunControls = memo(function RunControls() {
             : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
           runState === 'stopped' && 'opacity-subtle hover:opacity-subtle hover:text-text-secondary'
         )}
-        title={t(lang, 'runPauseHint')}
-        aria-label={t(lang, 'runPauseHint')}
+        title={translate('runPauseHint', lang)}
+        aria-label={translate('runPauseHint', lang)}
         disabled={runState === 'stopped'}
         onClick={() => { void workspaceRun('pause'); }}
       >
@@ -99,8 +99,8 @@ export const RunControls = memo(function RunControls() {
             ? 'text-text-secondary opacity-subtle hover:opacity-subtle hover:text-text-secondary'
             : 'text-text-secondary hover:bg-bg-hover hover:text-red'
         )}
-        title={t(lang, 'runStopHint')}
-        aria-label={t(lang, 'runStopHint')}
+        title={translate('runStopHint', lang)}
+        aria-label={translate('runStopHint', lang)}
         disabled={runState === 'stopped'}
         onClick={() => { void workspaceRun('stop'); }}
       >
@@ -110,30 +110,30 @@ export const RunControls = memo(function RunControls() {
         <span
           className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-red"
           data-testid="run-recording-active"
-          title={t(lang, 'runRecordingActiveHint')}
+          title={translate('runRecordingActiveHint', lang)}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-red inline-block" />
-          {t(lang, 'runRecordingActive')}
+          {translate('runRecordingActive', lang)}
         </span>
       )}
       {recordingBadge === 'disabled' && (
         <span
           className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-text-muted"
           data-testid="run-recording-disabled"
-          title={t(lang, 'runRecordingDisabledHint')}
+          title={translate('runRecordingDisabledHint', lang)}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-text-muted inline-block" />
-          {t(lang, 'runRecordingDisabled')}
+          {translate('runRecordingDisabled', lang)}
         </span>
       )}
       {recordingBadge === 'dropped' && (
         <span
           className="flex items-center gap-1 ml-1 whitespace-nowrap text-[10px] text-yellow"
           data-testid="run-recording-dropped"
-          title={t(lang, 'runRecordingDroppedHint')}
+          title={translate('runRecordingDroppedHint', lang)}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-yellow inline-block" />
-          {t(lang, 'runRecordingDropped').replace('{{count}}', String(droppedBatches))}
+          {translate('runRecordingDropped', lang).replace('{{count}}', String(droppedBatches))}
         </span>
       )}
     </div>

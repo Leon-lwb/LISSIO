@@ -5,7 +5,7 @@
 import { memo } from 'react';
 import type { SpectrumOutput, WindowType } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import { NumberField, SelectField } from '../../ui/fields';
 import type { WidgetPropertiesProps } from '../registryTypes';
 
@@ -17,32 +17,32 @@ export const FFTProperties = memo(function FFTProperties({ widget, update }: Wid
     update({ kind: 'FFT', params: { ...widget.params, ...p } });
   return (
     <section className="mt-3 pt-3 border-t border-border">
-      <div className="section-heading section-heading--micro mb-2">{t(lang, 'fftSettings')}</div>
-      <SelectField label={t(lang, 'spectrumWindowSize')} value={String(windowSize)}
+      <div className="section-heading section-heading--micro mb-2">{translate('fftSettings', lang)}</div>
+      <SelectField label={translate('spectrumWindowSize', lang)} value={String(windowSize)}
         options={[256, 512, 1024, 2048, 4096].map((sz) => ({ value: String(sz), label: String(sz) }))}
         onChange={(v) => patch({ windowSize: Number(v), hopSize: Number(v) / 2 })} />
-      <NumberField label={t(lang, 'fftHopSize')} value={hopSize}
+      <NumberField label={translate('fftHopSize', lang)} value={hopSize}
         onCommit={(v) => { if (Number.isInteger(v) && v > 0 && v <= windowSize) { patch({ hopSize: v }); return true; } return false; }}
-        error={t(lang, 'invalidStep')} />
-      <SelectField label={t(lang, 'spectrumWindowType')} value={windowType}
+        error={translate('invalidStep', lang)} />
+      <SelectField label={translate('spectrumWindowType', lang)} value={windowType}
         options={([
           ['Rect', 'windowRect'],
           ['Hann', 'windowHann'],
           ['Hamming', 'windowHamming'],
           ['Blackman', 'windowBlackman'],
-        ] as [WindowType, string][]).map(([value, key]) => ({ value, label: t(lang, key) }))}
+        ] as [WindowType, string][]).map(([value, key]) => ({ value, label: translate(key, lang) }))}
         onChange={(v) => patch({ windowType: v as WindowType })} />
-      <SelectField label={t(lang, 'spectrumOutputMode')} value={output}
+      <SelectField label={translate('spectrumOutputMode', lang)} value={output}
         options={([
           ['Magnitude', 'spectrumMagnitude'],
           ['Power', 'spectrumPower'],
           ['PSD', 'spectrumPSD'],
           ['Decibel', 'spectrumDecibel'],
-        ] as [SpectrumOutput, string][]).map(([value, key]) => ({ value, label: t(lang, key) }))}
+        ] as [SpectrumOutput, string][]).map(([value, key]) => ({ value, label: translate(key, lang) }))}
         onChange={(v) => patch({ output: v as SpectrumOutput })} />
-      <NumberField label={`${t(lang, 'filterSampleRate')} (Hz)`} value={sampleRate}
+      <NumberField label={`${translate('filterSampleRate', lang)} (Hz)`} value={sampleRate}
         onCommit={(v) => { if (v > 0) { patch({ sampleRate: v }); return true; } return false; }}
-        error={t(lang, 'invalidStep')} />
+        error={translate('invalidStep', lang)} />
     </section>
   );
 });

@@ -2,7 +2,7 @@ import { memo, useState } from 'react';
 import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { CompileErrorItem } from './CompileErrorItem';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { CompileReport } from '../../../store/slices/compileError';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 
@@ -40,7 +40,7 @@ export const CompileErrorGroup = memo(function CompileErrorGroup({
             {tabName}
           </span>
           <span className="text-xs text-text-secondary font-mono">
-            {`(${t(lang, 'compileErrorNodes').replace('{{count}}', String(nodeCount))})`}
+            {`(${translate('compileErrorNodes', lang).replace('{{count}}', String(nodeCount))})`}
           </span>
         </div>
       </div>
@@ -59,7 +59,7 @@ export const CompileErrorGroup = memo(function CompileErrorGroup({
             ))
           ) : (
             <div className="text-center py-4 text-xs text-text-secondary italic">
-              {t(lang, 'noCompileErrors')}
+              {translate('noCompileErrors', lang)}
             </div>
           )}
         </div>

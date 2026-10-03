@@ -1,6 +1,6 @@
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import type { DiscoveredEndpoint } from '../../types';
 import { endpointHardwareDetails, endpointSubtitle, isEndpointApplied } from './discoveredEndpoints';
 
@@ -25,13 +25,13 @@ export function DiscoveredEndpointList({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-text-secondary">{t(lang, 'capabilityDiscoveredEndpoint')}</span>
+        <span className="text-[11px] text-text-secondary">{translate('capabilityDiscoveredEndpoint', lang)}</span>
         <button
           type="button"
           disabled={disabled}
           onClick={onRefresh}
-          title={t(lang, 'refresh')}
-          aria-label={t(lang, 'refresh')}
+          title={translate('refresh', lang)}
+          aria-label={translate('refresh', lang)}
           className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
         >
           {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
@@ -39,7 +39,7 @@ export function DiscoveredEndpointList({
       </div>
       {endpoints.length === 0 ? (
         <div role="status" className="rounded border border-dashed border-border px-2 py-3 text-center text-[11px] text-text-muted">
-          {t(lang, pending ? 'capabilityDiscovering' : 'capabilityNoEndpointsDiscovered')}
+          {translate(pending ? 'capabilityDiscovering' : 'capabilityNoEndpointsDiscovered', lang)}
         </div>
       ) : (
         <div className="flex max-h-48 flex-col gap-1.5 overflow-y-auto">

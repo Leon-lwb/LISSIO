@@ -1,7 +1,7 @@
 import { memo, useMemo, useRef, useEffect, useState } from 'react';
 import { useAppStore } from '../../../store/appStore';
 import { useNumericHistory } from '../../../lib/hooks/useNumericPort';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { WidgetConfig, LoopbackResult } from '../../../types';
 
 interface TableViewProps {
@@ -101,7 +101,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
   if (params.columns.length === 0) {
     return (
       <div className="widget-card-acrylic flex-1 flex items-center justify-center text-text-secondary text-xs p-4">
-        {t(lang, 'tableViewNoColumns')}
+        {translate('tableViewNoColumns', lang)}
       </div>
     );
   }
@@ -122,7 +122,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
             });
           }}
         >
-          {t(lang, params.showRawData ? 'tableViewHideRaw' : 'tableViewShowRaw')}
+          {translate(params.showRawData ? 'tableViewHideRaw' : 'tableViewShowRaw', lang)}
         </button>
       </div>
 
@@ -134,7 +134,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
               <th className="px-2 py-1.5 text-left text-text-secondary font-medium w-8">#</th>
               {params.showTimestamp && (
                 <th className="px-2 py-1.5 text-left text-text-secondary font-medium whitespace-nowrap">
-                  {t(lang, 'tableViewTimestamp')}
+                  {translate('tableViewTimestamp', lang)}
                 </th>
               )}
               {params.columns.map((col, i) => (
@@ -154,7 +154,7 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
                   colSpan={1 + (params.showTimestamp ? 1 : 0) + params.columns.length}
                   className="px-2 py-6 text-center text-text-secondary opacity-muted italic"
                 >
-                  {t(lang, 'tableViewEmpty')}
+                  {translate('tableViewEmpty', lang)}
                 </td>
               </tr>
             ) : (
@@ -199,10 +199,10 @@ export const TableView = memo(function TableView({ widget, loopbackHistory }: Ta
 
       {/* 状态栏 */}
       <div className="flex items-center justify-between px-3 py-1 border-t border-border flex-shrink-0 text-[10px] text-text-secondary">
-        <span>{allRows.length} / {params.maxRows} {t(lang, 'tableViewRows')}</span>
+        <span>{allRows.length} / {params.maxRows} {translate('tableViewRows', lang)}</span>
         {loopbackHistory && loopbackHistory.length > 0 && (
           <span className="text-blue">
-            {loopbackHistory.length} {t(lang, 'tableViewLoopbackRows')}
+            {loopbackHistory.length} {translate('tableViewLoopbackRows', lang)}
           </span>
         )}
       </div>

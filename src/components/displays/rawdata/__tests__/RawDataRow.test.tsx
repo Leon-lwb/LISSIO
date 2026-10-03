@@ -1,4 +1,5 @@
-import { render } from '@testing-library/react';
+import { renderWithI18n } from '../../../../test/renderWithI18n';
+;
 import { describe, expect, it, vi } from 'vitest';
 import {
   RAWDATA_LINE_MAX_BYTES,
@@ -37,7 +38,7 @@ function createBuffer(bytes: number[], continued = false): RawDataLineSource {
 
 describe('RawDataRow', () => {
   it.each(['ascii', 'hex'] as const)('preserves an ASCII space in %s view', (repr) => {
-    const { container } = render(
+    const { container } = renderWithI18n(
       <Row
         originalIndex={0}
         filteredIndex={0}
@@ -62,7 +63,7 @@ describe('RawDataRow', () => {
   });
 
   it('decodes UTF-8 and GBK text representations', () => {
-    const renderRow = (repr: 'utf8' | 'gbk') => render(
+    const renderRow = (repr: 'utf8' | 'gbk') => renderWithI18n(
       <Row
         originalIndex={0}
         filteredIndex={0}
@@ -84,7 +85,7 @@ describe('RawDataRow', () => {
   });
 
   it('marks a wrapped continuation row with ↳ instead of the direction arrow', () => {
-    const { container, rerender } = render(
+    const { container, rerender } = renderWithI18n(
       <Row
         originalIndex={1}
         filteredIndex={1}
@@ -137,7 +138,7 @@ describe('RawDataRow', () => {
     };
     buffer.pushBatch(batch);
 
-    const { container } = render(
+    const { container } = renderWithI18n(
       <Row
         originalIndex={0}
         filteredIndex={0}

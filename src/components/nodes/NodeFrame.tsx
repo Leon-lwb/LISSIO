@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Handle, NodeResizer, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
-import { t } from '../../i18n';
+import { translate } from '../../i18n';
 import { CanvasErrorTooltip, useCanvasNodeError } from '../ui/CanvasErrorTooltip';
 import { domainColor } from '../widgets/shared/portVisuals';
 
@@ -67,22 +67,22 @@ export function NodeFrame({ id, tabId, label, selected, color, inputs, outputs,
   return <CanvasErrorTooltip message={error}>
     <div data-node-id={id} className="nowheel widget-card-acrylic rounded-md w-full h-full text-[11px] relative flex flex-col"
       style={{ minWidth, minHeight, boxShadow: error ? '0 0 0 2px #ef4444' : highlighted ? '0 0 0 2px var(--color-accent)' : undefined }}
-      onDoubleClick={onOpen} title={onOpen ? t(lang, 'nodeOpenWindowHint') : undefined}>
+      onDoubleClick={onOpen} title={onOpen ? translate('nodeOpenWindowHint', lang) : undefined}>
       <div className="contents" onDoubleClick={(event) => event.stopPropagation()}>
         <NodeResizer isVisible={!!selected} minWidth={minWidth} minHeight={minHeight} maxWidth={1600} maxHeight={1200}
           lineClassName="!border-accent" handleClassName="!w-[7px] !h-[7px] !border-accent !bg-bg-sidebar" />
       </div>
       <div className="node-drag-handle flex items-center gap-1 justify-between px-1.5 py-1 border-b border-border text-[10px] font-semibold cursor-grab active:cursor-grabbing"
-        style={{ color }} title={t(lang, 'nodeRenameHint')}
+        style={{ color }} title={translate('nodeRenameHint', lang)}
         onDoubleClick={(event) => { event.preventDefault(); event.stopPropagation(); setDraft(label); setInvalid(false); setRenaming(true); }}>
         {renaming ? <input ref={input} className={`nodrag nowheel flex-1 min-w-0 h-5 px-1 rounded bg-bg-input text-text-primary outline-none border ${invalid ? 'border-red' : 'border-accent'}`}
-          value={draft} aria-label={t(lang, 'widgetName')} aria-invalid={invalid}
+          value={draft} aria-label={translate('widgetName', lang)} aria-invalid={invalid}
           onChange={(event) => { setDraft(event.target.value); setInvalid(false); }}
           onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}
           onBlur={commit} onKeyDown={(event) => { event.stopPropagation(); if (event.key === 'Enter') commit(); if (event.key === 'Escape') setRenaming(false); }} />
           : <span className="flex-1 min-w-0 truncate" title={label}>{label}</span>}
         {status}{actions}
-        <button type="button" aria-label={t(lang, 'removeWidget')} className="nodrag w-4 h-4 opacity-muted hover:opacity-100 flex items-center justify-center rounded hover:bg-bg-hover"
+        <button type="button" aria-label={translate('removeWidget', lang)} className="nodrag w-4 h-4 opacity-muted hover:opacity-100 flex items-center justify-center rounded hover:bg-bg-hover"
           onClick={(event) => { event.stopPropagation(); onRemove(); }}><X size={10} /></button>
       </div>
       <div className="flex w-full flex-1 min-h-0">

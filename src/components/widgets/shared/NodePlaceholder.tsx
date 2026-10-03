@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { useAppStore } from '../../../store/appStore';
-import { t } from '../../../i18n';
+import { translate } from '../../../i18n';
 import type { WidgetConfig } from '../../../types';
 import { resolveRawDataStatusTransport } from '../../../lib/utils/rawDataChannel';
 import { selectWidgets } from '../../../store/appStoreHelpers';
@@ -28,14 +28,14 @@ const RawDataConnHint = memo(function RawDataConnHint({ nodeId }: { nodeId: stri
       className={`flex items-center gap-1 text-[9px] ${
         isError ? 'text-red' : 'text-text-secondary'
       }`}
-      title={t(lang, isError ? 'connError' : 'notConnected')}
+      title={translate(isError ? 'connError' : 'notConnected', lang)}
     >
       <span
         className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
           isError ? 'bg-red' : 'bg-text-muted'
         }`}
       />
-      {t(lang, isError ? 'connError' : 'notConnected')}
+      {translate(isError ? 'connError' : 'notConnected', lang)}
     </span>
   );
 });
@@ -53,7 +53,7 @@ export const NodePlaceholder = memo(function NodePlaceholder({ kind, nodeId, sho
   return (
     <div className="flex flex-col items-center gap-1 px-2 py-3 text-text-secondary text-[10px] text-center">
       <span>{kind}</span>
-      <span className="text-blue text-[9px]">↗ {t(lang, 'nodeOpenWindowHint')}</span>
+      <span className="text-blue text-[9px]">↗ {translate('nodeOpenWindowHint', lang)}</span>
       {showRawDataHint && kind === 'RawData' && <RawDataConnHint nodeId={nodeId} />}
     </div>
   );

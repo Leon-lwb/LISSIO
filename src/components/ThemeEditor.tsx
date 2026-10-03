@@ -15,7 +15,7 @@ import {
   FileCode,
 } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
-import { t } from '../i18n';
+import { translate } from '../i18n';
 import {
   BUILT_IN_THEMES,
   BUILT_IN_CSS_THEMES,
@@ -285,13 +285,13 @@ export function ThemeEditor({
     >
       <DialogSurface
         className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] animate-[settings-slide-in_0.2s_ease-out]"
-        label={t(lang, 'themeEditor')}
+        label={translate('themeEditor', lang)}
       >
         {/* 顶部 */}
         <DialogHeader className="gap-3">
           <div className="flex items-center gap-1.5 text-text-primary text-base font-semibold flex-shrink-0">
             <Palette size={16} />
-            <span>{t(lang, 'themeEditor')}</span>
+            <span>{translate('themeEditor', lang)}</span>
           </div>
           {/* Tab切换 */}
           <div className="flex items-center gap-1 ml-4 px-1 py-0.5 bg-bg-input rounded-lg">
@@ -303,7 +303,7 @@ export function ThemeEditor({
               }`}
               onClick={() => setActiveTab('color')}
             >
-              {t(lang, 'colorTheme')}
+              {translate('colorTheme', lang)}
             </button>
             <button
               className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
@@ -313,14 +313,14 @@ export function ThemeEditor({
               }`}
               onClick={() => setActiveTab('css')}
             >
-              {t(lang, 'cssTheme')}
+              {translate('cssTheme', lang)}
             </button>
           </div>
           <div className="flex-1" />
           <button
             className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer bg-transparent border-none"
             onClick={onClose}
-            title={t(lang, 'themeEditorClose')}
+            title={translate('themeEditorClose', lang)}
           >
             <X size={16} />
           </button>
@@ -334,12 +334,12 @@ export function ThemeEditor({
               <div className="w-56 dialog-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
-                    {t(lang, 'themeList')}
+                    {translate('themeList', lang)}
                   </span>
                   <button
                     className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors cursor-pointer bg-transparent border-none"
                     onClick={handleAddTheme}
-                    title={t(lang, 'themeAdd')}
+                    title={translate('themeAdd', lang)}
                   >
                     <Plus size={14} />
                   </button>
@@ -403,7 +403,7 @@ export function ThemeEditor({
               <div className="w-56 dialog-chrome-muted border-r border-border flex flex-col flex-shrink-0">
                 <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                   <span className="text-xs font-semibold text-text-secondary uppercase tracking-[0.5px]">
-                    {t(lang, 'cssThemeList')}
+                    {translate('cssThemeList', lang)}
                   </span>
                 </div>
                 <div className="flex-1 overflow-y-auto py-1">
