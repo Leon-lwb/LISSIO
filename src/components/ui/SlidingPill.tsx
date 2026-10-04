@@ -68,25 +68,53 @@ export function useSlidingPill(activeKey: string | null) {
   return { containerRef, pill };
 }
 
-/// 滑块本体 — 绝对定位在容器内, 位置/尺寸变化由 CSS transition 平滑滑行
+/**
+ * 把一个矩形换算成纯 `transform`。
+ *
+ * 元素本身按 `width`/`height` 布局在容器原点(`transform-origin: 0 0`), 因此
+ * `translate` 直接落到目标位置, `scale` 把目标尺寸还原成 `rect` 的尺寸。传入
+ * `rect` 自身尺寸时得到恒等变换, 传入上一个矩形时得到 FLIP 的起始姿态。
+ */
+export function pillTransform(rect: PillRect, width: number, height: number): string {
+  const scaleX = width > 0 ? rect.width / width : 1;
+  const scaleY = height > 0 ? rect.height / height : 1;
+  return `translate(${rect.left}px, ${rect.top}px) scale(${scaleX}, ${scaleY})`;
+}
+
+/// 滑块本体 — 绝对定位在容器内, 只写 `transform`, 位置与尺寸变化不触发布局
 /// variant: 'editor' (默认, bg-editor) | 'panel' (bg-active, 用于竖排通道 Tab)
 export function SlidingPill({ pill, variant = 'editor' }: { pill: PillRect; variant?: 'editor' | 'panel' }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const settled = useRef<PillRect | null>(null);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!pill.visible || pill.width <= 0 || pill.height <= 0) {
+      settled.current = null;
+      return;
+    }
+    const previous = settled.current;
+    settled.current = pill;
+    if (previous) {
+      // 尺寸已经是目标尺寸, 所以只需把 scale 调回上一帧, 元素就"看起来"还在旧矩形。
+      // 过渡必须先关掉, 再强制一次样式结算让这个姿态成为过渡起点, 否则浏览器会
+      // 从上一次已合成的 transform 插值, 尺寸就会瞬间跳变而不是形变。
+      el.style.transition = 'none';
+      el.style.transform = pillTransform(previous, pill.width, pill.height);
+      void el.offsetWidth;
+    }
+    el.style.transition = '';
+    el.style.transform = pillTransform(pill, pill.width, pill.height);
+  }, [pill]);
+
   if (!pill.visible) return null;
-  // 使用 left/top 定位，transform: scale() 处理尺寸动画（避免 layout）
-  // 由于 transition 只能作用于相同属性，需要分两步：
-  // 1. 位置变化：left/top 变化 + translateX/Y 动画
-  // 2. 尺寸变化：scaleX/scaleY 动画
-  // 为简化，使用 scale 配合 width/height 的视觉尺寸
   return (
     <div
+      ref={ref}
       aria-hidden
       className={`tab-sliding-pill motion-pill ${variant === 'panel' ? 'tab-sliding-pill--panel' : ''}`}
-      style={{
-        left: pill.left,
-        top: pill.top,
-        width: pill.width,
-        height: pill.height,
-      }}
+      style={{ width: pill.width, height: pill.height }}
     />
   );
 }

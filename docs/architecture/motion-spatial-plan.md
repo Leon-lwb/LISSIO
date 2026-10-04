@@ -1,7 +1,7 @@
 # 动效空间化改造计划
 
-本文件描述 `src/lib/motion/` 落地之后**尚未完成**的界面改造。
-已完成的物理引擎与令牌层见 `motion-tokens.md`；本文只讲接下来做什么、为什么。
+本文件描述 `src/lib/motion/` 落地之后**尚未完成**的界面改造，以及已经收尾的部分。
+已完成的物理引擎与令牌层见 `motion-tokens.md`；本文只讲还剩什么、为什么。
 
 ## 判断标准
 
@@ -26,38 +26,47 @@
 | 距离感知时长 | `motionSpringFor(family, phase, px)` | 按实测路程拉伸 |
 | 进场/离场几何 | `MotionPresence` 的 `origin` / `travel` / `scale` | 传真实锚点 |
 | 进场/离场不同令牌 | `--ease-<家族>-out` | 离场恒为临界阻尼 |
+| dock 边锚点 | `dockPanelGeometry(edge)` | 由停靠边推导 origin 与进场位移 |
+| 停靠面板抽屉 | `components/layout/DockedPanel.tsx` | 宽度收拢 + `MotionPresence` 退场 |
+| 组内换边连续性 | `useDockReorder(container, trigger)` | 手写 FLIP，纯 transform |
 | 错峰 | 尚未封装 | 需要新增，见下 |
-| 共享元素与重排 | 尚未封装 | 需要新增，见下 |
+| 共享元素与重排 | `pillTransform()` 的 FLIP 姿态换算 | 已由滑动指示器落地 |
 | 合成器图层预算 | `promote()` / `release()` | 引用计数，用完即卸 |
+
+## 已完成
+
+### 停靠面板的进场与离场
+
+停靠面板（侧边栏与 AI 面板的 left / right / bottom）统一由 `DockedPanel` 驱动，
+方向性 CSS 关键帧（`animate-ai-in-*`）已删除。它把一次开合拆成两半，各用各的长处：
+
+- **宽度**由 `docked-panel.css` 的 `flex-grow` 过渡负责。在 flex 行里外侧边不动、
+  内侧边行走，所以面板收拢时卡片是被"压"向所属 dock 边的，而不是被平移过去 ——
+  空间关系由布局本身给出，不必再补一条位移。
+- **透明度与进场**由 `MotionPresence`（`variant="panel"`）负责，`origin` /
+  `travel` / `scale` 全部来自 `dockPanelGeometry(edge)`。它还带来此前拿不到的能力：
+  退场播完才卸载。CSS `animation` 拦不住 React 卸载节点，所以关闭时曾经是瞬时消失。
+
+面板收起后仍留在组内（宽度为 0），这正是两半能重叠的前提，也是退场得以播放的原因。
+
+宽度过渡是唯一一处每帧触发布局的动效。抽屉开合本身就是尺寸变化，没有等价的
+transform 表达；这是用户主动触发的单元素尺寸变化，与指针驱动的 resize 同类。
+
+### 组内换边
+
+`App.tsx` 不再用 `key` 强制重挂载 `PanelGroup` —— 面板 DOM 本来就能跨换边存活
+（`order` 变化只触发重新注册），是 `key` 把它变成了瞬移。删除后由
+`useDockReorder` 补上连续性：提交后测量各面板矩形，把仍在飞行的位移减掉得到落定
+槽位，再让 `spatial` 家族的弹簧把它送回原位。只写 transform，留在合成器上。
+
+换边不涉及尺寸变化（布局存档按 panel id 索引），所以 FLIP 不碰 width/height。
+
+**未覆盖**：跨容器迁移（side ↔ bottom ↔ float）仍是瞬时。那条路径上面板会真的
+卸载再挂载到另一个面板组，FLIP 需要在提交前捕获矩形、在新容器里重新落位，是另一件事。
 
 ## 待改造界面
 
 按"违反上述判断标准的严重程度"排序，不按实现难度排序。
-
-### Tab 滑动指示器 —— 每帧一次布局
-
-`src/components/ui/SlidingPill.tsx` 过渡 `left/top/width/height`。
-这四个属性每次变化都触发一次布局重算，与"动效只跑在合成器线程"的红线直接冲突。
-
-改为：只写 `transform`（`translate` + `scale`），由 JS 在测量后一次性换算。
-几何信息已经通过 ResizeObserver 拿到，改动局限在这一个组件。
-
-### Dock 换边与面板迁移 —— 目前是瞬移
-
-`src/App.tsx` 用 `key={...}` 强制重挂载 PanelGroup，面板在 left / right / bottom /
-float 之间切换时直接跳到新位置，没有从旧位置飞过去的连续性。
-
-改为：用 GSAP Flip（或等价的手写 FLIP）在提交新布局前后各测一次矩形，
-让面板从旧矩形变形到新矩形。这也让"面板从它所属的 dock 边展开"成为可能 ——
-`MotionPresence` 已经支持 `origin`，缺的只是锚点信息。
-
-### 面板展开方向 —— 目前与所属边无关
-
-停靠面板的入场位移是 CSS 里写死的 `translateX(±28px)`（`ai-panel.css`），
-与它实际停靠在左还是右没有绑定关系。
-
-改为：由 dock 边推导 `origin` 与位移方向，作为 prop 传入 `MotionPresence`，
-删掉 `ai-panel.css` 里的方向性关键帧 —— JS 路径与非 JS 路径不再各播一次。
 
 ### 列表与时间线 —— 全部同时出现
 

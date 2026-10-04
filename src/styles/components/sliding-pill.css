@@ -1,8 +1,16 @@
 /* ============ Tab 滑动指示器 (SlidingPill) ============ */
-/* 注意: left/top/width/height 过渡会触发布局重算，但 Tab 切换频率低，性能影响可接受 */
-/* 未来可通过组件改造使用 transform 优化 */
+/* 元素按目标尺寸布局在容器原点, JS 写入 translate + scale 把它送到测量到的矩形。
+   left/top 固定为 0 参与过渡, 否则每帧都会重排一次容器。
+   transform-origin 必须是 0 0: scale 才能从左上角展开, 与 translate 叠加后
+   才等于"旧矩形"到"新矩形"的形变。
+   已知代价: 尺寸靠 scale 插值, 所以滑动途中 6px 圆角与控件阴影会被横向拉伸
+   (scaleX 约 0.3～3, 取决于两个 Tab 的宽度差)。这是刻意接受的 —— 形变只存在于
+   content 家族时长那么一个很短的飞行窗口内, 换来的是全程零布局。 */
 .tab-sliding-pill {
   position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
   border-radius: var(--radius-sm);
   background: var(--color-bg-editor);
   box-shadow: var(--shadow-control);
