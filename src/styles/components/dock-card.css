@@ -31,3 +31,18 @@
   border-color: var(--frost-border);
   box-shadow: var(--frost-shadow);
 }
+
+/* 画布卡 (kind=control, 承载 NodeEditor) 自身不做 backdrop-filter。
+
+   带 backdrop-filter 的元素就是它所有后代的 Backdrop Root: 画布内节点卡片的
+   backdrop-filter 于是只能在卡片这一层框内采样, WebKit 下嵌套 backdrop-filter
+   干脆不渲染 —— 表现就是节点卡片变回半透明实底, 网格不再被化开。
+
+   这一层模糊本身没有视觉贡献: 画布卡在布局中占据自己的槽位, 背后只有窗口底色
+   这一片平色, 模糊平色等于没有。所以去掉它零成本, 换来画布内每张节点卡片都能
+   正常模糊背后的网格与连线。半透明底色保留 —— 节点卡片要模糊的就是它透出来的
+   那层内容, 底色若实了, 卡片背后同样没东西可模糊。 */
+[data-acrylic='true'] .dock-card-acrylic[data-dock-kind='control'] {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

@@ -45,6 +45,15 @@ export function useMotionPresence<T extends HTMLElement>(
       }
 
       const release = promote(element);
+      // 收尾不能只挂在 onComplete: context revert 会直接杀掉 tween, 回调永不触发。
+      // StrictMode 的双次 effect 正好走这条路 (第一次的 promote 永远没人还),
+      // 于是 will-change 留在一个不会卸载的元素上 —— 它是 Backdrop Root 触发源,
+      // 元素自己的 backdrop-filter 随即只采样自身, 背后内容不再被模糊, 磨砂静默消失。
+      const settle = () => {
+        gsap.set(element, { clearProps: 'transform,opacity' });
+        release();
+      };
+
       if (!geometry.displaces) {
         gsap.fromTo(
           element,
@@ -53,10 +62,10 @@ export function useMotionPresence<T extends HTMLElement>(
             opacity: 1,
             duration: 0.001,
             delay,
-            onComplete: release,
+            onComplete: settle,
           }
         );
-        return;
+        return settle;
       }
 
       const distance = Math.hypot(geometry.enterFrom.x, geometry.enterFrom.y);
@@ -80,12 +89,10 @@ export function useMotionPresence<T extends HTMLElement>(
             spring: motionSpringFor(geometry.family, 'in', distance),
             delay,
           }),
-          onComplete: () => {
-            gsap.set(element, { clearProps: 'transform,opacity' });
-            release();
-          },
+          onComplete: settle,
         }
       );
+      return settle;
     },
     { scope: ref, dependencies: [variant, delay, enabled] }
   );

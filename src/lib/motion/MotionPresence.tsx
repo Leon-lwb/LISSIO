@@ -99,6 +99,14 @@ export function MotionPresence({
       }
 
       const release = promote(element);
+      // 同 useMotionPresence: 收尾必须由 cleanup 兜底, 因为 context revert 杀 tween
+      // 时不触发 onComplete —— StrictMode 的第一次 effect 会留下一份永不归还的
+      // will-change, 而 will-change: opacity 会让该元素成为自己的 Backdrop Root,
+      // 自己的 backdrop-filter 只采样自身, 浮层磨砂随即静默消失。
+      const settle = () => {
+        gsap.set(element, { clearProps: 'transform,opacity' });
+        release();
+      };
 
       if (visible) {
         gsap.fromTo(
@@ -115,17 +123,16 @@ export function MotionPresence({
             ...springTween(geometry.family, 'in', { opacity: 1, x: 0, y: 0, scaleX: 1, scaleY: 1 }, {
               spring: motionSpringFor(geometry.family, 'in', distance),
             }),
-            onComplete: release,
+            onComplete: settle,
           }
         );
-        return;
+        return settle;
       }
 
       if (!retained) {
-        release();
         setRetained(false);
         onExitComplete?.();
-        return;
+        return settle;
       }
 
       const exit = travelVars(geometry, 'exit');
@@ -136,12 +143,13 @@ export function MotionPresence({
           spring: motionSpringFor(geometry.family, 'out', distance),
         }),
         onComplete: () => {
-          gsap.set(element, { clearProps: 'transform,opacity' });
-          release();
+          settle();
           setRetained(false);
           onExitComplete?.();
         },
       });
+
+      return settle;
     },
     { scope: ownRef, dependencies: [visible, retained, variant] }
   );
