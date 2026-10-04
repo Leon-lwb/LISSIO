@@ -19,8 +19,13 @@
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
 import { promote } from './compositor';
-import { ensureSpringPlugin, springTween } from './gsapSpring';
-import { motionSpringFor, type MotionFamily, type MotionPhase } from './motionConfig';
+import { ensureSpringPlugin } from './gsapSpring';
+import {
+  motionSpringFor,
+  type MotionFamily,
+  type MotionPhase,
+  type Spring,
+} from './motionConfig';
 import { motionIsReduced } from './reducedMotion';
 
 /** 默认的身份属性: 换序后仍能对上同一个元素的那个值。 */
@@ -60,6 +65,14 @@ export interface FlipReorderOptions {
    * 对 0.32s), 让位因此也更利落。
    */
   phase?: MotionPhase;
+  /**
+   * 直接给出该距离上的弹簧, 覆盖 `family` / `phase`。
+   *
+   * 让位用这个: 它的事件比家族-进场/离场更小, 需要一份不属于任何家族的具名时序
+   * (见 `motionConfig` 的 `reflowSpring`)。走这个口子而不是让调用方自己算, 是为了
+   * 时序仍然只有 motion 模块一处说了算 —— 调用点只声明"这是一次让位"。
+   */
+  spring?: (distancePx: number) => Spring;
 }
 
 function liveOffset(element: HTMLElement): Offset {
@@ -104,11 +117,12 @@ export function useFlipReorder(
     keyAttribute = DEFAULT_KEY_ATTR,
     family = 'spatial',
     phase = 'in',
+    spring: springFor,
   } = options;
   const attrRef = useRef(keyAttribute);
   attrRef.current = keyAttribute;
-  const timingRef = useRef({ family, phase });
-  timingRef.current = { family, phase };
+  const timingRef = useRef({ family, phase, springFor });
+  timingRef.current = { family, phase, springFor };
 
   const slots = useRef<Map<string, Slot> | null>(null);
   const lastTrigger = useRef<string | null>(null);
@@ -146,7 +160,12 @@ export function useFlipReorder(
     // 首遍没有可比的旧槽位; 低动画保留状态变化, 丢掉位移。
     if (!reordered || before === null || motionIsReduced()) return;
 
-    const { family: travelFamily, phase: travelPhase } = timingRef.current;
+    const { family, phase, springFor } = timingRef.current;
+    // 低动画已在上面的早退里处理掉了, 所以这里直接给 tween 装弹簧即可 ——
+    // springTween 的低动画分支在这个调用点上不可达。
+    const springAtDistance = (distance: number): Spring =>
+      springFor ? springFor(distance) : motionSpringFor(family, phase, distance);
+
     for (const element of elements) {
       const key = element.getAttribute(attr);
       if (!key) continue;
@@ -163,9 +182,11 @@ export function useFlipReorder(
       gsap.killTweensOf(element);
       gsap.set(element, { x: dx, y: dy, zIndex: TRAVEL_Z });
       gsap.to(element, {
-        ...springTween(travelFamily, travelPhase, { x: 0, y: 0 }, {
-          spring: motionSpringFor(travelFamily, travelPhase, distance),
-        }),
+        x: 0,
+        y: 0,
+        // 曲线住在求解器里, GSAP 只负责给它一个真实时长推进时钟。
+        ease: 'none',
+        spring: springAtDistance(distance),
         onComplete: () => {
           gsap.set(element, { clearProps: 'transform,zIndex' });
           release();

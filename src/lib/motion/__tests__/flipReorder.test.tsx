@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { describe, expect, it } from 'vitest';
 import gsap from 'gsap';
 import { useFlipReorder } from '../flipReorder';
+import { reflowSpring } from '../motionConfig';
 import { springAtWithVelocity, springSettleTime } from '../spring';
 
 /**
@@ -54,11 +55,12 @@ function row(key: string) {
 }
 
 /** Vertical stack, 20px per row — the shape every list in the app actually has. */
-function Stack({ keys, phase }: { keys: string[]; phase?: 'in' | 'out' }) {
+function Stack({ keys, reflow = true }: { keys: string[]; reflow?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   // The trigger is the key order and nothing else: it is the only thing that decides
-  // which slot a row sits in.
-  useFlipReorder(ref, keys.join('|'), { family: 'content', phase });
+  // which slot a row sits in. `reflow: false` is the counterfactual — what a plain
+  // family/phase lookup would have given.
+  useFlipReorder(ref, keys.join('|'), reflow ? { spring: reflowSpring } : { family: 'content' });
   return (
     <div ref={ref}>
       {keys.map((key) => (
@@ -130,11 +132,11 @@ describe('useFlipReorder on a list', () => {
   it('does not sail past the slot it is being sent to', () => {
     // 让位不是"某块被送来", 行的位置是被别人的缺席顶上去的 —— 没有来源也没有动量。
     // 用进场令牌 (允许回弹) 会让它越过槽位再荡回来, 那读起来是渲染故障, 与离场晃动
-    // 同一类错误。所以三处块列表都读离场那个临界阻尼的令牌。
+    // 同一类错误。所以三处块列表都读让位那份临界阻尼的时序。
     rects = new Map(positionsOf(['a', 'b', 'c']));
-    const { rerender } = render(<Stack keys={['a', 'b', 'c']} phase="out" />);
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} />);
     rects = new Map(positionsOf(['a', 'c']));
-    rerender(<Stack keys={['a', 'c']} phase="out" />);
+    rerender(<Stack keys={['a', 'c']} />);
 
     const spring = springOf('c');
     expect(spring).toBeDefined();
@@ -142,12 +144,12 @@ describe('useFlipReorder on a list', () => {
   });
 
   it('would overshoot on the entrance token, which is why lists do not use it', () => {
-    // 反向断言: 默认的进场令牌确实会过冲。没有这一条, "列表传 out" 看起来只是口味选择,
-    // 而它实际是在避开一次真实的故障。
+    // 反向断言: 家族-进场令牌确实会过冲。没有这一条, "让位读自己的时序" 看起来只是
+    // 口味选择, 而它实际是在避开一次真实的故障。
     rects = new Map(positionsOf(['a', 'b', 'c']));
-    const { rerender } = render(<Stack keys={['a', 'b', 'c']} />);
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} reflow={false} />);
     rects = new Map(positionsOf(['a', 'c']));
-    rerender(<Stack keys={['a', 'c']} />);
+    rerender(<Stack keys={['a', 'c']} reflow={false} />);
 
     const spring = springOf('c');
     expect(spring).toBeDefined();

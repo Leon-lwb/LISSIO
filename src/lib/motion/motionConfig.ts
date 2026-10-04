@@ -131,6 +131,39 @@ export function timingAt(
 }
 
 /**
+ * 让位 —— 列表里一次小范围局部位移的时序意图。
+ *
+ * 它刻意比任何家族令牌都快, 因为**事件本身比家族-进场/离场更小**。家族按"移动了屏幕
+ * 多少"排序, `content` 那一档是消息、Toast、横幅 —— 整块表面的出现与消失。让位是相邻
+ * 两三行之间挪一格, 借用 `content/out` 只能得到一个为更大的事件调的时长, 于是让位读起来
+ * 拖沓: 观众已经看清行去了哪里, 动画还在收。
+ *
+ * 这是家族体系之外的第四种意图, 不是第六个家族 —— 家族描述的是"多大范围的表面", 而这里
+ * 需要区分的是同范围内的"这是一个物体到达, 还是周围让开"。所以它是一份具名时序加一个
+ * 解析器, 而不是新家族: 新家族会把五条 × 两相的调参表和生成文档都撑大, 而让位并不
+ * 需要按家族分别调优。
+ *
+ * `bounce` 为 0 的理由与离场令牌同源: 让位没有来源也没有动量, 越过槽位再荡回来读起来
+ * 是渲染故障。
+ */
+export const REFLOW_TIMING: SpringTiming = { duration: 0.14, bounce: 0 };
+
+/**
+ * 让位用的弹簧, 按实测让位距离拉伸。
+ *
+ * 走 `spatialTiming` 是为了距离感知仍然成立: 让位 20px 与让位 400px (删掉一个展开的块)
+ * 不该是同一种速度。速度设置也照常生效, 与家族令牌走同一份 `SPEED_SCALE`。
+ */
+export function reflowSpring(distancePx: number): Spring {
+  const scale = SPEED_SCALE[motionSpeed()];
+  const timing = {
+    duration: REFLOW_TIMING.duration * scale.duration,
+    bounce: REFLOW_TIMING.bounce * scale.bounce,
+  };
+  return springFromTiming(spatialTiming(timing, distancePx));
+}
+
+/**
  * Resolved spring for a family/phase.
  *
  * Cached downstream in `springFromTiming`, so the bisection behind this is paid once

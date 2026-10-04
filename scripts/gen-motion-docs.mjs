@@ -20,8 +20,9 @@ const vite = await createServer({
   server: { middlewareMode: true },
 });
 const spring = await vite.ssrLoadModule('/src/lib/motion/spring.ts');
-const { allMotionTokens, timingAt } = await vite.ssrLoadModule('/src/lib/motion/motionConfig.ts');
-const { springAt, springFromTiming, springSettleTime } = spring;
+const { allMotionTokens, timingAt, REFLOW_TIMING, SPEED_SCALE } =
+  await vite.ssrLoadModule('/src/lib/motion/motionConfig.ts');
+const { springAt, springFromTiming, springSettleTime, spatialTiming } = spring;
 
 function peak(spring, settle) {
   let max = 0;
@@ -60,6 +61,41 @@ const table = (speed) =>
       ),
   ].join('\n');
 
+const REFLOW_SPEEDS = ['fast', 'standard', 'relaxed'];
+
+const reflowRows = REFLOW_SPEEDS.map((speed) => {
+  const scale = SPEED_SCALE[speed];
+  const timing = {
+    duration: REFLOW_TIMING.duration * scale.duration,
+    bounce: REFLOW_TIMING.bounce * scale.bounce,
+  };
+  const spring = springFromTiming(timing);
+  const settle = springSettleTime(spring);
+  // 让位按实测距离拉伸。与 `reflowSpring()` 走同一条公式, 但这里必须显式传 speed ——
+  // `reflowSpring()` 从 DOM 读速度, 在生成脚本里恒为 standard, 会让三行给出同一个值。
+  const yieldAt = (distancePx) =>
+    Math.round(springSettleTime(springFromTiming(spatialTiming(timing, distancePx))) * 1000);
+  return {
+    speed,
+    duration: Math.round(timing.duration * 1000),
+    stiffness: spring.stiffness.toFixed(1),
+    damping: spring.damping.toFixed(2),
+    // 让位按实测距离拉伸, 所以这里给的是"让一格"(20px) 与"让一大段"(400px) 两端。
+    yield20: yieldAt(20),
+    yield400: yieldAt(400),
+    overshoot: `${((peak(spring, settle) - 1) * 100).toFixed(1)}%`,
+  };
+});
+
+const reflowTable = [
+  '| 速度 | 基准时长 | 刚度 k | 阻尼 c | 让一格(20px) | 让一大段(400px) | 峰值过冲 |',
+  '| --- | ---: | ---: | ---: | ---: | ---: | ---: |',
+  ...reflowRows.map(
+    (r) =>
+      `| ${r.speed} | ${r.duration}ms | ${r.stiffness} | ${r.damping} | ${r.yield20}ms | ${r.yield400}ms | ${r.overshoot} |`
+  ),
+].join('\n');
+
 const doc = `# 动效令牌与调参表
 
 本文件由 \`pnpm docs:motion\` 从 \`src/lib/motion/spring.ts\` 的求解器直接生成,
@@ -80,7 +116,7 @@ const doc = `# 动效令牌与调参表
 
 1. **过冲是解出来的, 不是画出来的。** 峰值过冲由 ζ 唯一决定, 与时长无关。
 2. **时长是解出来的, 不是填进去的。** \`springFromTiming()\` 反解出使系统恰好在
-   目标时刻进入静息带的 k, 所以"0.52 秒"在任何 bounce 下都真的读作半秒。
+   目标时刻进入静息带的 k, 所以表里写的时长在任何 bounce 下都真的读作这个时长。
 
 ## 为什么进场允许回弹、离场恒为临界阻尼
 
@@ -115,6 +151,24 @@ ${table('fast')}
 
 ${table('relaxed')}
 
+## 让位（家族之外的第四种意图）
+
+让位是列表里一次小范围局部位移: 某一行消失或换序, 相邻的行挪一格。它刻意比任何家族
+令牌都快, 因为**事件本身比家族-进场/离场更小** —— 家族按"移动了屏幕多少"排序,
+\`content\` 那一档是消息、Toast、横幅这类整块表面的出现与消失, 而让位是两三行之间挪一格。
+
+家族体系在这里不够用, 因为需要区分的不是"多大范围", 而是"这是一个物体到达, 还是
+周围让开"。所以它是一份具名时序 (\`REFLOW_TIMING\`) 加一个解析器 (\`reflowSpring\`),
+不是第六个家族 —— 新家族会把上面三张表都撑大, 而让位不需要按家族分别调优。
+
+让位按实测距离拉伸, 与家族令牌共用 \`spatialTiming\`: 删掉一个展开的块会让位距离远大于
+一格, 那次让位不该和删掉一个收起的块一样快。速度设置照常生效。
+
+${reflowTable}
+
+\`bounce\` 为 0 的理由与离场令牌同源: 让位没有来源也没有动量, 越过槽位再荡回来读起来
+是渲染故障。
+
 ## 怎么调
 
 **想改手感, 改 \`BASE_TIMING\`, 不要改别的地方。**
@@ -126,6 +180,7 @@ ${table('relaxed')}
 | 某个家族更利落 | \`BASE_TIMING[family].in.duration\` ↓ |
 | 回弹更明显 | \`BASE_TIMING[family].in.bounce\` ↑ |
 | 长距离迁移读起来更从容 | 已自动处理: \`spatialTiming()\` 按实测路程拉长时长并增加 bounce |
+| 列表让位更快/更慢 | \`REFLOW_TIMING.duration\`, 不在 \`BASE_TIMING\` 里 |
 | 某个浮层该从别的方向来 | 传 \`MotionPresence\` 的 \`origin\` / \`travel\` prop |
 
 **bounce 的可感知范围是 0 ~ 0.45。** 超过之后位移比弹簧周期还短, 看到的是频闪
@@ -150,7 +205,8 @@ CSS 侧把弹簧采样成 \`linear()\` 缓动函数写入 \`<html>\` 内联样�
 
 \`springFromTiming()\` 只回答"多久到位"。位移多远还会影响读感: 同样的 280ms,
 移动 600px 明显比移动 40px 显得被"拽"。\`spatialTiming()\` 因此按实测路程做对数
-拉伸(封顶 1.55×)并相应增加 bounce, 因为更长的航程会把沉降过程暴露得更完整。
+拉伸(封顶 1.35×)并相应增加 bounce, 因为更长的航程会把沉降过程暴露得更完整。
+上限刻意压得很浅: 远距离迁移已经多花了自己的时间, 再往上加就成了等待。
 
 固定偏移的入场传名义偏移(几乎不拉伸), 实测迁移(FLIP、Dock 换边)传真实像素距离。
 `;

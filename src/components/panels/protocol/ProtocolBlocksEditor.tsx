@@ -8,7 +8,7 @@ import { translate, type Lang } from '../../../i18n';
 import type { DecoderBlock } from '../../../types';
 import { BLOCK_TYPE_CONFIG, blockSummary } from '../../displays/decoder/frameDecoderShared';
 import { BlockEditor } from '../../displays/decoder/FrameDecoderBlockEditor';
-import { useFlipReorder } from '../../../lib/motion';
+import { reflowSpring, useFlipReorder } from '../../../lib/motion';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 
 /// 协议 schema 编辑器可添加的块类型
@@ -30,12 +30,9 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
 
   // 触发条件只编码块的顺序。展开/收起改变的是高度而非槽位, 由块自身的尺寸过渡负责,
   // 混进来会让 FLIP 与那个过渡争夺同一批像素。
-  // phase 用 out: 让位是槽位变了, 不是某块被送来 —— 越过槽位再荡回来读起来是渲染
-  // 故障, 与离场晃动同类; 那个令牌同时更短, 让位更利落。
   useFlipReorder(listRef, blocks.map((b, i) => b.id ?? i).join('|'), {
     keyAttribute: 'data-flip-key',
-    family: 'content',
-    phase: 'out',
+    spring: reflowSpring,
   });
 
   const toggleExpand = (idx: number) => {

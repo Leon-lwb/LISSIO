@@ -5,6 +5,8 @@ export {
   motionSpring,
   motionSpringFor,
   motionTiming,
+  reflowSpring,
+  REFLOW_TIMING,
   MOTION_DISTANCE,
   type MotionFamily,
   type MotionPhase,
