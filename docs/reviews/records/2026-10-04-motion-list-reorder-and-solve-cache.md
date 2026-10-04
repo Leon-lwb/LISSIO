@@ -2,13 +2,13 @@
 
 <!-- lissio-review
 date: 2026-10-04
-scope: 退场位移补偿（兄弟节点跳变）；springFromTiming 求解缓存；motion-spatial-plan.md 一处功能失真的核实与订正
+scope: 退场位移补偿（兄弟节点跳变）；springFromTiming 求解缓存；motion-spatial-plan.md 三处功能失真的核实与订正
 reviewer: 维护者（Horldsence）
 verdict: 有条件通过
 -->
 
 继续 `docs/architecture/motion-spatial-plan.md` 的待改造清单，落地其中的退场位移补偿，
-关闭上一轮记录的遗留项 3，并核实该文档中一处指向不存在功能的描述。
+关闭上一轮记录的遗留项 3，并核实该文档中三处指向不存在功能的描述。
 
 ## 范围
 
@@ -18,7 +18,7 @@ verdict: 有条件通过
 | 2 | 退场位移补偿接入三处块列表：`FrameDecoder.tsx` / `CommandSenderBlockList.tsx` / `ProtocolBlocksEditor.tsx` |
 | 3 | 新增 `flipReorder.test.tsx`：删除与插入两种变化的让位断言 |
 | 4 | `springFromTiming` 加求解缓存；订正 `motionConfig.ts` 中"已 memoised"的失效注释 |
-| 5 | 核实并订正 `motion-spatial-plan.md` 的"Widget 卡片布局重排（FRUIT 拖拽改序）" |
+| 5 | 核实 `motion-spatial-plan.md` 的三处功能描述：FRUIT 拖拽改序（不存在，改列真实块列表）、图表数据源切换（归属错位）、`@xyflow/react` 自带增删过渡（不存在，判定不改造） |
 
 ## 结论
 
@@ -38,8 +38,15 @@ verdict: 有条件通过
 三处块列表（帧解码器 / 命令发送 / 协议 schema 编辑器），它们的排序与增删在本轮一并
 接入。图表部分则判定为不需要改造，理由见文档。
 
-这与上一轮修正的"控件调色板行"属同一类失真：文档描述了一个从未存在的功能，若不核实
-就会照着它去实现。
+同一节还写了"`@xyflow/react` 自带节点增删过渡"，同样不成立：
+`node_modules/@xyflow/react/dist/{style,base}.css` 里 `transition` 出现次数为 0。
+React Flow 提供的是空间连续性（拖动时节点与视口位置连续），不是增删过渡。该项经核实后
+判定**不改造** —— 理由（批量创建时逐个播进场会让整张图抽搐；节点位置在这个界面里是
+数据而非表面）记在 `motion-spatial-plan.md` 的不改造节。
+
+这是同一份文档里第三处指向不存在功能的描述，也是 `2026-10-04-fact-consistency-fixes`
+记录的那类问题的第三次复现。文档写"待改造"时描述的是预期而非代码，核实成本很低
+（一条 grep），但漏掉的代价是照着不存在的功能去实现。
 
 ### 设计取舍（记录理由，避免后续重复讨论）
 
@@ -73,4 +80,4 @@ verdict: 有条件通过
 | 2 | 三处块列表的 FLIP 身份属性目前写作 `data-flip-key`，而拖拽逻辑已用 `data-block-id`。两者值相同但语义重复；若日后有第四处列表接入，应先决定是否统一为一个属性 | 本记录「范围」1 | 维护者 | 下一轮动效改动时 |
 | 3 | 菜单项与时间线节点的错峰仍未做：菜单项只有 `motion-row`（悬停/按下过渡），本无进场动画，需先新写关键帧 | `motion-spatial-plan.md` 待改造节 | 维护者 | 下一轮 |
 | 4 | 跨容器迁移（side ↔ bottom ↔ float）仍是瞬时，面板会真的跨组卸载重挂，FLIP 需在提交前捕获矩形、在新容器里重新落位 | `motion-spatial-plan.md` 未覆盖节 | 维护者 | 另行评估 |
-| 5 | 节点编辑器（`@xyflow/react`）增删过渡仍未归一到家族令牌 | `motion-spatial-plan.md` 待改造节 | 维护者 | 下一轮 |
+| 5 | 节点编辑器已核实并判定不改造：本文件原记的"`@xyflow/react` 自带增删过渡"不成立（其样式表 `transition` 出现次数为 0），且节点瞬时出现是空间编辑器的惯例，批量创建时逐个播进场会让整张图抽搐。理由见 `motion-spatial-plan.md` 不改造节 | 本记录「结论」 | 维护者 | 已关闭 |
