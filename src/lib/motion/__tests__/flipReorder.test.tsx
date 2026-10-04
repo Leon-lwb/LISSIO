@@ -1,7 +1,9 @@
 import { render } from '@testing-library/react';
 import { useRef } from 'react';
 import { describe, expect, it } from 'vitest';
+import gsap from 'gsap';
 import { useFlipReorder } from '../flipReorder';
+import { springAtWithVelocity, springSettleTime } from '../spring';
 
 /**
  * 列表行的让位过程。
@@ -52,11 +54,11 @@ function row(key: string) {
 }
 
 /** Vertical stack, 20px per row — the shape every list in the app actually has. */
-function Stack({ keys }: { keys: string[] }) {
+function Stack({ keys, phase }: { keys: string[]; phase?: 'in' | 'out' }) {
   const ref = useRef<HTMLDivElement>(null);
   // The trigger is the key order and nothing else: it is the only thing that decides
   // which slot a row sits in.
-  useFlipReorder(ref, keys.join('|'), { family: 'content' });
+  useFlipReorder(ref, keys.join('|'), { family: 'content', phase });
   return (
     <div ref={ref}>
       {keys.map((key) => (
@@ -66,6 +68,16 @@ function Stack({ keys }: { keys: string[] }) {
   );
 }
 
+/** Peak excursion past the target slot, as a fraction of the 1.0 response. */
+function peakOvershoot(spring: { stiffness: number; damping: number; mass: number }): number {
+  const settle = springSettleTime(spring);
+  let peak = 0;
+  for (let i = 0; i <= 1000; i += 1) {
+    peak = Math.max(peak, springAtWithVelocity(spring, (i / 1000) * settle, 0));
+  }
+  return peak - 1;
+}
+
 const positionsOf = (keys: string[]) =>
   keys.map((key, index) => [key, { left: 0, top: index * 20 }] as const);
 
@@ -73,6 +85,13 @@ const translateOf = (key: string) => {
   const el = document.querySelector<HTMLElement>(`[data-flip-key="${key}"]`)!;
   return el.style.transform ? readTranslate(el) : null;
 };
+
+/** The spring the hook actually handed to GSAP for a row. */
+function springOf(key: string) {
+  const el = document.querySelector<HTMLElement>(`[data-flip-key="${key}"]`)!;
+  const tween = gsap.getTweensOf(el)[0];
+  return tween?.vars.spring as { stiffness: number; damping: number; mass: number } | undefined;
+}
 
 describe('useFlipReorder on a list', () => {
   it('does not animate on the first pass, having nothing to compare against', () => {
@@ -106,6 +125,33 @@ describe('useFlipReorder on a list', () => {
     expect(translateOf('a')).toBeNull();
     expect(translateOf('new')).toBeNull();
     expect(translateOf('b')).toEqual({ x: 0, y: -20 });
+  });
+
+  it('does not sail past the slot it is being sent to', () => {
+    // 让位不是"某块被送来", 行的位置是被别人的缺席顶上去的 —— 没有来源也没有动量。
+    // 用进场令牌 (允许回弹) 会让它越过槽位再荡回来, 那读起来是渲染故障, 与离场晃动
+    // 同一类错误。所以三处块列表都读离场那个临界阻尼的令牌。
+    rects = new Map(positionsOf(['a', 'b', 'c']));
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} phase="out" />);
+    rects = new Map(positionsOf(['a', 'c']));
+    rerender(<Stack keys={['a', 'c']} phase="out" />);
+
+    const spring = springOf('c');
+    expect(spring).toBeDefined();
+    expect(peakOvershoot(spring!)).toBeLessThanOrEqual(0);
+  });
+
+  it('would overshoot on the entrance token, which is why lists do not use it', () => {
+    // 反向断言: 默认的进场令牌确实会过冲。没有这一条, "列表传 out" 看起来只是口味选择,
+    // 而它实际是在避开一次真实的故障。
+    rects = new Map(positionsOf(['a', 'b', 'c']));
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} />);
+    rects = new Map(positionsOf(['a', 'c']));
+    rerender(<Stack keys={['a', 'c']} />);
+
+    const spring = springOf('c');
+    expect(spring).toBeDefined();
+    expect(peakOvershoot(spring!)).toBeGreaterThan(0);
   });
 
   it('ignores the removed row entirely — it has no slot to be sent to', () => {

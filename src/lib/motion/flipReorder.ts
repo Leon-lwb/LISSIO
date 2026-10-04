@@ -20,7 +20,7 @@ import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
 import { promote } from './compositor';
 import { ensureSpringPlugin, springTween } from './gsapSpring';
-import { motionSpringFor, type MotionFamily } from './motionConfig';
+import { motionSpringFor, type MotionFamily, type MotionPhase } from './motionConfig';
 import { motionIsReduced } from './reducedMotion';
 
 /** 默认的身份属性: 换序后仍能对上同一个元素的那个值。 */
@@ -50,6 +50,16 @@ export interface FlipReorderOptions {
   keyAttribute?: string;
   /** 位移读哪个家族。面板组是 `spatial`, 列表行是 `content`。 */
   family?: MotionFamily;
+  /**
+   * 读令牌的哪个相位, 默认 `in`。
+   *
+   * 面板换边是真的"迁移到另一个位置", 用 `in` —— 到位后沉降一点是弹性。
+   * 列表让位不是: 行没有被别的东西送来, 也没有动量, 只是槽位变了。用 `in` 会让它
+   * 越过槽位再荡回来 —— 那读起来是渲染故障, 与离场晃动是同一类错误。所以列表传 `out`:
+   * 那个令牌的临界阻尼正是为"不该晃的位移"准备的, 同时它更短 (content 家族 0.22s
+   * 对 0.32s), 让位因此也更利落。
+   */
+  phase?: MotionPhase;
 }
 
 function liveOffset(element: HTMLElement): Offset {
@@ -90,11 +100,15 @@ export function useFlipReorder(
 ): void {
   ensureSpringPlugin();
 
-  const { keyAttribute = DEFAULT_KEY_ATTR, family = 'spatial' } = options;
+  const {
+    keyAttribute = DEFAULT_KEY_ATTR,
+    family = 'spatial',
+    phase = 'in',
+  } = options;
   const attrRef = useRef(keyAttribute);
   attrRef.current = keyAttribute;
-  const familyRef = useRef(family);
-  familyRef.current = family;
+  const timingRef = useRef({ family, phase });
+  timingRef.current = { family, phase };
 
   const slots = useRef<Map<string, Slot> | null>(null);
   const lastTrigger = useRef<string | null>(null);
@@ -132,7 +146,7 @@ export function useFlipReorder(
     // 首遍没有可比的旧槽位; 低动画保留状态变化, 丢掉位移。
     if (!reordered || before === null || motionIsReduced()) return;
 
-    const travelFamily = familyRef.current;
+    const { family: travelFamily, phase: travelPhase } = timingRef.current;
     for (const element of elements) {
       const key = element.getAttribute(attr);
       if (!key) continue;
@@ -149,8 +163,8 @@ export function useFlipReorder(
       gsap.killTweensOf(element);
       gsap.set(element, { x: dx, y: dy, zIndex: TRAVEL_Z });
       gsap.to(element, {
-        ...springTween(travelFamily, 'in', { x: 0, y: 0 }, {
-          spring: motionSpringFor(travelFamily, 'in', distance),
+        ...springTween(travelFamily, travelPhase, { x: 0, y: 0 }, {
+          spring: motionSpringFor(travelFamily, travelPhase, distance),
         }),
         onComplete: () => {
           gsap.set(element, { clearProps: 'transform,zIndex' });

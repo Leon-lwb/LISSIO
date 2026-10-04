@@ -15,7 +15,7 @@
 | `gsapSpring.ts` | GSAP 插件, 逐帧用同一个求解器求值, 让 JS 补间与 CSS 过渡完全一致 |
 | `compositor.ts` | 引用计数的 `will-change` 预算, 动画结束即释放图层 |
 | `presence.ts` | 浮层角色的几何: 从哪来、到哪去、缩放原点在哪; 停靠边的锚点推导 |
-| `flipReorder.ts` | FLIP 机制: 测量矩形、扣掉在途位移、弹簧送回原位。换序 / 删除 / 插入共用 |
+| `flipReorder.ts` | FLIP 机制: 测量矩形、扣掉在途位移、弹簧送回原位。换序 / 删除 / 插入共用; `phase` 决定位移是否允许回弹 |
 | `dockFlip.ts` | 面板组内换边的接入点: 固定身份属性与 `spatial` 家族 |
 | `stagger.ts` | 按索引错峰的进场延迟, 带上限封顶; 低动画下完全退化为零延迟 |
 | `release.ts` | 松手速度换算成释放计划: 前冲位移、初速度、幽灵存活时长 |

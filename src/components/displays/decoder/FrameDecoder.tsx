@@ -90,9 +90,12 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
   const blockListRef = useRef<HTMLDivElement>(null);
 
   // 触发条件只编码块的顺序。展开/收起改变的是高度而非槽位, 由块自身的尺寸过渡负责。
+  // phase 用 out: 让位是槽位变了, 不是某块被送来 —— 越过槽位再荡回来读起来是渲染
+  // 故障, 与离场晃动同类; 那个令牌同时更短, 让位更利落。
   useFlipReorder(blockListRef, blocks.map((b) => b.id).join('|'), {
     keyAttribute: 'data-flip-key',
     family: 'content',
+    phase: 'out',
   });
 
   // 初始化: 加载历史
