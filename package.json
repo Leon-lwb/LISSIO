@@ -33,6 +33,7 @@
     "generate:contracts": "node scripts/generate-contracts.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:model-catalog": "node scripts/check-model-catalog.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
     "check:tokens": "node scripts/check-ui-tokens.mjs",
     "docs:motion": "node scripts/gen-motion-docs.mjs",
     "check:all": "bash scripts/check-all.sh",

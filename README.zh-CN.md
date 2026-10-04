@@ -4,19 +4,12 @@
 
 一个使用 Rust + Tauri 完全重构的下一代串口助手 —— 面向嵌入式调试、波形可视化、节点式数据流编排、CAN / 汽车诊断与逻辑分析。
 
-<!-- PROJECT SHIELDS -->
-
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![GPL v2 License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
 
 <p align="center">
-  <a href="https://github.com/horldsence/lissio">
+  <a href="https://codeberg.org/Horldsence/Lissio">
     <img src="src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -24,12 +17,12 @@
   <p align="center">
     现代化串口调试工具，支持波形显示、节点编辑器、多协议解析、CAN 诊断与逻辑分析。
     <br />
-    <a href="https://github.com/horldsence/lissio"><strong>查看项目仓库 »</strong></a>
+    <a href="https://codeberg.org/Horldsence/Lissio"><strong>查看项目仓库 »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/horldsence/lissio/issues">报告 Bug</a>
+    <a href="https://codeberg.org/Horldsence/Lissio/issues">报告 Bug</a>
     ·
-    <a href="https://github.com/horldsence/lissio/issues">提出新特性</a>
+    <a href="https://codeberg.org/Horldsence/Lissio/issues">提出新特性</a>
   </p>
 </p>
 
@@ -291,7 +284,7 @@ lissio/
 1. 克隆仓库
 
 ```sh
-git clone https://github.com/horldsence/lissio.git
+git clone https://codeberg.org/Horldsence/Lissio.git
 cd lissio
 ```
 
@@ -412,6 +405,8 @@ pnpm check:deps
 pnpm check:web-contract
 pnpm check:contracts
 pnpm check:model-catalog
+pnpm check:tokens
+pnpm check:docs
 pnpm typecheck
 pnpm lint:ci
 pnpm test
@@ -435,15 +430,22 @@ cd src-tauri && cargo deny check
 4. 推送到分支：`git push origin feature/AmazingFeature`
 5. 提交 Pull Request
 
-提交 PR 前请确保 `pnpm tsc --noEmit` 与 `cd src-tauri && cargo clippy --workspace && cargo test` 均通过。
+提交 PR 前请先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)：其中列出 CLA 条款、你的改动需要满足的知识产权检查，以及完整门禁清单（`pnpm check:all`）。
 
 ## 版本控制
 
-本项目使用 Git 进行版本管理。你可以在 [Releases](https://github.com/horldsence/lissio/releases) 页面查看可用版本。
+本项目使用 Git 进行版本管理。你可以在 [Releases](https://codeberg.org/Horldsence/Lissio/releases) 页面查看可用版本。
 
 ## 开源协议
 
-本项目仅基于 GNU GPL v2 协议开源，详情请参阅 [LICENSE](./LICENSE)。
+双许可：可在 **GNU GPL v2 only**（[LICENSE](./LICENSE)）或单独议定的商业许可下使用。
+商业许可尚未发布，当前唯一可用的授权是 GPL-2.0-only。版权 © 2026 Horldsence；贡献者
+按 [CLA.md](./CLA.md) 授权。第三方归属、专利说明与再分发者的源码义务见
+[NOTICE](./NOTICE)，完整口径见
+[docs/governance/open-source-and-ip.md](docs/governance/open-source-and-ip.md)。
+
+贡献请先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)、
+[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) 与 [SECURITY.md](./SECURITY.md)。
 
 ## 鸣谢
 
@@ -458,16 +460,6 @@ cd src-tauri && cargo deny check
 - [libautomotive](https://crates.io/crates/libautomotive)
 
 <!-- links -->
-[contributors-shield]: https://img.shields.io/github/contributors/horldsence/lissio.svg?style=flat-square
-[contributors-url]: https://github.com/horldsence/lissio/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/horldsence/lissio.svg?style=flat-square
-[forks-url]: https://github.com/horldsence/lissio/network/members
-[stars-shield]: https://img.shields.io/github/stars/horldsence/lissio.svg?style=flat-square
-[stars-url]: https://github.com/horldsence/lissio/stargazers
-[issues-shield]: https://img.shields.io/github/issues/horldsence/lissio.svg?style=flat-square
-[issues-url]: https://github.com/horldsence/lissio/issues
-[license-shield]: https://img.shields.io/github/license/horldsence/lissio.svg?style=flat-square
-[license-url]: https://github.com/horldsence/lissio/blob/master/LICENSE
 
 ## 打赏
 

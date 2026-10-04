@@ -70,6 +70,7 @@ build_plan() {
   add_plan "架构" "Rust↔TS 合同一致"               "root" "pnpm check:contracts"
   add_plan "架构" "模型目录"                       "root" "pnpm check:model-catalog"
   add_plan "架构" "UI 颜色令牌"                    "root" "pnpm check:tokens"
+  add_plan "架构" "文档与许可证"                   "root" "pnpm check:docs"
   # 前端
   add_plan "前端" "TypeScript 类型"                "root" "pnpm typecheck"
   add_plan "前端" "ESLint (零警告)"                "root" "pnpm lint:ci"

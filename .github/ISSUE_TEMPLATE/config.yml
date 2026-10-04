@@ -1,0 +1,13 @@
+# 仓库 issue 模板之外的入口说明。
+# blank_issues_enabled 允许不使用模板直接提问，便于快速反馈。
+# contact_links 把不适合公开追踪的问题导向更合适的渠道，避免漏洞细节或举报内容进入公开 issue。
+# 链接主机名取自 git remote（文档与 About 弹窗以同一来源为准）；改托管地时需与本文件一起改。
+
+blank_issues_enabled: true
+contact_links:
+  - name: 报告漏洞或知识产权问题
+    url: https://codeberg.org/Horldsence/Lissio/src/branch/main/SECURITY.md
+    about: 请勿在公开 issue 中披露可利用的漏洞细节；渠道与响应时限见 SECURITY.md。
+  - name: 贡献指南
+    url: https://codeberg.org/Horldsence/Lissio/src/branch/main/CONTRIBUTING.md
+    about: 提 PR 前请先读合入门禁与许可条款。

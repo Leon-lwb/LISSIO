@@ -306,7 +306,7 @@ about: About
 aboutVersion: Version
 aboutAuthor: Author
 aboutLicense: License
-aboutGithub: GitHub Repository
+aboutRepo: Source Repository
 aboutDocs: Documentation
 aboutDescription: See every signal. Understand what matters. Act with confidence.
 aboutFonts: This software bundles these fonts

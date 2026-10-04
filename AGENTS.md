@@ -51,6 +51,8 @@ platform-shell commands and supervised `lissio-server` lifecycle.
 - `pnpm generate:contracts` — regenerate `src/types/generated` after a wire change; local
   step only, CI verifies its output via `check:contracts`
 - `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
+- `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace,
+  documentation index and links, review-record metadata; see `docs/governance/`
 - `pnpm check:tokens` — color/opacity token unification (text/symbol layer); see
   `docs/architecture/ui-color-tokens.md`
 - `pnpm typecheck`, `pnpm lint:ci` (zero warnings), `pnpm test`

@@ -1,7 +1,7 @@
 //! 关于对话框 — 从菜单栏 / Activity Bar 触发
 
 import { useEffect, useState } from 'react';
-import { X, Github, ExternalLink } from 'lucide-react';
+import { X, Code, ExternalLink } from 'lucide-react';
 import { platform } from '../lib/platform';
 import { FONT_ATTRIBUTIONS } from '../lib/fontAttributions';
 import { useAppStore } from '../store/appStore';
@@ -14,9 +14,12 @@ interface AboutModalProps {
 }
 
 const APP_AUTHOR = 'Horldsence';
-const APP_LICENSE = 'GPLv2';
-const APP_GITHUB = 'https://github.com/Horldsence/lissio';
-const APP_DOCS = 'https://github.com/Horldsence/lissio#readme';
+// 开源轨的 SPDX 标识, 与 package.json / 各 crate 的 license 字段同源;
+// 双许可的存在与商业轨状态见 NOTICE 与 docs/governance/open-source-and-ip.md
+const APP_LICENSE = 'GPL-2.0-only';
+// 仓库托管地为 Codeberg; 改仓库地址时这里与 i18n 的 aboutRepo 文案、README 一并更新
+const APP_REPO = 'https://codeberg.org/Horldsence/Lissio';
+const APP_DOCS = `${APP_REPO}/src/branch/main/docs/README.md`;
 
 export function AboutModal({ isOpen, onClose }: AboutModalProps) {
   const lang = useAppStore((s) => s.lang);
@@ -101,10 +104,10 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
         <div className="flex gap-2 mb-4">
           <button
             className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 motion-transition hover:bg-bg-hover hover:border-accent hover:text-text-bright"
-            onClick={() => void platform.openUrl(APP_GITHUB)}
+            onClick={() => void platform.openUrl(APP_REPO)}
           >
-            <Github size={14} />
-            <span>{translate('aboutGithub', lang)}</span>
+            <Code size={14} />
+            <span>{translate('aboutRepo', lang)}</span>
             <ExternalLink size={10} className="opacity-muted" />
           </button>
           <button

@@ -78,6 +78,36 @@ jobs:
       - name: Check dependency version unification
         run: pnpm check:deps
 
+  docs:
+    name: Documentation and license gates
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # check-docs 通过 cargo metadata 校验全部 workspace 成员的许可证字段
+      - name: Install Rust toolchain (cargo metadata only)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check documentation and license gates
+        run: pnpm check:docs
+
   cargo-deny:
     name: Cargo deny (advisories/licenses/bans/sources)
     runs-on: ubuntu-latest

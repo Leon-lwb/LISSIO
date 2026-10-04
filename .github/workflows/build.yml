@@ -130,6 +130,7 @@ jobs:
           pnpm check:contracts
           pnpm check:model-catalog
           pnpm check:tokens
+          pnpm check:docs
           pnpm typecheck
           pnpm lint:ci
           pnpm test

@@ -31,6 +31,7 @@ cargo fmt --check
 pnpm check:web-contract
 pnpm check:contracts
 pnpm check:model-catalog
+pnpm check:docs        # 许可证 / 治理文件 / 文档索引与链接
 pnpm build:web
 pnpm test:e2e
 
@@ -45,6 +46,13 @@ pnpm check:architecture # 二级领域目录、metadata、领域 DAG、层级和
 pnpm check:deps         # 第三方依赖版本统一 (workspace.dependencies 唯一登记)
 cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / 依赖来源
 ```
+
+## 开源与知识产权
+
+仓库采用双许可（GPL-2.0-only / 商业，商业许可尚未发布），版权归 Horldsence。改动前
+读 `docs/governance/open-source-and-ip.md`，新增依赖或资源时按
+`docs/governance/third-party-licenses.md` 登记许可证与义务。文档改动走
+`docs/governance/document-review.md` 的评审流程，并在 `docs/reviews/records/` 留记录。
 
 ## 目录速查
 
@@ -69,7 +77,8 @@ cd src-tauri && cargo deny check   # 安全公告 / 许可证 / 重复版本 / �
 vibe coding 提速的是写代码,不是验证。提 PR 前必须亲自跑通以下检查,**没跑过就不许说"完成"**:
 
 1. `pnpm architecture`、`pnpm check:architecture`、`pnpm check:deps` 通过
-2. `pnpm check:web-contract`、`pnpm check:contracts`、`pnpm check:model-catalog` 通过
+2. `pnpm check:web-contract`、`pnpm check:contracts`、`pnpm check:model-catalog`、
+   `pnpm check:docs` 通过
 3. `pnpm typecheck`、`pnpm lint:ci`、`pnpm test`、`pnpm build:web`、`pnpm test:e2e` 通过
 4. `cd src-tauri && cargo fmt --check`、`cargo clippy --workspace --all-targets`、`cargo test --workspace`、`cargo deny check` 通过
 5. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,同步更新 Rust owner 与生成 TS,并核对字段名逐一对应

@@ -306,7 +306,7 @@ about: 关于
 aboutVersion: 版本
 aboutAuthor: 作者
 aboutLicense: 许可证
-aboutGithub: GitHub 仓库
+aboutRepo: 源码仓库
 aboutDocs: 文档
 aboutDescription: 让设备发出的每一个信号, 都更容易看见、理解和行动。
 aboutFonts: 本软件内置以下字体

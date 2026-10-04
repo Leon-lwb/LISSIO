@@ -1,0 +1,32 @@
+Lissio
+Copyright (C) 2026 Horldsence
+
+本文件是 Lissio 每一份分发物的一部分（GPL-2.0-only §1、§3），须与 LICENSE 一并提供。
+
+1. 许可
+   开源轨：GNU General Public License, version 2 only（见 LICENSE 全文）。
+   项目采用双许可：接收方可在 GPL-2.0-only 与商业许可之间任选其一。商业许可截至
+   本文件发布时尚未发布，任何"可购买商业许可"的表述均无依据。项目方保留在商业轨
+   另行授权的权利，该权利来自贡献者对项目方授予的再许可权（见 CLA.md），不来自
+   GPL 本身。
+
+2. 版权
+   著作权归 Horldsence 所有。贡献者保留其贡献的著作权，并按 CLA.md 授权项目方行使
+   再许可权与专利许可权。本文件不改变任何贡献者的著作权归属。
+
+3. 专利
+   GPL-2.0 不含专利条款。专利授权由 CLA.md 提供，不因 GPL 分发而扩大。
+   第三方组件的专利条款以其各自许可证为准。
+
+4. 第三方组件
+   本项目使用第三方软件与资源，均按各自许可证条款使用，不因本许可而改变其条款。
+   完整清单、需人工留意的条目与复现方式见 docs/governance/third-party-licenses.md。
+   随产物分发的字体的署名入口在应用内 About 弹窗，事实来源为
+   src/lib/fontAttributions.ts，许可原文见 src/assets/fonts/*-LICENSE.txt。
+   第三方名称与商标归各自权利人所有，仅用于致谢与归属，不构成授权或背书。
+
+5. 源码
+   源码仓库：见 docs/README.md 首段的仓库地址。分发二进制时按 GPL-2.0-only §2、§3
+   提供完整对应源码或书面要约；当前发布流水线是否已完成该义务，见
+   docs/governance/open-source-and-ip.md 的分发合规表，未列为"已满足"的项目均视为
+   未满足。

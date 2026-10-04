@@ -4,19 +4,12 @@
 
 A next-generation serial assistant fully rebuilt with Rust + Tauri — built for embedded debugging, waveform visualization, node-based dataflow orchestration, CAN/automotive diagnostics, and logic analysis.
 
-<!-- PROJECT SHIELDS -->
-
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![GPL v2 License][license-shield]][license-url]
 
 <!-- PROJECT LOGO -->
 <br />
 
 <p align="center">
-  <a href="https://github.com/horldsence/lissio">
+  <a href="https://codeberg.org/Horldsence/Lissio">
     <img src="src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -24,12 +17,12 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
   <p align="center">
     A modern serial debugging tool with waveform display, node editor, multi-protocol parsing, CAN diagnostics, and logic analysis.
     <br />
-    <a href="https://github.com/horldsence/lissio"><strong>Explore the repo »</strong></a>
+    <a href="https://codeberg.org/Horldsence/Lissio"><strong>Explore the repo »</strong></a>
     <br />
     <br />
-    <a href="https://github.com/horldsence/lissio/issues">Report Bug</a>
+    <a href="https://codeberg.org/Horldsence/Lissio/issues">Report Bug</a>
     ·
-    <a href="https://github.com/horldsence/lissio/issues">Request Feature</a>
+    <a href="https://codeberg.org/Horldsence/Lissio/issues">Request Feature</a>
   </p>
 </p>
 
@@ -295,7 +288,7 @@ lissio/
 1. Clone the repository
 
 ```sh
-git clone https://github.com/horldsence/lissio.git
+git clone https://codeberg.org/Horldsence/Lissio.git
 cd lissio
 ```
 
@@ -424,6 +417,8 @@ pnpm check:deps
 pnpm check:web-contract
 pnpm check:contracts
 pnpm check:model-catalog
+pnpm check:tokens
+pnpm check:docs
 pnpm typecheck
 pnpm lint:ci
 pnpm test
@@ -448,15 +443,23 @@ Contributions are what make the open-source community such a great place to lear
 4. Push to the branch: `git push origin feature/AmazingFeature`
 5. Open a Pull Request
 
-Please make sure `pnpm tsc --noEmit` and `cd src-tauri && cargo clippy --workspace && cargo test` pass before opening a PR.
+Read [CONTRIBUTING.md](./CONTRIBUTING.md) first: it lists the CLA terms, the IP checks your change must satisfy, and the full gate list (`pnpm check:all`).
 
 ## Versioning
 
-This project is managed with Git. Available releases can be found on the [Releases](https://github.com/horldsence/lissio/releases) page.
+This project is managed with Git. Available releases can be found on the [Releases](https://codeberg.org/Horldsence/Lissio/releases) page.
 
 ## License
 
-This project is licensed under GNU GPL v2 only — see [LICENSE](./LICENSE) for details.
+Dual-licensed: you may use Lissio under **GNU GPL v2 only** (see [LICENSE](./LICENSE)), or
+under a separate commercial license — the commercial track has not been published yet, so
+GPL-2.0-only is the only available grant today. Copyright © 2026 Horldsence; contributors
+license their work to the project via [CLA.md](./CLA.md). Attribution, patent notes and the
+source-code obligation for redistributors are in [NOTICE](./NOTICE); the full policy is in
+[docs/governance/open-source-and-ip.md](docs/governance/open-source-and-ip.md).
+
+Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md),
+[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) and [SECURITY.md](./SECURITY.md).
 
 ## Acknowledgements
 
@@ -471,13 +474,3 @@ This project is licensed under GNU GPL v2 only — see [LICENSE](./LICENSE) for 
 - [libautomotive](https://crates.io/crates/libautomotive)
 
 <!-- links -->
-[contributors-shield]: https://img.shields.io/github/contributors/horldsence/lissio.svg?style=flat-square
-[contributors-url]: https://github.com/horldsence/lissio/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/horldsence/lissio.svg?style=flat-square
-[forks-url]: https://github.com/horldsence/lissio/network/members
-[stars-shield]: https://img.shields.io/github/stars/horldsence/lissio.svg?style=flat-square
-[stars-url]: https://github.com/horldsence/lissio/stargazers
-[issues-shield]: https://img.shields.io/github/issues/horldsence/lissio.svg?style=flat-square
-[issues-url]: https://github.com/horldsence/lissio/issues
-[license-shield]: https://img.shields.io/github/license/horldsence/lissio.svg?style=flat-square
-[license-url]: https://github.com/horldsence/lissio/blob/master/LICENSE
