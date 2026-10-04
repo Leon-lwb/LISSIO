@@ -17,12 +17,13 @@
 import gsap from 'gsap';
 import { motionSpring, type MotionFamily, type MotionPhase } from './motionConfig';
 import { motionIsReduced } from './reducedMotion';
-import { springAt, springSettleTime, type Spring } from './spring';
+import { springAtWithVelocity, springSettleTime, type Spring } from './spring';
 
 /** Tween vars owned by the plugin rather than by a target property. */
 const PLUGIN_VARS = new Set([
   'spring',
   'springDuration',
+  'initialVelocity',
   'ease',
   'duration',
   'delay',
@@ -53,11 +54,20 @@ export interface SpringTweenVars extends gsap.TweenVars {
   spring?: Spring;
   /** Override tween length; defaults to the spring's own settle time. */
   springDuration?: number;
+  /**
+   * Launch speed, in units of the tweened distance per second. Zero — the default
+   * — is the from-rest response; a non-zero value hands the tween momentum, as
+   * when a released drag carries the speed the pointer had. Keep it within
+   * `springNoOvershootVelocity(spring)` for anything that must arrive without
+   * sailing past its target.
+   */
+  initialVelocity?: number;
 }
 
 interface SpringRunData {
   spring: Spring;
   duration: number;
+  initialVelocity: number;
   setters: ((value: number) => void)[];
   from: number[];
   to: number[];
@@ -102,11 +112,18 @@ const SpringEasePlugin = {
     // `overwrite` and interrupt bookkeeping behave; the spring is evaluated
     // from that clock in `render`.
     if (duration > 0) tween.duration(duration);
-    return { spring, duration, setters, from, to };
+    return {
+      spring,
+      duration,
+      initialVelocity: vars.initialVelocity ?? 0,
+      setters,
+      from,
+      to,
+    };
   },
   render(ratio: number, data: gsap.PluginScope): void {
     const run = data as unknown as SpringRunData;
-    const progress = springAt(run.spring, ratio * run.duration);
+    const progress = springAtWithVelocity(run.spring, ratio * run.duration, run.initialVelocity);
     for (let i = 0; i < run.setters.length; i += 1) {
       const base = run.from[i];
       const delta = run.to[i] - base;

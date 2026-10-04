@@ -18,7 +18,7 @@
 //! - `data-dock-zone="canvas"`                                        → 控件画布投放
 
 import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
-import { motionIsReduced } from './motion';
+import { motionIsReduced, planRelease, type ReleasePlan } from './motion';
 import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
 import type { DiscoveredEndpoint, WidgetConfig } from '../types';
 import type { DeviceCardModel } from './acquisition/deviceCardModel';
@@ -50,8 +50,9 @@ export interface GhostState {
   x: number;
   y: number;
   label: string;
-  /// 释放态 — 拖拽放下后的短暂放大淡出动画; 低动画偏好 (prefers-reduced-motion) 时不产生
-  releasing?: boolean;
+  /// 释放态 — 松手后的放大淡出与动量前冲。低动画偏好时整个字段缺省, 幽灵直接消失。
+  /// durationMs 是幽灵存活的唯一权威: 组件据此驱动补间, 清除定时器也据此安排。
+  release?: ReleasePlan;
 }
 
 type Hover =
@@ -70,12 +71,20 @@ interface ActiveDrag {
   lastY: number;
   active: boolean;
   hover: Hover | null;
+  /// 最近的指针采样 — 松手速度由这段位移算出, 不需要额外的采样循环
+  samples: PointerSample[];
+}
+
+interface PointerSample {
+  x: number;
+  y: number;
+  t: number;
 }
 
 /// 触发拖拽所需的最小移动距离 (px) — 与 HTML5 DnD 阈值相当
 const THRESHOLD = 5;
-/// 释放动画时长 (ms) — 与 DockDragGhost 的 transition 时长一致
-const RELEASE_MS = 180;
+/// 松手速度只看最近这一段位移 (ms) — 更早的帧与"松手时的动量"无关
+const VELOCITY_WINDOW_MS = 90;
 
 let drag: ActiveDrag | null = null;
 /// 最近一次拖拽是否激活 — 用于抑制激活拖拽后跟随的 click (否则拖完会误触发点击)
@@ -124,7 +133,16 @@ export function begin(
       /* 指针已失效时忽略 */
     }
   }
-  drag = { spec, startX: e.clientX, startY: e.clientY, lastX: e.clientX, lastY: e.clientY, active: false, hover: null };
+  drag = {
+    spec,
+    startX: e.clientX,
+    startY: e.clientY,
+    lastX: e.clientX,
+    lastY: e.clientY,
+    active: false,
+    hover: null,
+    samples: [],
+  };
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
   window.addEventListener('pointercancel', onCancel);
@@ -137,6 +155,7 @@ function onMove(e: PointerEvent) {
   if (!d) return;
   d.lastX = e.clientX;
   d.lastY = e.clientY;
+  recordSample(d, e.clientX, e.clientY);
   if (!d.active) {
     if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < THRESHOLD) return;
     d.active = true;
@@ -146,6 +165,30 @@ function onMove(e: PointerEvent) {
   // store 各 setter 均有同值去重, 高频调用无副作用
   d.hover = hitTest(e.clientX, e.clientY);
   applyHover(d.hover);
+}
+
+/** 记一笔指针采样, 并丢掉窗口外的旧采样。 */
+function recordSample(d: ActiveDrag, x: number, y: number) {
+  const now = performance.now();
+  d.samples.push({ x, y, t: now });
+  const cutoff = now - VELOCITY_WINDOW_MS;
+  // 采样只增不减会让一次长拖攒下几百笔, 每帧都要扫一遍; 滑出窗口的可以丢弃。
+  while (d.samples.length > 2 && d.samples[0].t < cutoff) d.samples.shift();
+}
+
+/**
+ * 松手瞬间的指针速度 (px/s)。
+ *
+ * 只用最近窗口内的首尾两点: 中间各帧平均掉的是抖动, 首尾差才是手势本身的动量。
+ * 指针停住再松开时窗口内位移趋近 0, 自然得到"放稳了"而不是"甩出去"。
+ */
+function releaseVelocity(d: ActiveDrag): { x: number; y: number } {
+  const first = d.samples[0];
+  const last = d.samples[d.samples.length - 1];
+  if (!first || !last || first === last) return { x: 0, y: 0 };
+  const seconds = (last.t - first.t) / 1000;
+  if (seconds <= 0) return { x: 0, y: 0 };
+  return { x: (last.x - first.x) / seconds, y: (last.y - first.y) / seconds };
 }
 
 function activate(spec: DockDragSpec) {
@@ -171,12 +214,15 @@ function onUp(e: PointerEvent) {
   }
   finish();
   if (d.active && !prefersReducedMotion()) {
-    // 释放动画: 幽灵在落点放大淡出, 动画结束后清除 (代际校验防止误清新拖拽的幽灵)
+    // 释放动画: 松手速度换算成前冲与初速度, 幽灵带着动量落到落点再放大淡出。
+    // 时长取自释放计划本身, 组件与清除定时器共用同一个数, 不再各写一份。
+    const velocity = releaseVelocity(d);
+    const release = planRelease(velocity.x, velocity.y);
     const epoch = ghostEpoch;
-    emitGhost({ x: d.lastX, y: d.lastY, label: d.spec.label, releasing: true });
+    emitGhost({ x: d.lastX, y: d.lastY, label: d.spec.label, release });
     setTimeout(() => {
       if (epoch === ghostEpoch) emitGhost(null);
-    }, RELEASE_MS);
+    }, release.durationMs);
   } else {
     emitGhost(null);
   }

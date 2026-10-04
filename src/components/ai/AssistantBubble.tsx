@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useState, type CSSProperties } from 'react';
 import { Check, Copy, RotateCcw } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
@@ -11,7 +11,17 @@ import type { AiViewItem } from '../../types';
 ///
 /// memo 化: 流式回合刷新的是活跃尾块, 历史条目引用不变时必须跳过重建 —
 /// 否则每个 token 都会把整张消息列表重新渲染一遍 (长会话下直接拖垮渲染进程)。
-export const AssistantBubble = memo(function AssistantBubble({ item, canRetry }: { item: AiViewItem; canRetry: boolean }) {
+/// staggerStyle 因此也要保持引用稳定: 调用方用模块级常量传进来, 不破坏 memo。
+export const AssistantBubble = memo(function AssistantBubble({
+  item,
+  canRetry,
+  staggerStyle,
+}: {
+  item: AiViewItem;
+  canRetry: boolean;
+  /** 同一批挂载的气泡按索引错峰 — 见 lib/motion/stagger.ts */
+  staggerStyle?: CSSProperties;
+}) {
   const lang = useAppStore((s) => s.lang);
   const regenerate = useAiChatStore((s) => s.regenerate);
   const [copied, setCopied] = useState(false);
@@ -32,7 +42,7 @@ export const AssistantBubble = memo(function AssistantBubble({ item, canRetry }:
   };
 
   return (
-    <div className="flex justify-start group motion-message-in ai-assistant-message">
+    <div className="flex justify-start group motion-message-in ai-assistant-message" style={staggerStyle}>
       <div
         className={`max-w-full min-w-0 w-full px-1 py-1 space-y-2 ${
           item.error ? 'text-danger' : ''

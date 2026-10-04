@@ -37,6 +37,8 @@ verdict: 通过 | 有条件通过 | 不通过
 | 2026-10-04 | 开源与知识产权基线 | 有条件通过 | [records/2026-10-04-open-source-ip-baseline.md](records/2026-10-04-open-source-ip-baseline.md) |
 | 2026-10-04 | 事实不一致修正（关闭基线遗留项 3、4、6） | 通过 | [records/2026-10-04-fact-consistency-fixes.md](records/2026-10-04-fact-consistency-fixes.md) |
 | 2026-10-04 | 项目治理基线（GOVERNANCE / MAINTAINERS / ROADMAP） | 有条件通过 | [records/2026-10-04-project-governance-baseline.md](records/2026-10-04-project-governance-baseline.md) |
+| 2026-10-04 | 动效弹簧续作（错峰进场 / 拖拽释放动量） | 有条件通过 | [records/2026-10-04-motion-stagger-and-release.md](records/2026-10-04-motion-stagger-and-release.md) |
+| 2026-10-04 | 控件面板粘性分区条（去色块 / 字缘发光 / 局部磨砂） | 有条件通过 | [records/2026-10-04-palette-sticky-section-bar.md](records/2026-10-04-palette-sticky-section-bar.md) |
 
 ## 保留与时效
 

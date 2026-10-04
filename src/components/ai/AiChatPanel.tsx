@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   AlertCircle,
   ArrowDown,
@@ -33,12 +33,28 @@ import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiAttachment } from '../../types';
 import { AssistantBubble } from './AssistantBubble';
 import { SessionMenu } from './SessionMenu';
-import { motionIsReduced } from '../../lib/motion';
+import { motionIsReduced, useStaggerEntrance } from '../../lib/motion';
+
+/// 把错峰延迟交给 CSS 关键帧 —— 走自定义属性而不是 animationDelay:
+/// 内联的 animation-delay 会盖过 reduced-motion.css 里的降级声明, 而自定义属性
+/// 不会, 降级路径因此仍然只登记在那一处清单里。
+const EMPTY_STAGGER_STYLE = { '--motion-stagger-delay': '0ms' } as CSSProperties;
+
+function staggerVars(delayMs: number): CSSProperties {
+  // CSSProperties 没有自定义属性的索引签名, 断言收在这一处。
+  return delayMs === 0
+    ? EMPTY_STAGGER_STYLE
+    : ({ '--motion-stagger-delay': `${delayMs}ms` } as CSSProperties);
+}
 
 /// AI 对话面板 — 可停靠 (右/左/下/浮动), 流式对话 + Markdown 渲染 +
 /// 多会话 (后端持有) + MCP 工具调用展示
 export function AiChatPanel() {
   const lang = useAppStore((s) => s.lang);
+  // 整份历史一次性挂载时 (切回旧会话), 十几条气泡同帧齐飞只会读成"闪了一下"。
+  // 从尾部反向取索引: 级联从视线所在的最新一条开始, 而追加新气泡时最后一条的
+  // 索引正好是 0, 不会因为前面攒了 50 条而被推迟半秒才出现。
+  const staggerDelay = useStaggerEntrance();
   const {
     viewItems,
     streaming,
@@ -273,7 +289,11 @@ export function AiChatPanel() {
           )}
           {viewItems.map((item, i) =>
             item.role === 'user' ? (
-              <div key={i} className="flex justify-end motion-message-in">
+              <div
+                key={i}
+                className="flex justify-end motion-message-in"
+                style={staggerVars(staggerDelay(viewItems.length - 1 - i))}
+              >
                 <div className="max-w-[88%] min-w-0 rounded-2xl px-3 py-2 bg-bg-hover text-text-primary space-y-1.5">
                   {item.attachments && item.attachments.length > 0 && (
                     <div className="flex flex-wrap gap-1">
@@ -295,7 +315,12 @@ export function AiChatPanel() {
                 </div>
               </div>
             ) : (
-              <AssistantBubble key={i} item={item} canRetry={!!item.error && i === viewItems.length - 1 && !streaming} />
+              <AssistantBubble
+                key={i}
+                item={item}
+                canRetry={!!item.error && i === viewItems.length - 1 && !streaming}
+                staggerStyle={staggerVars(staggerDelay(viewItems.length - 1 - i))}
+              />
             )
           )}
 

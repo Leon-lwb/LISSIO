@@ -159,8 +159,10 @@
   animation: motion-pop-in var(--motion-duration-content-in) var(--ease-content-in) both;
 }
 
+/* 错峰延迟走自定义属性而不是内联 animation-delay: 内联的 animation-delay 会
+   盖过 reduced-motion.css 里的 animation-delay: 0ms 降级声明, 自定义属性不会。 */
 .motion-message-in {
-  animation: motion-message-in var(--motion-duration-content-in) var(--ease-content-in) both;
+  animation: motion-message-in var(--motion-duration-content-in) var(--ease-content-in) var(--motion-stagger-delay, 0ms) both;
 }
 
 .motion-banner-in {

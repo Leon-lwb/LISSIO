@@ -1,4 +1,4 @@
-import { memo, useEffect } from 'react';
+import { memo } from 'react';
 import clsx from 'clsx';
 import type { WidgetCategory } from '../../../types';
 import { dockDrag } from '../../../lib/dockDrag';
@@ -29,30 +29,15 @@ const tileClass = (cat: WidgetCategory) =>
 interface PaletteRowProps {
   entry: PaletteEntry;
   category: WidgetCategory;
-  /// 播放入场动画 (淡入 + 轻微下滑)
-  entering: boolean;
-  /// 播放退场动画 (淡出 + 轻微左移)
-  exiting: boolean;
   onActivate: (entry: PaletteEntry) => void;
-  /// 入场动画已播放标记 — 重挂载不再重放
-  onEnterPlayed: (key: string) => void;
 }
 
 /// 控件行 — 单行: 分类色图标块 + 名称, 左键拖拽或单击均可添加
 /// 字号取 theme token (--font-size-sm); memo 化后滚动重渲染仅更新可见行
-export const PaletteRow = memo(function PaletteRow({ entry, category, entering, exiting, onActivate, onEnterPlayed }: PaletteRowProps) {
-  useEffect(() => {
-    if (entering) onEnterPlayed(entry.key);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+export const PaletteRow = memo(function PaletteRow({ entry, category, onActivate }: PaletteRowProps) {
   return (
     <div
-      className={clsx(
-        'group flex items-center gap-2 px-1.5 rounded-sm cursor-grab select-none transition-colors active:cursor-grabbing hover:bg-bg-hover',
-        entering && 'motion-row animate-palette-row',
-        exiting && 'animate-palette-row-exit',
-      )}
+      className="group flex items-center gap-2 px-1.5 rounded-sm cursor-grab select-none transition-colors motion-row active:cursor-grabbing hover:bg-bg-hover"
       style={{ height: ROW_SIZE - 2, marginBottom: 2 }}
       onPointerDown={(e) => {
         if (e.button !== 0) return;

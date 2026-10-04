@@ -32,6 +32,15 @@
   --shadow-node-controls: 0 2px 6px var(--color-shadow-medium);
   --shadow-step-knob: inset 0 1px 0 var(--color-highlight-high), 0 1px 2px var(--color-shadow-strong);
   --shadow-step-pointer: 0 0 3px var(--color-accent-glow);
+  /* 粘性分区条标题的字缘发光 —— 这里就是标题全部的可读性来源。
+     底色淡到几乎看不见, 磨砂只在行穿过时才显形, 所以字必须靠这圈光自己立住:
+     半径全部压在字缘 (1px / 3px), 峰值够高以咬住字形, 又不做远距弥散 ——
+     加一层 7px 的弥散就会从"字缘发光"变成"发亮的描边", 比磨砂还抢眼。 */
+  --color-shadow-sticky-bar: rgb(0 0 0 / 58%);
+  --color-shadow-sticky-bar-mid: rgb(0 0 0 / 22%);
+  --text-shadow-sticky-bar-title:
+    0 0 1px var(--color-shadow-sticky-bar),
+    0 0 3px var(--color-shadow-sticky-bar-mid);
 
   /* Shared geometry. */
   --line-hairline: 1px;

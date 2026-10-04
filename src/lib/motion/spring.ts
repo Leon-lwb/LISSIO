@@ -109,6 +109,65 @@ export function springVelocity(spring: Spring, t: number): number {
 }
 
 /**
+ * Largest initial velocity that still arrives without overshooting.
+ *
+ * For a critically damped spring the response is `1 − e^(−ω₀t)(1 + (ω₀ − v₀)t)`,
+ * which turns back on itself exactly when `v₀` exceeds `ω₀` — above that bound the
+ * object sails past its target and comes back, which is the wobble that departures
+ * must never have. Callers handing a real momentum to a spring clamp against this.
+ *
+ * An underdamped spring overshoots whatever it is launched with; the bound only
+ * means something for the critically damped case.
+ */
+export function springNoOvershootVelocity(spring: Spring): number {
+  return Math.sqrt(spring.stiffness / spring.mass);
+}
+
+/**
+ * Normalized step response released with a non-zero launch speed.
+ *
+ * `springAt` is the from-rest case, which cannot express momentum: a hand that
+ * lets go of a moving object hands over a velocity, not a displacement. This is
+ * that response — same target of 1, same three damping regimes, but starting at
+ * `initialVelocity` units of the target per second instead of from rest.
+ *
+ * The only change from `springAt` is one coefficient per regime, because the
+ * closed-form solution already carries a free coefficient:
+ * - Underdamped: `B = (ζω₀ − v₀)/ω_d`, which reduces to `ζω₀/ω_d` at `v₀ = 0`.
+ * - Critically damped: the repeated root gives `1 + (ω₀ − v₀)t` against `1 + ω₀t`.
+ * - Overdamped: the weights of the two roots are solved from `x(0) = 0` and the
+ *   launch speed instead of from `x(0) = 0` and `x'(0) = 0`.
+ */
+export function springAtWithVelocity(
+  spring: Spring,
+  t: number,
+  initialVelocity: number
+): number {
+  if (t <= 0) return 0;
+  const { mass, stiffness, damping } = spring;
+  if (stiffness <= 0) return 1;
+  const v0 = Number.isFinite(initialVelocity) ? initialVelocity : 0;
+  const omega0 = Math.sqrt(stiffness / mass);
+  const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+
+  if (zeta < 1 - 1e-6) {
+    const omegaD = omega0 * Math.sqrt(1 - zeta * zeta);
+    const b = (zeta * omega0 - v0) / omegaD;
+    const decay = Math.exp(-zeta * omega0 * t);
+    return 1 - decay * (Math.cos(omegaD * t) + b * Math.sin(omegaD * t));
+  }
+  if (zeta <= 1 + 1e-6) {
+    const decay = Math.exp(-omega0 * t);
+    return 1 - decay * (1 + (omega0 - v0) * t);
+  }
+  const root = omega0 * Math.sqrt(zeta * zeta - 1);
+  const r1 = -zeta * omega0 + root;
+  const r2 = -zeta * omega0 - root;
+  const a = (v0 - r2) / (r1 - r2);
+  return 1 - (a * Math.exp(r1 * t) + (1 - a) * Math.exp(r2 * t));
+}
+
+/**
  * Slowest exponential decay rate in the response. Used to size the search
  * horizon so `springSettleTime` never truncates a still-oscillating spring.
  */

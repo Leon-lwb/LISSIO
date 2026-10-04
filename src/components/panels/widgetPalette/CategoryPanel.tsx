@@ -146,9 +146,19 @@ export function CategoryPanel() {
           return (
             <section key={section.id} ref={(element) => { if (element) sectionRefs.current.set(section.id, element); else sectionRefs.current.delete(section.id); }}
               aria-labelledby={`palette-heading-${section.id}`} className="pb-4 last:min-h-full">
-              <h3 id={`palette-heading-${section.id}`} className="sticky top-0 z-10 flex items-center gap-2 bg-bg-sidebar px-1.5 py-2 text-xs font-semibold text-text-primary border-b border-border-subtle mb-1">
-                <Icon size={13} /><span className="flex-1">{section.header}</span>
-                {section.id !== 'transport' && <span aria-hidden="true" className="text-text-muted font-normal tabular-nums">{filtered?.entries.length}</span>}
+              <h3 id={`palette-heading-${section.id}`} className="sticky-section-bar sticky top-0 z-10 flex items-center gap-2 px-1.5 py-2 text-xs font-semibold text-text-primary mb-1">
+                <span className="sticky-section-bar-label">
+                  <Icon size={13} />
+                  <span>{section.header}</span>
+                  {/* 计数紧跟标题, 一起落在磨砂块里 —— 推到条的最右端就脱离了那块
+                      磨砂, 行从下方穿过时计数背后是没有模糊的内容, 会读不清。 */}
+                  {section.id !== 'transport' && (
+                    <span aria-hidden="true" className="text-text-muted font-normal tabular-nums">
+                      {filtered?.entries.length}
+                    </span>
+                  )}
+                </span>
+                <span className="flex-1" />
               </h3>
               {section.id === 'transport' ? (
                 catalogPending ? <div role="status" className="flex justify-center gap-2 p-4 text-xs text-text-muted"><Loader2 size={14} className="motion-spin" />{translate('capabilityDiscovering', lang)}</div>
@@ -156,7 +166,7 @@ export function CategoryPanel() {
                     : <DevicePanel cards={capabilityCards} query={section.header.toLowerCase().includes(trimmedQuery) ? '' : trimmedQuery} />
               ) : filtered?.entries.map((entry) => (
                 <PaletteRow key={entry.key} entry={entry} category={section.category}
-                  entering={false} exiting={false} onActivate={handleActivate} onEnterPlayed={() => undefined} />
+                  onActivate={handleActivate} />
               ))}
             </section>
           );

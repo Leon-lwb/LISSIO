@@ -63,7 +63,7 @@ afterEach(async () => { cleanup(); __resetForTests(); resetModelCatalogForTests(
 describe('all interface palette entries', () => {
   it.each(entries)('$label creates one independent node per click/drop and consumes the trailing click', async (entry) => {
     const activate = (item: PaletteEntry) => { addPaletteNode(item, { x: 60, y: 60 }); };
-    renderWithI18n(<PaletteRow entry={entry} category="transport" entering={false} exiting={false} onActivate={activate} onEnterPlayed={() => undefined} />);
+    renderWithI18n(<PaletteRow entry={entry} category="transport" onActivate={activate} />);
     const row = screen.getByRole('button', { name: entry.label });
     fireEvent.click(row);
     const canvas = document.createElement('div');

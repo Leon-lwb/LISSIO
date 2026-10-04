@@ -50,6 +50,7 @@
 | `float-chrome-muted` | 浮层侧栏/弱化区域 | 半透明 chrome |
 | `frost-surface` | 面板内始终磨砂的表面 | 始终生效 |
 | `frost-acrylic` | 通知 Toast、底部状态栏 | `appearance.acrylicBackground` |
+| `sticky-section-bar` | 粘性分区标题条（行从其下方滚过） | `appearance.acrylicBackground` |
 
 核心 token：
 
@@ -59,14 +60,31 @@
 | `--frost-saturate` | `180%` | 所有磨砂表面共享的饱和度基线 |
 | `--frost-alpha-floating` | `72%` | 二级卡片/弹窗背景强度，由 `floatingGlassOpacity` 注入 |
 | `--frost-alpha-widget` | `47%` | Widget 亚克力背景强度，由 `acrylicOpacity` 注入 |
+| `--frost-alpha-sticky-bar` | `16%` | 粘性分区条标题的磨砂浓度，见下方说明 |
 | `--frost-border` / `--frost-highlight` | 派生色 | 统一玻璃边缘与顶部高光 |
 | `--frost-shadow` | 统一阴影 | 磨砂表面的玻璃阴影 |
 | `--shadow-float` / `--shadow-popover` | 统一阴影 | 关闭磨砂时的窗口/弹窗阴影 |
+| `--text-shadow-sticky-bar-title` | `1px + 3px` 双层 | 粘性分区条标题的字缘发光 |
 
 `floatingGlass` 与 `acrylicBackground` 是两个独立开关；前者只控制浮层基类，后者控制窗口
 背景和 Widget 亚克力。关闭磨砂时 `float-card` / `float-popover` 必须回退到实色且不保留
 `backdrop-filter`。浮层底色使用 `--color-float-*` 的主题原色出口，不能直接引用会被
 亚克力模式二次半透明化的 `--color-bg-*` 运行时值。
+
+### 粘性分区条：为什么浓度反而低
+
+`sticky-section-bar` 是唯一一处**故意不给整条底色**的粘性表面。它背后是面板的一整片
+平色，而平色经 `backdrop-filter` 模糊与提饱和后没有任何变化——磨砂在这里真正能被看见
+的成分只有底色浓度一项。由此有两条与直觉相反的结论：
+
+- **浓度必须压低。** 浓到能看见，磨砂块就重新读成一块深色圆角底板，比任何阴影都抢眼。
+  `16%` 只够让"行穿过时被化开"发生，标题的可读性交给 `--text-shadow-sticky-bar-title`。
+- **磨砂块必须按文字排版。** 它挂在 `inline-flex` 的 `.sticky-section-bar-label`（图标 +
+  标题 + 计数）上，而不是外层 `flex-1` 的 span 上；挂错的话 4 个字的标题会拿到一块
+  156px 宽的矩形，与浓度无关地读成色块。计数也必须紧跟标题，才能一起落进这块磨砂。
+
+字缘发光的衰减剖面是"字缘最强、快速归零"，半径全部压在 1px / 3px。加一层 7px 的远距
+弥散会从"字缘发光"变成"发亮的描边"，比磨砂还显眼。
 
 ## 文字色档位 (`--color-text-*`)
 

@@ -278,6 +278,12 @@
   --frost-alpha-widget: 47%;
   --frost-alpha-floating: 72%;
   --frost-alpha-chrome: 55%;
+  /* 粘性分区条的磨砂浓度。刻意压得极低。
+     这块磨砂背后是侧边栏的一整片平色, 平色经 blur 与 saturate 后没有任何变化, 所以
+     底色浓度是它唯一能被看见的成分 —— 而一旦浓到能看见, 它就重新读成一块深色圆角
+     底板, 比任何阴影都抢眼。这里只留一丝色偏, 让"行穿过时被化开"这件事发生;
+     标题的可读性由 --text-shadow-sticky-bar-title 的字缘发光承担, 不靠底色。 */
+  --frost-alpha-sticky-bar: 16%;
   --frost-alpha-surface: 90%;
   --frost-blur-widget: var(--frost-blur);
   --frost-saturate-widget: var(--frost-saturate);
