@@ -186,7 +186,7 @@ describe('spatialTiming', () => {
   it('barely stretches a nominal offset but stretches a long flight', () => {
     const base = { duration: 0.4, bounce: 0.2 };
     expect(spatialTiming(base, 24).duration).toBeLessThan(0.43);
-    expect(spatialTiming(base, 600).duration).toBeGreaterThan(0.55);
+    expect(spatialTiming(base, 600).duration).toBeGreaterThan(0.5);
   });
 
   it('is monotonic in distance and bounded', () => {
@@ -195,7 +195,7 @@ describe('spatialTiming', () => {
     for (const distance of [0, 40, 120, 400, 1200, 4000]) {
       const timing = spatialTiming(base, distance);
       expect(timing.duration).toBeGreaterThanOrEqual(previous);
-      expect(timing.duration).toBeLessThanOrEqual(base.duration * 1.55 + 1e-9);
+      expect(timing.duration).toBeLessThanOrEqual(base.duration * 1.35 + 1e-9);
       expect(timing.bounce).toBeLessThanOrEqual(0.5);
       previous = timing.duration;
     }

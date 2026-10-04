@@ -301,17 +301,19 @@
      --motion-duration-* 与 --ease-* 的值由 src/lib/motion/easingTokens.ts 在运行时
      写入 <html> 内联样式: 弹簧解算成 CSS linear() 缓动, 因此 CSS 过渡与 GSAP
      补间共用同一个求解器, 不会各算各的。下面声明的只是 JS 就绪前的兜底值,
-     会被内联值覆盖; 动画速度档位切换时整组令牌重新烘焙。 */
+     会被内联值覆盖; 动画速度档位切换时整组令牌重新烘焙。
+     兜底时长与 motionConfig.ts 的 BASE_TIMING (standard 档) 逐项对齐 —— 改手感
+     时两处要一起改, 否则第一帧会先按旧节奏播一次进场。 */
   --motion-duration-control-in: 160ms;
   --motion-duration-control-out: 120ms;
   --motion-duration-toggle-in: 240ms;
   --motion-duration-toggle-out: 180ms;
-  --motion-duration-content-in: 320ms;
-  --motion-duration-content-out: 220ms;
-  --motion-duration-surface-in: 400ms;
-  --motion-duration-surface-out: 260ms;
-  --motion-duration-spatial-in: 520ms;
-  --motion-duration-spatial-out: 300ms;
+  --motion-duration-content-in: 260ms;
+  --motion-duration-content-out: 180ms;
+  --motion-duration-surface-in: 300ms;
+  --motion-duration-surface-out: 200ms;
+  --motion-duration-spatial-in: 400ms;
+  --motion-duration-spatial-out: 220ms;
 
   /* 兜底缓动: 令牌烘焙前生效。家族内的近似形状 (进场减速, 离场加速)。 */
   --ease-control-in: cubic-bezier(0.25, 0.46, 0.45, 0.94);

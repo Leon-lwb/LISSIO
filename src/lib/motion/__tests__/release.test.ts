@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MOMENTUM_FLOOR_PX_S, planRelease } from '../release';
+import { motionSpring } from '../motionConfig';
 import {
   springAt,
   springAtWithVelocity,
@@ -111,11 +112,13 @@ describe('planRelease', () => {
   });
 
   it('初速度落在无过冲边界以内, 所以幽灵只会滑向落点而不会荡回来', () => {
+    // 边界必须对着实现真正使用的那根弹簧断言。写死一个毫秒数等于把
+    // BASE_TIMING.spatial.out 抄一份到测试里, 调参一改这条不变量就静默失真。
+    const atRest = motionSpring('spatial', 'out');
     for (const speed of [MOMENTUM_FLOOR_PX_S, 1500, 2500, 5000, 20000]) {
       const plan = planRelease(speed, 0);
       expect(plan.initialVelocity).toBeGreaterThan(0);
-      const spring = springFromTiming({ duration: 0.3, bounce: 0 });
-      expect(plan.initialVelocity).toBeLessThanOrEqual(springNoOvershootVelocity(spring));
+      expect(plan.initialVelocity).toBeLessThanOrEqual(springNoOvershootVelocity(atRest));
     }
   });
 

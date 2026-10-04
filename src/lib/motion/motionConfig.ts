@@ -51,15 +51,20 @@ export type MotionPresenceVariant =
  * Every `out` entry has `bounce: 0` — departures must not wobble — and that
  * invariant is asserted in the test suite rather than left to reviewers.
  *
+ * 三个家族的重心压得比"物理直觉"更利落: 进场的主要成本是用户等待, 不是位移本身。
+ * `surface` 与 `spatial` 的时长按"到位即可读出内容"的尺度给, 剩下的细化交给
+ * `spatialTiming` 的行程拉伸 —— 名义偏移越大, 读起来才越需要时间; 反之, 一律
+ * 按"大面板必须飞满半秒"给值, 弹窗就会慢到被读成卡顿。
+ *
  * Exported so `scripts/gen-motion-docs.mjs` can render the tuning table from the
  * live values; a hand-copied table would drift silently.
  */
 export const BASE_TIMING: Record<MotionFamily, Record<MotionPhase, SpringTiming>> = {
   control: { in: { duration: 0.16, bounce: 0.06 }, out: { duration: 0.12, bounce: 0 } },
   toggle: { in: { duration: 0.24, bounce: 0.14 }, out: { duration: 0.18, bounce: 0 } },
-  content: { in: { duration: 0.32, bounce: 0.18 }, out: { duration: 0.22, bounce: 0 } },
-  surface: { in: { duration: 0.4, bounce: 0.22 }, out: { duration: 0.26, bounce: 0 } },
-  spatial: { in: { duration: 0.52, bounce: 0.28 }, out: { duration: 0.3, bounce: 0 } },
+  content: { in: { duration: 0.26, bounce: 0.18 }, out: { duration: 0.18, bounce: 0 } },
+  surface: { in: { duration: 0.3, bounce: 0.22 }, out: { duration: 0.2, bounce: 0 } },
+  spatial: { in: { duration: 0.4, bounce: 0.28 }, out: { duration: 0.22, bounce: 0 } },
 };
 
 /** Multipliers applied to `BASE_TIMING` for each speed setting. */

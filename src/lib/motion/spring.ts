@@ -316,10 +316,15 @@ export function springDuration(spring: Spring): number {
  * crossing 600px feels sluggish on the same 280ms that suits a 40px popover. We
  * stretch duration with a logarithmic (not linear) law and grow bounce with it,
  * because longer flights reveal more of the settle.
+ *
+ * The stretch is deliberately shallow. A panel docking from the far side of the
+ * window already spends its extra time crossing the gap; letting the law add
+ * more than a third on top turns the arrival into a wait, and the user reads
+ * that as the app being slow rather than as distance being honoured.
  */
 export function spatialTiming(timing: SpringTiming, distancePx: number): SpringTiming {
   const distance = Math.max(Math.abs(distancePx), 0);
-  const stretch = clamp(1 + Math.log1p(distance / 120) * 0.28, 1, 1.55);
+  const stretch = clamp(1 + Math.log1p(distance / 120) * 0.22, 1, 1.35);
   return {
     duration: timing.duration * stretch,
     bounce: clamp(timing.bounce * (1 + (stretch - 1) * 0.5), 0, 0.5),
