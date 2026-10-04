@@ -271,7 +271,7 @@ export function SettingsModal() {
                 </div>
               )}
               <button
-                className={`w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm transition-all duration-150 ${
+                className={`w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm motion-transition ${
                   updateBusy ? 'opacity-muted cursor-wait' : 'cursor-pointer hover:text-text-bright'
                 }`}
                 onClick={handleUpdateClick}
@@ -300,7 +300,7 @@ export function SettingsModal() {
               {updateStatus === 'downloading' && (
                 <div className="h-1 rounded-full bg-bg-hover overflow-hidden mb-1">
                   <div
-                    className="h-full bg-accent transition-all duration-200"
+                    className="h-full bg-accent motion-transition"
                     style={{ width: `${updateProgress}%` }}
                   />
                 </div>
@@ -320,7 +320,7 @@ export function SettingsModal() {
             <SettingsResetButton onClick={reset} />
           </div>
 
-          <div className="flex-1 overflow-y-auto px-6 py-4 bg-bg-editor">
+          <div className="frost-content flex-1 overflow-y-auto px-6 py-4">
             {activeCategory === 'ai' && !searchQuery.trim() && (
               <nav
                 className="flex items-center gap-1.5 pb-3 text-xs text-text-secondary"

@@ -139,7 +139,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
 
       {/* 消息 — 与引导提示框正文同款排版 */}
       <div
-        className={`prompt-card-body font-mono cursor-pointer overflow-hidden break-all whitespace-pre-wrap transition-[max-height] duration-200 ease-in-out ml-6 ${expanded ? 'max-h-[200px]' : 'max-h-[4.5em]'}`}
+        className={`prompt-card-body font-mono cursor-pointer overflow-hidden break-all whitespace-pre-wrap transition-[max-height]-out ml-6 ${expanded ? 'max-h-[200px]' : 'max-h-[4.5em]'}`}
         onClick={() => setExpanded((v) => !v)}
         onKeyDown={activateOnKeyboard}
         role="button"

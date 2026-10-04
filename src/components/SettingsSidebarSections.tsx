@@ -29,7 +29,7 @@ export function SettingsSidebarNavigation({
         return (
           <div
             key={category}
-            className={`flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer transition-all duration-150 border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary ${isActive ? 'text-text-bright bg-bg-hover border-l-accent' : ''}`}
+            className={`flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer motion-transition border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary ${isActive ? 'text-text-bright bg-bg-hover border-l-accent' : ''}`}
             onClick={() => onSelectCategory(category)}
             onKeyDown={activateOnKeyboard}
             role="button"
@@ -44,7 +44,7 @@ export function SettingsSidebarNavigation({
       <div className="mt-2 border-t border-border px-4 pt-2 pb-1">
         <div className="section-heading mb-1">{translate('backupCategory', lang)}</div>
         <button
-          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
+          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer motion-transition hover:text-text-bright"
           onClick={() => void exportAppToFile()}
           title={translate('exportConfig', lang)}
         >
@@ -52,7 +52,7 @@ export function SettingsSidebarNavigation({
           <span>{translate('exportConfig', lang)}</span>
         </button>
         <button
-          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
+          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer motion-transition hover:text-text-bright"
           onClick={() => void importAppFromFile()}
           title={translate('importConfig', lang)}
         >
@@ -60,7 +60,7 @@ export function SettingsSidebarNavigation({
           <span>{translate('importConfig', lang)}</span>
         </button>
         <button
-          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer transition-all duration-150 hover:text-text-bright"
+          className="w-full flex items-center gap-2.5 py-1.5 text-text-secondary text-sm cursor-pointer motion-transition hover:text-text-bright"
           onClick={onOpenBackup}
           title={translate('backupCustom', lang)}
         >
@@ -76,7 +76,7 @@ export function SettingsResetButton({ onClick }: { onClick: () => void }) {
   const lang = useAppStore((state) => state.lang);
   return (
     <div
-      className="flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer transition-all duration-150 border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary"
+      className="flex items-center gap-2.5 px-4 py-2 text-text-secondary text-sm cursor-pointer motion-transition border-l-2 border-transparent hover:bg-bg-hover hover:text-text-primary"
       onClick={onClick}
       onKeyDown={activateOnKeyboard}
       role="button"

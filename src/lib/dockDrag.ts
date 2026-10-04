@@ -18,6 +18,7 @@
 //! - `data-dock-zone="canvas"`                                        → 控件画布投放
 
 import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
+import { motionIsReduced } from './motion';
 import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
 import type { DiscoveredEndpoint, WidgetConfig } from '../types';
 import type { DeviceCardModel } from './acquisition/deviceCardModel';
@@ -82,12 +83,10 @@ let suppressNextClick = false;
 /// 释放动画代际 — 新拖拽开始时递增, 使挂起的清除定时器失效
 let ghostEpoch = 0;
 
-/// 低动画偏好 (无障碍) — matchMedia 不可用 (如 jsdom) 时视为低动画, 不放释放动画
+/// 低动画偏好 (无障碍) — 判定统一走 lib/motion 的唯一权威源: 系统媒体查询与
+/// 应用内设置已在 <html> 上合并成一个类, 这里不再自己查 matchMedia。
 function prefersReducedMotion(): boolean {
-  return (
-    typeof window.matchMedia !== 'function' ||
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  return motionIsReduced();
 }
 /// 画布投放处理 — 按画布元素注册 (多个控制卡片并存时, 落点归属指针下方的画布)
 type CanvasHandler = (x: number, y: number, spec: WidgetDragSpec) => void;

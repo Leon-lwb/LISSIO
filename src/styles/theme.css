@@ -141,6 +141,9 @@
   --color-float-surface: var(--color-bg-elevated);
   --color-dialog-chrome: var(--color-bg-panel-header);
   --color-dialog-chrome-muted: var(--color-bg-elevated);
+  /* 浮层内容区底色。必须指向主题原色而不是 --color-bg-editor: 后者会被窗口
+     亚克力改写成半透明 rgba, 再叠一层 color-mix 就是二次半透明化。 */
+  --color-float-content: var(--color-bg-editor);
 
   /* ---------- 透明度档位 (--alpha-*, 全仓唯一白名单) ---------- */
   /* 组件不写裸 `opacity: 0.NN` / `opacity-NN`, 一律引用档位; --opacity-* 是

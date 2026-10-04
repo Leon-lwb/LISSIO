@@ -85,7 +85,7 @@ export function QuickStartPanel() {
           return (
             <div
               key={tpl.id}
-              className="group bg-bg-input border border-border-subtle rounded-md p-2.5 flex items-start gap-2.5 transition-all duration-150 hover:bg-bg-hover hover:border-accent/50"
+              className="group bg-bg-input border border-border-subtle rounded-md p-2.5 flex items-start gap-2.5 motion-transition hover:bg-bg-hover hover:border-accent/50"
             >
               <div className="w-9 h-9 rounded-sm flex items-center justify-center bg-accent/15 text-accent flex-shrink-0 [&_svg]:w-4 [&_svg]:h-4">
                 <Icon size={16} />

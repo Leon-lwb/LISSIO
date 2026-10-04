@@ -30,7 +30,7 @@ export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
       <div className="flex gap-2 w-full h-full min-h-[56px] items-stretch justify-center py-0.5">
         <div className="relative w-2.5 rounded-full bg-bg-input overflow-hidden flex flex-col justify-end">
           <div
-            className="w-full rounded-full transition-[height] duration-150"
+            className="w-full rounded-full transition-[height]"
             style={{ height: `${ratio * 100}%`, backgroundColor: fillColor }}
           />
         </div>
@@ -69,7 +69,7 @@ export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
       )}
       <div className="relative h-2.5 rounded-full bg-bg-input overflow-hidden">
         <div
-          className="h-full rounded-full transition-[width] duration-150"
+          className="h-full rounded-full transition-[width]"
           style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
         />
       </div>

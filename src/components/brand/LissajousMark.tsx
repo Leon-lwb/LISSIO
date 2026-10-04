@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
+import { motionIsReduced } from '../../lib/motion';
 
 const TAU = Math.PI * 2;
 const PATH_STEPS = 360;
@@ -97,8 +98,7 @@ export function LissajousMark({
 
   useEffect(() => {
     if (!animated || !pathRef.current) return;
-    const media = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    if (media?.matches) return;
+    if (motionIsReduced()) return;
 
     let frame = 0;
     const startedAt = performance.now();

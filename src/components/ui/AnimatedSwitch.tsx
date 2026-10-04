@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { motionDuration, motionIsReduced, motionSpring } from '../../lib/motion';
+import { motionDuration, motionIsReduced } from '../../lib/motion';
+import { switchTravel } from './tabTravel';
 
 interface AnimatedSwitchProps {
   /// 切换标识 — 值变化时播放一次转场动画 (首次挂载不播放)
@@ -13,33 +14,8 @@ interface AnimatedSwitchProps {
   className?: string;
 }
 
-/** Full-index travel. One step is subtle; crossing the whole strip is not. */
-const MAX_TRAVEL = 18;
+/** Fallback used only before the spring tokens have been baked onto <html>. */
 const FALLBACK_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
-
-/**
- * Signed travel for a switch, in px, along the given axis.
- *
- * Direction comes from where the new key sits relative to the old one, and the
- * magnitude scales with how many positions were crossed: nudging one tab should
- * not read the same as jumping the length of the strip. Returns 0 when the two
- * keys have no spatial relationship, which degrades to a pure cross-fade.
- */
-export function switchTravel(
-  from: string,
-  to: string,
-  order: readonly string[] | undefined,
-  axis: 'x' | 'y' | undefined
-): number {
-  if (!order || !axis) return 0;
-  const fromIdx = order.indexOf(from);
-  const toIdx = order.indexOf(to);
-  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return 0;
-  const steps = Math.abs(toIdx - fromIdx);
-  const direction = toIdx > fromIdx ? 1 : -1;
-  const axisFactor = axis === 'x' ? 1 : 0.6;
-  return direction * axisFactor * Math.min(MAX_TRAVEL, 4 + (steps - 1) * 6);
-}
 
 /// 通用切换转场容器
 /// 纯 CSS transition (transform + opacity) — 动画由合成器线程接管, 不触发任何
@@ -95,8 +71,3 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
     </div>
   );
 }
-
-/// 供测试与文档核对: content 家族入场的弹簧时长 (秒)
-export const ANIMATED_SWITCH_DURATION = () => motionDuration('content', 'in');
-/// 供测试与文档核对: content 家族入场的弹簧
-export const ANIMATED_SWITCH_SPRING = () => motionSpring('content', 'in');

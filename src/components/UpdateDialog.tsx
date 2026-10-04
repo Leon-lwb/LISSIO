@@ -88,7 +88,7 @@ export function UpdateDialog() {
           <div className="flex items-center gap-2 mt-3">
             <div className="flex-1 h-1.5 rounded-full bg-bg-hover overflow-hidden">
               <div
-                className="h-full bg-accent transition-all duration-200"
+                className="h-full bg-accent motion-transition"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -116,7 +116,7 @@ export function UpdateDialog() {
                 {translate('updateSkipVersion', lang)}
               </button>
               <button
-                className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
+                className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded motion-transition hover:bg-bg-hover hover:border-accent hover:text-text-bright"
                 onClick={closeDialog}
               >
                 {translate('updateLater', lang)}

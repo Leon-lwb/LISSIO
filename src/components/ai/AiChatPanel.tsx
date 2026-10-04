@@ -33,6 +33,7 @@ import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiAttachment } from '../../types';
 import { AssistantBubble } from './AssistantBubble';
 import { SessionMenu } from './SessionMenu';
+import { motionIsReduced } from '../../lib/motion';
 
 /// AI 对话面板 — 可停靠 (右/左/下/浮动), 流式对话 + Markdown 渲染 +
 /// 多会话 (后端持有) + MCP 工具调用展示
@@ -317,7 +318,7 @@ export function AiChatPanel() {
               if (list) {
                 list.scrollTo({
                   top: list.scrollHeight,
-                  behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+                  behavior: motionIsReduced() ? 'instant' : 'smooth',
                 });
               }
             }}

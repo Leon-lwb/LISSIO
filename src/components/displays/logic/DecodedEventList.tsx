@@ -210,7 +210,7 @@ export function DecodedEventList() {
             <button
               key={tp}
               type="button"
-              className={`px-2 py-0.5 text-[11px] border rounded cursor-pointer transition-all ${
+              className={`px-2 py-0.5 text-[11px] border rounded cursor-pointer motion-transition ${
                 filterType === tp
                   ? 'bg-accent border-accent text-text-inverse'
                   : 'bg-bg-input text-text-secondary border-border hover:bg-bg-hover hover:text-text-primary'

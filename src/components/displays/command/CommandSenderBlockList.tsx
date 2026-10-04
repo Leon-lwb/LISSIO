@@ -84,7 +84,7 @@ export function CommandSenderBlockList({
             <div
               key={block.id}
               data-block-id={block.id}
-              className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
+              className={`border rounded-sm motion-transition ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
               onDragOver={onDragOver(block.id)}
               onDrop={onDrop(block.id)}
             >
@@ -155,7 +155,7 @@ export function CommandSenderBlockList({
           return (
             <button
               key={bt}
-              className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
+              className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer motion-transition hover:text-text-primary hover:border-accent"
               onClick={() => onAddBlock(bt)}
               title={translate(cfg.addLabelKey, lang)}
             >

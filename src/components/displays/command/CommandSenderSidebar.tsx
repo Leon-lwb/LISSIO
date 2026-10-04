@@ -137,7 +137,7 @@ export function CommandSenderSidebar({
         <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{translate('cmdAppendNewline', lang)}</label>
           <button
-            className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${frame.appendNewline ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
+            className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer motion-transition hover:text-text-primary ${frame.appendNewline ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
             onClick={() => onUpdateFrame({ appendNewline: !frame.appendNewline })}
           >
             {frame.appendNewline ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
@@ -176,7 +176,7 @@ export function CommandSenderSidebar({
         <div className="field-grid field-grid--default">
           <label className="text-xs text-text-secondary">{translate('cmdLoopback', lang)}</label>
           <button
-            className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${params.loopbackEnabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
+            className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer motion-transition hover:text-text-primary ${params.loopbackEnabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
             onClick={() => onUpdateParams({ loopbackEnabled: !params.loopbackEnabled })}
           >
             {params.loopbackEnabled ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}

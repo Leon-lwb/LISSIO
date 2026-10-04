@@ -61,6 +61,7 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
   root.style.setProperty('--color-float-surface', activeTheme.tokens.bgSidebar);
   root.style.setProperty('--color-dialog-chrome', activeTheme.tokens.bgPanelHeader);
   root.style.setProperty('--color-dialog-chrome-muted', activeTheme.tokens.bgSidebar);
+  root.style.setProperty('--color-float-content', activeTheme.tokens.bgEditor);
   const acrylic = appearance.acrylicBackground === true;
   if (acrylic) {
     root.dataset.acrylic = 'true';

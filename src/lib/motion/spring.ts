@@ -128,10 +128,24 @@ function decayRate(spring: Spring): number {
  * full float precision. Quantising the answer to the scan grid instead would make
  * the stiffness solve in `springFromTiming` jitter, because stiffness scales with
  * 1/duration² and the grid error is re-amplified on every solve.
+ *
+ * The scan density is derived from the oscillation rather than fixed in time. An
+ * excursion lobe is half a cycle wide, so a fixed grid dense enough for a slow
+ * spring spends thousands of samples proving that nothing happens after the first
+ * lobe — which is exactly the shape of the work this function does most of.
  */
 export function springSettleTime(spring: Spring): number {
+  const { mass, stiffness, damping } = spring;
+  if (stiffness <= 0) return 0;
+  const omega0 = Math.sqrt(stiffness / mass);
+  const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+  const angular = zeta < 1 ? omega0 * Math.sqrt(1 - zeta * zeta) : omega0;
+
   const horizon = 14 / decayRate(spring);
-  const steps = clamp(Math.ceil(horizon / 0.0008), 400, 6000);
+  const halfCycle = Math.PI / Math.max(angular, 1e-6);
+  // 16 samples per excursion lobe: enough that no lobe can fall between two
+  // samples and be missed entirely.
+  const steps = clamp(Math.ceil((horizon / halfCycle) * 16), 48, 4096);
   const step = horizon / steps;
   const outside = (t: number) => Math.abs(springAt(spring, t) - 1) > SPRING_REST_DELTA;
 
@@ -144,9 +158,6 @@ export function springSettleTime(spring: Spring): number {
 
   // `last * step` is inside the final excursion and `(last + 1) * step` is
   // outside it by construction, so the boundary always lies between them.
-  // Bisecting unconditionally matters: returning the grid point instead would
-  // quantise the answer to the scan step and make `springFromTiming` jump by
-  // that much whenever ω₀ lands on the far side of a cell boundary.
   let low = last * step;
   let high = Math.min((last + 1) * step, horizon);
   for (let i = 0; i < 40 && high - low > 1e-9; i += 1) {

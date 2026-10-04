@@ -135,7 +135,7 @@ export function SearchInput({
       {display !== '' && !disabled && (
         <button
           type="button"
-          className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform motion-duration-micro motion-safe:active:scale-95 cursor-pointer motion-icon-pop"
+          className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform motion-safe:active:scale-95 cursor-pointer motion-icon-pop"
           title={translate('clearSearch', lang)}
           aria-label={translate('clearSearch', lang)}
           onClick={handleClear}

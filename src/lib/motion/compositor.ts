@@ -32,12 +32,20 @@ interface Promotion {
 
 const promotions = new WeakMap<HTMLElement, Promotion>();
 
+/** No-op release for a missing element, so callers need no null branch. */
+function noRelease(): void {
+  /* nothing to release */
+}
+
 /**
  * Request a compositor layer for `element` for the duration of one animation.
  * Returns the matching release function; calling it twice is a no-op.
  */
-export function promote(element: HTMLElement | null, properties: readonly string[] = COMPOSITED_PROPS): () => void {
-  if (!element) return () => {};
+export function promote(
+  element: HTMLElement | null,
+  properties: readonly string[] = COMPOSITED_PROPS
+): () => void {
+  if (!element) return noRelease;
   const value = properties.join(', ');
   const existing = promotions.get(element);
   if (existing) {

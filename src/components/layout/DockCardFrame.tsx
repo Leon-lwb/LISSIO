@@ -182,7 +182,7 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
       <div
         ref={tabBarRef}
         data-tour={kind === 'data' ? 'data-tabs' : undefined}
-        className={`relative flex items-center gap-1 bg-bg-panel-header border-b border-border-subtle shrink-0 px-2 py-1 overflow-x-auto transition duration-150 select-none ${
+        className={`relative flex items-center gap-1 bg-bg-panel-header border-b border-border-subtle shrink-0 px-2 py-1 overflow-x-auto transition select-none ${
           mergeHover
             ? 'shadow-[inset_0_0_0_1.5px_var(--color-accent)] bg-accent/10'
             : mergeActive
@@ -202,7 +202,7 @@ export const DockCardFrame = memo(function DockCardFrame({ cardId }: { cardId: s
           <div
             key={tab.id}
             data-tab-key={tab.id}
-            className={`relative px-2.5 h-7 text-xs cursor-pointer rounded-sm flex items-center gap-1.5 shrink-0 min-w-0 max-w-[180px] overflow-hidden transition-colors duration-150 select-none ${
+            className={`relative px-2.5 h-7 text-xs cursor-pointer rounded-sm flex items-center gap-1.5 shrink-0 min-w-0 max-w-[180px] overflow-hidden transition-colors select-none ${
               tab.id === activeTabId
                 ? 'text-text-bright'
                 : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary active:bg-accent-active'

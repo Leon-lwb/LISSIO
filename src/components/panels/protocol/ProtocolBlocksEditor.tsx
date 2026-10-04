@@ -145,7 +145,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
             <button
               key={bt}
               type="button"
-              className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-1.5 py-0.5 text-[10px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
+              className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-1.5 py-0.5 text-[10px] rounded-sm cursor-pointer motion-transition hover:text-text-primary hover:border-accent"
               onClick={() => addBlock(bt)}
               title={translate(cfg.addLabelKey, lang)}
             >

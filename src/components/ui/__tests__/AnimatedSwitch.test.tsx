@@ -1,7 +1,8 @@
 import { renderWithI18n } from '../../../test/renderWithI18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { motionDuration } from '../../../lib/motion';
-import { AnimatedSwitch, switchTravel } from '../AnimatedSwitch';
+import { AnimatedSwitch } from '../AnimatedSwitch';
+import { switchTravel } from '../tabTravel';
 
 function stubMatchMedia(matches = false) {
   vi.stubGlobal(

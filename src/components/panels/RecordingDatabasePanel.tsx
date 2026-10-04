@@ -98,7 +98,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             <button
               type="button"
               className={clsx(
-                'flex h-5 w-5 items-center justify-center rounded transition-colors duration-150',
+                'flex h-5 w-5 items-center justify-center rounded transition-colors',
                 runState === 'running'
                   ? 'text-green bg-green/10'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-green',
@@ -112,7 +112,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             <button
               type="button"
               className={clsx(
-                'flex h-5 w-5 items-center justify-center rounded transition-colors duration-150',
+                'flex h-5 w-5 items-center justify-center rounded transition-colors',
                 runState === 'paused'
                   ? 'text-yellow bg-yellow/10'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
@@ -128,7 +128,7 @@ export const RecordingDatabasePanel = memo(function RecordingDatabasePanel() {
             <button
               type="button"
               className={clsx(
-                'flex h-5 w-5 items-center justify-center rounded transition-colors duration-150',
+                'flex h-5 w-5 items-center justify-center rounded transition-colors',
                 runState === 'stopped'
                   ? 'text-text-secondary opacity-subtle'
                   : 'text-text-secondary hover:bg-bg-hover hover:text-red',

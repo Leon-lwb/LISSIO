@@ -297,12 +297,13 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
           </div>
 
           {/* 右侧: 预览 */}
-          <div className="w-[320px] flex flex-col bg-bg-editor flex-shrink-0">
+          <div className="frost-content w-[320px] flex flex-col flex-shrink-0">
             <div className="flex items-center gap-1.5 px-2.5 py-1.5 dialog-chrome border-b border-border">
               <Play size={12} className="text-green" />
               <span className="text-xs">{translate('customPreview', lang)}</span>
             </div>
-            <div className="flex-1 p-3 overflow-auto bg-bg-editor">
+            {/* 内层保持透明: 外层容器已经承担磨砂底色, 再叠一层会让预览区明显偏暗 */}
+            <div className="flex-1 p-3 overflow-auto">
               {validation.def ? (
                 <CustomWidget
                   key={previewKey}

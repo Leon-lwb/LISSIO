@@ -292,7 +292,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               <div
                 key={block.id}
                 data-block-id={block.id}
-                className={`border rounded-sm transition-all ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
+                className={`border rounded-sm motion-transition ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
                 onDragOver={handleDragOver(block.id)}
                 onDrop={handleDrop(block.id)}
               >
@@ -355,7 +355,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
             return (
               <button
                 key={bt}
-                className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
+                className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer motion-transition hover:text-text-primary hover:border-accent"
                 onClick={() => addBlock(bt)}
                 title={translate(cfg.addLabelKey, lang)}
               >
@@ -431,7 +431,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               <div key={paramKey} className="field-grid field-grid--default">
                 <label className="text-xs text-text-secondary">{translate(labelKey, lang)}</label>
                 <button
-                  className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary ${on ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
+                  className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer motion-transition hover:text-text-primary ${on ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
                   onClick={() => updateParams({ [paramKey]: !on })}
                 >
                   {on ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}

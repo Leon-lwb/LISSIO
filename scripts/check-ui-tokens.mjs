@@ -268,6 +268,73 @@ if (!aliasBlock) {
   }
 }
 
+// ---------- 磨砂浮层 ----------
+// 浮层的底色规则是给全部角色共用的实色, 磨砂则由 data-floating-glass 单独声明。
+// 一旦某个类只出现在实色规则里而漏在玻璃规则之外, 它在两个开关都打开时仍渲染成
+// 实色 —— 没有报错、没有告警, 只是看起来"没有亚克力"。这类缺陷只能靠结构校验拦。
+const surfaceCss = fs
+  .readFileSync(path.join(root, 'src/styles/components/dialog-surface.css'), 'utf8')
+  .replace(/\/\*[\s\S]*?\*\//g, '');
+
+{
+  const rolesBeforeBrace = (index) => {
+    const open = surfaceCss.indexOf('{', index);
+    const selector = surfaceCss.slice(0, open);
+    const start = Math.max(selector.lastIndexOf('}'), selector.lastIndexOf(';'));
+    return selector
+      .slice(start + 1)
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => part.replace(/^\[data-floating-glass='true'\]\s*/, '').replace(/^\./, ''));
+  };
+
+  const baseAt = surfaceCss.indexOf('.dialog-surface');
+  const glassAt = surfaceCss.indexOf("[data-floating-glass='true']");
+  if (baseAt < 0 || glassAt < 0) {
+    errors.push('磨砂: dialog-surface.css 未解析到浮层实色规则或玻璃规则');
+  } else {
+    const base = rolesBeforeBrace(baseAt);
+    const glass = rolesBeforeBrace(glassAt);
+    for (const role of base) {
+      if (!glass.includes(role)) {
+        errors.push(
+          `磨砂: .${role} 在浮层实色规则中却没有玻璃规则对应项 — 开关打开时仍渲染为实色`
+        );
+      }
+    }
+  }
+}
+
+// ---------- 磨砂浮层: 内容区归属与基色 token ----------
+// 浮层内容区的通透必须由 data-floating-glass 决定。若它继续依赖 data-acrylic,
+// 关掉窗口亚克力后就会出现"外框是玻璃、主体不透明"的错配。
+// 另外内容区不得自带 backdrop-filter: 浮层主体已经过滤过, 子层再过滤会二次模糊。
+if (surfaceCss.includes('.frost-content')) {
+  const contentBlock = surfaceCss.slice(surfaceCss.indexOf('.frost-content'));
+  const contentRule = contentBlock.slice(0, contentBlock.indexOf('}') + 1);
+  if (/backdrop-filter/.test(contentRule)) {
+    errors.push('磨砂: .frost-content 不应自带 backdrop-filter — 浮层主体已过滤, 叠加会二次模糊');
+  }
+  if (/\[data-acrylic='true'\][^{]*\.frost-content/.test(surfaceCss)) {
+    errors.push(
+      "磨砂: .frost-content 不应挂在 [data-acrylic='true'] 下 — 浮层通透由 data-floating-glass 决定"
+    );
+  }
+  // 基色必须走独立 token, 否则会被窗口亚克力的半透明化二次叠加。
+  if (!/background-color:[^;]*var\(--color-float-content\)/.test(surfaceCss)) {
+    errors.push('磨砂: .frost-content 的基色必须用 var(--color-float-content)');
+  }
+}
+
+// --color-float-content 必须由 applyAppearance 从主题原色注入
+{
+  const applyTheme = fs.readFileSync(path.join(root, 'src/settings/applyTheme.ts'), 'utf8');
+  if (!/setProperty\(\s*'--color-float-content'\s*,\s*activeTheme\.tokens\.bgEditor\s*\)/.test(applyTheme)) {
+    errors.push('同步: applyAppearance 未从主题原色注入 --color-float-content');
+  }
+}
+
 // ---------- 输出 ----------
 
 if (errors.length > 0) {

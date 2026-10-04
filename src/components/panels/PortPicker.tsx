@@ -142,7 +142,7 @@ export function PortPicker({
             return (
               <div
                 key={group.key}
-                className={`group px-2 py-2 rounded-md cursor-pointer flex items-start gap-2 border transition-all duration-150 ${
+                className={`group px-2 py-2 rounded-md cursor-pointer flex items-start gap-2 border motion-transition ${
                   selected
                     ? 'bg-bg-active border-accent/50 shadow-[0_1px_4px_rgba(0,0,0,0.3)]'
                     : 'border-transparent hover:bg-bg-hover hover:border-border'

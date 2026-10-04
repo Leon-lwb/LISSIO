@@ -10,9 +10,10 @@
 // 用户滚动与自身写入), 动画立即取消; 位置明显不属于任何一次自身写入时同样归属用户。
 // 接管后按既有 <30px 视为在底部 的语义写入 userScrolledRef。
 // 脱离状态 (detached) 同时以 state 暴露, 供视口右下角"回到最新"按钮显示。
-// prefers-reduced-motion: 回退为瞬时跳底。
+// 低动画模式: 回退为瞬时跳底 (判定统一走 lib/motion 的唯一权威源)。
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { motionIsReduced } from '../../../lib/motion';
 
 /// 距底部不足该值视为仍在底部 (与旧版判定一致)
 const AT_BOTTOM_PX = 30;
@@ -37,12 +38,6 @@ export interface ScrollTarget {
   scrollTop: number;
   scrollHeight: number;
   clientHeight: number;
-}
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 function isAtBottom(el: ScrollTarget): boolean {
@@ -179,7 +174,7 @@ export function useAutoScrollBottom(
     }
     // 用户上滚输入已接管: 不再把视口拽回最新 (脱离状态由 scroll 事件给出)
     if (userIntentRef.current) return;
-    if (prefersReducedMotion()) {
+    if (motionIsReduced()) {
       stopLoop();
       snapTo(el, target);
       return;

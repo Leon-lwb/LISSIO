@@ -37,9 +37,15 @@
   );
 }
 
+/* 浮层磨砂。.prompt-card 与上面几个类共用同一条实色基础规则, 必须一并列入:
+   基础规则给的是 --color-float-surface 的不透明原色 (applyAppearance 刻意把该
+   变量固定为主题原色, 以免与 acrylic 对 bg-* 的半透明化二次叠加), 所以一旦漏在
+   本规则之外, 提示卡片就会在两个开关都打开时仍然渲染成实色 —— 内联提示条和投放
+   提示浮层曾经就是这样丢失磨砂的。 */
 [data-floating-glass='true'] .dialog-surface,
 [data-floating-glass='true'] .popover-surface,
-[data-floating-glass='true'] .context-menu {
+[data-floating-glass='true'] .context-menu,
+[data-floating-glass='true'] .prompt-card {
   background-color: color-mix(
     in srgb,
     var(--color-float-surface) var(--frost-alpha-floating),
@@ -56,7 +62,13 @@
    --frost-alpha-widget 档位, 与 Widget 卡片同源; 底色不写死, 由使用方用
    --frost-acrylic-base 指向自己的主题原色出口 (浮层用 --color-float-surface,
    状态栏用 --color-bg-statusbar), 避免亚克力对 bg-* 的半透明化二次叠加。
-   关闭亚克力时本规则不生效, 组件回退到自身实色背景且不保留 backdrop-filter。 */
+   关闭亚克力时本规则不生效, 组件回退到自身实色背景且不保留 backdrop-filter。
+
+   优先级: 本类与上面的角色默认规则 ([data-floating-glass] .prompt-card 等)
+   特异性相同, 靠本规则在源码中靠后生效。语义是"显式选择覆盖角色默认":
+   通知 Toast 同时挂 prompt-card 与 frost-acrylic, 就是要从浮层档位
+   (--frost-alpha-floating) 换成 Widget 档位 (--frost-alpha-widget)。
+   新增类似组合时不要依赖偶然的源码顺序, 要么沿用这个显式类, 要么调整特异性。 */
 .frost-acrylic {
   --frost-acrylic-base: var(--color-float-surface);
 }
@@ -75,6 +87,29 @@
   -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
   border-color: var(--frost-border);
   box-shadow: var(--frost-shadow);
+}
+
+/* 浮层内容区底色 —— 刻意只做半透明, 不叠 backdrop-filter。
+
+   浮层主体 (.dialog-surface 等) 已经过滤过背景, 子层再过滤一次会在已模糊的
+   结果上二次模糊, 边缘还会出现两层半透明叠加出的接缝。子层只需要让出透明度,
+   背后被主体滤过的内容就会自然透上来。
+
+   归属 data-floating-glass 而不是 data-acrylic 是关键: 一个浮层的通透与否是
+   "浮层磨砂" 这一个开关的事, 不该依赖"窗口亚克力"。此前设置窗口的主体用
+   bg-bg-editor, 而该 token 的半透明化只在窗口亚克力开启时才发生 —— 于是关掉
+   窗口亚克力后 (帧率低时 acrylicGuard 正是这么建议的), 对话框外框是玻璃的、
+   主体却是不透明的, 整窗读起来就是"没有亚克力"。 */
+.frost-content {
+  background-color: var(--color-float-content);
+}
+
+[data-floating-glass='true'] .frost-content {
+  background-color: color-mix(
+    in srgb,
+    var(--color-float-content) var(--frost-alpha-floating),
+    transparent
+  );
 }
 
 /* 面板内无需开关状态的磨砂表面, 与浮层/Widget 共用同一组磨砂处理 token。 */

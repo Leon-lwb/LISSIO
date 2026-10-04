@@ -73,7 +73,7 @@ export function KeychainPermissionDialog() {
         <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="bg-transparent text-text-primary border border-border px-3 py-1.5 text-xs cursor-pointer rounded transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
+            className="bg-transparent text-text-primary border border-border px-3 py-1.5 text-xs cursor-pointer rounded motion-transition hover:bg-bg-hover hover:border-accent hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
             disabled={retrying}
             onClick={() => dismiss(dontRemind)}
           >

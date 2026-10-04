@@ -44,8 +44,17 @@ export type MotionPresenceVariant =
   | 'menu'
   | 'banner';
 
-/** Author-facing timing intent at `standard` speed, before speed scaling. */
-const BASE_TIMING: Record<MotionFamily, Record<MotionPhase, SpringTiming>> = {
+/**
+ * Author-facing timing intent at `standard` speed, before speed scaling.
+ *
+ * This is the only place in the app where a motion value is chosen by hand.
+ * Every `out` entry has `bounce: 0` — departures must not wobble — and that
+ * invariant is asserted in the test suite rather than left to reviewers.
+ *
+ * Exported so `scripts/gen-motion-docs.mjs` can render the tuning table from the
+ * live values; a hand-copied table would drift silently.
+ */
+export const BASE_TIMING: Record<MotionFamily, Record<MotionPhase, SpringTiming>> = {
   control: { in: { duration: 0.16, bounce: 0.06 }, out: { duration: 0.12, bounce: 0 } },
   toggle: { in: { duration: 0.24, bounce: 0.14 }, out: { duration: 0.18, bounce: 0 } },
   content: { in: { duration: 0.32, bounce: 0.18 }, out: { duration: 0.22, bounce: 0 } },
@@ -53,11 +62,30 @@ const BASE_TIMING: Record<MotionFamily, Record<MotionPhase, SpringTiming>> = {
   spatial: { in: { duration: 0.52, bounce: 0.28 }, out: { duration: 0.3, bounce: 0 } },
 };
 
-const SPEED_SCALE: Record<MotionSpeed, { duration: number; bounce: number }> = {
+/** Multipliers applied to `BASE_TIMING` for each speed setting. */
+export const SPEED_SCALE: Record<MotionSpeed, { duration: number; bounce: number }> = {
   fast: { duration: 0.7, bounce: 0.6 },
   standard: { duration: 1, bounce: 1 },
   relaxed: { duration: 1.3, bounce: 1.15 },
 };
+
+const FAMILIES: readonly MotionFamily[] = ['control', 'toggle', 'content', 'surface', 'spatial'];
+const SPEEDS: readonly MotionSpeed[] = ['fast', 'standard', 'relaxed'];
+
+/** Every family/phase combination, in declaration order. */
+export function allMotionTokens(): {
+  family: MotionFamily;
+  phase: MotionPhase;
+  speed: MotionSpeed;
+}[] {
+  const out: { family: MotionFamily; phase: MotionPhase; speed: MotionSpeed }[] = [];
+  for (const speed of SPEEDS) {
+    for (const family of FAMILIES) {
+      for (const phase of ['in', 'out'] as const) out.push({ family, phase, speed });
+    }
+  }
+  return out;
+}
 
 /** Presence variant → motion family. */
 const VARIANT_FAMILY: Record<MotionPresenceVariant, MotionFamily> = {
@@ -88,8 +116,17 @@ export function motionSpeed(): MotionSpeed {
  * need an actual `Spring` go through `motionSpring()`.
  */
 export function motionTiming(family: MotionFamily, phase: MotionPhase): SpringTiming {
+  return timingAt(family, phase, motionSpeed());
+}
+
+/** Timing intent for a family/phase at an explicit speed, ignoring the DOM. */
+export function timingAt(
+  family: MotionFamily,
+  phase: MotionPhase,
+  speed: MotionSpeed
+): SpringTiming {
   const base = BASE_TIMING[family][phase];
-  const scale = SPEED_SCALE[motionSpeed()];
+  const scale = SPEED_SCALE[speed];
   return { duration: base.duration * scale.duration, bounce: base.bounce * scale.bounce };
 }
 

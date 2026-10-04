@@ -107,7 +107,7 @@ export function WaveformChartOverlays({
               {/* 右下角动态 series 开关 (仅用户创建的波形图, default-waveform 不显示) */}
               {dynamicSeriesVisible && (
                 <button
-                  className={`absolute bottom-1.5 right-2 z-[100] px-2.5 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded cursor-pointer select-none shadow whitespace-nowrap transition-all duration-150 hover:bg-bg-hover hover:border-border/50 ${dynamicSeries ? 'text-orange border-orange/50 bg-orange/10' : ''}`}
+                  className={`absolute bottom-1.5 right-2 z-[100] px-2.5 py-0.5 text-[10px] text-text-primary bg-bg-editor/95 border border-border/30 rounded cursor-pointer select-none shadow whitespace-nowrap motion-transition hover:bg-bg-hover hover:border-border/50 ${dynamicSeries ? 'text-orange border-orange/50 bg-orange/10' : ''}`}
                   onClick={onToggleDynamicSeries}
                   title={translate('dynamicSeriesToggle', lang)}
                 >

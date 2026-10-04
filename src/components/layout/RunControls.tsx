@@ -66,7 +66,7 @@ export const RunControls = memo(function RunControls() {
       <span className="whitespace-nowrap mr-0.5">{translate(badge.label, lang)}</span>
       <button
         className={clsx(
-          'w-5 h-5 flex items-center justify-center rounded transition-colors duration-150',
+          'w-5 h-5 flex items-center justify-center rounded transition-colors',
           runState === 'running'
             ? 'text-green bg-green/10'
             : 'text-text-secondary hover:bg-bg-hover hover:text-green'
@@ -79,7 +79,7 @@ export const RunControls = memo(function RunControls() {
       </button>
       <button
         className={clsx(
-          'w-5 h-5 flex items-center justify-center rounded transition-colors duration-150',
+          'w-5 h-5 flex items-center justify-center rounded transition-colors',
           runState === 'paused'
             ? 'text-yellow bg-yellow/10'
             : 'text-text-secondary hover:bg-bg-hover hover:text-yellow',
@@ -94,7 +94,7 @@ export const RunControls = memo(function RunControls() {
       </button>
       <button
         className={clsx(
-          'w-5 h-5 flex items-center justify-center rounded transition-colors duration-150',
+          'w-5 h-5 flex items-center justify-center rounded transition-colors',
           runState === 'stopped'
             ? 'text-text-secondary opacity-subtle hover:opacity-subtle hover:text-text-secondary'
             : 'text-text-secondary hover:bg-bg-hover hover:text-red'

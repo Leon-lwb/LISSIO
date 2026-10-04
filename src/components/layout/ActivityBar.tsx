@@ -91,7 +91,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
           key={item.view}
           data-tour={item.view}
           className={clsx(
-            "w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer transition-colors duration-150 active:bg-accent-active",
+            "w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer transition-colors active:bg-accent-active",
             activeView === item.view
               ? "text-text-bright bg-bg-active"
               : "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
@@ -114,7 +114,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
               key={id}
               data-tour={`category-${id}`}
               className={clsx(
-                "w-10 max-w-full h-10 shrink-0 rounded-md flex items-center justify-center cursor-pointer transition-colors duration-150 active:bg-accent-active flex-shrink-0",
+                "w-10 max-w-full h-10 shrink-0 rounded-md flex items-center justify-center cursor-pointer transition-colors active:bg-accent-active flex-shrink-0",
                 active
                   ? "text-text-bright bg-bg-active"
                   : "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
@@ -136,7 +136,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
       <div className="flex-1" />
       <div
         data-tour="help"
-        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
+        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors"
         title={translate('helpCenterOpen', lang)}
         onClick={openHelp}
         onKeyDown={activateOnKeyboard}
@@ -146,7 +146,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
         <HelpCircle size={22} />
       </div>
       <div
-        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
+        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors"
         title={translate('about', lang)}
         onClick={openAbout}
         onKeyDown={activateOnKeyboard}
@@ -156,7 +156,7 @@ export const ActivityBar = memo(function ActivityBar({ activeView, onSelect }: A
         <Info size={22} />
       </div>
       <div
-        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors duration-150"
+        className="w-10 h-10 shrink-0 mx-1 rounded-md flex items-center justify-center cursor-pointer text-text-secondary hover:text-text-primary hover:bg-bg-hover active:bg-accent-active transition-colors"
         title={translate('settings', lang)}
         onClick={() => openSettings()}
         onKeyDown={activateOnKeyboard}

@@ -4,7 +4,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
   type RefObject,
@@ -160,7 +159,6 @@ export function MotionPresence({
       data-motion-variant={variant}
       data-motion-visible={visible ? 'true' : 'false'}
       data-motion-speed={motionSpeed()}
-      style={props.style as CSSProperties}
     >
       {children}
     </div>

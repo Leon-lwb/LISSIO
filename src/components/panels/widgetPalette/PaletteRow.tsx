@@ -49,7 +49,7 @@ export const PaletteRow = memo(function PaletteRow({ entry, category, entering, 
   return (
     <div
       className={clsx(
-        'group flex items-center gap-2 px-1.5 rounded-sm cursor-grab select-none transition-colors duration-150 active:cursor-grabbing hover:bg-bg-hover',
+        'group flex items-center gap-2 px-1.5 rounded-sm cursor-grab select-none transition-colors active:cursor-grabbing hover:bg-bg-hover',
         entering && 'motion-row animate-palette-row',
         exiting && 'animate-palette-row-exit',
       )}

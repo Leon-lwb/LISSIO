@@ -100,7 +100,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
 
         <div className="flex gap-2 mb-4">
           <button
-            className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
+            className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 motion-transition hover:bg-bg-hover hover:border-accent hover:text-text-bright"
             onClick={() => void platform.openUrl(APP_GITHUB)}
           >
             <Github size={14} />
@@ -108,7 +108,7 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             <ExternalLink size={10} className="opacity-muted" />
           </button>
           <button
-            className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 transition-all hover:bg-bg-hover hover:border-accent hover:text-text-bright"
+            className="bg-transparent text-text-primary border border-border px-2.5 py-1 text-xs cursor-pointer rounded inline-flex items-center gap-1.5 motion-transition hover:bg-bg-hover hover:border-accent hover:text-text-bright"
             onClick={() => void platform.openUrl(APP_DOCS)}
           >
             <span>{translate('aboutDocs', lang)}</span>

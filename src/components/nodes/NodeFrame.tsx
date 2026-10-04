@@ -57,7 +57,7 @@ export function NodeFrame({ id, tabId, label, selected, color, inputs, outputs,
         return <div key={port.id} className={`flex items-center gap-1 h-[14px] relative ${output ? 'flex-row-reverse' : ''}`} title={`${port.label ?? port.id} · ${port.domain}`}>
           <Handle type={output ? 'source' : 'target'} position={output ? Position.Right : Position.Left} id={port.id}
             style={{ position: 'relative', left: 'auto', right: 'auto', top: 'auto', transform: 'none', borderColor: portColor }}
-            className={`w-[9px] h-[9px] bg-bg-input border-[1.5px] rounded-full cursor-crosshair transition-all duration-150 hover:bg-accent [&.valid]:border-green${connected ? ' connected' : ''}`} />
+            className={`w-[9px] h-[9px] bg-bg-input border-[1.5px] rounded-full cursor-crosshair motion-transition hover:bg-accent [&.valid]:border-green${connected ? ' connected' : ''}`} />
           <span className="text-[9px] text-text-secondary font-mono whitespace-nowrap bg-bg-sidebar px-0.5 rounded-sm">{port.label ?? port.id}</span>
           <span className="w-[5px] h-[5px] rounded-full shrink-0" style={{ backgroundColor: portColor }} />
         </div>;

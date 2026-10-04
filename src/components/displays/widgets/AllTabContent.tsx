@@ -67,7 +67,7 @@ export function AllTabContent({
       )}
       <div className="flex flex-row flex-wrap gap-1 pb-1.5 border-b border-border">
         <button
-          className={`inline-flex items-center gap-1 px-2 h-7 border rounded text-xs cursor-pointer transition-all duration-150 ${config.running ? 'bg-green border-green text-black' : 'bg-red border-red text-black'}`}
+          className={`inline-flex items-center gap-1 px-2 h-7 border rounded text-xs cursor-pointer motion-transition ${config.running ? 'bg-green border-green text-black' : 'bg-red border-red text-black'}`}
           onClick={() => patch(config.running ? { running: false } : { running: true, hPosition: 0 })}
           title={config.running ? translate('stop', lang) : translate('run', lang)}
         >
@@ -75,7 +75,7 @@ export function AllTabContent({
           <span>{config.running ? translate('stop', lang) : translate('run', lang)}</span>
         </button>
         <button
-          className="inline-flex items-center gap-1 px-2 h-7 bg-bg-input text-text-primary border border-border rounded text-xs cursor-pointer transition-all duration-150 hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
+          className="inline-flex items-center gap-1 px-2 h-7 bg-bg-input text-text-primary border border-border rounded text-xs cursor-pointer motion-transition hover:bg-bg-hover hover:text-text-bright disabled:opacity-disabled disabled:cursor-not-allowed"
           onClick={() => onAutoSet?.()}
           title={translate('autoSet', lang)}
           disabled={!onAutoSet}
@@ -84,7 +84,7 @@ export function AllTabContent({
           <span>{translate('autoSet', lang)}</span>
         </button>
         <button
-          className={`inline-flex items-center gap-1 px-1.5 h-7 border rounded text-xs cursor-pointer transition-all duration-150 ${config.grid ? 'bg-bg-active text-text-bright border-accent' : 'bg-bg-input text-text-primary border-border hover:bg-bg-hover hover:text-text-bright'}`}
+          className={`inline-flex items-center gap-1 px-1.5 h-7 border rounded text-xs cursor-pointer motion-transition ${config.grid ? 'bg-bg-active text-text-bright border-accent' : 'bg-bg-input text-text-primary border-border hover:bg-bg-hover hover:text-text-bright'}`}
           onClick={() => patch({ grid: !config.grid })}
           title={translate('gridVisible', lang)}
         >
@@ -122,7 +122,7 @@ export function AllTabContent({
         <div className="text-[10px] font-semibold uppercase tracking-[0.5px] text-text-secondary flex items-center justify-between gap-1.5">
           <span>{translate('channels', lang)}</span>
           <button
-            className={`inline-flex items-center px-2 h-6 text-[10px] border rounded cursor-pointer transition-all duration-150 whitespace-nowrap ${config.sharedY ? 'bg-blue text-black border-blue' : 'bg-bg-input text-text-secondary border-border hover:bg-bg-hover hover:text-text-primary'}`}
+            className={`inline-flex items-center px-2 h-6 text-[10px] border rounded cursor-pointer motion-transition whitespace-nowrap ${config.sharedY ? 'bg-blue text-black border-blue' : 'bg-bg-input text-text-secondary border-border hover:bg-bg-hover hover:text-text-primary'}`}
             onClick={() => patch({ sharedY: !config.sharedY })}
             title={translate('sharedYDesc', lang)}
           >
@@ -302,7 +302,7 @@ function ChannelVisibilityRow({
     <div className="flex flex-col gap-0.5 py-1 border-t border-border/50 first:border-t-0">
       <div className="flex items-center gap-1.5">
         <button
-          className={`inline-flex items-center gap-1 border rounded px-1.5 h-6 text-[10px] font-mono cursor-pointer transition-all duration-150 flex-1 min-w-0 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-muted'} hover:bg-bg-hover`}
+          className={`inline-flex items-center gap-1 border rounded px-1.5 h-6 text-[10px] font-mono cursor-pointer motion-transition flex-1 min-w-0 ${ch.show ? 'text-text-bright border-blue bg-blue/10' : 'text-text-secondary border-border opacity-muted'} hover:bg-bg-hover`}
           onClick={() => onPatchChannel(idx, { show: !ch.show })}
           title={`CH${idx}`}
         >

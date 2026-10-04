@@ -58,7 +58,7 @@ export interface SpringTweenVars extends gsap.TweenVars {
 interface SpringRunData {
   spring: Spring;
   duration: number;
-  setters: Array<(value: number) => void>;
+  setters: ((value: number) => void)[];
   from: number[];
   to: number[];
 }
@@ -84,7 +84,7 @@ const SpringEasePlugin = {
     const keys = numericKeys(vars);
     const list = gsap.utils.toArray<gsap.TweenTarget>(targets);
 
-    const setters: Array<(value: number) => void> = [];
+    const setters: ((value: number) => void)[] = [];
     const from: number[] = [];
     const to: number[] = [];
 
@@ -139,12 +139,12 @@ export function springTween(
   extra: SpringTweenVars = {}
 ): SpringTweenVars {
   if (motionIsReduced()) {
-    return { ...properties, duration: 0, ease: 'none', ...extra } as SpringTweenVars;
+    return { ...properties, duration: 0, ease: 'none', ...extra };
   }
   return {
     ...properties,
     spring: motionSpring(family, phase),
     ease: 'none',
     ...extra,
-  } as SpringTweenVars;
+  };
 }

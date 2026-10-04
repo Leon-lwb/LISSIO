@@ -1,27 +1,59 @@
 # Frontend motion system
 
-动画统一由 `src/lib/motion/` 和 `src/styles/components/motion.css` 管理。
+动画统一由 `src/lib/motion/` 与 `src/styles/components/motion.css` 管理。
+时序是**物理弹簧**而非三次贝塞尔, 完整数值表见 `motion-tokens.md`;
+尚未落地的界面改造清单见 `motion-spatial-plan.md`。
 
-## Vocabulary
+## 模块
 
-- `motion-control`: 高频按钮、输入框和工具栏的即时反馈，只改变颜色/边框/阴影，并提供约 1.5% 的按压缩放。
-- `motion-row`: 列表行、菜单项和标签项，使用轻微位移与颜色反馈。
-- `motion-surface`: 模块卡片和 Widget 卡片的表面状态变化。
-- `motion-float`: Dialog、Popover、Toast 等浮层的透明度、位移、缩放和阴影过渡。
+| 模块 | 职责 |
+| --- | --- |
+| `spring.ts` | 阻尼谐振子的闭式解、解析速度、按实测路程拉伸时长。无 DOM 依赖 |
+| `motionConfig.ts` | 唯一的时序意图来源 (`BASE_TIMING`)。五个家族 × 进场/离场 |
+| `reducedMotion.ts` | 低动画模式的唯一权威源, 把系统偏好与应用内设置合并成一个根类 |
+| `easingTokens.ts` | 把弹簧采样成 CSS `linear()` 缓动, 写入 `<html>` 内联样式 |
+| `gsapSpring.ts` | GSAP 插件, 逐帧用同一个求解器求值, 让 JS 补间与 CSS 过渡完全一致 |
+| `compositor.ts` | 引用计数的 `will-change` 预算, 动画结束即释放图层 |
+| `presence.ts` | 浮层角色的几何: 从哪来、到哪去、缩放原点在哪 |
+| `MotionPresence.tsx` | 可卸载浮层的进场/退场生命周期 (退场播完才卸载) |
+| `useMotionPresence.ts` | 仅进场, 用于退场由 DOM 负责的表面 |
+
+## 家族
+
+按"移动了屏幕多少"排序, 不按组件类型 —— 新增界面时不需要新增家族。
+
+| 家族 | 职责 |
+| --- | --- |
+| `control` | 悬停 / 按下 / 聚焦, 短到无感 |
+| `toggle` | 开关 / 旋钮 / 滑块的通断翻转 |
+| `content` | 列表行 / 消息 / 提示 / 通知 |
+| `surface` | 有锚点的浮层: 对话框 / 菜单 / 气泡 |
+| `spatial` | 大尺度空间迁移: 停靠面板 / 浮动窗口 / Dock |
+
+进场允许回弹 (到位的物体会沉降), 离场恒为临界阻尼 (离开的物体不该晃)。
+
+## CSS 基元
+
+- `motion-control`: 高频按钮与工具栏的即时反馈, 只改颜色/边框/阴影。
+- `motion-row`: 列表行与菜单项的位移与颜色反馈。
+- `motion-surface`: 模块卡片与 Widget 卡片的表面状态变化。
+- `motion-float`: 对话框 / 气泡等浮层的透明度、位移、缩放与阴影过渡。
 - `motion-pill`: Tab 指示器的几何移动。
-- `motion-switch`: 不重挂载内容的 Tab/模式切换容器。
-- `motion-overlay-in`、`motion-surface-in`、`motion-pop-in`、`motion-tick-in`: 统一的 CSS 入场关键帧。
+- `motion-switch`: 不重挂载内容的 Tab / 模式切换容器。
+- `motion-transition`: `transition-all` 的替代品, 属性集合显式钉死。
+- `motion-*-in` / `motion-*-exit`: 无 JS 时的降级关键帧。进场与离场刻意不同。
 
-`src/lib/motion/MotionPresence.tsx` 负责可卸载浮层的入场/退场生命周期，`src/lib/motion/useMotionPresence.ts`
-负责单纯入场；它们使用 `@gsap/react`
-的 `useGSAP()` 自动清理，并在 `prefers-reduced-motion` 或 `:root.reduced-motion`
-启用时直接使用最终状态。高频状态仍由 CSS transition 驱动，避免每个 hover 都创建 tween。
+## 规则
 
-## Rules
-
-1. 位移优先使用 `transform`，不要动画化 `top/left/width/height`，Tab 指示器是低频例外。
-2. 一次性入场不长期写入 `will-change`，只在动画期间由 GSAP/浏览器提升图层。
-3. 复杂顺序、滚动联动、拖拽或可逆转场使用 GSAP Timeline / plugin；简单反馈使用 CSS。
-4. 任何新增动画都必须同时遵守 `prefers-reduced-motion` 和设置中的 `reducedMotion`。
-5. 动画速度由设置中的 `motionSpeed`（`fast` / `standard` / `relaxed`）统一控制；CSS 通过
-   `data-motion-speed` 读取，GSAP 通过 `motionDuration()` 读取，二者共享同一档位。
+1. 时长与缓动只来自家族令牌, 不允许新写 `cubic-bezier(...)`。
+2. 位移优先 `transform`。`top/left/width/height` 会每帧触发布局。
+3. `will-change` 由 `promote()` 申请、`release()` 归还, 不长期写在样式里。
+4. 复杂顺序、空间重排、拖拽惯性用 GSAP; 高频状态反馈仍交给 CSS transition,
+   避免每次 hover 都创建 tween。
+5. 任何新增动效都必须走 `motionIsReduced()`, 不允许自行查 `matchMedia`。
+6. 新增的动效表面在 `reduced-motion.css` 的清单里**只登记一次**。
+7. 浮层动画优先用 `MotionPresence` 而不是 CSS 关键帧 —— 只有它能保证
+   "退场播完才卸载", CSS `animation` 无法阻止 React 立刻卸载节点。
+8. 同一元素的动效不应同时由 CSS 关键帧与 GSAP 驱动, 否则会重复播放。
+   `MotionPresence` 已负责停靠面板的进场, `ai-panel.css` 里的方向性关键帧
+   在完成改造前是重复的, 见 `motion-spatial-plan.md`。

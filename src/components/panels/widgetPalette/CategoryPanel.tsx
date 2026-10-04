@@ -13,6 +13,7 @@ import { loadAdapterCapabilities } from '../../../lib/acquisition/capabilityCata
 import { buildDeviceCards, type DeviceCardModel } from '../../../lib/acquisition/deviceCardModel';
 import { addPaletteNode } from '../../../lib/utils/paletteCreation';
 import { SearchInput } from '../../ui/SearchInput';
+import { motionIsReduced } from '../../../lib/motion';
 
 export function CategoryPanel() {
   const lang = useAppStore((s) => s.lang);
@@ -87,7 +88,7 @@ export function CategoryPanel() {
       const section = sectionRefs.current.get(activeCategory);
       if (list && section) {
         const top = list.scrollTop + section.getBoundingClientRect().top - list.getBoundingClientRect().top;
-        const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth';
+        const behavior = motionIsReduced() ? 'instant' : 'smooth';
         if (typeof list.scrollTo === 'function') list.scrollTo({ top, behavior });
         else list.scrollTop = top;
       }

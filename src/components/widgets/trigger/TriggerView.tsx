@@ -86,7 +86,7 @@ function TriggerRuleRow({ rule, expanded, onToggleExpand, onUpdate, onRemove, la
           <div className="field-grid field-grid--default">
             <label className="text-[10px] text-text-secondary">{translate('triggerEnabled', lang)}</label>
             <button
-              className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer transition-all hover:text-text-primary text-left ${rule.enabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
+              className={`bg-bg-input border border-border text-text-secondary px-2 py-0.5 text-xs rounded-sm cursor-pointer motion-transition hover:text-text-primary text-left ${rule.enabled ? 'bg-bg-button text-text-inverse border-bg-button' : ''}`}
               onClick={() => onUpdate({ enabled: !rule.enabled })}
             >
               {rule.enabled ? translate('cmdNewlineOn', lang) : translate('cmdNewlineOff', lang)}
@@ -428,7 +428,7 @@ export function Trigger({ widget }: TriggerProps) {
             return (
               <button
                 key={mt}
-                className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer transition-all hover:text-text-primary hover:border-accent"
+                className="inline-flex items-center gap-1 bg-transparent border border-dashed border-border text-text-secondary px-2 py-1 text-[11px] rounded-sm cursor-pointer motion-transition hover:text-text-primary hover:border-accent"
                 onClick={() => handleAddRule(mt)}
                 title={translate(cfg.hintKey, lang)}
               >

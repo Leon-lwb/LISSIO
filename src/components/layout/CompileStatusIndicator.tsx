@@ -61,7 +61,7 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
           'flex items-center gap-1 text-text-success',
           compact ? 'h-full whitespace-nowrap' : 'h-full whitespace-nowrap px-1',
           interactive &&
-            'cursor-pointer hover:text-text-success-strong active:text-text-success-strong rounded transition-colors duration-150',
+            'cursor-pointer hover:text-text-success-strong active:text-text-success-strong rounded transition-colors',
         )}
         title="Compile errors"
         aria-label={`${scope.count} compile error${scope.count > 1 ? 's' : ''}`}
@@ -82,7 +82,7 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
           'flex items-center gap-1 text-text-danger',
           compact ? 'h-full whitespace-nowrap' : 'h-full whitespace-nowrap px-1',
           interactive &&
-            'cursor-pointer hover:text-text-danger-strong active:text-text-danger-strong rounded transition-colors duration-150',
+            'cursor-pointer hover:text-text-danger-strong active:text-text-danger-strong rounded transition-colors',
         )}
         title="Compile errors"
         aria-label={`${scope.count} compile error${scope.count > 1 ? 's' : ''}`}

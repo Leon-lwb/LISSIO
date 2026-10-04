@@ -20,7 +20,7 @@ export function DockDragGhost() {
         top: ghost.y,
         transform: releasing ? 'translate(-50%, -50%) scale(1.3)' : 'translate(-50%, -50%)',
         opacity: releasing ? 0 : 0.9,
-        transition: 'transform 180ms ease-out, opacity 180ms ease-out',
+        transition: 'transform 180ms, opacity 180ms',
       }}
     >
       {ghost.label}

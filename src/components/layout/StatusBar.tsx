@@ -22,7 +22,7 @@ function AiPanelToggle() {
   const setAiPanelVisible = useLayoutStore((s) => s.setAiPanelVisible);
   return (
     <button
-      className={`w-6 h-6 flex items-center justify-center rounded transition-colors duration-150 shrink-0 ${
+      className={`w-6 h-6 flex items-center justify-center rounded transition-colors shrink-0 ${
         visible
           ? 'text-accent bg-accent/10'
           : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
@@ -258,7 +258,7 @@ export const StatusBar = memo(function StatusBar() {
       <PerformanceIndicator compact={tier >= 3} />
       <div className="w-px h-3 bg-border-subtle mx-1 shrink-0" />
       <button
-        className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary active:bg-accent-active transition-colors duration-150 shrink-0"
+        className="w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary active:bg-accent-active transition-colors shrink-0"
         title={translate('refresh', lang)}
         onClick={() => { void refreshPorts(); }}
       >
