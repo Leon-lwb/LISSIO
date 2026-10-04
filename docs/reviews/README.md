@@ -39,6 +39,7 @@ verdict: 通过 | 有条件通过 | 不通过
 | 2026-10-04 | 项目治理基线（GOVERNANCE / MAINTAINERS / ROADMAP） | 有条件通过 | [records/2026-10-04-project-governance-baseline.md](records/2026-10-04-project-governance-baseline.md) |
 | 2026-10-04 | 动效弹簧续作（错峰进场 / 拖拽释放动量） | 有条件通过 | [records/2026-10-04-motion-stagger-and-release.md](records/2026-10-04-motion-stagger-and-release.md) |
 | 2026-10-04 | 控件面板粘性分区条（去色块 / 字缘发光 / 局部磨砂） | 有条件通过 | [records/2026-10-04-palette-sticky-section-bar.md](records/2026-10-04-palette-sticky-section-bar.md) |
+| 2026-10-04 | 动效弹簧续作（列表让位 / 求解缓存 / 文档失真） | 有条件通过 | [records/2026-10-04-motion-list-reorder-and-solve-cache.md](records/2026-10-04-motion-list-reorder-and-solve-cache.md) |
 
 ## 保留与时效
 

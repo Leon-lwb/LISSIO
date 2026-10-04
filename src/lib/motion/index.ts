@@ -38,6 +38,7 @@ export {
   type ReleasePlan,
 } from './release';
 export { useDockReorder } from './dockFlip';
+export { useFlipReorder, type FlipReorderOptions } from './flipReorder';
 export { dockPanelGeometry, type DockEdge, type DockPanelGeometry } from './presence';
 export { useMotionPresence } from './useMotionPresence';
 export { MotionPresence, type MotionPresenceProps } from './MotionPresence';

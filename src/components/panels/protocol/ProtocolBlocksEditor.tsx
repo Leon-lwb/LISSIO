@@ -1,13 +1,14 @@
 //! 协议 schema 自定义块编辑器 — preset='custom' 时内嵌于 ProtocolConfigForm
 //! 支持协议侧有意义的块: header/length/id/field/bitfield/checksum/tail/csv
 //! (块编辑表单复用 FrameDecoder 的 BlockEditor; 本组件只维护列表增删/排序/展开)
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { translate, type Lang } from '../../../i18n';
 import type { DecoderBlock } from '../../../types';
 import { BLOCK_TYPE_CONFIG, blockSummary } from '../../displays/decoder/frameDecoderShared';
 import { BlockEditor } from '../../displays/decoder/FrameDecoderBlockEditor';
+import { useFlipReorder } from '../../../lib/motion';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 
 /// 协议 schema 编辑器可添加的块类型
@@ -25,6 +26,14 @@ interface ProtocolBlocksEditorProps {
 
 export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksEditorProps) {
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // 触发条件只编码块的顺序。展开/收起改变的是高度而非槽位, 由块自身的尺寸过渡负责,
+  // 混进来会让 FLIP 与那个过渡争夺同一批像素。
+  useFlipReorder(listRef, blocks.map((b, i) => b.id ?? i).join('|'), {
+    keyAttribute: 'data-flip-key',
+    family: 'content',
+  });
 
   const toggleExpand = (idx: number) => {
     setExpandedIds((prev) => {
@@ -71,7 +80,7 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div ref={listRef} className="flex flex-col gap-1.5">
       {blocks.length === 0 && (
         <div className="text-xs text-text-secondary opacity-muted italic py-2 text-center">
           {translate('fdBlocksEmpty', lang)}
@@ -81,7 +90,11 @@ export function ProtocolBlocksEditor({ blocks, onChange, lang }: ProtocolBlocksE
         const cfg = BLOCK_TYPE_CONFIG[block.type];
         const isExpanded = expandedIds.has(idx);
         return (
-          <div key={block.id ?? idx} className={`border rounded-sm ${cfg.blockClass}`}>
+          <div
+            key={block.id ?? idx}
+            data-flip-key={block.id ?? idx}
+            className={`border rounded-sm ${cfg.blockClass}`}
+          >
             {/* 块头: 类型徽章 + 摘要 + 排序/删除 */}
             <div
               className="flex items-center gap-1 px-1 py-1 cursor-pointer select-none"

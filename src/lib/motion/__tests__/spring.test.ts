@@ -159,6 +159,27 @@ describe('springFromTiming', () => {
       expect(springSettleTime(spring)).toBeGreaterThan(0);
     }
   });
+
+  it('serves a repeated timing from the cache instead of re-solving', () => {
+    // The bisection costs ~200µs for a bouncy token and runs per animation, so the
+    // cache is load-bearing rather than a nicety. Identity is the observable: a
+    // re-solve would hand back a fresh, equal-but-distinct object.
+    const first = springFromTiming({ duration: 0.52, bounce: 0.28 });
+    expect(springFromTiming({ duration: 0.52, bounce: 0.28 })).toBe(first);
+  });
+
+  it('quantises the solve onto a grid finer than perception', () => {
+    // Timings within one grid step share a spring, and the settle time still reads
+    // as the requested duration — the CSS tokens these project into are
+    // millisecond-resolution, so a 0.1ms snap cannot show up.
+    expect(springFromTiming({ duration: 0.4, bounce: 0.2 })).toBe(
+      springFromTiming({ duration: 0.40004, bounce: 0.2 })
+    );
+    for (const duration of [0.12, 0.4, 0.52]) {
+      const spring = springFromTiming({ duration: duration + 0.00004, bounce: 0.2 });
+      expect(Math.abs(springSettleTime(spring) - duration)).toBeLessThan(0.001);
+    }
+  });
 });
 
 describe('spatialTiming', () => {

@@ -37,6 +37,7 @@ import { BlockEditor } from './FrameDecoderBlockEditor';
 import { LiveModePanel } from './FrameDecoderLivePanel';
 import { ManualModePanel } from './FrameDecoderManualPanel';
 import { useNumericInputs } from '../../../lib/hooks/useNumericPort';
+import { useFlipReorder } from '../../../lib/motion';
 
 interface FrameDecoderProps {
   widget: Extract<WidgetConfig, { kind: 'FrameDecoder' }>;
@@ -86,6 +87,13 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
   const dragIdRef = useRef<string | null>(null);
+  const blockListRef = useRef<HTMLDivElement>(null);
+
+  // 触发条件只编码块的顺序。展开/收起改变的是高度而非槽位, 由块自身的尺寸过渡负责。
+  useFlipReorder(blockListRef, blocks.map((b) => b.id).join('|'), {
+    keyAttribute: 'data-flip-key',
+    family: 'content',
+  });
 
   // 初始化: 加载历史
   useEffect(() => {
@@ -267,6 +275,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
 
         {/* 块列表 */}
         <div
+          ref={blockListRef}
           className="flex flex-col gap-1.5"
           onDragOver={(e) => { if (dragIdRef.current) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
           onDrop={(e) => {
@@ -292,6 +301,7 @@ export function FrameDecoder({ widget }: FrameDecoderProps) {
               <div
                 key={block.id}
                 data-block-id={block.id}
+                data-flip-key={block.id}
                 className={`border rounded-sm motion-transition ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
                 onDragOver={handleDragOver(block.id)}
                 onDrop={handleDrop(block.id)}

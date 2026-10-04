@@ -1,9 +1,11 @@
+import { useRef } from 'react';
 import { Plus, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import type { BlockType, CommandBlock } from '../../../types';
 import type { Lang } from '../../../i18n';
 import { translate } from '../../../i18n';
 import { BLOCK_TYPE_CONFIG, blockSummary } from './commandSenderShared';
 import { CommandBlockEditor } from './CommandSenderBlockEditor';
+import { useFlipReorder } from '../../../lib/motion';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';
 
 interface Props {
@@ -47,6 +49,14 @@ export function CommandSenderBlockList({
   onReorderBlocks,
   lang,
 }: Props) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // 触发条件只编码块的顺序。展开/收起改变的是高度而非槽位, 由块自身的尺寸过渡负责。
+  useFlipReorder(listRef, blocks.map((b) => b.id).join('|'), {
+    keyAttribute: 'data-flip-key',
+    family: 'content',
+  });
+
   return (
     <div className="flex-1 min-w-0 min-h-0 flex flex-col gap-2 p-3 overflow-y-auto bg-bg-sidebar">
       <div className="flex items-center justify-between pb-1.5 border-b border-border shrink-0">
@@ -56,6 +66,7 @@ export function CommandSenderBlockList({
 
       {/* 块列表 */}
       <div
+        ref={listRef}
         className="flex flex-col gap-1.5"
         onDragOver={(e) => {
           if (dragId) e.preventDefault();
@@ -84,6 +95,7 @@ export function CommandSenderBlockList({
             <div
               key={block.id}
               data-block-id={block.id}
+              data-flip-key={block.id}
               className={`border rounded-sm motion-transition ${cfg.blockClass} ${isDragging ? 'opacity-subtle' : ''} ${isOver ? 'border-t-2 border-t-blue' : ''}`}
               onDragOver={onDragOver(block.id)}
               onDrop={onDrop(block.id)}

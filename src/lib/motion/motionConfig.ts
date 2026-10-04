@@ -130,7 +130,12 @@ export function timingAt(
   return { duration: base.duration * scale.duration, bounce: base.bounce * scale.bounce };
 }
 
-/** Resolved spring for a family/phase. Memoised because it runs per animation. */
+/**
+ * Resolved spring for a family/phase.
+ *
+ * Cached downstream in `springFromTiming`, so the bisection behind this is paid once
+ * per distinct timing rather than once per call.
+ */
 export function motionSpring(family: MotionFamily, phase: MotionPhase): Spring {
   return springFromTiming(motionTiming(family, phase));
 }

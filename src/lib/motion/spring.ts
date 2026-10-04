@@ -38,6 +38,15 @@ const MIN_DURATION = 0.05;
 /** Bisection budget for the stiffness solve. 40 halvings pins ω₀ to ~1e-12 relative. */
 const SOLVE_ITERATIONS = 40;
 
+/**
+ * Solve cache budget. A solve is a 40-step bisection, each step a full settle scan
+ * (up to 4096 samples plus 40 refinement halvings) — around 200µs for a bouncy
+ * token. Motion tokens are a finite set, so repeat solves are pure waste; the cap
+ * only exists so a caller feeding raw measured geometry cannot grow it without
+ * bound.
+ */
+const SOLVE_CACHE_LIMIT = 256;
+
 function clamp(value: number, min: number, max: number): number {
   return value < min ? min : value > max ? max : value;
 }
@@ -231,6 +240,31 @@ function springAtOmega(omega0: number, zeta: number): Spring {
   return { stiffness: omega0 * omega0, damping: 2 * zeta * omega0, mass: 1 };
 }
 
+/** Solved springs, keyed by quantised timing. See `springFromTiming`. */
+const solveCache = new Map<string, Spring>();
+
+/**
+ * Quantise a timing onto the grid the cache is keyed by.
+ *
+ * A measured travel distance makes `duration` an arbitrary float, so an unquantised
+ * key would miss on every FLIP and grow the cache without ever hitting. Both grids sit
+ * below perception: 0.1ms of settle time and 0.001 of damping ratio both round away in
+ * the millisecond-resolution CSS tokens these springs are projected into. Quantising the
+ * solve target rather than only the key keeps one timing to exactly one spring —
+ * otherwise two requests a rounding apart would return springs solved for different
+ * targets depending on which one reached the cache first.
+ */
+function quantiseTiming(target: number, zeta: number): { duration: number; zeta: number } {
+  return {
+    duration: Math.round(target * 10000) / 10000,
+    zeta: Math.round(zeta * 1000) / 1000,
+  };
+}
+
+function solveKey(duration: number, zeta: number): string {
+  return `${Math.round(duration * 10000)}|${Math.round(zeta * 1000)}`;
+}
+
 /**
  * Derive the spring whose settle time is exactly `timing.duration`.
  *
@@ -238,10 +272,19 @@ function springAtOmega(omega0: number, zeta: number): Spring {
  * token layer honest: a designer-authored `duration: 0.52` really does read as
  * half a second at any bounce level, and a bounce sweep stays continuous across
  * the critically damped boundary where a closed-form stiffness formula kinks.
+ *
+ * Memoised: the bisection is ~200µs for a bouncy token, and `motionSpring()` is
+ * called per animation — `planRelease` alone solves twice per drag release.
  */
 export function springFromTiming({ duration, bounce }: SpringTiming): Spring {
-  const target = Math.max(duration, MIN_DURATION);
-  const zeta = clamp(1 - bounce, MIN_DAMPING_RATIO, 1);
+  const { duration: target, zeta } = quantiseTiming(
+    Math.max(duration, MIN_DURATION),
+    clamp(1 - bounce, MIN_DAMPING_RATIO, 1)
+  );
+
+  const key = solveKey(target, zeta);
+  const cached = solveCache.get(key);
+  if (cached) return cached;
 
   // settleTime decreases monotonically in ω₀, so geometric bisection converges.
   let low = 1;
@@ -251,7 +294,14 @@ export function springFromTiming({ duration, bounce }: SpringTiming): Spring {
     if (springSettleTime(springAtOmega(mid, zeta)) > target) low = mid;
     else high = mid;
   }
-  return springAtOmega(Math.sqrt(low * high), zeta);
+  const solved = springAtOmega(Math.sqrt(low * high), zeta);
+
+  // Motion tokens are a small finite set; only a caller feeding raw measured
+  // geometry can reach the cap, and dropping everything is cheaper than tracking
+  // recency for a cache that never needs it.
+  if (solveCache.size >= SOLVE_CACHE_LIMIT) solveCache.clear();
+  solveCache.set(key, solved);
+  return solved;
 }
 
 /** Duration a spring would run for if handed straight to a tween. */
