@@ -39,7 +39,7 @@ export function UpdateIndicator() {
   if (status === 'checking') {
     return (
       <div className="flex items-center gap-1.5 px-1.5" title={translate('updateChecking', lang)}>
-        <RefreshCw size={12} className="animate-spin text-text-secondary" />
+        <RefreshCw size={12} className="motion-spin text-text-secondary" />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export function UpdateIndicator() {
         role="button"
         tabIndex={0}
       >
-        <span className="w-2 h-2 rounded-full bg-accent animate-pulse inline-block" />
+        <span className="w-2 h-2 rounded-full bg-accent motion-pulse inline-block" />
         <span className="text-accent font-mono text-[10px]">v{updateInfo.version}</span>
       </div>
     );

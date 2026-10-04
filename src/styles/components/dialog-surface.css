@@ -51,6 +51,32 @@
   box-shadow: var(--frost-shadow);
 }
 
+/* 亚克力后缀面 — 通知 Toast 与状态栏共用。
+   跟随 :root[data-acrylic='true'] (appearance.acrylicBackground), 强度复用
+   --frost-alpha-widget 档位, 与 Widget 卡片同源; 底色不写死, 由使用方用
+   --frost-acrylic-base 指向自己的主题原色出口 (浮层用 --color-float-surface,
+   状态栏用 --color-bg-statusbar), 避免亚克力对 bg-* 的半透明化二次叠加。
+   关闭亚克力时本规则不生效, 组件回退到自身实色背景且不保留 backdrop-filter。 */
+.frost-acrylic {
+  --frost-acrylic-base: var(--color-float-surface);
+}
+
+.frost-acrylic--statusbar {
+  --frost-acrylic-base: var(--color-bg-statusbar);
+}
+
+[data-acrylic='true'] .frost-acrylic {
+  background-color: color-mix(
+    in srgb,
+    var(--frost-acrylic-base) var(--frost-alpha-widget),
+    transparent
+  );
+  backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  -webkit-backdrop-filter: blur(var(--frost-blur)) saturate(var(--frost-saturate));
+  border-color: var(--frost-border);
+  box-shadow: var(--frost-shadow);
+}
+
 /* 面板内无需开关状态的磨砂表面, 与浮层/Widget 共用同一组磨砂处理 token。 */
 .frost-surface {
   background-color: color-mix(

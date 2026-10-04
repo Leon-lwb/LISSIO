@@ -49,7 +49,7 @@ export const CompileErrorsView = memo(function CompileErrorsView() {
             title={translate('refresh', lang)}
             aria-label={translate('refresh', lang)}
           >
-            <RotateCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
+            <RotateCw size={13} className={isRefreshing ? 'motion-spin' : ''} />
           </button>
         </div>
       </div>

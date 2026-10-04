@@ -49,6 +49,7 @@
 | `float-chrome` | 浮层标题栏/底栏 | 半透明 chrome |
 | `float-chrome-muted` | 浮层侧栏/弱化区域 | 半透明 chrome |
 | `frost-surface` | 面板内始终磨砂的表面 | 始终生效 |
+| `frost-acrylic` | 通知 Toast、底部状态栏 | `appearance.acrylicBackground` |
 
 核心 token：
 

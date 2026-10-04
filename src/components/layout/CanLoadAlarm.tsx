@@ -56,7 +56,7 @@ export function CanLoadAlarm() {
       className="flex items-center gap-1.5 px-1.5"
       title={`${translate('canLoadThresholdAlarm', lang)}: ${(loadRatio * 100).toFixed(2)}% >= ${(threshold * 100).toFixed(0)}%`}
     >
-      <span className="w-2 h-2 rounded-full bg-red animate-pulse inline-block" />
+      <span className="w-2 h-2 rounded-full bg-red motion-pulse inline-block" />
       <span className="text-red font-mono text-[10px]">
         {(loadRatio * 100).toFixed(1)}%
       </span>

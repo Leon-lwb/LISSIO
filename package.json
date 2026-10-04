@@ -34,6 +34,8 @@
     "check:contracts": "node scripts/check-contracts.mjs",
     "check:model-catalog": "node scripts/check-model-catalog.mjs",
     "check:tokens": "node scripts/check-ui-tokens.mjs",
+    "check:all": "bash scripts/check-all.sh",
+    "check:all:quick": "bash scripts/check-all.sh --quick",
     "publish:crates": "node scripts/publish-crates.mjs",
     "bench:audit": "bash scripts/bench-audit.sh quick",
     "bench:full": "bash scripts/bench-audit.sh full",

@@ -73,9 +73,9 @@
   border-radius: 50%;
   cursor: crosshair;
   /* 明确指定过渡属性，避免不必要的动画性能损耗 */
-  transition: background-color var(--transition-fast) var(--ease-out-cubic),
-    border-color var(--transition-fast) var(--ease-out-cubic),
-    transform var(--transition-fast) var(--ease-out-cubic);
+  transition: background-color var(--motion-duration-control-in) var(--ease-control-in),
+    border-color var(--motion-duration-control-in) var(--ease-control-in),
+    transform var(--motion-duration-control-in) var(--ease-control-in);
 }
 
 .node-editor-rf .react-flow__handle:hover {

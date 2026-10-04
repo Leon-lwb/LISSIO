@@ -1,67 +1,89 @@
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import type { RefObject } from 'react';
-import {
-  MOTION_DISTANCE,
-  motionDuration,
-  MOTION_EASE,
-  motionIsReduced,
-  type MotionPresenceVariant,
-} from './motionConfig';
+import { useRef, type RefObject } from 'react';
+import { promote } from './compositor';
+import { ensureSpringPlugin, springTween } from './gsapSpring';
+import { motionSpringFor, type MotionPresenceVariant } from './motionConfig';
+import { motionIsReduced } from './reducedMotion';
+import { VARIANT_GEOMETRY } from './presence';
 
-gsap.registerPlugin(useGSAP);
+ensureSpringPlugin();
 
 interface MotionPresenceOptions {
   variant?: MotionPresenceVariant;
   delay?: number;
   enabled?: boolean;
+  origin?: string;
 }
 
-const FROM: Record<MotionPresenceVariant, gsap.TweenVars> = {
-  overlay: { opacity: 0 },
-  surface: { opacity: 0, y: MOTION_DISTANCE.micro, scale: 0.99 },
-  popover: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  toast: { opacity: 0, x: MOTION_DISTANCE.small, scale: 0.99 },
-  panel: { opacity: 0, x: MOTION_DISTANCE.panel, scale: 0.99 },
-  row: { opacity: 0, y: -MOTION_DISTANCE.micro },
-  message: { opacity: 0, y: MOTION_DISTANCE.micro },
-  window: { opacity: 0, y: MOTION_DISTANCE.panel, scale: 0.97 },
-  menu: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  banner: { opacity: 0, y: -MOTION_DISTANCE.micro },
-};
-
-const TO: Record<MotionPresenceVariant, gsap.TweenVars> = {
-  overlay: { opacity: 1 },
-  surface: { opacity: 1, y: 0, scale: 1 },
-  popover: { opacity: 1, y: 0, scale: 1 },
-  toast: { opacity: 1, x: 0, scale: 1 },
-  panel: { opacity: 1, x: 0, scale: 1 },
-  row: { opacity: 1, y: 0 },
-  message: { opacity: 1, y: 0 },
-  window: { opacity: 1, y: 0, scale: 1 },
-  menu: { opacity: 1, y: 0, scale: 1 },
-  banner: { opacity: 1, y: 0 },
-};
-
-/** Plays a restrained entrance once; use MotionPresence for dismissible surfaces. */
+/**
+ * Plays a spring-driven entrance once, without the exit half.
+ *
+ * Use `MotionPresence` for dismissible surfaces. This hook exists for surfaces
+ * whose exit is handled by the DOM — a `<details>` disclosure, a route change, a
+ * dialog whose parent unmounts — where there is nothing to keep alive.
+ */
 export function useMotionPresence<T extends HTMLElement>(
   ref: RefObject<T | null>,
-  { variant = 'surface', delay = 0, enabled = true }: MotionPresenceOptions = {}
+  { variant = 'surface', delay = 0, enabled = true, origin }: MotionPresenceOptions = {}
 ): void {
+  const overrides = useRef({ origin });
+  overrides.current = { origin };
+
   useGSAP(
     () => {
       const element = ref.current;
-      if (!element || !enabled || motionIsReduced()) return;
+      if (!element || !enabled) return;
 
+      const geometry = VARIANT_GEOMETRY[variant];
+      const transformOrigin = overrides.current.origin ?? geometry.origin;
+
+      gsap.killTweensOf(element);
+      if (motionIsReduced()) {
+        gsap.set(element, { clearProps: 'transform,opacity' });
+        return;
+      }
+
+      const release = promote(element);
+      if (!geometry.displaces) {
+        gsap.fromTo(
+          element,
+          { opacity: 0 },
+          {
+            opacity: 1,
+            duration: 0.001,
+            delay,
+            onComplete: release,
+          }
+        );
+        return;
+      }
+
+      const distance = Math.hypot(geometry.enterFrom.x, geometry.enterFrom.y);
       gsap.fromTo(
         element,
-        FROM[variant],
         {
-          ...TO[variant],
-          duration: variant === 'overlay' ? motionDuration('quick') : motionDuration('base'),
-          delay,
-          ease: MOTION_EASE.enter,
-          clearProps: 'transform,opacity',
+          opacity: 0,
+          x: geometry.enterFrom.x,
+          y: geometry.enterFrom.y,
+          scaleX: geometry.enterScale,
+          scaleY: geometry.enterScale,
+          transformOrigin,
+        },
+        {
+          opacity: 1,
+          x: 0,
+          y: 0,
+          scaleX: 1,
+          scaleY: 1,
+          ...springTween(geometry.family, 'in', { opacity: 1 }, {
+            spring: motionSpringFor(geometry.family, 'in', distance),
+            delay,
+          }),
+          onComplete: () => {
+            gsap.set(element, { clearProps: 'transform,opacity' });
+            release();
+          },
         }
       );
     },

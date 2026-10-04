@@ -102,7 +102,7 @@ const CompileStatusIndicator = memo(function CompileStatusIndicator({
       className="flex items-center gap-1 text-text-warning h-full whitespace-nowrap"
       title="Compiling"
     >
-      <Loader2 size={12} className="animate-spin" />
+      <Loader2 size={12} className="motion-spin" />
       {!compact && <span>Compiling...</span>}
     </span>
   );
@@ -127,7 +127,7 @@ export function CompileDot({ tabId }: { tabId: string }) {
     return (
       <Loader2
         size={10}
-        className="text-text-warning animate-spin shrink-0"
+        className="text-text-warning motion-spin shrink-0"
         aria-label="Compiling"
       />
     );

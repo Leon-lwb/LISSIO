@@ -9,6 +9,7 @@ import { withAlpha } from '../lib/ui/colorAlpha';
 import type { AppSettings } from './defaults';
 import { applyTheme, getCssVariableName, resolveActiveTheme, getBuiltInCssTheme, type ThemeToken } from './theme';
 import { loadCssTheme } from './css-theme-loader';
+import { installMotionTokens, setReducedMotionSetting } from '../lib/motion';
 
 /// 亚克力模式下各背景 token 的基准透明度 (未列出的 token 保持不透明)
 /// 基准对应 acrylicOpacity = 0.6, 实际透明度 = 基准值 / 0.6 * acrylicOpacity
@@ -114,13 +115,11 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
 
   // 动画速度档位: CSS 过渡和 GSAP 共享同一份节奏
   root.dataset.motionSpeed = appearance.motionSpeed ?? 'standard';
-
-  // 低动画模式
-  if (appearance.reducedMotion) {
-    root.classList.add('reduced-motion');
-  } else {
-    root.classList.remove('reduced-motion');
-  }
+  // 低动画模式: 设置项写入 data 属性, 由 motion 模块与系统偏好合并成唯一权威类
+  setReducedMotionSetting(appearance.reducedMotion === true);
+  // 速度档位与低动画状态都定下来后再烘焙一次弹簧令牌
+  // (CSS linear() 与 GSAP 补间共用同一个求解器, 不会各算各的)
+  installMotionTokens();
 
   // 控件栏/状态栏可见性由 App.tsx 读取 settings 控制, 这里不直接操作
 }

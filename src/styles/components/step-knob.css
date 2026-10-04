@@ -8,8 +8,8 @@
     var(--shadow-step-knob);
   cursor: grab;
   transition:
-    border-color var(--transition-fast) var(--ease-out-cubic),
-    transform var(--transition-fast) var(--ease-out-cubic);
+    border-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    transform var(--motion-duration-toggle-in) var(--ease-toggle-in);
   touch-action: none;
 }
 

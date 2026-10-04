@@ -85,7 +85,7 @@ export function KeychainPermissionDialog() {
             disabled={retrying}
             onClick={() => void retry()}
           >
-            {retrying && <RefreshCw size={12} className="animate-spin" aria-hidden="true" />}
+            {retrying && <RefreshCw size={12} className="motion-spin" aria-hidden="true" />}
             {translate(retrying ? 'keychainPermissionRequesting' : 'keychainPermissionRequestAgain', lang)}
           </button>
         </div>

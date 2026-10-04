@@ -1,7 +1,7 @@
 import { renderWithI18n } from '../../../test/renderWithI18n';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-;
-import { AnimatedSwitch } from '../AnimatedSwitch';
+import { motionDuration } from '../../../lib/motion';
+import { AnimatedSwitch, switchTravel } from '../AnimatedSwitch';
 
 function stubMatchMedia(matches = false) {
   vi.stubGlobal(
@@ -46,11 +46,37 @@ describe('AnimatedSwitch', () => {
 
     // 同一 DOM 节点 (不 remount 子树), 切换仅通过 CSS transition 驱动
     expect(container.firstElementChild).toBe(el);
-    expect(el.style.transition).toContain('opacity 180ms');
-    expect(el.style.transition).toContain('transform 180ms');
+    // 时长来自 content 家族弹簧令牌, 不写死数值以免令牌调整后失配
+    const expected = `${Math.round(motionDuration('content', 'in') * 1000)}ms`;
+    expect(el.style.transition).toContain(`opacity ${expected}`);
+    expect(el.style.transition).toContain(`transform ${expected}`);
     expect(el.style.opacity).toBe('1');
     expect(el.style.transform).toBe('none');
     expect(el.textContent).toBe('content');
+  });
+
+  it('scales travel with the number of positions crossed', () => {
+    const order = ['a', 'b', 'c', 'd', 'e', 'f'];
+    // Direction follows position.
+    expect(switchTravel('a', 'b', order, 'x')).toBeGreaterThan(0);
+    expect(switchTravel('b', 'a', order, 'x')).toBeLessThan(0);
+    // Magnitude grows with distance, and saturates rather than running away.
+    expect(Math.abs(switchTravel('a', 'd', order, 'x'))).toBeGreaterThan(
+      Math.abs(switchTravel('a', 'b', order, 'x'))
+    );
+    expect(switchTravel('a', 'e', order, 'x')).toBe(switchTravel('a', 'f', order, 'x'));
+    // A vertical strip moves less than a horizontal one for the same jump.
+    expect(Math.abs(switchTravel('a', 'd', order, 'y'))).toBeLessThan(
+      Math.abs(switchTravel('a', 'd', order, 'x'))
+    );
+  });
+
+  it('degrades to a cross-fade when there is no spatial relationship', () => {
+    const order = ['a', 'b'];
+    expect(switchTravel('a', 'b', undefined, 'x')).toBe(0);
+    expect(switchTravel('a', 'b', order, undefined)).toBe(0);
+    expect(switchTravel('a', 'missing', order, 'x')).toBe(0);
+    expect(switchTravel('a', 'a', order, 'x')).toBe(0);
   });
 
   it('resolves the slide direction from the ordered keys', () => {

@@ -12,9 +12,9 @@
   /* 默认: 实色 (与 .module-card 默认一致) */
   background-color: var(--color-bg-surface);
   transition:
-    background-color var(--transition-base) var(--ease-out-cubic),
-    border-color var(--transition-fast) var(--ease-out-cubic),
-    box-shadow var(--transition-fast) var(--ease-out-cubic);
+    background-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    border-color var(--motion-duration-control-in) var(--ease-surface-in),
+    box-shadow var(--motion-duration-control-in) var(--ease-surface-in);
 }
 
 [data-acrylic='true'] .dock-card-acrylic {

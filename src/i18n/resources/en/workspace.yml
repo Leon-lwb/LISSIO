@@ -145,3 +145,7 @@ performanceSampling: Sampling
 performanceSampleCount: Samples
 performanceMonitorRpc: Monitor request
 performanceLastSample: Last sample
+# Acrylic stutter notice (lib/performance/acrylicGuard): offered when FPS stays low
+performanceAcrylicHeavyTitle: Acrylic background is slowing the UI
+performanceAcrylicHeavyMessage: Frame rate has stayed low; the system frosted-glass (acrylic) background keeps the GPU busy. Turn it off if the UI feels sluggish.
+performanceAcrylicDisable: Turn off acrylic

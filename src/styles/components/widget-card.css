@@ -19,10 +19,10 @@
   box-shadow:
     var(--shadow-card);
   transition:
-    border-color var(--motion-duration-micro) var(--ease-enter),
-    box-shadow var(--motion-duration-base) var(--ease-enter),
-    background-color var(--motion-duration-base) var(--ease-enter),
-    transform var(--motion-duration-base) var(--ease-enter);
+    border-color var(--motion-duration-control-in) var(--ease-surface-in),
+    box-shadow var(--motion-duration-surface-in) var(--ease-surface-in),
+    background-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    transform var(--motion-duration-surface-in) var(--ease-surface-in);
   transform: translateZ(0);
 }
 

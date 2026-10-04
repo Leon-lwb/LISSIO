@@ -121,6 +121,16 @@ describe('settingsStore', () => {
     expect(document.documentElement.style.getPropertyValue('--window-opacity')).toBe('');
   });
 
+  it('外观默认开启亚克力 (透明) 且整窗保持不透明', () => {
+    useSettingsStore.getState().resetCategory('appearance');
+    const appearance = useSettingsStore.getState().settings.appearance;
+
+    expect(appearance.acrylicBackground).toBe(true);
+    expect(appearance.acrylicOpacity).toBe(0.6);
+    expect(appearance.windowOpacity).toBe(1);
+    expect(document.documentElement.dataset.acrylic).toBe('true');
+  });
+
   it('整窗透明度与亚克力开关相互独立', () => {
     useSettingsStore.getState().update('appearance', 'acrylicBackground', true);
     useSettingsStore.getState().update('appearance', 'windowOpacity', 0.7);

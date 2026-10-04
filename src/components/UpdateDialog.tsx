@@ -131,7 +131,7 @@ export function UpdateDialog() {
           )}
           {status === 'downloading' && (
             <span className="text-xs text-text-secondary inline-flex items-center gap-1.5">
-              <RefreshCw size={12} className="animate-spin" />
+              <RefreshCw size={12} className="motion-spin" />
               {translate('updateDownloading', lang)}
             </span>
           )}

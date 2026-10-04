@@ -26,6 +26,7 @@
   opacity: var(--alpha-faint);
 }
 
+/* LED 呼吸是状态指示而非装饰运动: 对称缓入缓出, 且在低动画模式下继续运行。 */
 .animate-led-pulse {
-  animation: led-pulse 1.5s ease-in-out infinite;
+  animation: led-pulse var(--duration-led-pulse) var(--ease-oscillate) infinite;
 }

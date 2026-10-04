@@ -145,3 +145,7 @@ performanceSampling: 采样
 performanceSampleCount: 样本数
 performanceMonitorRpc: 监控请求
 performanceLastSample: 最近采样
+# 亚克力卡顿提醒 (lib/performance/acrylicGuard): 帧率持续偏低时提示关闭亚克力
+performanceAcrylicHeavyTitle: 亚克力背景拖慢了界面
+performanceAcrylicHeavyMessage: 前端帧率持续偏低，系统毛玻璃（亚克力）会一直占用 GPU。若操作卡顿，可关闭后继续使用。
+performanceAcrylicDisable: 关闭亚克力

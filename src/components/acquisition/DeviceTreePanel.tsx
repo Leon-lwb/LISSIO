@@ -105,7 +105,7 @@ export function DeviceTreePanel() {
         }}><Plus size={15} /></button>
       <button type="button" className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-disabled" disabled={pending}
         title={translate('refresh', lang)} aria-label={translate('refresh', lang)} onClick={() => { setAttempt(value => value + 1); void refreshDeviceNodeSnapshots(); }}>
-        {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+        {pending ? <Loader2 size={14} className="motion-spin" /> : <RefreshCw size={14} />}
       </button>
     </div>
     <button type="button" className="text-left text-[11px] text-accent hover:underline"

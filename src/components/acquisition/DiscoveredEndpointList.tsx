@@ -34,7 +34,7 @@ export function DiscoveredEndpointList({
           aria-label={translate('refresh', lang)}
           className="p-1 rounded text-text-secondary hover:bg-bg-hover hover:text-text-primary disabled:opacity-disabled"
         >
-          {pending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+          {pending ? <Loader2 size={14} className="motion-spin" /> : <RefreshCw size={14} />}
         </button>
       </div>
       {endpoints.length === 0 ? (

@@ -280,30 +280,68 @@
   --frost-saturate-widget: var(--frost-saturate);
 
   /* ---------- 动效 (Motion tokens) ---------- */
-  /* 语义时长别名 — components.css 原生 CSS 直接引用 var(--transition-*) */
-  --transition-fast: var(--motion-duration-micro);
-  --transition-base: var(--motion-duration-base);
-  --transition-slow: var(--motion-duration-slow);
-  /* Tailwind v4 命名空间: duration-fast/base/slow 工具类 (transition-duration 属主) */
-  --transition-duration-fast: var(--transition-fast);
-  --transition-duration-base: var(--transition-base);
-  --transition-duration-slow: var(--transition-slow);
-  /* 缓动: ease-out-cubic 工具类 + var(--ease-*) 直接引用 */
-  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
-  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-  --ease-settle: cubic-bezier(0.34, 1.2, 0.64, 1);
-  /* Motion scale: micro = feedback, base = content transitions, panel = spatial moves. */
-  --motion-duration-micro: 140ms;
-  --motion-duration-quick: 180ms;
-  --motion-duration-base: 280ms;
-  --motion-duration-panel: 360ms;
-  --motion-duration-slow: 480ms;
-  --motion-distance-micro: 4px;
-  --motion-distance-small: 8px;
-  --motion-distance-panel: 18px;
+  /* 动效令牌是物理弹簧的投影, 不是手调的三次贝塞尔。
+     五个家族按"移动了屏幕多少"排序, 每个家族各有进场 (in) 与离场 (out):
+       control  悬停/按下/聚焦等即时反馈 — 短到无感
+       toggle   开关/旋钮/滑块的通断翻转
+       content  列表行/消息/提示/通知
+       surface  对话框/菜单/气泡
+       spatial  面板/浮动窗口/Dock 迁移
+     进场允许回弹 (到位的物体会沉降), 离场恒为临界阻尼 (离开的物体不该晃)。
+
+     --motion-duration-* 与 --ease-* 的值由 src/lib/motion/easingTokens.ts 在运行时
+     写入 <html> 内联样式: 弹簧解算成 CSS linear() 缓动, 因此 CSS 过渡与 GSAP
+     补间共用同一个求解器, 不会各算各的。下面声明的只是 JS 就绪前的兜底值,
+     会被内联值覆盖; 动画速度档位切换时整组令牌重新烘焙。 */
+  --motion-duration-control-in: 160ms;
+  --motion-duration-control-out: 120ms;
+  --motion-duration-toggle-in: 240ms;
+  --motion-duration-toggle-out: 180ms;
+  --motion-duration-content-in: 320ms;
+  --motion-duration-content-out: 220ms;
+  --motion-duration-surface-in: 400ms;
+  --motion-duration-surface-out: 260ms;
+  --motion-duration-spatial-in: 520ms;
+  --motion-duration-spatial-out: 300ms;
+
+  /* 兜底缓动: 令牌烘焙前生效。家族内的近似形状 (进场减速, 离场加速)。 */
+  --ease-control-in: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-control-out: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-toggle-in: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-toggle-out: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-content-in: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-content-out: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-surface-in: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-surface-out: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spatial-in: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spatial-out: cubic-bezier(0.4, 0, 1, 1);
+
+  /* 线性只用于与时间本身成正比的量: 进度条、旋转指示器。
+     这些是"信息"而不是"运动", 低动画模式下也必须继续走。 */
+  --ease-linear: linear;
+
+  /* 周期性往返振荡 (LED 呼吸、心跳指示)。这类没有"起止点", 用弹簧表达
+     没有意义, 但用 linear 会让呼吸变成生硬的顿挫 —— 需要对称的缓入缓出。
+     同属信息类循环, 低动画模式下保留。 */
+  --ease-oscillate: cubic-bezier(0.4, 0, 0.6, 1);
+
+  /* Tailwind v4 命名空间: duration-* 工具类 (transition-duration 属主) */
+  --transition-duration-fast: var(--motion-duration-control-in);
+  --transition-duration-base: var(--motion-duration-content-in);
+  --transition-duration-slow: var(--motion-duration-spatial-in);
+
+  /* Tailwind v4 的 --default-transition-* 是所有 transition-* 工具类的兜底。
+     覆盖它们, 于是 166 处裸写 `transition-colors` 的控件自动获得弹簧时序,
+     而不必在每个 className 上重复挂 duration/ease。原先落到 Tailwind 内建的
+     150ms + cubic-bezier(0.4,0,0.2,1), 那正是"到处都一样"的线性感的来源。 */
+  --default-transition-duration: var(--motion-duration-control-in);
+  --default-transition-timing-function: var(--ease-control-in);
+
+  /* 位移距离: 仅用于 CSS 关键帧的固定偏移与 transform-origin。真实位移由
+     src/lib/motion 按测得的路程换算时长 (spatialTiming), 不在此处定死。 */
+  --motion-distance-micro: 5px;
+  --motion-distance-small: 10px;
+  --motion-distance-panel: 24px;
 }
 
 /* ============ 层级令牌 (z-index) ============ */

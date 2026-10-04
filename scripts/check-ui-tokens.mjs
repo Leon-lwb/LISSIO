@@ -43,6 +43,10 @@ const LEGACY_FROST_TOKEN = /--(?:widget-acrylic|blur-acrylic|saturate-acrylic|sh
 const RAW_CSS_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
 const FRONTEND_LIMIT = 500;
 
+// 动画令牌检查
+const TAILWIND_ANIMATION = /\b(animate-spin|animate-pulse|animate-bounce|animate-ping)\b/;
+const DURATION_WHITELIST = ['theme.css', 'component-tokens.css', 'motion.css'];
+
 /** 递归收集 src 下指定后缀的文件 */
 function collect(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -85,6 +89,34 @@ for (const file of collect(path.join(root, 'src'))) {
   const isCss = file.endsWith('.css');
   const raw = fs.readFileSync(file, 'utf8');
   const lines = raw.split('\n');
+
+  // 动画令牌检查 (在循环外，基于整个文件内容)
+  const isDurationWhitelist = DURATION_WHITELIST.some((w) => rel.endsWith(w));
+  if (!isDurationWhitelist && isCss) {
+    const durationRe = /(?<![-\w])(\d+(?:\.\d+)?)(ms|s)\b/g;
+    let dm;
+    while ((dm = durationRe.exec(raw)) !== null) {
+      if (dm[1] === '0') continue;
+      const line = raw.slice(0, dm.index).split('\n').length;
+      errors.push(`${rel}:${line}  硬编码时长 ${dm[0]} — 使用 var(--motion-duration-*) 或 var(--duration-*) 令牌`);
+    }
+  }
+  if (TAILWIND_ANIMATION.test(raw)) {
+    const line = raw.split('\n').findIndex((l) => TAILWIND_ANIMATION.test(l)) + 1;
+    errors.push(`${rel}:${line}  Tailwind 内置动画 — 使用 motion-spin / motion-pulse 替代`);
+  }
+  if (isCss && !rel.endsWith('styles/theme.css')) {
+    // 移除 var(--ease-*) 引用和 linear-gradient 后再检查裸缓动函数
+    const cssWithoutEaseVars = raw
+      .replace(/var\(--ease-[a-z-]+\)/g, '')
+      .replace(/linear-gradient\(/g, '');
+    const easeRe = /cubic-bezier\(|(?<![-\w])ease-in\b|(?<![-\w])ease-out\b|(?<![-\w])ease-in-out\b|(?<![-\w])linear\b/g;
+    let em;
+    while ((em = easeRe.exec(cssWithoutEaseVars)) !== null) {
+      const line = cssWithoutEaseVars.slice(0, em.index).split('\n').length;
+      errors.push(`${rel}:${line}  裸缓动函数 — 使用 var(--ease-*) 令牌`);
+    }
+  }
 
   lines.forEach((line, i) => {
     const code = stripCommentLines(line);
@@ -142,6 +174,7 @@ for (const file of collect(path.join(root, 'src'))) {
       }
     }
   }
+
 }
 
 // ---------- 同步校验: 四处单一来源 ----------

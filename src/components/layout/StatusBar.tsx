@@ -185,13 +185,13 @@ export const StatusBar = memo(function StatusBar() {
 
   const dotColorClass = {
     Disconnected: 'bg-text-muted',
-    Connecting: 'bg-yellow animate-pulse',
+    Connecting: 'bg-yellow motion-pulse',
     Connected: 'bg-green',
     Error: 'bg-red',
   }[connectionState];
 
   return (
-    <div ref={rootRef} className="h-[24px] bg-bg-statusbar text-text-secondary flex items-center px-2 text-xs gap-3 shrink-0 overflow-hidden" onContextMenu={onContextMenu}>
+    <div ref={rootRef} className="frost-acrylic frost-acrylic--statusbar h-[24px] bg-bg-statusbar text-text-secondary flex items-center px-2 text-xs gap-3 shrink-0 overflow-hidden" onContextMenu={onContextMenu}>
       <RunControls />
       <div className="w-px h-3 bg-border-subtle mx-0.5 shrink-0" />
       <div className="flex items-center gap-1.5 h-full">

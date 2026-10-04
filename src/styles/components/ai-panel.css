@@ -17,34 +17,26 @@
 }
 
 .animate-ai-in-right {
-  animation: ai-panel-in-x var(--duration-panel-enter) var(--ease-enter);
+  animation: ai-panel-in-x var(--motion-duration-spatial-in) var(--ease-spatial-in);
   --ai-slide-from: 28px;
 }
 
 .animate-ai-in-left {
-  animation: ai-panel-in-x var(--duration-panel-enter) var(--ease-enter);
+  animation: ai-panel-in-x var(--motion-duration-spatial-in) var(--ease-spatial-in);
   --ai-slide-from: -28px;
 }
 
 .animate-ai-in-bottom {
-  animation: ai-panel-in-y var(--duration-panel-enter) var(--ease-enter);
+  animation: ai-panel-in-y var(--motion-duration-spatial-in) var(--ease-spatial-in);
 }
 
 .animate-ai-in-float {
-  animation: ai-panel-in-float var(--duration-dialog-slide) var(--ease-enter);
+  animation: ai-panel-in-float var(--motion-duration-spatial-in) var(--ease-spatial-in);
   transform-origin: bottom right;
 }
 
-/* 会话下拉 / 消息气泡 / 提示横幅的微入场统一由 motion.css 管理。 */
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-ai-in-right,
-  .animate-ai-in-left,
-  .animate-ai-in-bottom,
-  .animate-ai-in-float {
-    animation: none;
-  }
-}
+/* 会话下拉 / 消息气泡 / 提示横幅的微入场统一由 motion.css 管理。
+   低动画模式由 reduced-motion.css 的统一清单接管, 此处不再重复声明。 */
 
 /* Scroll-away fade for chat messages. */
 .ai-chat-scroll-fade {

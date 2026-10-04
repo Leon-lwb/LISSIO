@@ -20,9 +20,9 @@
   border: 1px solid var(--color-border);
   border-radius: 9px;
   transition:
-    background-color var(--transition-base) var(--ease-in-out),
-    border-color var(--transition-base) var(--ease-in-out),
-    box-shadow var(--transition-base) var(--ease-in-out);
+    background-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    border-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    box-shadow var(--motion-duration-toggle-in) var(--ease-toggle-in);
 }
 
 .settings-toggle-slider::before {
@@ -35,8 +35,8 @@
   background: var(--color-text-secondary);
   border-radius: 50%;
   transition:
-    transform var(--transition-base) var(--ease-in-out),
-    background-color var(--transition-base) var(--ease-in-out);
+    transform var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    background-color var(--motion-duration-toggle-in) var(--ease-toggle-in);
 }
 
 .settings-toggle:hover .settings-toggle-slider {

@@ -105,7 +105,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
       onExitComplete={onDismiss}
     >
     <div
-      className="prompt-card motion-float h-full relative w-full p-4 flex flex-col gap-2.5 overflow-hidden"
+      className="prompt-card frost-acrylic motion-float h-full relative w-full p-4 flex flex-col gap-2.5 overflow-hidden"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -162,8 +162,8 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
         </div>
       )}
 
-      {/* 悬停时显示进度条 (info/warn 自动消失) */}
-      {notif.severity !== 'error' && (
+      {/* 悬停时显示进度条 (info/warn 自动消失; 常驻提示 durationMs=0 不倒计时) */}
+      {notif.severity !== 'error' && notif.durationMs > 0 && (
         <div
           className={`absolute left-0 bottom-0 h-0.5 opacity-subtle notif-progress ${progressColorClass} ${hovered ? 'paused' : ''}`}
           key={notif.timestamp}

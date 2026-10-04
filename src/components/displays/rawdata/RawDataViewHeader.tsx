@@ -219,7 +219,7 @@ export function RawDataViewHeader({
           >
             <span
               className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                connState === 'Error' ? 'bg-red animate-pulse' : connState === 'Connecting' ? 'bg-yellow animate-pulse' : 'bg-text-muted'
+                connState === 'Error' ? 'bg-red motion-pulse' : connState === 'Connecting' ? 'bg-yellow motion-pulse' : 'bg-text-muted'
               }`}
             />
             {translate(connState === 'Error' ? 'connError' : connState === 'Connecting' ? 'connecting' : 'notConnected', lang)}

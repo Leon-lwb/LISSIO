@@ -278,7 +278,7 @@ export function SettingsModal() {
                 disabled={updateBusy}
                 title={updateLabel}
               >
-                <RefreshCw size={14} className={updateBusy ? 'animate-spin' : ''} />
+                <RefreshCw size={14} className={updateBusy ? 'motion-spin' : ''} />
                 <span>{updateLabel}</span>
               </button>
               <div className="flex items-center justify-between gap-2 py-1.5">

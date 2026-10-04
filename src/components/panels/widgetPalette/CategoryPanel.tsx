@@ -150,7 +150,7 @@ export function CategoryPanel() {
                 {section.id !== 'transport' && <span aria-hidden="true" className="text-text-muted font-normal tabular-nums">{filtered?.entries.length}</span>}
               </h3>
               {section.id === 'transport' ? (
-                catalogPending ? <div role="status" className="flex justify-center gap-2 p-4 text-xs text-text-muted"><Loader2 size={14} className="animate-spin" />{translate('capabilityDiscovering', lang)}</div>
+                catalogPending ? <div role="status" className="flex justify-center gap-2 p-4 text-xs text-text-muted"><Loader2 size={14} className="motion-spin" />{translate('capabilityDiscovering', lang)}</div>
                   : catalogError ? <div role="alert" className="p-3 text-xs text-text-secondary">{translate('capabilityUnavailable', lang)}<button type="button" className="ml-2 text-accent" onClick={() => setCatalogAttempt((value) => value + 1)}>{translate('refresh', lang)}</button></div>
                     : <DevicePanel cards={capabilityCards} query={section.header.toLowerCase().includes(trimmedQuery) ? '' : trimmedQuery} />
               ) : filtered?.entries.map((entry) => (

@@ -24,7 +24,7 @@
   text-align: left;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color var(--transition-fast) var(--ease-out-cubic);
+  transition: background-color var(--motion-duration-control-in) var(--ease-control-in);
 }
 
 .context-menu-item:hover:not(:disabled),

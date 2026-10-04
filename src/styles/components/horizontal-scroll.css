@@ -10,7 +10,7 @@
   width: 24px;
   pointer-events: none;
   opacity: 0;
-  transition: opacity var(--transition-fast) var(--ease-out-cubic);
+  transition: opacity var(--motion-duration-control-in) var(--ease-control-in);
 }
 
 .horizontal-scroll-shadow[data-visible='true'] {

@@ -1,13 +1,26 @@
 export {
-  MOTION_DISTANCE,
-  MOTION_DURATION,
+  familyOf,
   motionDuration,
   motionSpeed,
-  type MotionDurationKey,
-  type MotionSpeed,
-  MOTION_EASE,
-  motionIsReduced,
+  motionSpring,
+  motionSpringFor,
+  motionTiming,
+  MOTION_DISTANCE,
+  type MotionFamily,
+  type MotionPhase,
   type MotionPresenceVariant,
+  type MotionSpeed,
+  type Spring,
+  type SpringTiming,
 } from './motionConfig';
+export {
+  motionIsReduced,
+  setReducedMotionSetting,
+  subscribeReducedMotion,
+  syncReducedMotion,
+  watchReducedMotion,
+} from './reducedMotion';
+export { installMotionTokens, springToLinearEasing } from './easingTokens';
+export { ensureSpringPlugin, springTween, type SpringTweenVars } from './gsapSpring';
 export { useMotionPresence } from './useMotionPresence';
 export { MotionPresence, type MotionPresenceProps } from './MotionPresence';

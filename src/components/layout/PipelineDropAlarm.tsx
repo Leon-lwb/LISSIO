@@ -52,7 +52,7 @@ export function PipelineDropAlarm() {
         role="button"
         tabIndex={0}
       >
-        <span className="w-2 h-2 rounded-full bg-red animate-pulse inline-block" />
+        <span className="w-2 h-2 rounded-full bg-red motion-pulse inline-block" />
         <span className="text-red font-mono text-[10px]">
           {rxDroppedWindow}
         </span>

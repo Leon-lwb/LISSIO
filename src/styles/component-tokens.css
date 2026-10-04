@@ -42,18 +42,13 @@
   --size-focus-offset: 2px;
   --size-resize-handle: 2px;
 
-  /* Motion aliases used by component-specific animations. */
+  /* Motion durations are no longer forwarded through this layer.
+   The family tokens (--motion-duration-<family>-<phase>) are the single source of
+   timing; an extra semantic alias on top only made "which tier does this surface
+   belong to" unanswerable without a lookup. What remains here is duration that
+   runs *proportionally to time* — progress bars and live telemetry — which is
+   data rather than a motion parameter and must keep running under reduced motion. */
   --duration-instant: 0.001ms;
-  --duration-search-clear: var(--motion-duration-micro);
-  --duration-menu-enter: var(--motion-duration-micro);
-  --duration-palette-enter: var(--motion-duration-quick);
-  --duration-banner-enter: var(--motion-duration-quick);
-  --duration-raw-data-enter: var(--motion-duration-quick);
-  --duration-dialog-fade: var(--motion-duration-quick);
-  --duration-toast-enter: var(--motion-duration-base);
-  --duration-dialog-slide: var(--motion-duration-base);
-  --duration-message-enter: var(--motion-duration-quick);
-  --duration-panel-enter: var(--motion-duration-panel);
   --duration-notification-progress: 8s;
   --duration-led-pulse: 1.5s;
 

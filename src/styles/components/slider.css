@@ -8,7 +8,7 @@
   border-radius: var(--radius-sm);
   outline: none;
   cursor: pointer;
-  transition: background-color var(--transition-fast) var(--ease-out-cubic);
+  transition: background-color var(--motion-duration-toggle-in) var(--ease-toggle-in);
 }
 
 .slider-input:hover {
@@ -29,9 +29,9 @@
   cursor: pointer;
   border: 2px solid var(--color-bg-editor);
   transition:
-    background-color var(--transition-fast) var(--ease-out-cubic),
-    border-color var(--transition-fast) var(--ease-out-cubic),
-    box-shadow var(--transition-fast) var(--ease-out-cubic);
+    background-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    border-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    box-shadow var(--motion-duration-toggle-in) var(--ease-toggle-in);
 }
 
 .slider-input::-moz-range-thumb {
@@ -42,9 +42,9 @@
   cursor: pointer;
   border: 2px solid var(--color-bg-editor);
   transition:
-    background-color var(--transition-fast) var(--ease-out-cubic),
-    border-color var(--transition-fast) var(--ease-out-cubic),
-    box-shadow var(--transition-fast) var(--ease-out-cubic);
+    background-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    border-color var(--motion-duration-toggle-in) var(--ease-toggle-in),
+    box-shadow var(--motion-duration-toggle-in) var(--ease-toggle-in);
 }
 
 .slider-input:hover::-webkit-slider-thumb,

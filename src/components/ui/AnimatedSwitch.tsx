@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { motionDuration, motionIsReduced } from '../../lib/motion';
+import { motionDuration, motionIsReduced, motionSpring } from '../../lib/motion';
 
 interface AnimatedSwitchProps {
   /// 切换标识 — 值变化时播放一次转场动画 (首次挂载不播放)
@@ -13,10 +13,33 @@ interface AnimatedSwitchProps {
   className?: string;
 }
 
-const EASE = 'var(--ease-enter)';
-const DURATION_MS = Math.round(motionDuration('quick') * 1000);
-const SLIDE_X = 16;
-const SLIDE_Y = 10;
+/** Full-index travel. One step is subtle; crossing the whole strip is not. */
+const MAX_TRAVEL = 18;
+const FALLBACK_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+
+/**
+ * Signed travel for a switch, in px, along the given axis.
+ *
+ * Direction comes from where the new key sits relative to the old one, and the
+ * magnitude scales with how many positions were crossed: nudging one tab should
+ * not read the same as jumping the length of the strip. Returns 0 when the two
+ * keys have no spatial relationship, which degrades to a pure cross-fade.
+ */
+export function switchTravel(
+  from: string,
+  to: string,
+  order: readonly string[] | undefined,
+  axis: 'x' | 'y' | undefined
+): number {
+  if (!order || !axis) return 0;
+  const fromIdx = order.indexOf(from);
+  const toIdx = order.indexOf(to);
+  if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return 0;
+  const steps = Math.abs(toIdx - fromIdx);
+  const direction = toIdx > fromIdx ? 1 : -1;
+  const axisFactor = axis === 'x' ? 1 : 0.6;
+  return direction * axisFactor * Math.min(MAX_TRAVEL, 4 + (steps - 1) * 6);
+}
 
 /// 通用切换转场容器
 /// 纯 CSS transition (transform + opacity) — 动画由合成器线程接管, 不触发任何
@@ -37,29 +60,33 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
     if (!el) return;
     if (motionIsReduced()) return;
 
-    // 默认纯淡入淡出; 有序切换按方向滑入 (与旧 WAAPI keyframes 完全一致的视觉)
-    let translate = '';
-    let dist = 0;
+    // 方向由新旧位置关系决定, 距离由跨越的索引数决定 —— 跳过一格和横穿整个
+    // Tab 条不该是同一种幅度, 否则远距离切换会显得被"拽"过来。
     const { order: ord, axis: ax } = navRef.current;
-    if (ord && ax) {
-      const fromIdx = ord.indexOf(from);
-      const toIdx = ord.indexOf(switchKey);
-      if (fromIdx >= 0 && toIdx >= 0 && fromIdx !== toIdx) {
-        const dir = toIdx > fromIdx ? 1 : -1;
-        translate = ax === 'x' ? 'translateX' : 'translateY';
-        dist = dir * (ax === 'x' ? SLIDE_X : SLIDE_Y);
-      }
-    }
+    const travel = switchTravel(from, switchKey, ord, ax);
 
-    // 两阶段 CSS transition: 先无过渡地落到起始态, 强制同步 reflow 后过渡到终态
-    const fromTransform = translate ? `${translate}(${dist}px)` : 'none';
-    el.style.transition = 'none';
-    el.style.opacity = '0';
-    el.style.transform = fromTransform;
+    // 时长与缓动都取自 content 家族的弹簧令牌, 与 CSS 其余部分同一来源;
+    // 令牌尚未烘焙时退回等价的三次贝塞尔, 避免无缓动的生硬切换。
+    const duration = Math.round(motionDuration('content', 'in') * 1000);
+    const baked = getComputedStyle(el).getPropertyValue('--ease-content-in').trim();
+    const easing = baked || FALLBACK_EASE;
+
+    const settle = el.style;
+    settle.transition = 'none';
+    settle.opacity = '0';
+    settle.transform = travel === 0 ? 'none' : `translate${ax === 'y' ? 'Y' : 'X'}(${travel}px)`;
     void el.offsetWidth; // 让起始态立即生效
-    el.style.transition = `opacity ${DURATION_MS}ms ${EASE}, transform ${DURATION_MS}ms ${EASE}`;
-    el.style.opacity = '1';
-    el.style.transform = 'none';
+    settle.transition = `opacity ${duration}ms ${easing}, transform ${duration}ms ${easing}`;
+    settle.opacity = '1';
+    settle.transform = 'none';
+
+    // 交还合成器: 动画结束即释放, 不长期占用图层。
+    const timer = window.setTimeout(() => {
+      settle.transition = '';
+      settle.opacity = '';
+      settle.transform = '';
+    }, duration);
+    return () => window.clearTimeout(timer);
   }, [switchKey]);
 
   return (
@@ -68,3 +95,8 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
     </div>
   );
 }
+
+/// 供测试与文档核对: content 家族入场的弹簧时长 (秒)
+export const ANIMATED_SWITCH_DURATION = () => motionDuration('content', 'in');
+/// 供测试与文档核对: content 家族入场的弹簧
+export const ANIMATED_SWITCH_SPRING = () => motionSpring('content', 'in');

@@ -3,8 +3,14 @@ import ReactDOM from "react-dom/client";
 import App from "./App";
 import { I18nextProvider, i18n } from "./i18n";
 import { BackendConnectionGate } from './components/BackendConnectionGate';
+import { installMotionTokens, watchReducedMotion } from './lib/motion';
 import "./styles/theme.css";
 import "./styles/components.css";
+
+// 动效地基: 先把系统低动画偏好同步成 <html> 上的唯一权威类, 再烘焙一次弹簧令牌。
+// 必须在 React 挂载前完成, 避免首帧使用未烘焙的兜底曲线。
+watchReducedMotion();
+installMotionTokens(true);
 
 // 过滤已知的良性 ResizeObserver 告警 — 打开节点画布等场景下,
 // 第三方库 (@xyflow/react 节点测量) 内部的 RO 会在同一帧内循环触发,

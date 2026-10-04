@@ -170,7 +170,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
     monoFontSize: 12,
     statusBarVisible: true,
     activityBarVisible: true,
-    acrylicBackground: false,
+    /// 默认开启亚克力 + 半透明: 面板/Widget 走系统毛玻璃, 观感即默认行为。
+    /// 帧率持续偏低时由 lib/performance/acrylicGuard 提醒用户关闭 (见该模块头注)。
+    acrylicBackground: true,
     acrylicOpacity: 0.6,
     floatingGlass: true,
     floatingGlassOpacity: 0.72,

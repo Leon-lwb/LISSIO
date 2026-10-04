@@ -20,7 +20,7 @@ export const LED = memo(function LED({ widget }: LEDProps) {
   return (
     <div className="flex flex-col items-center gap-1 py-1.5">
       <div
-        className={`w-7 h-7 rounded-full border-2 border-[#1e1e1e] transition-[background,box-shadow] duration-100 ${isOn ? 'animate-led-pulse' : ''}`}
+        className={`w-7 h-7 rounded-full border-2 border-[#1e1e1e] transition-[background,box-shadow] motion-duration-micro ${isOn ? 'animate-led-pulse' : ''}`}
         style={{
           background: color,
           boxShadow: isOn ? `0 0 14px ${color}, 0 0 4px ${color}` : 'none',

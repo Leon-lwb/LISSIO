@@ -6,7 +6,7 @@
   border: 1.5px dashed var(--color-accent);
   pointer-events: none;
   /* 定位由 left/top/width/height 控制，这里只对 opacity 动画表示出现/消失 */
-  transition: opacity var(--transition-fast) var(--ease-out-cubic);
+  transition: opacity var(--motion-duration-control-in) var(--ease-control-in);
   opacity: 0;
   z-index: 30;
 }

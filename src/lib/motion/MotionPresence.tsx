@@ -4,19 +4,18 @@ import {
   useEffect,
   useRef,
   useState,
+  type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
   type RefObject,
 } from 'react';
-import {
-  MOTION_DISTANCE,
-  motionDuration,
-  MOTION_EASE,
-  motionIsReduced,
-  type MotionPresenceVariant,
-} from './motionConfig';
+import { promote } from './compositor';
+import { ensureSpringPlugin, springTween } from './gsapSpring';
+import { motionSpeed, motionSpringFor, type MotionPresenceVariant } from './motionConfig';
+import { motionIsReduced } from './reducedMotion';
+import { travelVars, VARIANT_GEOMETRY, type TravelVector } from './presence';
 
-gsap.registerPlugin(useGSAP);
+ensureSpringPlugin();
 
 export interface MotionPresenceProps extends HTMLAttributes<HTMLDivElement> {
   visible: boolean;
@@ -25,38 +24,31 @@ export interface MotionPresenceProps extends HTMLAttributes<HTMLDivElement> {
   /** Optional external ref to the animated root (for positioning/measurement). */
   innerRef?: RefObject<HTMLDivElement | null>;
   onExitComplete?: () => void;
+  /**
+   * Overrides the variant's transform origin — pass the real anchor (a dock
+   * edge, the corner a window spawned from) so scaling grows out of it instead
+   * of out of the element's centre.
+   */
+  origin?: string;
+  /**
+   * Replaces the variant's nominal travel with a measured one, in px. Used when
+   * the surface is arriving from a known place rather than a fixed offset.
+   */
+  travel?: TravelVector;
+  /** Scale applied at the entrance's far end. */
+  scale?: number;
 }
 
-const ENTER: Record<MotionPresenceVariant, gsap.TweenVars> = {
-  overlay: { opacity: 0 },
-  surface: { opacity: 0, y: MOTION_DISTANCE.micro, scale: 0.99 },
-  popover: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  toast: { opacity: 0, x: MOTION_DISTANCE.small, scale: 0.99 },
-  panel: { opacity: 0, x: MOTION_DISTANCE.panel, scale: 0.99 },
-  row: { opacity: 0, y: -MOTION_DISTANCE.micro },
-  message: { opacity: 0, y: MOTION_DISTANCE.micro },
-  window: { opacity: 0, y: MOTION_DISTANCE.panel, scale: 0.97 },
-  menu: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  banner: { opacity: 0, y: -MOTION_DISTANCE.micro },
-};
-
-const EXIT: Record<MotionPresenceVariant, gsap.TweenVars> = {
-  overlay: { opacity: 0 },
-  surface: { opacity: 0, y: MOTION_DISTANCE.micro, scale: 0.99 },
-  popover: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  toast: { opacity: 0, x: MOTION_DISTANCE.small, scale: 0.99 },
-  panel: { opacity: 0, x: MOTION_DISTANCE.panel, scale: 0.99 },
-  row: { opacity: 0, y: -MOTION_DISTANCE.micro },
-  message: { opacity: 0, y: MOTION_DISTANCE.micro },
-  window: { opacity: 0, y: MOTION_DISTANCE.panel, scale: 0.97 },
-  menu: { opacity: 0, y: -MOTION_DISTANCE.micro, scale: 0.985 },
-  banner: { opacity: 0, y: -MOTION_DISTANCE.micro },
-};
-
 /**
- * Keeps a mounted child alive while its exit tween plays, then removes it.
- * This is the shared lifecycle primitive for floating windows, menus, and
- * dismissible surfaces; regular controls should stay on CSS transitions.
+ * Keeps a mounted child alive while its exit plays, then removes it.
+ *
+ * This is the shared lifecycle primitive for dialogs, menus, toasts and floating
+ * windows. Geometry comes from the presence role, timing from the motion family,
+ * and the spring is solved for the real travel distance so a long crossing is
+ * not read at the pace of a short one.
+ *
+ * Regular controls should stay on CSS transitions — this component exists for
+ * surfaces that need a retained mount and an exit-complete callback.
  */
 export function MotionPresence({
   visible,
@@ -65,6 +57,9 @@ export function MotionPresence({
   className = '',
   innerRef,
   onExitComplete,
+  origin,
+  travel,
+  scale,
   ...props
 }: MotionPresenceProps) {
   const ownRef = useRef<HTMLDivElement>(null);
@@ -75,53 +70,81 @@ export function MotionPresence({
     if (visible) setRetained(true);
   }, [visible]);
 
+  // Read inside the effect without making it a dependency: callers pass object
+  // literals, and re-running the tween on every render would restart the spring.
+  const overrides = useRef({ origin, travel, scale });
+  overrides.current = { origin, travel, scale };
+
   useGSAP(
     () => {
       const element = ownRef.current;
       if (!element) return;
 
-      if (visible) {
-        if (motionIsReduced()) {
-          gsap.set(element, { clearProps: 'transform,opacity' });
-          return;
+      const geometry = VARIANT_GEOMETRY[variant];
+      const from = overrides.current.travel ?? geometry.enterFrom;
+      const enterScale = overrides.current.scale ?? geometry.enterScale;
+      const transformOrigin = overrides.current.origin ?? geometry.origin;
+      const distance = Math.hypot(from.x, from.y);
+
+      // Re-entering mid-exit must reverse cleanly, so any in-flight tween dies
+      // here rather than racing the new spring.
+      gsap.killTweensOf(element);
+
+      if (motionIsReduced()) {
+        gsap.set(element, { clearProps: 'transform,opacity' });
+        if (!visible) {
+          setRetained(false);
+          onExitComplete?.();
         }
+        return;
+      }
+
+      const release = promote(element);
+
+      if (visible) {
         gsap.fromTo(
           element,
-          ENTER[variant],
           {
-            opacity: 1,
-            x: 0,
-            y: 0,
-            scale: 1,
-            duration: variant === 'overlay' ? motionDuration('quick') : motionDuration('base'),
-            ease: MOTION_EASE.enter,
-            clearProps: 'transform,opacity',
+            opacity: 0,
+            x: from.x,
+            y: from.y,
+            scaleX: enterScale,
+            scaleY: enterScale,
+            transformOrigin,
+          },
+          {
+            ...springTween(geometry.family, 'in', { opacity: 1, x: 0, y: 0, scaleX: 1, scaleY: 1 }, {
+              spring: motionSpringFor(geometry.family, 'in', distance),
+            }),
+            onComplete: release,
           }
         );
         return;
       }
 
-      if (!retained || motionIsReduced()) {
+      if (!retained) {
+        release();
         setRetained(false);
         onExitComplete?.();
         return;
       }
 
+      const exit = travelVars(geometry, 'exit');
       gsap.to(element, {
-        ...EXIT[variant],
-        duration: variant === 'window' ? motionDuration('base') : motionDuration('quick'),
-        ease: MOTION_EASE.exit,
+        ...exit,
+        transformOrigin,
+        ...springTween(geometry.family, 'out', exit, {
+          spring: motionSpringFor(geometry.family, 'out', distance),
+        }),
         onComplete: () => {
           gsap.set(element, { clearProps: 'transform,opacity' });
+          release();
           setRetained(false);
           onExitComplete?.();
         },
       });
     },
-    {
-      scope: ownRef,
-      dependencies: [visible, retained, variant],
-    }
+    { scope: ownRef, dependencies: [visible, retained, variant] }
   );
 
   if (!shouldRender) return null;
@@ -136,6 +159,8 @@ export function MotionPresence({
       className={className}
       data-motion-variant={variant}
       data-motion-visible={visible ? 'true' : 'false'}
+      data-motion-speed={motionSpeed()}
+      style={props.style as CSSProperties}
     >
       {children}
     </div>

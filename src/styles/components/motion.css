@@ -1,26 +1,24 @@
-/* ============ Motion speed profiles ============ */
-/* applyAppearance() writes data-motion-speed; GSAP reads the same profile via
-   motionDuration() so CSS and JavaScript never drift apart. */
-:root[data-motion-speed='fast'] {
-  --motion-duration-micro: 100ms;
-  --motion-duration-quick: 140ms;
-  --motion-duration-base: 200ms;
-  --motion-duration-panel: 280ms;
-  --motion-duration-slow: 360ms;
-}
+/* ============ 动效基元 (Motion primitives) ============
+   时长与缓动不再在本文件定义 —— 它们的值是物理弹簧的投影, 由
+   src/lib/motion/easingTokens.ts 在运行时写入 <html> 内联样式:
 
-:root[data-motion-speed='relaxed'] {
-  --motion-duration-micro: 180ms;
-  --motion-duration-quick: 260ms;
-  --motion-duration-base: 360ms;
-  --motion-duration-panel: 480ms;
-  --motion-duration-slow: 640ms;
-}
+     --motion-duration-<家族>-<阶段>   5 个家族 × 进/离场 = 10 个时长
+     --ease-<家族>-<阶段>              同上, 为弹簧采样出的 CSS linear()
 
-/* ============ Unified motion primitives ============ */
-/* These classes are the shared interaction vocabulary. They intentionally
-   animate transform/opacity only where movement is needed; color feedback stays
-   in component rules so high-frequency controls do not create extra layers. */
+   这样 CSS 过渡与 GSAP 补间共用同一个求解器, 速度档位切换时整组一起重烘焙。
+   本文件只负责"哪个角色用哪个家族"和"从哪个方向来"。
+
+   家族按移动了屏幕多少排序:
+     control  悬停/按下/聚焦 — 短到无感
+     toggle   开关/旋钮/滑块翻转
+     content  列表行/消息/提示/通知
+     surface  对话框/菜单/气泡
+     spatial  面板/浮动窗口/Dock 迁移
+   进场允许回弹 (到位的物体会沉降), 离场恒为临界阻尼 (离开的物体不该晃)。 */
+
+/* ============ 交互态基元 ============ */
+/* 只对 transform/opacity 建立过渡。颜色类属性在组件规则里就地声明,
+   避免高频控件凭空多出合成层。 */
 
 .motion-control,
 .motion-row,
@@ -28,29 +26,29 @@
 .motion-float,
 .motion-pill,
 .motion-switch {
-  --motion-ease: var(--ease-standard);
+  --motion-ease: var(--ease-control-in);
 }
 
 .motion-control {
   transition:
-    color var(--motion-duration-micro) var(--motion-ease),
-    background-color var(--motion-duration-micro) var(--motion-ease),
-    border-color var(--motion-duration-micro) var(--motion-ease),
-    box-shadow var(--motion-duration-micro) var(--motion-ease),
-    transform var(--motion-duration-micro) var(--ease-settle);
-  transform: translateZ(0);
+    color var(--motion-duration-control-in) var(--ease-control-in),
+    background-color var(--motion-duration-control-in) var(--ease-control-in),
+    border-color var(--motion-duration-control-in) var(--ease-control-in),
+    box-shadow var(--motion-duration-control-in) var(--ease-control-in),
+    transform var(--motion-duration-control-in) var(--ease-toggle-in);
 }
 
+/* 按下是一段被压进去的位移, 不是缩放: 缩放会让文字重排, 位移不会。 */
 .motion-control:active:not(:disabled) {
-  transform: scale(0.985);
+  transform: translateY(1px) scale(0.99);
 }
 
 .motion-row {
   transition:
-    color var(--motion-duration-micro) var(--motion-ease),
-    background-color var(--motion-duration-micro) var(--motion-ease),
-    border-color var(--motion-duration-micro) var(--motion-ease),
-    transform var(--motion-duration-quick) var(--ease-enter);
+    color var(--motion-duration-content-in) var(--ease-content-in),
+    background-color var(--motion-duration-content-in) var(--ease-content-in),
+    border-color var(--motion-duration-content-in) var(--ease-content-in),
+    transform var(--motion-duration-content-in) var(--ease-content-in);
 }
 
 .motion-row:active:not(:disabled) {
@@ -59,76 +57,142 @@
 
 .motion-surface {
   transition:
-    background-color var(--motion-duration-base) var(--ease-enter),
-    border-color var(--motion-duration-base) var(--ease-enter),
-    box-shadow var(--motion-duration-base) var(--ease-enter),
-    transform var(--motion-duration-base) var(--ease-enter);
+    background-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    border-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    box-shadow var(--motion-duration-surface-in) var(--ease-surface-in),
+    transform var(--motion-duration-surface-in) var(--ease-surface-in);
 }
 
 .motion-float {
   transition:
-    opacity var(--motion-duration-quick) var(--ease-enter),
-    transform var(--motion-duration-base) var(--ease-enter),
-    box-shadow var(--motion-duration-base) var(--ease-enter);
-}
-
-[data-motion-variant='window'] {
-  transform-origin: bottom right;
-}
-
-.motion-pill {
-  transition:
-    left var(--motion-duration-base) var(--ease-standard),
-    top var(--motion-duration-base) var(--ease-standard),
-    width var(--motion-duration-base) var(--ease-standard),
-    height var(--motion-duration-base) var(--ease-standard),
-    background-color var(--motion-duration-base) var(--ease-standard);
+    opacity var(--motion-duration-surface-in) var(--ease-surface-in),
+    transform var(--motion-duration-spatial-in) var(--ease-spatial-in),
+    box-shadow var(--motion-duration-spatial-in) var(--ease-spatial-in);
 }
 
 .motion-switch {
   transition:
-    opacity var(--motion-duration-base) var(--ease-enter),
-    transform var(--motion-duration-base) var(--ease-enter);
+    opacity var(--motion-duration-content-in) var(--ease-content-in),
+    transform var(--motion-duration-content-in) var(--ease-content-in);
+}
+
+/* 窗口从它被生成的角落长出来, 而不是从自己的中心。 */
+[data-motion-variant='window'] {
+  transform-origin: bottom right;
+}
+
+[data-motion-variant='popover'],
+[data-motion-variant='menu'] {
+  transform-origin: top center;
+}
+
+[data-motion-variant='toast'] {
+  transform-origin: right center;
+}
+
+/* 滑动指示器由 JS 写入 transform (FLIP), 不参与 left/top 过渡:
+   过渡 left/width 会让每一帧都触发一次布局。 */
+.motion-pill {
+  transition: transform var(--motion-duration-content-in) var(--ease-content-in);
+  will-change: transform;
 }
 
 .motion-icon-pop {
-  animation: motion-icon-pop var(--motion-duration-micro) var(--ease-enter);
+  animation: motion-icon-pop var(--motion-duration-control-in) var(--ease-toggle-in);
   transform-origin: center;
 }
 
-@keyframes motion-icon-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.6);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* `transition-all` 的替代品。
+   `transition-all` 会把当前和未来所有可动画属性都纳入过渡, 于是:
+   - 一次 hover 顺带过渡了 width/height/filter 等, 每帧多一次布局或绘制
+   - 属性集合随样式表演化而漂移, 同一个类在不同页面上动的东西不一样
+   这里把集合显式钉死, 并且只用合成器友好的属性。 */
+.motion-transition {
+  transition:
+    color var(--motion-duration-control-in) var(--ease-control-in),
+    background-color var(--motion-duration-control-in) var(--ease-control-in),
+    border-color var(--motion-duration-control-in) var(--ease-control-in),
+    box-shadow var(--motion-duration-control-in) var(--ease-control-in),
+    opacity var(--motion-duration-control-in) var(--ease-control-in),
+    transform var(--motion-duration-control-in) var(--ease-toggle-in);
 }
 
+/* ============ 循环动画 ============ */
+/* 旋转与脉冲是"状态指示", 不是"运动": 与时间成正比才是对的,
+   所以这两条保持 linear, 并且在低动画模式下继续运行。 */
+.motion-spin {
+  animation: motion-spin 1s var(--ease-linear) infinite;
+}
+
+.motion-pulse {
+  animation: motion-pulse 2s var(--ease-linear) infinite;
+}
+
+@keyframes motion-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes motion-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes motion-icon-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ============ 进场面板 ============ */
+/* 这些类是无 JS 时的降级路径: 有 JS 时同一个表面由 MotionPresence 驱动,
+   因为只有它能保住"退场播放完才卸载"的生命周期。两者不同时作用于一个元素。 */
+
 .motion-overlay-in {
-  animation: motion-overlay-in var(--duration-dialog-fade) var(--ease-enter) both;
+  animation: motion-overlay-in var(--motion-duration-surface-out) var(--ease-surface-in) both;
 }
 
 .motion-surface-in {
-  animation: motion-surface-in var(--duration-dialog-slide) var(--ease-enter) both;
+  animation: motion-surface-in var(--motion-duration-surface-in) var(--ease-surface-in) both;
 }
 
 .motion-pop-in {
-  animation: motion-pop-in var(--duration-toast-enter) var(--ease-enter) both;
+  animation: motion-pop-in var(--motion-duration-content-in) var(--ease-content-in) both;
 }
 
 .motion-message-in {
-  animation: motion-message-in var(--duration-message-enter) var(--ease-enter) both;
+  animation: motion-message-in var(--motion-duration-content-in) var(--ease-content-in) both;
 }
 
 .motion-banner-in {
-  animation: motion-banner-in var(--duration-banner-enter) var(--ease-enter) both;
+  animation: motion-banner-in var(--motion-duration-content-in) var(--ease-content-in) both;
 }
 
 .motion-tick-in {
-  animation: motion-tick-in var(--duration-dialog-slide) var(--ease-settle) both;
+  animation: motion-tick-in var(--motion-duration-toggle-in) var(--ease-toggle-in) both;
+}
+
+/* ============ 离场面板 ============ */
+/* 与进场刻意不同: 时长更短、缓动为临界阻尼、位移不越过进场偏移。
+   原路退回会让读感像"卡了一下", 继续沿原方向离场才是离开。 */
+
+.motion-overlay-exit {
+  animation: motion-overlay-out var(--motion-duration-surface-out) var(--ease-surface-out) both;
+}
+
+.motion-surface-exit {
+  animation: motion-surface-out var(--motion-duration-surface-out) var(--ease-surface-out) both;
+}
+
+.motion-pop-exit {
+  animation: motion-pop-out var(--motion-duration-content-out) var(--ease-content-out) both;
+}
+
+.motion-message-exit {
+  animation: motion-message-out var(--motion-duration-content-out) var(--ease-content-out) both;
+}
+
+.motion-banner-exit {
+  animation: motion-banner-out var(--motion-duration-content-out) var(--ease-content-out) both;
 }
 
 @keyframes motion-overlay-in {
@@ -139,7 +203,7 @@
 @keyframes motion-surface-in {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance-small)) scale(0.985);
+    transform: translateY(var(--motion-distance-small)) scale(0.97);
   }
   to {
     opacity: 1;
@@ -150,22 +214,22 @@
 @keyframes motion-pop-in {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance-micro));
+    transform: translateY(calc(var(--motion-distance-micro) * -1)) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes motion-message-in {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance-micro));
+    transform: translateY(var(--motion-distance-micro)) scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -181,22 +245,33 @@
 }
 
 @keyframes motion-tick-in {
-  from {
-    opacity: 0;
-    transform: scale(0.4);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-/* ============ 低动画模式 (用户设置) ============ */
-/* 通过设置开启，替代 prefers-reduced-motion 系统偏好 */
-.reduced-motion *,
-.reduced-motion *::before,
-.reduced-motion *::after {
-  transition: none !important;
-  animation-duration: 0.001ms !important;
-  animation-iteration-count: 1 !important;
+/* ============ 离场关键帧 ============ */
+
+@keyframes motion-overlay-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes motion-surface-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * 0.4)) scale(0.985); }
+}
+
+@keyframes motion-pop-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * -0.5)) scale(0.985); }
+}
+
+@keyframes motion-message-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * 0.5)) scale(1); }
+}
+
+@keyframes motion-banner-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * -1)); }
 }

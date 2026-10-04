@@ -35,7 +35,7 @@ export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query:
         <span className="text-[11px] font-medium text-text-secondary">{translate('devicePanelDevices', lang)} <span className="ml-1 text-text-muted tabular-nums">{visible.length}</span></span>
         <button type="button" disabled={pending} onClick={() => { void refresh(); }} aria-label={translate('refresh', lang)}
           title={translate('refresh', lang)} className="rounded p-1.5 text-text-secondary hover:bg-bg-hover disabled:opacity-disabled">
-          {pending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+          {pending ? <Loader2 size={13} className="motion-spin" /> : <RefreshCw size={13} />}
         </button>
       </div>
       <p className="px-1 text-[11px] leading-relaxed text-text-muted">{translate('devicePanelHint', lang)}</p>

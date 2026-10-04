@@ -45,10 +45,10 @@
   font-size: var(--font-size-xs);
   cursor: pointer;
   transition:
-    color var(--motion-duration-micro) var(--ease-standard),
-    background-color var(--motion-duration-micro) var(--ease-standard),
-    border-color var(--motion-duration-micro) var(--ease-standard),
-    transform var(--motion-duration-micro) var(--ease-settle);
+    color var(--motion-duration-surface-in) var(--ease-surface-in),
+    background-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    border-color var(--motion-duration-surface-in) var(--ease-surface-in),
+    transform var(--motion-duration-surface-in) var(--ease-surface-in);
 }
 
 .dialog-button:active:not(:disabled) {

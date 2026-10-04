@@ -28,6 +28,7 @@ import { useBootstrap } from './lib/startup/useBootstrap';
 import { useWorkspaceSeed } from './lib/startup/useWorkspaceSeed';
 import { useFirstFrameReveal } from './lib/startup/useFirstFrameReveal';
 import { startPerformanceTelemetry } from './lib/performance/telemetry';
+import { startAcrylicPerformanceGuard } from './lib/performance/acrylicGuard';
 import { useStartupDialogs } from './lib/startup/useStartupDialogs';
 import {
   LazyAboutModal,
@@ -43,6 +44,8 @@ import {
 function App() {
   useCanFrameSubscription();
   useEffect(() => startPerformanceTelemetry(), []);
+  // 亚克力默认开启: 帧率持续偏低时提醒用户关闭 (复用上方的帧率采样)
+  useEffect(() => startAcrylicPerformanceGuard(), []);
   const sidebarView = useAppStore((s) => s.sidebarView);
   const sidebarVisible = useAppStore((s) => s.sidebarVisible);
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
