@@ -18,6 +18,7 @@
 @import "./components/form-field.css";
 @import "./components/section-heading.css";
 @import "./components/empty-state.css";
+@import "./components/docked-panel.css";
 @import "./components/ai-panel.css";
 @import "./components/dock-drop-zone.css";
 @import "./components/context-menu.css";

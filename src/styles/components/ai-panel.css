@@ -1,39 +1,6 @@
 /* ============ AI 面板 ============ */
-/* --- 入场动画 --- */
-/* 面板按停靠方向滑入 (打开面板 / 切换停靠位置时随容器重挂载播放) */
-@keyframes ai-panel-in-x {
-  from { opacity: 0; transform: translateX(var(--ai-slide-from, 28px)); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes ai-panel-in-y {
-  from { opacity: 0; transform: translateY(28px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes ai-panel-in-float {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.animate-ai-in-right {
-  animation: ai-panel-in-x var(--motion-duration-spatial-in) var(--ease-spatial-in);
-  --ai-slide-from: 28px;
-}
-
-.animate-ai-in-left {
-  animation: ai-panel-in-x var(--motion-duration-spatial-in) var(--ease-spatial-in);
-  --ai-slide-from: -28px;
-}
-
-.animate-ai-in-bottom {
-  animation: ai-panel-in-y var(--motion-duration-spatial-in) var(--ease-spatial-in);
-}
-
-.animate-ai-in-float {
-  animation: ai-panel-in-float var(--motion-duration-spatial-in) var(--ease-spatial-in);
-  transform-origin: bottom right;
-}
+/* 停靠面板的进场/离场由 DockedPanel (MotionPresence + 宽度收拢) 驱动,
+   方向性关键帧已删除 —— 见 styles/components/docked-panel.css。 */
 
 /* 会话下拉 / 消息气泡 / 提示横幅的微入场统一由 motion.css 管理。
    低动画模式由 reduced-motion.css 的统一清单接管, 此处不再重复声明。 */

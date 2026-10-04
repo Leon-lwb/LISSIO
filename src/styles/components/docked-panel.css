@@ -1,0 +1,31 @@
+/* ============ 停靠面板抽屉 ============
+   停靠面板的空间运动由两部分组成, 二者共用同一组弹簧令牌:
+     - 宽度   本文件的 flex-grow 过渡。在 flex 行里外侧边不动、内侧边行走,
+              所以面板收拢时卡片是被"压"向所属 dock 边的, 而不是被平移过去。
+     - 透明度 / 缩放 / 入场位移  MotionPresence (components/layout/DockedPanel.tsx),
+              它还负责"退场播完才卸载"的生命周期。
+
+   为什么宽度可以用 transition 而不是 transform: 抽屉开合本身就是尺寸变化,
+   没有等价的 transform 表达; 这是用户主动触发的单元素尺寸变化, 每帧一次布局
+   的代价可接受, 与指针驱动的 resize 同类 (见 compositor.ts 的 INPUT_DRIVEN)。
+   位移本身 (面板换边) 仍走纯 transform 的 FLIP, 见 lib/motion/dockFlip.ts。 */
+
+.dock-panel {
+  transition: flex-grow var(--dock-drawer-duration) var(--dock-drawer-ease);
+}
+
+/* 进场允许回弹 —— 到位的抽屉会略微过冲再沉降; 离场恒为临界阻尼。 */
+.dock-panel[data-dock-state='open'] {
+  --dock-drawer-duration: var(--motion-duration-spatial-in);
+  --dock-drawer-ease: var(--ease-spatial-in);
+}
+
+.dock-panel[data-dock-state='closed'] {
+  --dock-drawer-duration: var(--motion-duration-spatial-out);
+  --dock-drawer-ease: var(--ease-spatial-out);
+}
+
+/* 拖拽期间不允许宽度过渡: 指针每帧都在改 flex-grow, 叠加过渡会让面板滞后于光标。 */
+body.dragging-dock .dock-panel {
+  transition: none;
+}

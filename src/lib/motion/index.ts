@@ -22,5 +22,7 @@ export {
 } from './reducedMotion';
 export { installMotionTokens, springToLinearEasing } from './easingTokens';
 export { ensureSpringPlugin, springTween, type SpringTweenVars } from './gsapSpring';
+export { useDockReorder } from './dockFlip';
+export { dockPanelGeometry, type DockEdge, type DockPanelGeometry } from './presence';
 export { useMotionPresence } from './useMotionPresence';
 export { MotionPresence, type MotionPresenceProps } from './MotionPresence';

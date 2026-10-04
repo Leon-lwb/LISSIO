@@ -1,9 +1,10 @@
-import { Suspense, useEffect, useMemo, type ReactNode } from 'react';
-import { MotionPresence } from './lib/motion';
+import { Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { MotionPresence, useDockReorder } from './lib/motion';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { transport } from './lib/rpc';
 import { Settings, Info, RefreshCw, PanelLeft } from 'lucide-react';
 import { ActivityBar } from './components/layout/ActivityBar';
+import { DockedPanel } from './components/layout/DockedPanel';
 import { Sidebar } from './components/layout/Sidebar';
 import { DockLayout } from './components/layout/DockLayout';
 import { StatusBar } from './components/layout/StatusBar';
@@ -90,6 +91,9 @@ function App() {
   const aiFloatRect = useLayoutStore((s) => s.aiFloatRect);
   const draggingAiPanel = useLayoutStore((s) => s.draggingAiPanel);
   const aiDockEdgeHover = useLayoutStore((s) => s.aiDockEdgeHover);
+
+  // 横向面板组的容器 — FLIP 在其中测量各面板的矩形
+  const dockGroupRef = useRef<HTMLDivElement>(null);
 
   // 浮动窗口渲染位置 clamp 到窗口内 (窗口缩小后仍可见; store 原值不动)
   const floatPos = useMemo(() => {
@@ -230,20 +234,15 @@ function App() {
 
   // 主横向面板组 — 按停靠位置拼装: [左侧停靠面板…] 中央 Dock [右侧停靠面板…]
   // (AI 面板 left/right 与侧边栏同级; bottom/float 在下方单独处理)
-  const aiDockedSide = aiPanelVisible && (aiDock === 'left' || aiDock === 'right') ? aiDock : null;
-  const sidebarSide = sidebarVisible ? sidebarDock : null;
+  // 停靠面板在横向组里的槽位只由"哪一侧被占用"决定。收起时面板本身留在树里
+  // (DockedPanel 把自身宽度收到 0), 因此槽位不随可见性变化。
+  const aiDockedSide = aiDock === 'left' || aiDock === 'right' ? aiDock : null;
+  const sidebarSide = sidebarDock;
   const bottomDocked = aiPanelVisible && aiDock === 'bottom';
   const handleClass = 'w-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors';
-  // AI 面板入场: 停靠面板按方向滑入, 浮动窗口由 MotionPresence 统一驱动
-  // 浮动窗口由 MotionPresence 统一驱动，避免与方向性 CSS 入场重复播放。
-  const aiPanelAnimClass =
-    aiDock === 'right'
-      ? 'animate-ai-in-right'
-      : aiDock === 'left'
-        ? 'animate-ai-in-left'
-        : aiDock === 'bottom'
-          ? 'animate-ai-in-bottom'
-          : '';
+  // 换边触发 FLIP: 面板换到另一侧时从旧矩形连续变形过去, 而不是瞬移。
+  const dockOrder = `${sidebarSide}:${aiDockedSide ?? 'none'}`;
+  useDockReorder(dockGroupRef, dockOrder);
 
   const mainGroupItems: ReactNode[] = [];
   let panelOrder = 0;
@@ -252,30 +251,49 @@ function App() {
     <PanelResizeHandle key={key} className={handleClass} />
   );
   const sidebarPanel = (ord: number) => (
-    <Panel key="sidebar" id="sidebar" order={ord} defaultSize={18} minSize={12} maxSize={35}>
-      <div className="module-card motion-surface h-full w-full">
-        <Sidebar view={sidebarView} />
-      </div>
-    </Panel>
+    <DockedPanel
+      key="sidebar"
+      id="sidebar"
+      order={ord}
+      edge={sidebarSide}
+      visible={sidebarVisible}
+      defaultSize={18}
+      minSize={12}
+      maxSize={35}
+      className="module-card motion-surface"
+    >
+      <Sidebar view={sidebarView} />
+    </DockedPanel>
   );
   const aiPanelNode = (ord: number) => (
-    <Panel key="ai-panel" id="ai-panel" order={ord} defaultSize={24} minSize={14} maxSize={55}>
-      <div className={`module-card motion-surface dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
-        <Suspense fallback={<SuspenseFallback />}>
-          <LazyAiChatPanel />
-        </Suspense>
-      </div>
-    </Panel>
+    <DockedPanel
+      key="ai-panel"
+      id="ai-panel"
+      order={ord}
+      edge={aiDockedSide ?? 'right'}
+      visible={aiPanelVisible}
+      defaultSize={24}
+      minSize={14}
+      maxSize={55}
+      className="module-card motion-surface dock-card-acrylic"
+    >
+      <Suspense fallback={<SuspenseFallback />}>
+        <LazyAiChatPanel />
+      </Suspense>
+    </DockedPanel>
   );
-  if (sidebarSide === 'left') mainGroupItems.push(sidebarPanel(nextOrder()), resizeHandle('main-handle-l'));
-  if (aiDockedSide === 'left') mainGroupItems.push(aiPanelNode(nextOrder()), resizeHandle('ai-handle-l'));
+  // 把手跟随其面板的可见性: 面板收起时它必须一并消失, 否则组内多出一条无用的间隙。
+  const sidebarHandle = (key: string) => (sidebarVisible ? resizeHandle(key) : null);
+  const aiSideHandle = (key: string) => (aiDockedSide ? resizeHandle(key) : null);
+  if (sidebarSide === 'left') mainGroupItems.push(sidebarPanel(nextOrder()), sidebarHandle('main-handle-l'));
+  if (aiDockedSide === 'left') mainGroupItems.push(aiPanelNode(nextOrder()), aiSideHandle('ai-handle-l'));
   mainGroupItems.push(
     <Panel key="center" id="center" order={nextOrder()} className="min-w-0">
       <DockLayout />
     </Panel>
   );
-  if (aiDockedSide === 'right') mainGroupItems.push(resizeHandle('ai-handle-r'), aiPanelNode(nextOrder()));
-  if (sidebarSide === 'right') mainGroupItems.push(resizeHandle('main-handle-r'), sidebarPanel(nextOrder()));
+  if (aiDockedSide === 'right') mainGroupItems.push(aiSideHandle('ai-handle-r'), aiPanelNode(nextOrder()));
+  if (sidebarSide === 'right') mainGroupItems.push(sidebarHandle('main-handle-r'), sidebarPanel(nextOrder()));
 
   // 工作台行 — bottom 停靠时被纵向 PanelGroup 包裹, 否则直接占满剩余高度
   const workbench = (
@@ -286,8 +304,8 @@ function App() {
           onSelect={toggleSidebar}
         />
       </div>
-      <div className="flex-1 min-w-0">
-        <PanelGroup key={`${sidebarDock}:${aiDock}`} direction="horizontal" autoSaveId="sp-main">
+      <div className="flex-1 min-w-0" ref={dockGroupRef}>
+        <PanelGroup direction="horizontal" autoSaveId="sp-main">
           {mainGroupItems}
         </PanelGroup>
       </div>
@@ -305,13 +323,20 @@ function App() {
             {workbench}
           </Panel>
           <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
-          <Panel order={2} defaultSize={34} minSize={15} maxSize={70} className="min-h-0">
-            <div className={`module-card motion-surface dock-card-acrylic h-full w-full ${aiPanelAnimClass}`}>
-              <Suspense fallback={<SuspenseFallback />}>
-                <LazyAiChatPanel />
-              </Suspense>
-            </div>
-          </Panel>
+          <DockedPanel
+            id="ai-bottom"
+            order={2}
+            edge="bottom"
+            visible={aiPanelVisible}
+            defaultSize={34}
+            minSize={15}
+            maxSize={70}
+            className="module-card motion-surface dock-card-acrylic"
+          >
+            <Suspense fallback={<SuspenseFallback />}>
+              <LazyAiChatPanel />
+            </Suspense>
+          </DockedPanel>
         </PanelGroup>
       ) : (
         workbench
@@ -323,7 +348,7 @@ function App() {
         className="absolute z-50"
         style={{ left: floatPos.x, top: floatPos.y, width: aiFloatRect.w, height: aiFloatRect.h }}
       >
-        <div className={`module-card motion-surface dock-card-acrylic h-full w-full shadow-2xl ${aiPanelAnimClass}`}>
+        <div className="module-card motion-surface dock-card-acrylic h-full w-full shadow-2xl">
           <Suspense fallback={<SuspenseFallback />}>
             <LazyAiChatPanel />
           </Suspense>

@@ -14,9 +14,15 @@
 | `easingTokens.ts` | 把弹簧采样成 CSS `linear()` 缓动, 写入 `<html>` 内联样式 |
 | `gsapSpring.ts` | GSAP 插件, 逐帧用同一个求解器求值, 让 JS 补间与 CSS 过渡完全一致 |
 | `compositor.ts` | 引用计数的 `will-change` 预算, 动画结束即释放图层 |
-| `presence.ts` | 浮层角色的几何: 从哪来、到哪去、缩放原点在哪 |
+| `presence.ts` | 浮层角色的几何: 从哪来、到哪去、缩放原点在哪; 停靠边的锚点推导 |
+| `dockFlip.ts` | 面板组内换边的 FLIP: 测量矩形、扣掉在途位移、弹簧送回原位 |
 | `MotionPresence.tsx` | 可卸载浮层的进场/退场生命周期 (退场播完才卸载) |
 | `useMotionPresence.ts` | 仅进场, 用于退场由 DOM 负责的表面 |
+
+停靠面板 (侧边栏与 AI 面板的 left / right / bottom) 由
+`components/layout/DockedPanel.tsx` 组装: 宽度收拢交给 `docked-panel.css` 的
+`flex-grow` 过渡, 透明度与进场交给 `MotionPresence`, 换边交给 `useDockReorder`。
+一次开合因此拆成三段, 各自用各自最合适的手段。
 
 ## 家族
 
@@ -46,7 +52,9 @@
 ## 规则
 
 1. 时长与缓动只来自家族令牌, 不允许新写 `cubic-bezier(...)`。
-2. 位移优先 `transform`。`top/left/width/height` 会每帧触发布局。
+2. 位移优先 `transform`。`top/left/width/height` 会每帧触发布局。唯一的例外是
+   停靠面板的宽度收拢: 抽屉开合是尺寸变化, 没有等价的 transform 表达, 且由
+   用户主动触发 —— 见 `motion-spatial-plan.md`。
 3. `will-change` 由 `promote()` 申请、`release()` 归还, 不长期写在样式里。
 4. 复杂顺序、空间重排、拖拽惯性用 GSAP; 高频状态反馈仍交给 CSS transition,
    避免每次 hover 都创建 tween。
@@ -54,6 +62,7 @@
 6. 新增的动效表面在 `reduced-motion.css` 的清单里**只登记一次**。
 7. 浮层动画优先用 `MotionPresence` 而不是 CSS 关键帧 —— 只有它能保证
    "退场播完才卸载", CSS `animation` 无法阻止 React 立刻卸载节点。
-8. 同一元素的动效不应同时由 CSS 关键帧与 GSAP 驱动, 否则会重复播放。
-   `MotionPresence` 已负责停靠面板的进场, `ai-panel.css` 里的方向性关键帧
-   在完成改造前是重复的, 见 `motion-spatial-plan.md`。
+8. 同一元素的动效不应同时被 CSS 关键帧与 JS 补间驱动, 否则会重复播放。
+   停靠面板曾经是反例: 进场走 `ai-panel.css` 的方向性关键帧, 浮动窗口走
+   `MotionPresence`, 两套路径并存。现在停靠面板统一由 `DockedPanel` 驱动,
+   方向性关键帧已删除, 见 `motion-spatial-plan.md`。

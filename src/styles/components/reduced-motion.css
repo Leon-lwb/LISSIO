@@ -52,11 +52,7 @@
 .reduced-motion .motion-icon-pop,
 .reduced-motion .animate-rawdata-enter,
 .reduced-motion .animate-palette-row,
-.reduced-motion .animate-palette-row-exit,
-.reduced-motion .animate-ai-in-right,
-.reduced-motion .animate-ai-in-left,
-.reduced-motion .animate-ai-in-bottom,
-.reduced-motion .animate-ai-in-float {
+.reduced-motion .animate-palette-row-exit {
   animation-duration: 1ms;
   animation-delay: 0ms;
 }

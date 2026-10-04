@@ -149,13 +149,63 @@ export const VARIANT_GEOMETRY: Record<MotionPresenceVariant, VariantGeometry> = 
   },
 };
 
-/** GSAP transform properties for a geometry phase. */
+/** Window edges a panel can be docked to. */
+export type DockEdge = 'left' | 'right' | 'bottom';
+
+/**
+ * Nominal offset a docked panel starts its entrance from, in px.
+ *
+ * A docked panel's travel is mostly the width collapse it runs in CSS, which
+ * already retracts toward the dock edge. This offset is the part a width cannot
+ * express: where the panel sits relative to its own slot on the first frame.
+ */
+const DOCK_TRAVEL_PX = 28;
+
+/**
+ * Presence geometry for a panel docked to `edge`.
+ *
+ * The dock edge is the panel's real anchor, so scaling grows out of it and the
+ * entrance offset points outboard of it — a right-docked panel arrives from the
+ * window's right edge instead of fading in place. The exit carries no offset of
+ * its own: the panel's width collapses toward the same edge, and a displacement
+ * on top of a shrinking box would only push the content out of the window.
+ */
+export interface DockPanelGeometry {
+  /** CSS `transform-origin` — the edge the panel is docked to. */
+  origin: string;
+  /** Displacement an entrance begins from. */
+  enterFrom: TravelVector;
+  /** Scale at the entrance's far end. */
+  enterScale: number;
+}
+
+const DOCK_PANEL_GEOMETRY: Record<DockEdge, DockPanelGeometry> = {
+  left: { origin: 'left center', enterFrom: { x: -DOCK_TRAVEL_PX, y: 0 }, enterScale: 0.98 },
+  right: { origin: 'right center', enterFrom: { x: DOCK_TRAVEL_PX, y: 0 }, enterScale: 0.98 },
+  // A bottom panel spans the full window width, so its scale stays near 1: a
+  // uniform shrink would narrow a drawer that should only retract vertically.
+  bottom: { origin: 'center bottom', enterFrom: { x: 0, y: DOCK_TRAVEL_PX }, enterScale: 0.99 },
+};
+
+export function dockPanelGeometry(edge: DockEdge): DockPanelGeometry {
+  return DOCK_PANEL_GEOMETRY[edge];
+}
+
+/**
+ * GSAP transform properties for a geometry phase.
+ *
+ * These are the tween *targets*, so the exit phase has to land on `opacity: 0`.
+ * Exits used to target 1, which made every departure fully opaque — surfaces slid
+ * away and then blinked out at the unmount instead of fading. A docked panel
+ * cannot slide at all (its box is collapsing), so a missing fade left it sitting
+ * at full opacity until the width hit zero.
+ */
 export function travelVars(geometry: VariantGeometry, phase: 'enter' | 'exit'): gsap.TweenVars {
-  if (!geometry.displaces) return { opacity: phase === 'enter' ? 0 : 1 };
+  if (!geometry.displaces) return { opacity: 0 };
   const from = phase === 'enter' ? geometry.enterFrom : NO_TRAVEL;
   const to = phase === 'enter' ? NO_TRAVEL : geometry.exitTo;
   return {
-    opacity: phase === 'enter' ? 0 : 1,
+    opacity: 0,
     x: from.x - to.x,
     y: from.y - to.y,
     scaleX: phase === 'enter' ? geometry.enterScale : geometry.exitScale,
