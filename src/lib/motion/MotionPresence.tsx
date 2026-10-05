@@ -8,13 +8,11 @@ import {
   type ReactNode,
   type RefObject,
 } from 'react';
-import { promote } from './compositor';
-import { ensureSpringPlugin, springTween } from './gsapSpring';
+import { createBorrowSlot, promote } from './compositor';
+import { springTween } from './gsapSpring';
 import { motionSpeed, motionSpringFor, type MotionPresenceVariant } from './motionConfig';
 import { motionIsReduced } from './reducedMotion';
-import { travelVars, VARIANT_GEOMETRY, type TravelVector } from './presence';
-
-ensureSpringPlugin();
+import { exitVars, VARIANT_GEOMETRY, type TravelVector } from './presence';
 
 export interface MotionPresenceProps extends HTMLAttributes<HTMLDivElement> {
   visible: boolean;
@@ -36,6 +34,15 @@ export interface MotionPresenceProps extends HTMLAttributes<HTMLDivElement> {
   travel?: TravelVector;
   /** Scale applied at the entrance's far end. */
   scale?: number;
+  /**
+   * Where the surface actually goes on its way out, in px. Unlike `travel` this
+   * is the displacement itself, not a mirror of the entrance offset: a docked
+   * panel leaves toward the edge it belongs to, which no nominal role value can
+   * know. Omit it and the role's own exit geometry applies.
+   */
+  exitTravel?: TravelVector;
+  /** Scale applied at the exit's far end, about the same origin. */
+  exitScale?: number;
 }
 
 /**
@@ -59,6 +66,8 @@ export function MotionPresence({
   origin,
   travel,
   scale,
+  exitTravel,
+  exitScale,
   ...props
 }: MotionPresenceProps) {
   const ownRef = useRef<HTMLDivElement>(null);
@@ -71,8 +80,14 @@ export function MotionPresence({
 
   // Read inside the effect without making it a dependency: callers pass object
   // literals, and re-running the tween on every render would restart the spring.
-  const overrides = useRef({ origin, travel, scale });
-  overrides.current = { origin, travel, scale };
+  const overrides = useRef({ origin, travel, scale, exitTravel, exitScale });
+  overrides.current = { origin, travel, scale, exitTravel, exitScale };
+
+  // 当前这一次动画对元素的借用。`useGSAP` 只在**卸载**时归还, 依赖变化时不会调用上一次
+  // 返回的 cleanup —— 而进场/退场互相打断时补间是被 `killTweensOf` 杀掉的, `onComplete`
+  // 根本不触发。于是上一段借的图层与 transform 所有权只能由下一段自己还回去, 否则
+  // 它们会一直留在元素上。
+  const borrow = useRef(createBorrowSlot());
 
   useGSAP(
     () => {
@@ -86,8 +101,10 @@ export function MotionPresence({
       const distance = Math.hypot(from.x, from.y);
 
       // Re-entering mid-exit must reverse cleanly, so any in-flight tween dies
-      // here rather than racing the new spring.
+      // here rather than racing the new spring. 先还上一段的借用 —— killTweensOf
+      // 不会替我们触发它的收尾。
       gsap.killTweensOf(element);
+      borrow.current.release();
 
       if (motionIsReduced()) {
         gsap.set(element, { clearProps: 'transform,opacity' });
@@ -98,14 +115,13 @@ export function MotionPresence({
         return;
       }
 
-      const release = promote(element);
-      // 同 useMotionPresence: 收尾必须由 cleanup 兜底, 因为 context revert 杀 tween
-      // 时不触发 onComplete —— StrictMode 的第一次 effect 会留下一份永不归还的
-      // will-change, 而 will-change: opacity 会让该元素成为自己的 Backdrop Root,
-      // 自己的 backdrop-filter 只采样自身, 浮层磨砂随即静默消失。
+      borrow.current.take(promote(element));
+      // 收尾要清两样: 内联 transform/opacity, 以及借来的图层与所有权。
+      // `will-change: opacity` 会让元素成为自己的 Backdrop Root, 自己的
+      // backdrop-filter 只采样自身, 浮层磨砂随即静默消失 —— 所以不能只留 will-change。
       const settle = () => {
         gsap.set(element, { clearProps: 'transform,opacity' });
-        release();
+        borrow.current.release();
       };
 
       if (visible) {
@@ -135,12 +151,17 @@ export function MotionPresence({
         return settle;
       }
 
-      const exit = travelVars(geometry, 'exit');
+      const exit = exitVars(geometry, overrides.current.exitTravel, overrides.current.exitScale);
+      // 离场按**它自己要走多远**拉伸, 不是复用进场那段位移: 停靠面板的进场偏移是
+      // 28px, 退场只走 10px, 拿前者算会让一个更小的动作花掉更多时间。
+      const exitDistance = overrides.current.exitTravel
+        ? Math.hypot(overrides.current.exitTravel.x, overrides.current.exitTravel.y)
+        : distance;
       gsap.to(element, {
         ...exit,
         transformOrigin,
         ...springTween(geometry.family, 'out', exit, {
-          spring: motionSpringFor(geometry.family, 'out', distance),
+          spring: motionSpringFor(geometry.family, 'out', exitDistance),
         }),
         onComplete: () => {
           settle();

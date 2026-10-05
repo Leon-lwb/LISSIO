@@ -53,11 +53,19 @@ platform-shell commands and supervised `lissio-server` lifecycle.
 - `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
 - `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace,
   documentation index and links, review-record metadata; see `docs/governance/`
-- `pnpm check:tokens` — color/opacity token unification (text/symbol layer); see
-  `docs/architecture/ui-color-tokens.md`
+- `pnpm check:tokens` — color/opacity token unification (text/symbol layer) plus the
+  frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
+- `pnpm check:motion` — every `transition`/`@keyframes` property must stay on the
+  paint layer. Layout animations are invisible to the browser perf probe (they run
+  in C++, not JS), so they can only be caught statically
 - `pnpm typecheck`, `pnpm lint:ci` (zero warnings), `pnpm test`
 - `pnpm build:web` — production frontend build
 - `pnpm test:e2e` — Playwright browser smoke tests
+- `pnpm perf:check` — frontend render budget: per-frame cost rates for interaction
+  scenarios against a committed baseline. Gate counts per frame, never wall-clock fps
+  (headless has no vsync); see `docs/performance/frontend-render-budget.md` before
+  changing a budget or adding a scenario. `pnpm perf:baseline` overwrites the baseline
+  and is only for an intended change.
 - `cd src-tauri && cargo fmt --check`
 - `cd src-tauri && cargo clippy --workspace --all-targets`
 - `cd src-tauri && cargo test --workspace`

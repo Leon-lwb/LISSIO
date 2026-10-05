@@ -35,6 +35,7 @@
     "check:model-catalog": "node scripts/check-model-catalog.mjs",
     "check:docs": "node scripts/check-docs.mjs",
     "check:tokens": "node scripts/check-ui-tokens.mjs",
+    "check:motion": "node scripts/check-motion-css.mjs",
     "docs:motion": "node scripts/gen-motion-docs.mjs",
     "check:all": "bash scripts/check-all.sh",
     "check:all:quick": "bash scripts/check-all.sh --quick",
@@ -43,6 +44,10 @@
     "bench:full": "bash scripts/bench-audit.sh full",
     "bench:collect": "node scripts/bench-collect.mjs",
     "bench:check": "node scripts/bench-collect.mjs --check docs/experiments/results/criterion.json",
+    "test:perf": "playwright test --config=playwright.perf.config.ts",
+    "perf:collect": "node scripts/perf-collect.mjs",
+    "perf:check": "node scripts/perf-collect.mjs --check",
+    "perf:baseline": "node scripts/perf-collect.mjs --update-baseline",
     "set-version": "node scripts/set-version.mjs",
     "auto-build": "bash scripts/auto-build.sh",
     "tauri": "tauri"

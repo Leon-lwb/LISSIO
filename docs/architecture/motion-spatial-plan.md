@@ -24,16 +24,17 @@
 | --- | --- | --- |
 | 物理弹簧 | `motionSpring(family, phase)` | 闭合解，`duration` 是解出来的 |
 | 距离感知时长 | `motionSpringFor(family, phase, px)` | 按实测路程拉伸 |
-| 进场/离场几何 | `MotionPresence` 的 `origin` / `travel` / `scale` | 传真实锚点 |
+| 进场/离场几何 | `MotionPresence` 的 `origin` / `travel` / `scale` / `exitTravel` / `exitScale` | 传真实锚点 |
 | 进场/离场不同令牌 | `--ease-<家族>-out` | 离场恒为临界阻尼 |
-| dock 边锚点 | `dockPanelGeometry(edge)` | 由停靠边推导 origin 与进场位移 |
+| dock 边锚点 | `dockPanelGeometry(edge)` | 由停靠边推导 origin、进场位移与退场收拢 |
 | 停靠面板抽屉 | `components/layout/DockedPanel.tsx` | 宽度收拢 + `MotionPresence` 退场 |
-| 组内换边连续性 | `useDockReorder(container, trigger)` | 手写 FLIP，纯 transform |
+| 组内几何连续性 | `useDockReorder(container, layoutKey, sizeEpoch)` | 手写 FLIP，纯 transform；换边与开合读各自该读的时序 |
 | 列表换槽位连续性 | `useFlipReorder(container, trigger, opts)` | 换序 / 删除 / 插入共用一次测量；`spring` 决定这次位移读哪份时序 |
 | 错峰 | `useStaggerEntrance()` | 按索引延迟，封顶封在 `STAGGER_CAP_MS` |
 | 共享元素与重排 | `pillTransform()` 的 FLIP 姿态换算 | 已由滑动指示器落地 |
 | 合成器图层预算 | `promote()` / `release()` | 引用计数，用完即卸 |
 | 非零初速度 | `springAtWithVelocity(spring, t, v₀)` | 离场可带着动量落点，不过冲 |
+| 单一属性写者 | `promote()` | 借走合成层时一并接管 `transform`，避免 CSS 过渡与补间互相追赶 |
 | 松手动量 | `planRelease(vx, vy)` | 前冲距离与时长，一次算清 |
 
 ## 已完成
@@ -41,19 +42,28 @@
 ### 停靠面板的进场与离场
 
 停靠面板（侧边栏与 AI 面板的 left / right / bottom）统一由 `DockedPanel` 驱动，
-方向性 CSS 关键帧（`animate-ai-in-*`）已删除。它把一次开合拆成两半，各用各的长处：
+方向性 CSS 关键帧（`animate-ai-in-*`）已删除。它把一次开合拆成三段，各用各的长处：
 
-- **宽度**由 `docked-panel.css` 的 `flex-grow` 过渡负责。在 flex 行里外侧边不动、
-  内侧边行走，所以面板收拢时卡片是被"压"向所属 dock 边的，而不是被平移过去 ——
-  空间关系由布局本身给出，不必再补一条位移。
-- **透明度与进场**由 `MotionPresence`（`variant="panel"`）负责，`origin` /
-  `travel` / `scale` 全部来自 `dockPanelGeometry(edge)`。它还带来此前拿不到的能力：
-  退场播完才卸载。CSS `animation` 拦不住 React 卸载节点，所以关闭时曾经是瞬时消失。
+- **宽度**只提交一次，不逐帧插值。在 flex 行里外侧边不动、内侧边行走，所以面板收拢时
+  卡片是被"压"向所属 dock 边的 —— 空间关系由布局本身给出，不必再补一条位移；
+  连续性由面板组的 FLIP 接手（只写 transform）。
+- **进退场**由 `MotionPresence`（`variant="panel"`）负责，`origin` / `travel` /
+  `scale` / `exitTravel` / `exitScale` 全部来自 `dockPanelGeometry(edge)`。它还带来
+  此前拿不到的能力：退场播完才卸载。CSS `animation` 拦不住 React 卸载节点，所以关闭
+  时曾经是瞬时消失。
+- **相邻面板的让位**由 `useDockReorder` 负责，见下节。
 
-面板收起后仍留在组内（宽度为 0），这正是两半能重叠的前提，也是退场得以播放的原因。
+面板收起后仍留在组内（宽度为 0），这正是退场得以播放的原因。
 
-宽度过渡是唯一一处每帧触发布局的动效。抽屉开合本身就是尺寸变化，没有等价的
-transform 表达；这是用户主动触发的单元素尺寸变化，与指针驱动的 resize 同类。
+关闭必须**串行**：先播退场，`onExitComplete` 里才收宽度。库给 Panel 强制
+`overflow: hidden`，先收布局会把卡片当场裁没，退场将完全不可见。
+
+退场本身是一次朝所属 dock 边的**收拢**：以那条边为原点缩到 0.9，并向外让出 10px，
+与进场（0.98 → 1，从边外侧 28px 处进来）互为镜像。这一段不是装饰 —— 少了它，关闭就
+是"原地淡出 150ms，然后宽度一步收掉、邻居再滑 180ms"，两段之间没有任何衔接。
+
+底部面板的缩放量压到 0.97：它横跨整个窗口宽度，均匀收窄一条只该竖向收拢的抽屉是
+错的读法。与 `enterScale` 同理。
 
 ### 组内换边
 
@@ -63,6 +73,19 @@ transform 表达；这是用户主动触发的单元素尺寸变化，与指针�
 槽位，再让 `spatial` 家族的弹簧把它送回原位。只写 transform，留在合成器上。
 
 换边不涉及尺寸变化（布局存档按 panel id 索引），所以 FLIP 不碰 width/height。
+
+面板组里会触发 FLIP 的变化有**两种**，物理性质不同，因此读不同的时序：
+
+- **换边**（`layoutKey` 变了）：面板真的搬到了另一个位置，到位后沉降一点是弹性，读
+  `spatial/in`。
+- **开合**（只有 `sizeEpoch` 加一）：面板组没动过，相邻面板的位置是被别人的缺席或
+  presence 顶上去的。它们既没有来源也没有动量，越过槽位再荡回来只会读成渲染故障 ——
+  读让位那份临界阻尼的时序（`reflowSpring`），它也更短：观众已经看清内容去了哪里，
+  动画还在收，迟钝比回弹更糟。
+
+此前两者共用 `spatial/in`，于是**抽屉开合时中央面板会冲过自己的槽位约 4% 再荡回来**，
+且 300px 的让位要读满 510ms。这条分流由 `dockYieldSpring()` 决定，测试钉的是阻尼比
+而不是毫秒数 —— 迁移与让位的区别不在快慢，在过冲。
 
 **未覆盖**：跨容器迁移（side ↔ bottom ↔ float）仍是瞬时。那条路径上面板会真的
 卸载再挂载到另一个面板组，FLIP 需要在提交前捕获矩形、在新容器里重新落位，是另一件事。

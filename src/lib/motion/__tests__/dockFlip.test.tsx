@@ -1,7 +1,8 @@
 import { render, waitFor } from '@testing-library/react';
 import { useRef } from 'react';
 import { describe, expect, it } from 'vitest';
-import { useDockReorder } from '../dockFlip';
+import { dockYieldSpring, useDockReorder } from '../dockFlip';
+import { dampingRatio } from '../spring';
 
 /**
  * 面板矩形由测试直接给定 —— jsdom 不做布局, 而 FLIP 的全部意义就是"旧槽位与新槽位
@@ -47,9 +48,13 @@ function slot(key: string) {
   );
 }
 
-function Harness({ order }: { order: string }) {
+/**
+ * `key` 是面板组占位 (换边), `epoch` 是宽度提交计数 (开合)。两者分开传, 因为它们的
+ * 物理性质不同 —— 见 `useDockReorder`。
+ */
+function Harness({ order, epoch = 0 }: { order: string; epoch?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  useDockReorder(ref, order);
+  useDockReorder(ref, order, epoch);
   return (
     <div ref={ref}>
       {order === 'swapped' ? (
@@ -82,6 +87,30 @@ const SWAPPED: [string, { left: number; top: number }][] = [
   ['a', { left: 100, top: 0 }],
   ['b', { left: 0, top: 0 }],
 ];
+
+describe('dockYieldSpring', () => {
+  it('never overshoots on a yield', () => {
+    // 断言阻尼比而不是毫秒数: 让位与迁移的区别不在快慢, 在**越过槽位再荡回来**。
+    // 开合时相邻面板的位置是被别人的缺席顶上去的, 没有来源也没有动量, 临界阻尼
+    // 是唯一正确的读法 (与列表删行同源)。
+    for (const distance of [12, 120, 400, 900]) {
+      expect(dampingRatio(dockYieldSpring(false, distance))).toBeCloseTo(1, 5);
+    }
+  });
+
+  it('lets a panel settle when it really migrated to another slot', () => {
+    // 换边是真的搬了位置, 到位后沉降一点是弹性 —— 这一点不能被让位的那次改动
+    // 顺手削掉, 否则换边读起来是"被推过去"而不是"走过去"。
+    expect(dampingRatio(dockYieldSpring(true, 400))).toBeLessThan(1);
+  });
+
+  it('is quicker on a yield than on a migration of the same distance', () => {
+    // 同一段距离下让位更快: 观众已经看清内容去了哪里, 动画还在收就是迟钝。
+    const yieldSettle = dockYieldSpring(false, 400);
+    const migrateSettle = dockYieldSpring(true, 400);
+    expect(yieldSettle.stiffness).toBeGreaterThan(migrateSettle.stiffness);
+  });
+});
 
 describe('useDockReorder', () => {
   it('does not animate on the first pass, having nothing to compare against', () => {
@@ -175,6 +204,18 @@ describe('useDockReorder', () => {
     // 记住的矩形若还是缩放前的, a 的起点会带上那 200px 窗口偏移, 面板会先弹一下再回来。
     expect(translateOf('a')).toEqual({ x: -200, y: 0 });
     expect(translateOf('b')).toEqual({ x: 300, y: 0 });
+  });
+
+  it('yields on a width commit, because nothing in the group moved', () => {
+    // 开合也要有让位: 宽度一步收掉, 中央面板必须从旧槽位滑向新槽位, 否则它瞬移。
+    rects = new Map(INITIAL);
+    const { rerender } = render(<Harness order="a:b" />);
+    rects = new Map([
+      ['a', { left: 0, top: 0 }],
+      ['b', { left: 0, top: 0 }],
+    ]);
+    rerender(<Harness order="a:b" epoch={1} />);
+    expect(translateOf('b')).toEqual({ x: 100, y: 0 });
   });
 
   it('leaves no transform behind once the panel settles', async () => {

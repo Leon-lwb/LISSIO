@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { MotionPresence, useDockReorder } from './lib/motion';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { transport } from './lib/rpc';
@@ -240,9 +240,23 @@ function App() {
   const sidebarSide = sidebarDock;
   const bottomDocked = aiPanelVisible && aiDock === 'bottom';
   const handleClass = 'w-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors';
-  // 换边触发 FLIP: 面板换到另一侧时从旧矩形连续变形过去, 而不是瞬移。
+
+  // 抽屉宽度只提交一次, 让位由 FLIP 补连续性 —— 所以面板组需要知道"几何变了"。
+  //
+  // 计数器而不是布尔: 连续两次提交 (例如关到底再开) 必须让 FLIP 播两遍, 而 FLIP 的
+  // 触发条件是"这次拿到的槽位和上次缓存的不一样"。它自己在新矩形落定的那次提交里
+  // 读到新槽位, 所以通知只要落在提交动作上就够了。
+  const [dockSizeEpoch, setDockSizeEpoch] = useState(0);
+  const noteDockSizeCommit = useCallback(() => setDockSizeEpoch((epoch) => epoch + 1), []);
+  const bottomDockRef = useRef<HTMLDivElement>(null);
+  const [bottomSizeEpoch, setBottomSizeEpoch] = useState(0);
+  const noteBottomSizeCommit = useCallback(() => setBottomSizeEpoch((epoch) => epoch + 1), []);
+
+  // 几何变化触发 FLIP: 面板换到另一侧时从旧矩形连续变形过去, 而不是瞬移; 抽屉开合
+  // 则是相邻面板让位。两者读各自该读的时序 —— 见 `useDockReorder`。
   const dockOrder = `${sidebarSide}:${aiDockedSide ?? 'none'}`;
-  useDockReorder(dockGroupRef, dockOrder);
+  useDockReorder(dockGroupRef, dockOrder, dockSizeEpoch);
+  useDockReorder(bottomDockRef, 'bottom', bottomSizeEpoch);
 
   const mainGroupItems: ReactNode[] = [];
   let panelOrder = 0;
@@ -261,6 +275,7 @@ function App() {
       minSize={12}
       maxSize={35}
       className="module-card motion-surface"
+      onSizeCommit={noteDockSizeCommit}
     >
       <Sidebar view={sidebarView} />
     </DockedPanel>
@@ -276,6 +291,7 @@ function App() {
       minSize={14}
       maxSize={55}
       className="module-card motion-surface dock-card-acrylic"
+      onSizeCommit={noteDockSizeCommit}
     >
       <Suspense fallback={<SuspenseFallback />}>
         <LazyAiChatPanel />
@@ -288,7 +304,9 @@ function App() {
   if (sidebarSide === 'left') mainGroupItems.push(sidebarPanel(nextOrder()), sidebarHandle('main-handle-l'));
   if (aiDockedSide === 'left') mainGroupItems.push(aiPanelNode(nextOrder()), aiSideHandle('ai-handle-l'));
   mainGroupItems.push(
-    <Panel key="center" id="center" order={nextOrder()} className="min-w-0">
+    // data-flip-key 不能省: 抽屉让位靠的是中央面板从旧槽位滑向新槽位, 没有它中央
+    // 面板不在 FLIP 集合里, 布局一提交就会瞬移。
+    <Panel key="center" id="center" order={nextOrder()} className="min-w-0" data-flip-key="center">
       <DockLayout />
     </Panel>
   );
@@ -317,27 +335,32 @@ function App() {
       {/* Windows: 透明窗口下原生菜单栏无法正确渲染 (白字白底/透视), 由自定义菜单栏接管; 其它平台内部返回 null */}
       <MenuBar />
       {bottomDocked ? (
-        // AI 面板停靠底部 — 工作台与对话面板纵向分栏
-        <PanelGroup direction="vertical" autoSaveId="sp-ai-bottom" className="flex-1 min-h-0">
-          <Panel order={1} minSize={30} className="min-h-0">
-            {workbench}
-          </Panel>
-          <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
-          <DockedPanel
-            id="ai-bottom"
-            order={2}
-            edge="bottom"
-            visible={aiPanelVisible}
-            defaultSize={34}
-            minSize={15}
-            maxSize={70}
-            className="module-card motion-surface dock-card-acrylic"
-          >
-            <Suspense fallback={<SuspenseFallback />}>
-              <LazyAiChatPanel />
-            </Suspense>
-          </DockedPanel>
-        </PanelGroup>
+        // AI 面板停靠底部 — 工作台与对话面板纵向分栏。
+        // 外层 div 只为给 FLIP 一个容器 (PanelGroup 的 ref 是命令式句柄, 不是 DOM 节点);
+        // 它自己接住 flex-1, 内层 PanelGroup 照旧撑满, 布局链不变。
+        <div className="flex min-h-0 flex-1 flex-col" ref={bottomDockRef}>
+          <PanelGroup direction="vertical" autoSaveId="sp-ai-bottom" className="flex-1 min-h-0">
+            <Panel order={1} minSize={30} className="min-h-0" data-flip-key="workbench">
+              {workbench}
+            </Panel>
+            <PanelResizeHandle className="h-2 rounded-full bg-transparent hover:bg-accent/50 transition-colors" />
+            <DockedPanel
+              id="ai-bottom"
+              order={2}
+              edge="bottom"
+              visible={aiPanelVisible}
+              defaultSize={34}
+              minSize={15}
+              maxSize={70}
+              className="module-card motion-surface dock-card-acrylic"
+              onSizeCommit={noteBottomSizeCommit}
+            >
+              <Suspense fallback={<SuspenseFallback />}>
+                <LazyAiChatPanel />
+              </Suspense>
+            </DockedPanel>
+          </PanelGroup>
+        </div>
       ) : (
         workbench
       )}

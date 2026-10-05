@@ -284,7 +284,10 @@
      底板, 比任何阴影都抢眼。这里只留一丝色偏, 让"行穿过时被化开"这件事发生;
      标题的可读性由 --text-shadow-sticky-bar-title 的字缘发光承担, 不靠底色。 */
   --frost-alpha-sticky-bar: 16%;
-  --frost-alpha-surface: 90%;
+  /* AI 输入区等面板内表面。这个值定在 40% 而不是接近不透明, 因为 backdrop-filter
+     只在底色足够透时才看得见 —— 底色越实, 那一笔模糊越是全价付出去却换不到东西。
+     模糊半径与透明度必须成对调整, 见 docs/architecture/ui-color-tokens.md。 */
+  --frost-alpha-surface: 40%;
   --frost-blur-widget: var(--frost-blur);
   --frost-saturate-widget: var(--frost-saturate);
 
@@ -313,7 +316,7 @@
   --motion-duration-surface-in: 300ms;
   --motion-duration-surface-out: 200ms;
   --motion-duration-spatial-in: 400ms;
-  --motion-duration-spatial-out: 220ms;
+  --motion-duration-spatial-out: 150ms;
 
   /* 兜底缓动: 令牌烘焙前生效。家族内的近似形状 (进场减速, 离场加速)。 */
   --ease-control-in: cubic-bezier(0.25, 0.46, 0.45, 0.94);

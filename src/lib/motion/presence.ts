@@ -166,9 +166,13 @@ const DOCK_TRAVEL_PX = 28;
  *
  * The dock edge is the panel's real anchor, so scaling grows out of it and the
  * entrance offset points outboard of it — a right-docked panel arrives from the
- * window's right edge instead of fading in place. The exit carries no offset of
- * its own: the panel's width collapses toward the same edge, and a displacement
- * on top of a shrinking box would only push the content out of the window.
+ * window's right edge instead of fading in place.
+ *
+ * 退场朝同一条边退, 与进场互为镜像: 缩放原点不变, 于是表面是被**压回它所属的边**
+ * 而不是原地淡出。位移同样指向边外侧, 与缩放同向 —— 面板盒子在此刻仍是满宽的
+ * (宽度要等退场播完才收), 所以越出盒子的那一小段会被 `overflow: hidden` 裁掉。
+ * 这不是妥协: 位移与缩放都朝同一边, 被裁掉的恰好是已经贴到边框上的部分, 于是
+ * 读出来仍是"被收进边框", 而不是被抹掉一刀。
  */
 export interface DockPanelGeometry {
   /** CSS `transform-origin` — the edge the panel is docked to. */
@@ -177,14 +181,40 @@ export interface DockPanelGeometry {
   enterFrom: TravelVector;
   /** Scale at the entrance's far end. */
   enterScale: number;
+  /** 退场终点的位移, 方向即实际方向 (朝所属边外侧)。 */
+  exitTo: TravelVector;
+  /** 退场终点的缩放, 相对所属边收缩。 */
+  exitScale: number;
 }
 
+/** 退场朝边外侧走多远, px。位移与缩放同向, 所以不需要大 —— 大了只会被裁掉。 */
+const DOCK_EXIT_TRAVEL_PX = 10;
+
 const DOCK_PANEL_GEOMETRY: Record<DockEdge, DockPanelGeometry> = {
-  left: { origin: 'left center', enterFrom: { x: -DOCK_TRAVEL_PX, y: 0 }, enterScale: 0.98 },
-  right: { origin: 'right center', enterFrom: { x: DOCK_TRAVEL_PX, y: 0 }, enterScale: 0.98 },
+  left: {
+    origin: 'left center',
+    enterFrom: { x: -DOCK_TRAVEL_PX, y: 0 },
+    enterScale: 0.98,
+    exitTo: { x: -DOCK_EXIT_TRAVEL_PX, y: 0 },
+    exitScale: 0.9,
+  },
+  right: {
+    origin: 'right center',
+    enterFrom: { x: DOCK_TRAVEL_PX, y: 0 },
+    enterScale: 0.98,
+    exitTo: { x: DOCK_EXIT_TRAVEL_PX, y: 0 },
+    exitScale: 0.9,
+  },
   // A bottom panel spans the full window width, so its scale stays near 1: a
   // uniform shrink would narrow a drawer that should only retract vertically.
-  bottom: { origin: 'center bottom', enterFrom: { x: 0, y: DOCK_TRAVEL_PX }, enterScale: 0.99 },
+  // 同一条理由也压住了它的退场收缩量 —— 横向收窄整条抽屉是错的读法。
+  bottom: {
+    origin: 'center bottom',
+    enterFrom: { x: 0, y: DOCK_TRAVEL_PX },
+    enterScale: 0.99,
+    exitTo: { x: 0, y: DOCK_EXIT_TRAVEL_PX },
+    exitScale: 0.97,
+  },
 };
 
 export function dockPanelGeometry(edge: DockEdge): DockPanelGeometry {
@@ -199,6 +229,9 @@ export function dockPanelGeometry(edge: DockEdge): DockPanelGeometry {
  * away and then blinked out at the unmount instead of fading. A docked panel
  * cannot slide at all (its box is collapsing), so a missing fade left it sitting
  * at full opacity until the width hit zero.
+ *
+ * 离场方向由调用方按真实归属给时走 `exitVars`; 这里的 `exitTo` 是**进场偏移的
+ * 镜像空间** (出口取负), 它的方向缺陷另有记录, 不在这里顺手改掉。
  */
 export function travelVars(geometry: VariantGeometry, phase: 'enter' | 'exit'): gsap.TweenVars {
   if (!geometry.displaces) return { opacity: 0 };
@@ -211,6 +244,27 @@ export function travelVars(geometry: VariantGeometry, phase: 'enter' | 'exit'): 
     scaleX: phase === 'enter' ? geometry.enterScale : geometry.exitScale,
     scaleY: phase === 'enter' ? geometry.enterScale : geometry.exitScale,
   };
+}
+
+/**
+ * 离场目标值, 允许调用方给出真实的离开方向。
+ *
+ * 与 `travelVars` 的差别只有一处, 但那一处是这整个接口存在的理由: 这里的
+ * `travel` 是**实际位移**, 方向就是它写的那一遍; 而 `VariantGeometry.exitTo`
+ * 表达的是进场偏移的镜像, 出口要取负。停靠面板必须知道自己属于哪条边才能决定
+ * 往哪边退, 这件事没法从角色表里的名义值推出来, 所以由调用方直接给。
+ *
+ * 只有一个参数给过时才走这里 —— 两个都没给就退回角色表, 让绝大多数表面不必关心。
+ */
+export function exitVars(
+  geometry: VariantGeometry,
+  travel?: TravelVector,
+  scale?: number
+): gsap.TweenVars {
+  if (!travel && scale === undefined) return travelVars(geometry, 'exit');
+  const from = travel ?? NO_TRAVEL;
+  const endScale = scale ?? geometry.exitScale;
+  return { opacity: 0, x: from.x, y: from.y, scaleX: endScale, scaleY: endScale };
 }
 
 /** CSS custom property pair consumed by the keyframe fallbacks. */

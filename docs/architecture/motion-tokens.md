@@ -54,7 +54,7 @@ bounce 一律为 0, 这条规则写在 `motionConfig.ts` 的 `BASE_TIMING` 里�
 | `surface` | in | 300ms | 0.22 | 727.5 | 42.08 | 2.0% |
 | `surface` | out | 200ms | 0.00 | 1928.5 | 87.83 | -0.1% |
 | `spatial` | in | 400ms | 0.28 | 360.1 | 27.33 | 3.8% |
-| `spatial` | out | 220ms | 0.00 | 1593.8 | 79.84 | -0.1% |
+| `spatial` | out | 150ms | 0.00 | 3428.4 | 117.11 | -0.1% |
 
 ### fast
 
@@ -69,7 +69,7 @@ bounce 一律为 0, 这条规则写在 `motionConfig.ts` 的 `BASE_TIMING` 里�
 | `surface` | in | 210ms | 0.13 | 1560.0 | 68.57 | 0.4% |
 | `surface` | out | 140ms | 0.00 | 3935.7 | 125.47 | -0.1% |
 | `spatial` | in | 280ms | 0.17 | 891.0 | 49.67 | 0.9% |
-| `spatial` | out | 154ms | 0.00 | 3252.6 | 114.06 | -0.1% |
+| `spatial` | out | 105ms | 0.00 | 6996.8 | 167.29 | -0.1% |
 
 ### relaxed
 
@@ -84,7 +84,7 @@ bounce 一律为 0, 这条规则写在 `motionConfig.ts` 的 `BASE_TIMING` 里�
 | `surface` | in | 390ms | 0.25 | 402.8 | 29.98 | 2.9% |
 | `surface` | out | 260ms | 0.00 | 1141.1 | 67.56 | -0.1% |
 | `spatial` | in | 520ms | 0.32 | 368.0 | 26.01 | 5.5% |
-| `spatial` | out | 286ms | 0.00 | 943.1 | 61.42 | -0.1% |
+| `spatial` | out | 195ms | 0.00 | 2028.7 | 90.08 | -0.1% |
 
 ## 让位（家族之外的第四种意图）
 

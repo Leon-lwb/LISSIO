@@ -52,6 +52,11 @@ export type MotionPresenceVariant =
  * invariant is asserted in the test suite rather than left to reviewers.
  *
  * 三个家族的重心压得比"物理直觉"更利落: 进场的主要成本是用户等待, 不是位移本身。
+ * 离场比进场短一大截, `spatial/out` 只留 150ms: 停靠抽屉收起是**先播完退场才收
+ * 布局**, 两段串行, 离场慢一点, 整个开合就被读成拖沓 —— 而这段时间画面上还
+ * 没有可看的位移, 观众只会觉得"卡了一下"。所以离场只负责把面板交出去, 让位那一段
+ * 交给面板组的 FLIP (那份时序按让位自己的意图选, 见 `dockFlip.ts`)。
+ *
  * `surface` 与 `spatial` 的时长按"到位即可读出内容"的尺度给, 剩下的细化交给
  * `spatialTiming` 的行程拉伸 —— 名义偏移越大, 读起来才越需要时间; 反之, 一律
  * 按"大面板必须飞满半秒"给值, 弹窗就会慢到被读成卡顿。
@@ -64,7 +69,7 @@ export const BASE_TIMING: Record<MotionFamily, Record<MotionPhase, SpringTiming>
   toggle: { in: { duration: 0.24, bounce: 0.14 }, out: { duration: 0.18, bounce: 0 } },
   content: { in: { duration: 0.26, bounce: 0.18 }, out: { duration: 0.18, bounce: 0 } },
   surface: { in: { duration: 0.3, bounce: 0.22 }, out: { duration: 0.2, bounce: 0 } },
-  spatial: { in: { duration: 0.4, bounce: 0.28 }, out: { duration: 0.22, bounce: 0 } },
+  spatial: { in: { duration: 0.4, bounce: 0.28 }, out: { duration: 0.15, bounce: 0 } },
 };
 
 /** Multipliers applied to `BASE_TIMING` for each speed setting. */

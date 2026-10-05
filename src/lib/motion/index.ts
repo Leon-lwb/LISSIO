@@ -23,8 +23,8 @@ export {
   watchReducedMotion,
 } from './reducedMotion';
 export { installMotionTokens, springToLinearEasing } from './easingTokens';
-export { ensureSpringPlugin, springTween, type SpringTweenVars } from './gsapSpring';
-export { promote, promotionCount } from './compositor';
+export { springEase, springTween, type SpringTweenVars } from './gsapSpring';
+export { createBorrowSlot, promote, promotionCount, type BorrowSlot } from './compositor';
 export {
   STAGGER_CAP_MS,
   STAGGER_STEP_MS,

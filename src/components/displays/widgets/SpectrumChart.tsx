@@ -37,8 +37,18 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // 跟踪容器尺寸, 触发 canvas 重绘 (响应式)
   const [size, setSize] = useState({ w: 0, h: 0 });
-  // 十字光标位置 (相对 canvas 的 CSS 像素坐标), null = 隐藏
-  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
+  // 十字光标位置 (相对 canvas 的 CSS 像素坐标), null = 隐藏。
+  //
+  // 放在 ref 而不是 state: 拖拽时光标每帧都在变, 走 state 会让 React 每个
+  // mousemove 重渲染一次并重跑下面的绘制副作用 —— 那次重绘过去还会重设
+  // canvas.width, 也就是每个 mousemove 重新分配一次后备存储。指针事件的到达
+  // 频率远高于屏幕刷新率, 所以这里改成"记下最新位置 + 一个 rAF 循环按屏幕
+  // 刷新率重绘", 让光标跟手的同时把每帧成本压到一次重绘。
+  const cursorRef = useRef<{ x: number; y: number } | null>(null);
+  // 光标脏版本号: mousemove 只递增它, rAF 循环据此决定要不要重绘
+  const cursorVersionRef = useRef(0);
+  // 当前绘制闭包, 供 rAF 循环在光标变化时复用 (不必重建整条绘制链)
+  const drawRef = useRef<(() => void) | null>(null);
 
   // 展示所需的上下文来自数据源 FFT 求解器 (无数据源时用默认值)
   const output: SpectrumOutput = sourceWidget?.params.output ?? 'Magnitude';
@@ -68,6 +78,24 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
     };
   }, []);
 
+  // 后备存储只在尺寸真正变化时重分配。
+  //
+  // 给 canvas 写 width/height 会顺带清空后备存储, 所以它过去被放在了绘制
+  // 副作用里 —— 也就是每帧光标一动就重新分配一次整块位图。分配 + 清空 +
+  // 重新光栅化的代价远高于绘制本身。现在尺寸是它唯一的依赖, 重绘只复用
+  // 既有后备存储。
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || size.w === 0 || size.h === 0) return;
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.round(size.w * dpr);
+    const height = Math.round(size.h * dpr);
+    // 同尺寸重复写入仍然会清空, 所以先比一次。
+    if (canvas.width === width && canvas.height === height) return;
+    canvas.width = width;
+    canvas.height = height;
+  }, [size]);
+
   // 绘制频谱图
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -77,13 +105,13 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
     if (size.w === 0 || size.h === 0) return;
 
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = size.w * dpr;
-    canvas.height = size.h * dpr;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
 
     const w = size.w;
     const h = size.h;
+
+    const draw = () => {
     ctx.clearRect(0, 0, w, h);
 
     // 背景
@@ -191,8 +219,9 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
 
     // 十字光标 (与示波器一致: 金色虚线 + 读数标签)
     // Y 轴吸附: X 对齐到最近频点 bin, Y 取该 bin 的曲线值, 交点落在谱线上
-    if (cursor) {
-      const i = Math.max(0, Math.min(n - 1, Math.round((cursor.x / w) * (n - 1))));
+    const cursorPoint = cursorRef.current;
+    if (cursorPoint) {
+      const i = Math.max(0, Math.min(n - 1, Math.round((cursorPoint.x / w) * (n - 1))));
       const snapX = (i / (n - 1)) * w;
       const snapValue = values[i];
       const snapY = h - ((snapValue - vMin) / (vMax - vMin)) * h;
@@ -235,7 +264,31 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
       ctx.fillText(label, lx, ly);
       ctx.restore();
     }
-  }, [result, sourceId, sampleRate, output, lang, size, cursor]);
+    };
+
+    drawRef.current = draw;
+    draw();
+  }, [result, sourceId, sampleRate, output, lang, size]);
+
+  // 光标重绘循环: 按屏幕刷新率把光标变化合并成一次重绘。
+  //
+  // 只在版本号前进时才画, 所以静止时这个循环不做任何绘制工作; 数据流
+  // (result 变化) 仍然走上面的副作用, 两条路径互不干扰。
+  useEffect(() => {
+    let lastDrawn = cursorVersionRef.current;
+    let raf: number | null = null;
+    const tick = () => {
+      if (cursorVersionRef.current !== lastDrawn) {
+        lastDrawn = cursorVersionRef.current;
+        drawRef.current?.();
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      if (raf !== null) cancelAnimationFrame(raf);
+    };
+  }, []);
 
   return (
     <div className="group widget-card-acrylic flex-1 min-w-0 min-h-0 flex relative overflow-hidden">
@@ -244,9 +297,13 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
         className="flex-1 min-w-0 min-h-0 relative bg-[#1e1e1e] cursor-crosshair"
         onMouseMove={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();
-          setCursor({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+          cursorRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+          cursorVersionRef.current += 1;
         }}
-        onMouseLeave={() => setCursor(null)}
+        onMouseLeave={() => {
+          cursorRef.current = null;
+          cursorVersionRef.current += 1;
+        }}
       >
         <canvas
           ref={canvasRef}

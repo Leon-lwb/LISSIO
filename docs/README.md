@@ -55,6 +55,7 @@ Lissio 文档的唯一入口。写作规范见
 | [architecture/motion-spatial-plan.md](architecture/motion-spatial-plan.md) | 动效界面改造清单 |
 | [architecture/architecture-review-2026-09.md](architecture/architecture-review-2026-09.md) | 2026-09 架构评审记录 |
 | [architecture/cleanup-plan-2026-09.md](architecture/cleanup-plan-2026-09.md) | 2026-09 清理计划 |
+| [performance/frontend-render-budget.md](performance/frontend-render-budget.md) | 前端渲染预算门禁：交互场景的每帧成本计量与回归门禁 |
 
 ## 开发约定
 
@@ -67,4 +68,5 @@ Lissio 文档的唯一入口。写作规范见
 | 命令 | 覆盖 |
 | --- | --- |
 | `pnpm check:docs` | 许可证原文与字段一致性、治理文件齐备、文档索引与链接、元数据与评审记录 |
+| `pnpm perf:check` | 前端渲染预算：交互场景的每帧成本速率与基线比较，见 [performance/frontend-render-budget.md](performance/frontend-render-budget.md) |
 | `pnpm check:all` | 上述全部门禁，汇总输出 |

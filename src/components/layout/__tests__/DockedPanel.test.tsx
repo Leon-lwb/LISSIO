@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { Panel, PanelGroup } from 'react-resizable-panels';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { DockedPanel, type DockedPanelProps } from '../DockedPanel';
 
 const DEFAULTS: Omit<DockedPanelProps, 'children'> = {
@@ -75,22 +75,50 @@ describe('DockedPanel', () => {
     render(<Group visible={false} />);
     // collapsedSize=0: 宽度归零是收拢动作本身, 面板必须留在组内才能完成它。
     expect(panel().dataset.panelCollapsible).toBe('true');
-    expect(panel().dataset.dockState).toBe('closed');
     expect(panel().style.flexGrow).toBe('0');
   });
 
-  it('marks the open state so CSS can pick the entrance spring', () => {
+  it('commits the open width immediately, so nothing has to interpolate it', () => {
     render(<Group visible />);
-    expect(panel().dataset.dockState).toBe('open');
-    // 展开时宽度回到 defaultSize, 而不是停在 0。
+    // 展开时宽度一次到位 —— 不再由 CSS 过渡逐帧重排整个面板组。
     expect(Number(panel().style.flexGrow)).toBeGreaterThan(0);
+    // 面板本体不再声明任何抽屉专属的 CSS 状态, 宽度完全由提交决定。
+    expect(panel().dataset.dockState).toBeUndefined();
   });
 
-  it('reopens to its stored width after being closed', () => {
+  it('defers the collapse until the exit finishes, so the surface is not clipped away', async () => {
+    const { rerender } = render(<Group visible />);
+    rerender(<Group visible={false} />);
+    // 此刻宽度还没收: 库给 Panel 强制 overflow:hidden, 先收布局会把卡片当场裁没,
+    // 退场淡出将完全不可见。
+    expect(Number(panel().style.flexGrow)).toBeGreaterThan(0);
+    await waitFor(() => {
+      expect(panel().style.flexGrow).toBe('0');
+    });
+  });
+
+  it('reports every size commit exactly once', async () => {
+    const onSizeCommit = vi.fn();
+    const { rerender } = render(<Group visible onSizeCommit={onSizeCommit} />);
+    expect(onSizeCommit).toHaveBeenCalledTimes(1);
+    // 退场期间布局还没动, 所以此刻不该有第二次通知。
+    rerender(<Group visible={false} onSizeCommit={onSizeCommit} />);
+    expect(onSizeCommit).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(onSizeCommit).toHaveBeenCalledTimes(2);
+    });
+    // 重复的同目标提交必须被吞掉, 否则 FLIP 会被无意义的空转触发。
+    rerender(<Group visible={false} onSizeCommit={onSizeCommit} />);
+    expect(onSizeCommit).toHaveBeenCalledTimes(2);
+  });
+
+  it('reopens to its stored width after being closed', async () => {
     const { rerender } = render(<Group visible />);
     const open = Number(panel().style.flexGrow);
     rerender(<Group visible={false} />);
-    expect(panel().style.flexGrow).toBe('0');
+    await waitFor(() => {
+      expect(panel().style.flexGrow).toBe('0');
+    });
     rerender(<Group visible />);
     // 展开走的是库记录的折叠前尺寸, 不是 defaultSize —— 否则用户拉过的宽度会丢。
     expect(Number(panel().style.flexGrow)).toBe(open);
@@ -110,7 +138,8 @@ describe('DockedPanel', () => {
 
   it('animates only transform and opacity on the surface', () => {
     render(<Group />);
-    // 空间运动只写合成器友好的属性; 宽度是 CSS 过渡, 不走补间属性表。
+    // 空间运动只写合成器友好的属性; 宽度由一次性布局提交决定, 既不走补间属性表,
+    // 也不由 CSS 过渡逐帧重排。
     const style = surface().getAttribute('style') ?? '';
     expect(style).not.toMatch(/(^|;)\s*(left|top|width|height)\s*:/);
   });

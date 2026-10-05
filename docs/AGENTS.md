@@ -31,9 +31,18 @@ cargo fmt --check
 pnpm check:web-contract
 pnpm check:contracts
 pnpm check:model-catalog
+pnpm check:tokens       # 颜色/透明度 token + 磨砂结构性预算
+pnpm check:motion       # 过渡与关键帧只走绘制层属性 (逐帧布局动画只能静态拦)
 pnpm check:docs        # 许可证 / 治理文件 / 文档索引与链接
 pnpm build:web
 pnpm test:e2e
+
+# 前端渲染预算 (真实浏览器计量交互场景的每帧成本)
+pnpm test:perf       # 只计量, 落盘原始数据
+pnpm perf:check      # 只判定, 与已提交基线比较, 回归则非零退出
+pnpm perf:baseline   # 覆盖基线 (仅用于确认改动是有意的)
+# 门禁卡"每帧速率"而非帧率: 无头环境无真实 vsync, 帧率随 runner 负载漂移。
+# 改预算或加场景前先读 docs/performance/frontend-render-budget.md
 
 # 整应用
 pnpm dev:desktop
@@ -80,9 +89,11 @@ vibe coding 提速的是写代码,不是验证。提 PR 前必须亲自跑通以
 2. `pnpm check:web-contract`、`pnpm check:contracts`、`pnpm check:model-catalog`、
    `pnpm check:docs` 通过
 3. `pnpm typecheck`、`pnpm lint:ci`、`pnpm test`、`pnpm build:web`、`pnpm test:e2e` 通过
-4. `cd src-tauri && cargo fmt --check`、`cargo clippy --workspace --all-targets`、`cargo test --workspace`、`cargo deny check` 通过
-5. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,同步更新 Rust owner 与生成 TS,并核对字段名逐一对应
-6. 涉及 UI 的改动,`pnpm dev:desktop` 实际点开验证过,而不是"理论上没问题"
+4. 改动前端交互或渲染路径 (画布重绘、动效、亚克力/高斯效果) 时, `pnpm perf:check` 通过;
+   确认是有意的成本变化才用 `pnpm perf:baseline`, 并在 PR 里说明数字变化
+5. `cd src-tauri && cargo fmt --check`、`cargo clippy --workspace --all-targets`、`cargo test --workspace`、`cargo deny check` 通过
+6. 涉及前后端契约(事件名、payload、命令参数、serde 结构)的改动,同步更新 Rust owner 与生成 TS,并核对字段名逐一对应
+7. 涉及 UI 的改动,`pnpm dev:desktop` 实际点开验证过,而不是"理论上没问题"
 
 ## 责任条款
 

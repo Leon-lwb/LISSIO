@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "note": "perFrame 为门禁项（每帧速率）；advisory 为时序类参考量，无头环境下随 runner 负载漂移，刻意不做判定。",
+  "budgetsPerFrame": {
+    "canvasBackingStoreRealloc": 0,
+    "setAttribute": 90,
+    "getBoundingClientRect": 8,
+    "getComputedStyle": 4
+  },
+  "rows": [
+    {
+      "scenario": "canvas-drag",
+      "ran": true,
+      "frames": 63,
+      "totals": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 2122,
+        "getBoundingClientRect": 278,
+        "getComputedStyle": 64
+      },
+      "perFrame": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 33.68,
+        "getBoundingClientRect": 4.41,
+        "getComputedStyle": 1.02
+      },
+      "advisory": {
+        "fps": 60.00571482998381,
+        "frameTimeP95Ms": 16.700000000000273,
+        "frameTimeMaxMs": 16.799999999999955,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0,
+        "jsHeapMb": 33.473968505859375
+      },
+      "topAttributes": [
+        {
+          "key": "path[d]",
+          "count": 256
+        },
+        {
+          "key": "path[fill]",
+          "count": 256
+        },
+        {
+          "key": "path[class]",
+          "count": 256
+        },
+        {
+          "key": "path[stroke-opacity]",
+          "count": 128
+        },
+        {
+          "key": "path[stroke-width]",
+          "count": 128
+        },
+        {
+          "key": "g[class]",
+          "count": 128
+        },
+        {
+          "key": "g[tabindex]",
+          "count": 128
+        },
+        {
+          "key": "g[role]",
+          "count": 128
+        }
+      ]
+    },
+    {
+      "scenario": "palette-scroll",
+      "ran": true,
+      "frames": 91,
+      "totals": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 3042,
+        "getBoundingClientRect": 465,
+        "getComputedStyle": 92
+      },
+      "perFrame": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 33.43,
+        "getBoundingClientRect": 5.11,
+        "getComputedStyle": 1.01
+      },
+      "advisory": {
+        "fps": 57.47489420829912,
+        "frameTimeP95Ms": 16.800000000000182,
+        "frameTimeMaxMs": 33.40000000000009,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0,
+        "jsHeapMb": 33.473968505859375
+      },
+      "topAttributes": [
+        {
+          "key": "path[d]",
+          "count": 368
+        },
+        {
+          "key": "path[fill]",
+          "count": 368
+        },
+        {
+          "key": "path[class]",
+          "count": 368
+        },
+        {
+          "key": "path[stroke-opacity]",
+          "count": 184
+        },
+        {
+          "key": "path[stroke-width]",
+          "count": 184
+        },
+        {
+          "key": "g[class]",
+          "count": 184
+        },
+        {
+          "key": "g[tabindex]",
+          "count": 184
+        },
+        {
+          "key": "g[role]",
+          "count": 184
+        }
+      ]
+    },
+    {
+      "scenario": "panel-drawer",
+      "ran": true,
+      "frames": 59,
+      "totals": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 4257,
+        "getBoundingClientRect": 217,
+        "getComputedStyle": 95
+      },
+      "perFrame": {
+        "canvasBackingStoreRealloc": 0,
+        "setAttribute": 72.15,
+        "getBoundingClientRect": 3.68,
+        "getComputedStyle": 1.61
+      },
+      "advisory": {
+        "fps": 60.00203396725311,
+        "frameTimeP95Ms": 16.700000000000273,
+        "frameTimeMaxMs": 16.800000000000182,
+        "longTaskTotalMs": 0,
+        "longestTaskMs": 0,
+        "jsHeapMb": 33.473968505859375
+      },
+      "topAttributes": [
+        {
+          "key": "path[d]",
+          "count": 531
+        },
+        {
+          "key": "path[fill]",
+          "count": 252
+        },
+        {
+          "key": "path[class]",
+          "count": 252
+        },
+        {
+          "key": "DIV[class]",
+          "count": 157
+        },
+        {
+          "key": "SPAN[class]",
+          "count": 134
+        },
+        {
+          "key": "path[stroke-opacity]",
+          "count": 126
+        },
+        {
+          "key": "path[stroke-width]",
+          "count": 126
+        },
+        {
+          "key": "g[class]",
+          "count": 126
+        }
+      ]
+    }
+  ]
+}

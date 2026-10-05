@@ -12,6 +12,15 @@ interface ProgressProps {
 /// 进度条控件 — 横向/纵向条形显示单通道实时值占比
 /// 数据源: value 输入边; 量程手动或滑动窗口自适应。
 /// 刻度: 主刻度数量/精度由配置决定 (纵向空间紧凑, 仅画刻度线不画标签)。
+///
+/// 填充块永远是满尺寸, 靠 `clip-path` 裁出占比, 而不是把宽度调成占比:
+/// 宽度过渡逐帧触发布局, 而实时数据每个采样点都会推动一次过渡。用 clip-path 之后
+/// 过渡只走绘制, 且圆角不会被横向压扁 —— scaleX 会把 `rounded-full` 拉成透镜,
+/// 而裁切保留填充块自己的圆角: 起始端是圆头, 裁切线是平口, 这正是进度条该有的样子。
+///
+/// clip-path 不进全局白名单: 它作用在**祖先**上会让后代的 backdrop-filter 失效
+/// (元素成为自己的 Backdrop Root), 本仓已经踩过两次同类的坑。豁免登记在
+/// `scripts/check-motion-css.mjs`, 作用域限定在本文件。
 export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
   const params = widget.params;
   const { range: rangeConfig, unit, orientation, showValue, color } = params;
@@ -30,8 +39,8 @@ export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
       <div className="flex gap-2 w-full h-full min-h-[56px] items-stretch justify-center py-0.5">
         <div className="relative w-2.5 rounded-full bg-bg-input overflow-hidden flex flex-col justify-end">
           <div
-            className="w-full rounded-full transition-[height]"
-            style={{ height: `${ratio * 100}%`, backgroundColor: fillColor }}
+            className="w-full h-full rounded-full transition-[clip-path]"
+            style={{ clipPath: `inset(0 0 ${(1 - ratio) * 100}% 0)`, backgroundColor: fillColor }}
           />
         </div>
         {/* 纵向刻度线 — 右侧细线, 无标签 (空间紧凑) */}
@@ -69,8 +78,8 @@ export const ProgressBar = memo(function Progress({ widget }: ProgressProps) {
       )}
       <div className="relative h-2.5 rounded-full bg-bg-input overflow-hidden">
         <div
-          className="h-full rounded-full transition-[width]"
-          style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
+          className="h-full w-full rounded-full transition-[clip-path]"
+          style={{ clipPath: `inset(0 ${(1 - ratio) * 100}% 0 0)`, backgroundColor: fillColor }}
         />
       </div>
       {/* 主刻度标签 — 均分排布, 两端对齐避免溢出 */}

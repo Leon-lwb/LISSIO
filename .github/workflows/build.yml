@@ -130,6 +130,7 @@ jobs:
           pnpm check:contracts
           pnpm check:model-catalog
           pnpm check:tokens
+          pnpm check:motion
           pnpm check:docs
           pnpm typecheck
           pnpm lint:ci
@@ -139,6 +140,13 @@ jobs:
         run: |
           pnpm exec playwright install --with-deps chromium
           pnpm test:e2e
+      - name: Frontend render budget
+        run: |
+          # 计量与判定分离: 先用真实浏览器把每个场景的每帧速率落盘,
+          # 再由 perf-collect 与基线比较。串行单 worker, 避免并行抢 CPU
+          # 把速率搅成噪声 (见 playwright.perf.config.ts 的说明)。
+          pnpm test:perf
+          pnpm perf:check
       - name: Rust gates
         working-directory: src-tauri
         run: |

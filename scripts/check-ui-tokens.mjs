@@ -47,13 +47,14 @@ const FRONTEND_LIMIT = 500;
 const TAILWIND_ANIMATION = /\b(animate-spin|animate-pulse|animate-bounce|animate-ping)\b/;
 const DURATION_WHITELIST = ['theme.css', 'component-tokens.css', 'motion.css'];
 
-/** 递归收集 src 下指定后缀的文件 */
-function collect(dir, out = []) {
+/** 递归收集 src 下指定后缀的文件。extensions 省略时收集 ts/tsx/css 全部。 */
+function collect(dir, extensions, out = []) {
+  const exts = extensions ?? ['.ts', '.tsx', '.css'];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === 'generated') continue;
     const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(p, out);
-    else if (/\.(ts|tsx|css)$/.test(entry.name)) out.push(p);
+    if (entry.isDirectory()) collect(p, extensions, out);
+    else if (exts.some((ext) => entry.name.endsWith(ext))) out.push(p);
   }
   return out;
 }
@@ -332,6 +333,105 @@ if (surfaceCss.includes('.frost-content')) {
   const applyTheme = fs.readFileSync(path.join(root, 'src/settings/applyTheme.ts'), 'utf8');
   if (!/setProperty\(\s*'--color-float-content'\s*,\s*activeTheme\.tokens\.bgEditor\s*\)/.test(applyTheme)) {
     errors.push('同步: applyAppearance 未从主题原色注入 --color-float-content');
+  }
+}
+
+// ---------- 磨砂的结构性预算 ----------
+//
+// 替代已删除的 `gaussian-budget` 场景。那个场景拿"亚克力开/关的帧间隔 p95 之差"当
+// 预算, 实测差值 2.27e-13 ms —— 不是"模糊便宜"的证据, 而是测量饱和: 无头 BeginFrame
+// 锁 60Hz, 两侧都被量化到同一根 16.7ms 栅格上。更根本的是 backdrop-filter 在合成器
+// 里做, 而浏览器探针打的是主线程原型。详见 docs/performance/frontend-render-budget.md。
+//
+// 所以改为拦那些**能从源码确定推出**的浪费。这几条都不需要跑浏览器, 也不会随 runner
+// 负载漂移; 它们防的是"白付钱", 不是"帧率低"。
+
+/**
+ * 磨砂表面的登记册。`alpha` 是底色不透明度百分比, `blur` 是模糊半径 px。
+ *
+ * 这不是审美清单, 是价格清单: 模糊的成本正比于半径乘以面积, 并且**只在背后失效的
+ * 那一帧**付。所以半径与透明度必须成对登记 —— 底色越不透明, 模糊越看不见, 于是那一笔
+ * 钱越是白付。
+ */
+const FROST_SURFACES = [
+  // 类名, 说明
+  ['widget-card-acrylic', '节点卡片与画布类控件'],
+  ['dock-card-acrylic', '停靠卡片外壳'],
+  ['frost-surface', 'AI 输入区等面板内表面'],
+  ['frost-acrylic', '吐司与状态栏'],
+];
+
+// 底色不透明度高到模糊基本看不见的档位。alpha 90% 时 18px 模糊的结果与实色相差
+// 无几, 却是全价付费 —— 这类表面要么降到能看见模糊的水平, 要么去掉模糊。
+const OPAQUE_ENOUGH = 85;
+
+{
+  const theme = themeCss;
+  const allCss = collect(path.join(root, 'src'), ['.css'])
+    .filter((f) => !f.endsWith('generated'))
+    .map((f) => fs.readFileSync(f, 'utf8'))
+    .join('\n');
+  const allCode = collect(path.join(root, 'src'), ['.ts', '.tsx'])
+    .filter((f) => !f.includes(`${path.sep}generated${path.sep}`))
+    .map((f) => fs.readFileSync(f, 'utf8'))
+    .join('\n');
+
+  // 1) 每个磨砂表面都必须有 alpha 档位, 否则底色透明度与模糊半径各走各的。
+  for (const [cls] of FROST_SURFACES) {
+    if (!new RegExp(`\\.${cls}\\b`).test(allCss + allCode)) continue;
+    if (!/--frost-alpha-[a-z-]+/.test(theme)) {
+      errors.push(`磨砂: .${cls} 存在但 theme.css 没有任何 --frost-alpha-* 档位`);
+    }
+  }
+
+  // 2) --frost-alpha-surface 是 .frost-surface 的底色档, 它不得高到让模糊白付。
+  //    底色越不透明, 模糊越看不见, 于是那一笔钱越是全价付出去却换不到东西。
+  const surfaceAlpha = /--frost-alpha-surface:\s*([\d.]+)%/.exec(theme);
+  if (!surfaceAlpha) {
+    errors.push('磨砂: theme.css 缺 --frost-alpha-surface — .frost-surface 的底色档失去单一来源');
+  } else if (Number(surfaceAlpha[1]) >= OPAQUE_ENOUGH) {
+    errors.push(
+      `磨砂: --frost-alpha-surface=${surfaceAlpha[1]}% ≥ ${OPAQUE_ENOUGH}% — 底色这么不透明时 ` +
+        `backdrop-filter 基本看不见, 却是全价付费; 降到能看见模糊的水平, 或去掉该处的模糊`
+    );
+  }
+
+  // 3) 所有 --frost-alpha-* 档位都必须被至少一处用到。删掉一个档位却留着定义, 会让
+  //    下一个人以为它还在生效。
+  for (const m of theme.matchAll(/--frost-alpha-([a-z-]+):/g)) {
+    const token = `--frost-alpha-${m[1]}`;
+    const used = allCss.includes(`var(${token})`) || allCode.includes(token);
+    if (!used) errors.push(`磨砂: theme.css 定义了 ${token} 却无人引用 — 死 token 会伪装成仍在生效的档位`);
+  }
+
+  // 4) 嵌套的 backdrop-filter 不是性能问题, 是**静默失效**: 元素一旦带模糊就成为
+  //    自己的 Backdrop Root, 落在它内部的模糊只能采到这一层, 于是"磨砂没了"且没有
+  //    任何报错。这条一旦漏网, 后面所有关于磨砂成本的讨论都失去前提。
+  //
+  //    判定只能建立在**同一个选择器**上 —— 同时被两个带模糊的类选中。这覆盖了
+  //    `A.b { backdrop-filter }` 与 `.a.b { backdrop-filter }` 两种写法, 且不需要
+  //    猜 DOM 结构。
+  for (const file of collect(path.join(root, 'src/styles'), ['.css'])) {
+    const source = fs.readFileSync(file, 'utf8');
+    const blurred = new Set();
+    for (const m of source.matchAll(/([^{}]+)\{([^{}]*backdrop-filter[^{}]*)\}/g)) {
+      const selector = m[1];
+      // 后代/子代组合 (含空格 或 >) 是"嵌套"而非"同一个元素", 不算在这里。
+      if (/[ >]/.test(selector.trim())) continue;
+      for (const cls of selector.matchAll(/\.([a-z0-9-]+)/g)) blurred.add(cls[1]);
+    }
+    // 逐个规则看: 若它的选择器同时命中两个带模糊的类, 就是在同一个元素上叠了两层。
+    for (const m of source.matchAll(/([^{}]+)\{([^{}]*backdrop-filter[^{}]*)\}/g)) {
+      const classes = [...m[1].matchAll(/\.([a-z0-9-]+)/g)].map((c) => c[1]);
+      if (classes.length < 2) continue;
+      const alsoBlurred = classes.filter((c) => blurred.has(c));
+      if (alsoBlurred.length < 2) continue;
+      errors.push(
+        `磨砂: ${path.relative(root, file)} 的 \`${m[1].trim().slice(0, 70)}\` 同时叠了 ` +
+          `${alsoBlurred.length} 层 backdrop-filter (${alsoBlurred.map((c) => '.' + c).join(' ')}) — ` +
+          `WebKit 下只渲染最外层, 表现为磨砂静默消失`
+      );
+    }
   }
 }
 

@@ -1,10 +1,11 @@
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { useRef } from 'react';
 import { describe, expect, it } from 'vitest';
 import gsap from 'gsap';
 import { useFlipReorder } from '../flipReorder';
+import { promotionCount } from '../compositor';
 import { reflowSpring } from '../motionConfig';
-import { springAtWithVelocity, springSettleTime } from '../spring';
+import { springSettleTime } from '../spring';
 
 /**
  * 列表行的让位过程。
@@ -70,12 +71,17 @@ function Stack({ keys, reflow = true }: { keys: string[]; reflow?: boolean }) {
   );
 }
 
-/** Peak excursion past the target slot, as a fraction of the 1.0 response. */
-function peakOvershoot(spring: { stiffness: number; damping: number; mass: number }): number {
-  const settle = springSettleTime(spring);
+/**
+ * Peak excursion past the target, as a fraction of the 1.0 response.
+ *
+ * 采样的是**补间真正使用的那条曲线** (`vars.ease`), 而不是它背后的弹簧对象: 曲线
+ * 是否过冲才是观感的事实, 而中间变量随时可能被换一种接法 —— 之前这里断言的是
+ * `vars.spring`, 于是弹簧根本没接上补间时它照样通过。
+ */
+function peakOvershoot(curve: (ratio: number) => number): number {
   let peak = 0;
   for (let i = 0; i <= 1000; i += 1) {
-    peak = Math.max(peak, springAtWithVelocity(spring, (i / 1000) * settle, 0));
+    peak = Math.max(peak, curve(i / 1000));
   }
   return peak - 1;
 }
@@ -88,11 +94,16 @@ const translateOf = (key: string) => {
   return el.style.transform ? readTranslate(el) : null;
 };
 
-/** The spring the hook actually handed to GSAP for a row. */
-function springOf(key: string) {
+/** The curve and clock the hook actually handed to GSAP for a row. */
+function curveOf(key: string) {
   const el = document.querySelector<HTMLElement>(`[data-flip-key="${key}"]`)!;
   const tween = gsap.getTweensOf(el)[0];
-  return tween?.vars.spring as { stiffness: number; damping: number; mass: number } | undefined;
+  return tween?.vars.ease as ((ratio: number) => number) | undefined;
+}
+
+function tweenOf(key: string) {
+  const el = document.querySelector<HTMLElement>(`[data-flip-key="${key}"]`)!;
+  return gsap.getTweensOf(el)[0];
 }
 
 describe('useFlipReorder on a list', () => {
@@ -138,9 +149,21 @@ describe('useFlipReorder on a list', () => {
     rects = new Map(positionsOf(['a', 'c']));
     rerender(<Stack keys={['a', 'c']} />);
 
-    const spring = springOf('c');
-    expect(spring).toBeDefined();
-    expect(peakOvershoot(spring!)).toBeLessThanOrEqual(0);
+    const curve = curveOf('c');
+    expect(curve).toBeDefined();
+    expect(peakOvershoot(curve!)).toBeLessThanOrEqual(0);
+  });
+
+  it('runs on the spring clock rather than on a default tween length', () => {
+    // 曲线与时长必须成对地从同一根弹簧解出来。曾经这里传的是一个 GSAP 认不出来的
+    // 插件名, 于是补间退回默认 500ms 匀速 —— 令牌给的时长与过冲一次都没生效, 而
+    // 只断言曲线的话, 那条曲线压根不会被采样。
+    rects = new Map(positionsOf(['a', 'b', 'c']));
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} />);
+    rects = new Map(positionsOf(['a', 'c']));
+    rerender(<Stack keys={['a', 'c']} />);
+
+    expect(tweenOf('c').duration()).toBeCloseTo(springSettleTime(reflowSpring(20)), 5);
   });
 
   it('would overshoot on the entrance token, which is why lists do not use it', () => {
@@ -151,9 +174,30 @@ describe('useFlipReorder on a list', () => {
     rects = new Map(positionsOf(['a', 'c']));
     rerender(<Stack keys={['a', 'c']} reflow={false} />);
 
-    const spring = springOf('c');
-    expect(spring).toBeDefined();
-    expect(peakOvershoot(spring!)).toBeGreaterThan(0);
+    const curve = curveOf('c');
+    expect(curve).toBeDefined();
+    expect(peakOvershoot(curve!)).toBeGreaterThan(0);
+  });
+
+  it('hands the layer back when one reorder interrupts another', async () => {
+    // 同一行连续两次换槽位: 第二次会 killTweensOf 掉第一次, 被杀的那段 onComplete 永不
+    // 触发。引用计数因此必须由新的一段先归还 —— 否则计数停在 2, 图层永远留在行上。
+    rects = new Map(positionsOf(['a', 'b', 'c']));
+    const { rerender } = render(<Stack keys={['a', 'b', 'c']} />);
+    const rowOf = () => document.querySelector<HTMLElement>('[data-flip-key="b"]')!;
+
+    rects = new Map(positionsOf(['a', 'c', 'b']));
+    rerender(<Stack keys={['a', 'c', 'b']} />);
+    expect(promotionCount(rowOf())).toBe(1);
+
+    rects = new Map(positionsOf(['a', 'b', 'c']));
+    rerender(<Stack keys={['a', 'b', 'c']} />);
+    expect(promotionCount(rowOf()), '被打断的那一段必须已归还').toBe(1);
+
+    await waitFor(() => {
+      expect(promotionCount(rowOf())).toBe(0);
+      expect(rowOf().style.willChange).toBe('');
+    });
   });
 
   it('ignores the removed row entirely — it has no slot to be sent to', () => {

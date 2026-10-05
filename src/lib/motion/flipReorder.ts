@@ -18,8 +18,8 @@
 
 import { useEffect, useLayoutEffect, useRef, type RefObject } from 'react';
 import gsap from 'gsap';
-import { promote } from './compositor';
-import { ensureSpringPlugin } from './gsapSpring';
+import { createBorrowSlot, promote, type BorrowSlot } from './compositor';
+import { springTween } from './gsapSpring';
 import {
   motionSpringFor,
   type MotionFamily,
@@ -111,8 +111,6 @@ export function useFlipReorder(
   trigger: string,
   options: FlipReorderOptions = {}
 ): void {
-  ensureSpringPlugin();
-
   const {
     keyAttribute = DEFAULT_KEY_ATTR,
     family = 'spatial',
@@ -123,6 +121,11 @@ export function useFlipReorder(
   attrRef.current = keyAttribute;
   const timingRef = useRef({ family, phase, springFor });
   timingRef.current = { family, phase, springFor };
+
+  // 每个元素一格借用: 见 `BorrowSlot`。这个 effect 每次提交都跑, 同一个元素完全可能
+  // 在上一次动画还没播完时再次换槽位 —— 那时旧补间被 `killTweensOf` 杀掉, 它的
+  // `onComplete` 不会触发, 借来的图层只能由新的一段先归还。
+  const borrows = useRef(new WeakMap<HTMLElement, BorrowSlot>());
 
   const slots = useRef<Map<string, Slot> | null>(null);
   const lastTrigger = useRef<string | null>(null);
@@ -161,8 +164,7 @@ export function useFlipReorder(
     if (!reordered || before === null || motionIsReduced()) return;
 
     const { family, phase, springFor } = timingRef.current;
-    // 低动画已在上面的早退里处理掉了, 所以这里直接给 tween 装弹簧即可 ——
-    // springTween 的低动画分支在这个调用点上不可达。
+    // 低动画已在上面的早退里处理掉了, 所以这里直接给 tween 装弹簧即可。
     const springAtDistance = (distance: number): Spring =>
       springFor ? springFor(distance) : motionSpringFor(family, phase, distance);
 
@@ -178,18 +180,26 @@ export function useFlipReorder(
       const distance = Math.hypot(dx, dy);
       if (distance < MIN_TRAVEL_PX) continue;
 
-      const release = promote(element);
+      // 只申请 transform 这一层, 不带 opacity。`will-change: opacity` 会让元素成为
+      // 自己的 Backdrop Root, 于是它后代的 backdrop-filter 只采样自身 —— 换序途中
+      // 卡片会从磨砂闪成实底 (与 MotionPresence 头注记录的是同一类失效)。补间只写
+      // transform, 所以也只需要这一层。
       gsap.killTweensOf(element);
+      let borrow = borrows.current.get(element);
+      if (!borrow) {
+        borrow = createBorrowSlot();
+        borrows.current.set(element, borrow);
+      }
+      // 先还上一段 —— 被杀掉的那段不会自己收尾。
+      borrow.release();
+      borrow.take(promote(element, ['transform']));
       gsap.set(element, { x: dx, y: dy, zIndex: TRAVEL_Z });
       gsap.to(element, {
-        x: 0,
-        y: 0,
-        // 曲线住在求解器里, GSAP 只负责给它一个真实时长推进时钟。
-        ease: 'none',
-        spring: springAtDistance(distance),
+        // 时长与曲线都在求解器里, GSAP 只负责按时钟推进 ratio。
+        ...springTween(family, phase, { x: 0, y: 0 }, { spring: springAtDistance(distance) }),
         onComplete: () => {
           gsap.set(element, { clearProps: 'transform,zIndex' });
-          release();
+          borrow.release();
         },
       });
     }

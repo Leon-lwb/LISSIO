@@ -1,6 +1,7 @@
 /* ============ AI 面板 ============ */
-/* 停靠面板的进场/离场由 DockedPanel (MotionPresence + 宽度收拢) 驱动,
-   方向性关键帧已删除 —— 见 styles/components/docked-panel.css。 */
+/* 停靠面板的进场/离场由 DockedPanel (MotionPresence + 一次性宽度提交) 驱动,
+   方向性关键帧已删除; 几何与时序见 lib/motion/presence.ts 与
+   architecture/motion-spatial-plan.md。 */
 
 /* 会话下拉 / 消息气泡 / 提示横幅的微入场统一由 motion.css 管理。
    低动画模式由 reduced-motion.css 的统一清单接管, 此处不再重复声明。 */

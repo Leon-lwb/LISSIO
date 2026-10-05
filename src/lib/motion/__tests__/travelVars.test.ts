@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MotionPresenceVariant } from '../motionConfig';
-import { travelVars, VARIANT_GEOMETRY } from '../presence';
+import { exitVars, travelVars, VARIANT_GEOMETRY } from '../presence';
 
 const VARIANTS = Object.keys(VARIANT_GEOMETRY) as MotionPresenceVariant[];
 
@@ -60,6 +60,23 @@ describe('travelVars', () => {
       expect(exit.scaleX).toBe(geometry.exitScale);
       expect(exit.scaleY).toBe(geometry.exitScale);
     }
+  });
+
+  it('takes the exit vector verbatim when the caller gives one', () => {
+    // 与 travelVars 的分别只有一处, 但那正是这个接口存在的理由: 这里给的是实际
+    // 位移, 不取负。停靠面板朝自己所属的边退, 这件事没法从角色表推出来。
+    const geometry = VARIANT_GEOMETRY.panel;
+    const exit = exitVars(geometry, { x: -10, y: 0 }, 0.9);
+    expect(axis(exit.x)).toBe(-10);
+    expect(axis(exit.y)).toBe(0);
+    expect(exit.scaleX).toBe(0.9);
+    expect(exit.opacity).toBe(0);
+  });
+
+  it('falls back to the role when the caller overrides nothing', () => {
+    // 大多数表面只声明角色, 不该被迫关心离场几何。
+    expect(exitVars(VARIANT_GEOMETRY.surface)).toEqual(travelVars(VARIANT_GEOMETRY.surface, 'exit'));
+    expect(exitVars(VARIANT_GEOMETRY.overlay)).toEqual(travelVars(VARIANT_GEOMETRY.overlay, 'exit'));
   });
 
   it('displaces nothing for an opacity-only role', () => {

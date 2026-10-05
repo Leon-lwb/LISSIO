@@ -61,6 +61,7 @@
 | `--frost-alpha-floating` | `72%` | 二级卡片/弹窗背景强度，由 `floatingGlassOpacity` 注入 |
 | `--frost-alpha-widget` | `47%` | Widget 亚克力背景强度，由 `acrylicOpacity` 注入 |
 | `--frost-alpha-sticky-bar` | `16%` | 粘性分区条标题的磨砂浓度，见下方说明 |
+| `--frost-alpha-surface` | `40%` | 面板内表面（`.frost-surface`）的磨砂浓度，见下方说明 |
 | `--frost-border` / `--frost-highlight` | 派生色 | 统一玻璃边缘与顶部高光 |
 | `--frost-shadow` | 统一阴影 | 磨砂表面的玻璃阴影 |
 | `--shadow-float` / `--shadow-popover` | 统一阴影 | 关闭磨砂时的窗口/弹窗阴影 |
@@ -85,6 +86,24 @@
 
 字缘发光的衰减剖面是"字缘最强、快速归零"，半径全部压在 1px / 3px。加一层 7px 的远距
 弥散会从"字缘发光"变成"发亮的描边"，比磨砂还显眼。
+
+### 面板内表面：模糊半径与透明度必须成对看
+
+`.frost-surface`（AI 输入区）不挂任何开关——亚克力与浮层玻璃都关掉时它照样生效。
+
+这里曾经把 `--frost-alpha-surface` 定在 `90%`，与 `18px` 的模糊半径配在一起。那是**全价
+付费却换不到东西**：底色越接近不透明，`backdrop-filter` 的结果与实色相差越少，而模糊
+的成本照付。`backdrop-filter` 只在底色足够透时才看得见，所以半径与透明度必须成对调整，
+而不是各自取一个"看起来合适"的值。现在是 `40%`。
+
+磨砂的成本**不在浏览器里量**。原先有一个 `gaussian-budget` 场景拿"亚克力开/关的帧间隔
+p95 之差"当预算，实测差值是 `2.27e-13 ms`——那不是"模糊便宜"的证据，而是测量饱和：
+无头 Chromium 的 BeginFrame 锁 60Hz，两侧都被量化到同一根 16.7 ms 栅格上。更根本的是
+`backdrop-filter` 在**合成器**里做，而探针打的是主线程原型，两条不同的线程。因此该场景
+已删除，成本改为**结构性预算**（下表），这些量都能从源码确定推出，不需要跑浏览器，
+也不会随 CI runner 负载漂移。
+
+结构性预算拦的是"白付钱"，不是"帧率低"。真机 GPU 代价仍需桌面端实测。
 
 ## 文字色档位 (`--color-text-*`)
 
@@ -180,7 +199,11 @@ TEXT_TONE_ALPHA                     // 档位白名单 {faint:.15, subtle:.4, di
 | CSS 裸透明度 | `opacity: 0.NN` (@keyframes 除外) | `opacity: var(--alpha-*)` |
 | 裸磨砂 | TS/TSX 中 `backdrop-blur-*` / `backdrop-filter` | `float-card` / `float-popover` / `frost-surface` |
 | 磨砂参数 | CSS 中非 `--frost-*` 的 blur/saturate | `--frost-blur*` / `--frost-saturate*` |
+| 磨砂结构性预算 | `--frost-alpha-*` ≥ 85%（模糊看不见却全价付）；无人引用的 `--frost-alpha-*`；同一元素叠多层 `backdrop-filter` | 降透明度让模糊可见 / 删死 token / 合并成一层 |
 | 四处同步 | `--alpha-*` ↔ `TEXT_TONE_ALPHA` ↔ `--opacity-*` ↔ 类名/token/别名 | — |
+
+同一元素叠多层 `backdrop-filter` 不是性能问题而是**静默失效**：元素一旦带模糊就成为
+自己的 Backdrop Root，WebKit 下只渲染最外层，表现为磨砂无声消失。
 
 裸色相 (`text-green` / `bg-blue`) 经 `@theme` token 解析, **允许**; 禁的是带色阶的
 `text-green-500` (tailwind 默认调色板, 不随主题联动)。

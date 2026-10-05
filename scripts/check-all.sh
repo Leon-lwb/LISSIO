@@ -70,6 +70,7 @@ build_plan() {
   add_plan "架构" "Rust↔TS 合同一致"               "root" "pnpm check:contracts"
   add_plan "架构" "模型目录"                       "root" "pnpm check:model-catalog"
   add_plan "架构" "UI 颜色令牌"                    "root" "pnpm check:tokens"
+  add_plan "架构" "动效属性 (只走绘制层)"           "root" "pnpm check:motion"
   add_plan "架构" "文档与许可证"                   "root" "pnpm check:docs"
   # 前端
   add_plan "前端" "TypeScript 类型"                "root" "pnpm typecheck"
@@ -83,6 +84,7 @@ build_plan() {
   if [ "$MODE_FULL" = true ]; then
     add_plan "前端·慢" "Web 生产构建"              "root"  "pnpm build:web"
     add_plan "前端·慢" "Playwright E2E"            "root"  "pnpm test:e2e"
+    add_plan "前端·慢" "前端渲染预算"                "root"  "bash scripts/perf-gate.sh"
     add_plan "Rust·慢" "cargo deny"                "tauri" "cargo deny check"
   fi
 }
