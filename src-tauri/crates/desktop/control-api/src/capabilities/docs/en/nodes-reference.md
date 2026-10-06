@@ -1,5 +1,13 @@
 # Node & Widget Type Reference
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Runtime English capability help: nodes-reference.md
+-->
 ## Device nodes (per tab, capability-driven)
 
 | adapter id | key configuration |

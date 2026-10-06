@@ -1,5 +1,13 @@
 # Built-in Tools Guide
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Runtime English capability help: tools-guide.md
+-->
 Lissio's built-in AI has two tool groups: capability-registry tools execute in
 the backend, while frontend-hosted tools operate through the UI. External MCP
 clients only receive the capability-registry tools; frontend-hosted tools such

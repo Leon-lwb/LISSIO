@@ -1,6 +1,19 @@
 # Lissio 软件与核心概念总览
 
-Lissio 是一款数据采集与调试上位机 (VOFA+ 的下一代),面向嵌入式开发中的
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: src-tauri/crates/desktop/control-api/src/capabilities/docs/en/overview.md
+applies-to: Runtime Chinese capability help translation
+-->
+
+> 中文产品翻译；英文运行时文档为权威版本。若中英文不一致，以英文为准。
+> Chinese product translation. The English runtime document is authoritative; English controls in case of conflict.
+
+Lissio 是一款面向嵌入式开发的数据采集与调试上位机，支持 VOFA+ 兼容协议，覆盖
 串口 / TCP / UDP / CAN / 逻辑分析仪及工业点位调试场景。核心能力:设备树与
 采集端点、协议解析、波形与控件、CAN/逻辑分析、命令帧、数据录制与历史查询。
 

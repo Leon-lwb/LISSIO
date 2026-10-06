@@ -1,5 +1,13 @@
 # Device Debugging Playbook
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Runtime English capability help: debug-recipes.md
+-->
 ## Task 1: Connect a device and show a waveform
 
 1. Ask or confirm the target device, protocol, and expected signal; use

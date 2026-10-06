@@ -1,7 +1,14 @@
 # Lissio Software & Core Concepts Overview
 
-Lissio is a data-acquisition and debugging host application (successor of
-VOFA+) for embedded development with serial / TCP / UDP / CAN / logic-analyzer
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Runtime English capability help: overview.md
+-->
+Lissio is a data-acquisition and debugging host application for embedded development with VOFA+-compatible protocol support with serial / TCP / UDP / CAN / logic-analyzer
 and industrial point scenarios. Its capabilities include device-tree
 acquisition, protocol parsing, waveforms and widgets, CAN/logic analysis,
 command frames, and recording with history queries.

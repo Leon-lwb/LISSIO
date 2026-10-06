@@ -71,6 +71,7 @@ build_plan() {
   add_plan "架构" "模型目录"                       "root" "pnpm check:model-catalog"
   add_plan "架构" "UI 颜色令牌"                    "root" "pnpm check:tokens"
   add_plan "架构" "动效属性 (只走绘制层)"           "root" "pnpm check:motion"
+  add_plan "架构" "前端分层 (实现/交互/效果/视图)"   "root" "pnpm check:layers"
   add_plan "架构" "文档与许可证"                   "root" "pnpm check:docs"
   # 前端
   add_plan "前端" "TypeScript 类型"                "root" "pnpm typecheck"

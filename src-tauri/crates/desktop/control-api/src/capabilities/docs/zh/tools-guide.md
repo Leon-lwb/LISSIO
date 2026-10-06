@@ -1,5 +1,18 @@
 # 内置工具使用指南
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: src-tauri/crates/desktop/control-api/src/capabilities/docs/en/tools-guide.md
+applies-to: Runtime Chinese capability help translation
+-->
+
+> 中文产品翻译；英文运行时文档为权威版本。若中英文不一致，以英文为准。
+> Chinese product translation. The English runtime document is authoritative; English controls in case of conflict.
+
 Lissio 内置 AI 可用两组工具：能力注册表工具由后端直接执行，前端托管工具通过
 界面执行。外部 MCP 客户端只提供能力注册表工具；`get_workspace`、`add_node`、
 `connect_device` 等前端托管工具仅供内置 AI 使用。实际可调用工具以本轮模型收到的

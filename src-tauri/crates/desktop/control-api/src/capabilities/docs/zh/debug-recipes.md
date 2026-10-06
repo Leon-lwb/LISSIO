@@ -1,5 +1,18 @@
 # 设备调试实战手册
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: src-tauri/crates/desktop/control-api/src/capabilities/docs/en/debug-recipes.md
+applies-to: Runtime Chinese capability help translation
+-->
+
+> 中文产品翻译；英文运行时文档为权威版本。若中英文不一致，以英文为准。
+> Chinese product translation. The English runtime document is authoritative; English controls in case of conflict.
+
 ## 任务一: 连接设备并显示波形
 
 1. 先询问或确认目标设备、协议和期望信号；list_serial_ports / list_driver_manifests

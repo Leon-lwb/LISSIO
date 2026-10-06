@@ -1,5 +1,13 @@
 # Protocols & Data Formats
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Runtime English capability help: protocols.md
+-->
 ## JustFloat (binary float)
 
 - Frame = N × float32 (little-endian) + tail `00 00 80 7F` (+Inf).

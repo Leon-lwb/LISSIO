@@ -1,5 +1,18 @@
 # 协议与数据格式
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: src-tauri/crates/desktop/control-api/src/capabilities/docs/en/protocols.md
+applies-to: Runtime Chinese capability help translation
+-->
+
+> 中文产品翻译；英文运行时文档为权威版本。若中英文不一致，以英文为准。
+> Chinese product translation. The English runtime document is authoritative; English controls in case of conflict.
+
 ## JustFloat (二进制浮点)
 
 - 帧 = N 个 float32 (小端) + 帧尾 `00 00 80 7F` (+Inf)。

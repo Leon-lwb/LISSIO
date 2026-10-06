@@ -1,10 +1,10 @@
 [package]
 name = "lissio"
 version = "0.7.2"
-description = "Modern serial port assistant with VOFA protocol support"
-authors = ["peng"]
-license = "GPL-2.0-only"
-repository = "https://github.com/Horldsence/Lissio"
+description = "Modern serial data assistant with VOFA-compatible protocol support"
+authors = ["Horldsence", "sloray"]
+license = "Apache-2.0"
+repository = "https://codeberg.org/Horldsence/Lissio"
 edition = "2024"
 
 [package.metadata.lissio]
@@ -107,9 +107,9 @@ members = [
 
 [workspace.package]
 edition = "2024"
-repository = "https://github.com/Horldsence/Lissio"
+repository = "https://codeberg.org/Horldsence/Lissio"
 version = "0.7.2"
-license = "GPL-2.0-only"
+license = "Apache-2.0"
 
 [workspace.lints.clippy]
 # 最严格 clippy 配置 — 所有规则组 deny

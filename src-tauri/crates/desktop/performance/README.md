@@ -1,13 +1,22 @@
-# performance
+# Performance Crate
 
-`performance` owns backend-side performance sampling for Lissio's unified
-monitor:
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Backend performance sampling ownership
+-->
 
-- current process CPU, resident memory, uptime, and thread/task count;
-- bounded RPC dispatch latency statistics;
-- WebSocket output and bounded-queue drop counters;
-- projection of typed data-plane diagnostics into the backend wire contract.
+`performance` owns backend sampling for Lissio's unified monitor:
 
-The frontend owns browser/WebView frame timing, long-task, and JS heap samples.
-The UI merges the two sources but does not infer backend state from frontend
-timers. See `docs/architecture/crates.md` for the ownership boundary.
+- process CPU, resident memory, uptime, and thread/task counts;
+- bounded RPC dispatch latency;
+- WebSocket output and bounded queue drop counters;
+- typed data-plane diagnostics projected into the backend wire contract.
+
+The frontend owns browser/WebView frame timing, long tasks, and JavaScript heap
+samples. The UI merges both sources without inferring backend state from
+frontend timers. Ownership boundaries are documented in
+`docs/architecture/crates.md`.

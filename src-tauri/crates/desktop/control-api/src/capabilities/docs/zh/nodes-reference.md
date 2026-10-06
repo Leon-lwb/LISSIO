@@ -1,5 +1,18 @@
 # 节点与控件类型参考
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: src-tauri/crates/desktop/control-api/src/capabilities/docs/en/nodes-reference.md
+applies-to: Runtime Chinese capability help translation
+-->
+
+> 中文产品翻译；英文运行时文档为权威版本。若中英文不一致，以英文为准。
+> Chinese product translation. The English runtime document is authoritative; English controls in case of conflict.
+
 ## 设备节点 (按页签归属，由能力目录驱动)
 
 | adapter id | 配置要点 |
