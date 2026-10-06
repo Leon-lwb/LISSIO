@@ -1,9 +1,18 @@
-# i18n
+# Internationalization
 
-本目录以 `i18next` 作为翻译运行时，以 `react-i18next` 作为 React 绑定。
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: i18next runtime and React integration
+-->
 
-- `resources.ts` 负责加载并校验资源；资源目录约定见 `resources/README.md`。
-- `instance.ts` 创建全局 i18next 实例，并提供非 React 代码使用的 `translate`。
-- React 组件使用 `useTranslation()`；应用根节点由 `I18nextProvider` 提供实例。
-- `Lang` 与 `settings.general.language` 保持一致，设置切换时调用 `changeLanguage`。
-- 缺失键返回键名，和旧实现保持可诊断的降级行为。
+This directory uses `i18next` with `react-i18next`.
+
+- `resources.ts` loads and validates resources; conventions are in `resources/README.md`.
+- `instance.ts` creates the global i18next instance and exposes `translate` for non-React code.
+- React components use `useTranslation()` and the root uses `I18nextProvider`.
+- `Lang` remains aligned with `settings.general.language`; switching settings calls `changeLanguage`.
+- Missing keys return their key names so failures remain diagnosable.

@@ -15,7 +15,7 @@ import { CompileDot } from './CompileStatusIndicator';
 import { useContextMenu, showContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
 import { activateOnKeyboard } from '../../lib/utils/a11y';
-import { dockDrag } from '../../lib/dockDrag';
+import { dockDrag } from '../../lib/interaction/dockDrag';
 import { translate } from '../../i18n';
 
 /// 通用 Dock 卡片框架 — 标题栏 (Tab 条 + 滑动指示器) + 内容区 + 吸附投放层

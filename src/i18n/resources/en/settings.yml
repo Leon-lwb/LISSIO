@@ -188,6 +188,12 @@ settingFloatingGlass: Frosted Secondary Cards
 settingFloatingGlassDesc: Use frosted glass on secondary cards opened from settings and panels; independent of the acrylic background
 settingFloatingGlassOpacity: Secondary Card Opacity
 settingFloatingGlassOpacityDesc: Adjust secondary-card translucency; lower is more transparent (0.72 is the default look)
+settingLiquidGlass: Liquid Glass
+settingLiquidGlassDesc: Render floating panels as refracting glass via WebGPU/WebGL. Off keeps the Gaussian-blur look; falls back automatically when no GPU backend is available
+settingLiquidGlassPreset: Liquid Glass Preset
+settingLiquidGlassPresetDesc: Pick how the refraction reads, from a thin sheet to a thick lens
+settingLiquidGlassIntensity: Liquid Glass Intensity
+settingLiquidGlassIntensityDesc: Scale refraction and edge bending together; lower is subtler (0.7 is the default look)
 settingWindowOpacity: Window Opacity
 settingWindowOpacityDesc: Adjust the overall window transparency; lower is more transparent. Independent of the acrylic background
 settingMotionSpeed: Motion Speed

@@ -188,6 +188,12 @@ settingFloatingGlass: 二级卡片磨砂
 settingFloatingGlassDesc: 设置界面和各面板打开的二级卡片使用磨砂效果；与亚克力背景相互独立
 settingFloatingGlassOpacity: 二级卡片透明度
 settingFloatingGlassOpacityDesc: 调整二级卡片的透明度，越小越透明（0.72 为默认观感）
+settingLiquidGlass: 液态玻璃
+settingLiquidGlassDesc: 用 WebGPU/WebGL 渲染折射玻璃。关闭时保持高斯模糊观感；无可用图形后端时自动回落
+settingLiquidGlassPreset: 液态玻璃预设
+settingLiquidGlassPresetDesc: 选择折射的观感，从薄玻璃片到厚透镜
+settingLiquidGlassIntensity: 液态玻璃强度
+settingLiquidGlassIntensityDesc: 统一缩放折射与边缘弯折，越小越克制（0.7 为默认观感）
 settingWindowOpacity: 整窗透明度
 settingWindowOpacityDesc: 调节整个窗口的透明度，越小越透明；与亚克力背景相互独立
 settingMotionSpeed: 动画速度

@@ -5,15 +5,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, InputHTMLAttributes, KeyboardEvent, TextareaHTMLAttributes } from 'react';
-import { useAppStore } from '../../store/appStore';
-import { translate } from '../../i18n';
+import { useTranslation } from '../../i18n';
 import { FormField } from './Form';
 
 export function TextField({ value, label, onCommit, allowEmpty = false }: {
   value: string; label: string; onCommit: (value: string) => void;
   allowEmpty?: boolean;
 }) {
-  const lang = useAppStore((s) => s.lang);
+  const { t } = useTranslation();
   const [draft, setDraft] = useState(value);
   const [invalid, setInvalid] = useState(false);
   useEffect(() => { setDraft(value); setInvalid(false); }, [value]);
@@ -28,7 +27,7 @@ export function TextField({ value, label, onCommit, allowEmpty = false }: {
     if (next !== value) onCommit(next);
   };
   return (
-    <FormField label={label} error={invalid ? translate('requiredValue', lang) : null}>
+    <FormField label={label} error={invalid ? t('requiredValue') : null}>
       <input
         className={`form-input motion-control ${invalid ? 'border-red' : ''}`}
         value={draft}

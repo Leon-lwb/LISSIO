@@ -4,7 +4,7 @@ import { translate } from '../../i18n';
 import { useAppStore } from '../../store/appStore';
 import type { DeviceCardModel } from '../../lib/acquisition/deviceCardModel';
 import { addAcquisitionNode } from '../../lib/acquisition/acquisitionNodes';
-import { dockDrag } from '../../lib/dockDrag';
+import { dockDrag } from '../../lib/interaction/dockDrag';
 import { endpointHardwareDetails, endpointSubtitle, endpointTypeLabel } from './discoveredEndpoints';
 import { adapterLabel, groupDevices, type DeviceOption, type PanelDevice } from './devicePanelModel';
 import { useDeviceDiscovery } from './useDeviceDiscovery';

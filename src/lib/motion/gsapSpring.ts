@@ -26,7 +26,7 @@
 //! (插件的 `render` 与 `_addPropTween` 会各写一遍), 也不再需要模块级的注册状态。
 
 import { motionSpring, type MotionFamily, type MotionPhase } from './motionConfig';
-import { motionIsReduced } from './reducedMotion';
+import { motionIsReduced } from '../utils/reducedMotion';
 import { springAtWithVelocity, springSettleTime, type Spring } from './spring';
 
 /** GSAP 的 `ease` 接受一个 `ratio -> eased ratio` 的函数, 这就是弹簧的落位。 */

@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import type { WidgetConfig } from '../../../types';
 import { isUnaryMathOp } from '../../../types';
 import { useNumericInputs, useNumericOutput } from '../../../lib/hooks/useNumericPort';
-import { NumericPortStatus } from '../../displays/common/NumericPortStatus';
+import { NumericPortStatus } from '../shared/NumericPortStatus';
 
 interface MathWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'Math' }>;

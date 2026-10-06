@@ -203,12 +203,5 @@ export function motionDuration(family: MotionFamily, phase: MotionPhase): number
   return springDuration(motionSpring(family, phase));
 }
 
-/** Nominal travel distance per variant, in px, for the CSS fallback offsets. */
-export const MOTION_DISTANCE = {
-  micro: 5,
-  small: 10,
-  panel: 24,
-} as const;
-
 export { springFromTiming, springDuration, spatialTiming, type Spring, type SpringTiming };
-export { motionIsReduced } from './reducedMotion';
+export { motionIsReduced } from '../utils/reducedMotion';

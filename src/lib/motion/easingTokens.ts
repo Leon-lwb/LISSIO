@@ -17,13 +17,22 @@ import {
   motionSpring,
   type MotionFamily,
   type MotionPhase,
+  type MotionPresenceVariant,
   type MotionSpeed,
 } from './motionConfig';
-import { motionIsReduced } from './reducedMotion';
+import {
+  VARIANT_GEOMETRY,
+  cssScaleToken,
+  cssScaleValue,
+  cssTravelToken,
+  cssTravelValue,
+} from './presence';
+import { motionIsReduced } from '../utils/reducedMotion';
 import { springAt, springSettleTime, type Spring } from './spring';
 
 const FAMILIES: readonly MotionFamily[] = ['control', 'toggle', 'content', 'surface', 'spatial'];
 const PHASES: readonly MotionPhase[] = ['in', 'out'];
+const VARIANTS = Object.keys(VARIANT_GEOMETRY) as MotionPresenceVariant[];
 
 /** Stops per easing. Springs that overshoot need the extra resolution to show it. */
 const SAMPLES = { bouncy: 48, monotone: 24 } as const;
@@ -65,7 +74,9 @@ export function springToLinearEasing(spring: Spring): string {
 }
 
 /**
- * Install every `--ease-*` and `--motion-duration-*` token on the document root.
+ * Install every motion token on the document root: `--ease-*`,
+ * `--motion-duration-*`, and the per-role `--motion-travel-*` /
+ * `--motion-scale-*` geometry the CSS fallback keyframes read.
  *
  * Safe to call repeatedly; only re-bakes when the inputs actually changed.
  * Returns true when the stylesheet values were rewritten.
@@ -93,6 +104,19 @@ export function installMotionTokens(force = false): boolean {
       style.setProperty(durationVar, `${Math.round(motionDuration(family, phase) * 1000)}ms`);
       style.setProperty(easeVar, springToLinearEasing(motionSpring(family, phase)));
     }
+  }
+
+  // 浮层几何与时长/缓动同批烘焙, 理由是一样的: presence.ts 的 VARIANT_GEOMETRY 是
+  // 唯一的数值来源, 关键帧只消费 token。曾经关键帧各自写死偏移, 于是同一个角色在
+  // CSS 兜底路径与 GSAP 路径上走的是两个不同的值 (banner 5px vs 8px) —— 差异取决于
+  // JS 是否已经把令牌写进 <html>, 两边都"合法"所以谁也不会报错。收敛之后
+  // easingTokens.test.ts 逐个角色比对本函数写入的值与 VARIANT_GEOMETRY。
+  //
+  // 减速偏好下把位移压到 0 并把缩放压到 1 —— 关键帧仍会播 (时长 1ms 已在
+  // reduced-motion.css 里压过), 只是不再移动或缩放任何像素。
+  for (const variant of VARIANTS) {
+    style.setProperty(cssTravelToken(variant), reduced ? '0px, 0px' : cssTravelValue(variant));
+    style.setProperty(cssScaleToken(variant), reduced ? '1' : cssScaleValue(variant));
   }
   return true;
 }

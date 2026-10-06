@@ -36,16 +36,16 @@ export interface ReleasePlan {
   dy: number;
   /** 交给弹簧的初速度, 按前冲总距离归一化 (每秒走过全程的比例)。 */
   initialVelocity: number;
-  /** 幽灵必须存活的时长 (ms) —— 弹簧的沉降时间。 */
+  /** 幽灵释放动画的沉降时长 (ms) — 补间走完即幽灵消失。 */
   durationMs: number;
 }
 
 /**
  * 把松手速度换算成幽灵的释放动画。
  *
- * 返回的时长是幽灵存活的唯一权威: `dockDrag` 用它安排清除, 组件用它驱动补间,
- * 两边不再各自写死一个数字 (从前 `RELEASE_MS` 与组件的 CSS transition 是两份
- * 必须手工对齐的副本)。
+ * 唯一调用者是效果层的幽灵组件: 交互层只交出松手速度 (见 `GhostState.velocity`),
+ * 前冲距离、初速度与时长都在这里由弹簧令牌推导。`durationMs` 同时是补间的沉降
+ * 时长, 补间走完即幽灵寿终 —— 存活时长不需要第二个数字去对齐 (见 `endGhostRelease`)。
  */
 export function planRelease(velocityX: number, velocityY: number): ReleasePlan {
   const vx = Number.isFinite(velocityX) ? velocityX : 0;

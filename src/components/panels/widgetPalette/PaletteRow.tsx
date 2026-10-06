@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import clsx from 'clsx';
 import type { WidgetCategory } from '../../../types';
-import { dockDrag } from '../../../lib/dockDrag';
+import { dockDrag } from '../../../lib/interaction/dockDrag';
 import type { PaletteEntry } from './paletteModel';
 import { ROW_SIZE } from './paletteModel';
 import { activateOnKeyboard } from '../../../lib/utils/a11y';

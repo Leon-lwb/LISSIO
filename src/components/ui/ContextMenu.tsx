@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, cloneElement } from 'react';
 import { useMotionPresence } from '../../lib/motion';
 import { useContextMenuStore } from '../../store/contextMenuStore';
+import { useGlassSurface } from '../../lib/glass/useGlassSurface';
+import { useGlassAppearance } from '../../lib/hooks/useGlassAppearance';
 import type { ContextMenuItem, ContextMenuEntry } from '../../types';
 
 const MENU_ITEM_HEIGHT = 26;
@@ -14,6 +16,7 @@ export function ContextMenu() {
   const { visible, x, y, items, close } = useContextMenuStore();
   const menuRef = useRef<HTMLDivElement>(null);
   useMotionPresence(menuRef, { variant: 'popover', enabled: visible });
+  const glass = useGlassSurface({ role: 'floating', appearance: useGlassAppearance() });
   const positionRef = useRef({ x, y });
 
   // 记录最近一次请求的坐标，避免尺寸测量期间 state 已变
@@ -107,8 +110,12 @@ export function ContextMenu() {
 
   return (
     <div
-      ref={menuRef}
+      ref={(el) => {
+        menuRef.current = el;
+        glass.ref(el);
+      }}
       className="context-menu popover-surface motion-float"
+      data-glass-tier={glass.tier}
       style={{
         position: 'fixed',
         left: x,

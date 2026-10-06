@@ -295,6 +295,11 @@ export type WidgetConfig =
   | { kind: 'Str'; params: StrConfig }
   | { kind: 'TextOut'; params: TextOutConfig };
 
+/// 控件种类的联合 — 从 `WidgetConfig` 派生, 保证与配置形状永远同源。
+/// 定义在这里 (而非视图侧的 registryTypes) 是因为面板注册表等实现层模块也要用它,
+/// 而实现层不应为了一个类型别名去引用视图目录。
+export type WidgetKind = WidgetConfig['kind'];
+
 /// 文本下发控件 — 动态发送回传: 把图内字符串 (text 输入口) 写回目标 Transport 的 tx
 /// 后端求值经通用字符串发布进入 graph_string_outputs, 由发送 ticker 按 minIntervalMs
 /// 限速发送; Send 按钮走 send_text_out_now 强制立即发送一次

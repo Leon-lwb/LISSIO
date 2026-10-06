@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { WidgetConfig } from '../../../types';
 import { useNumericInput } from '../../../lib/hooks/useNumericPort';
-import { formatNumericValue, NumericPortStatus } from '../../displays/common/NumericPortStatus';
+import { formatNumericValue, NumericPortStatus } from '../shared/NumericPortStatus';
 
 interface NumberDisplayProps {
   widget: Extract<WidgetConfig, { kind: 'NumberDisplay' }>;

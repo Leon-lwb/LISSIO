@@ -17,11 +17,11 @@
 //! - `data-dock-zone="ai-dock"`   + data-dock-edge                    → AI 面板边缘停靠
 //! - `data-dock-zone="canvas"`                                        → 控件画布投放
 
-import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../store/dockStore';
-import { motionIsReduced, planRelease, type ReleasePlan } from './motion';
-import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../store/layoutStore';
-import type { DiscoveredEndpoint, WidgetConfig } from '../types';
-import type { DeviceCardModel } from './acquisition/deviceCardModel';
+import { useDockStore, type CardKind, type DragTabPayload, type SnapEdge } from '../../store/dockStore';
+import { motionIsReduced } from '../utils/reducedMotion';
+import { useLayoutStore, type AiDockEdge, type SidebarDock } from '../../store/layoutStore';
+import type { DiscoveredEndpoint, WidgetConfig } from '../../types';
+import type { DeviceCardModel } from '../acquisition/deviceCardModel';
 
 /// 从控件面板拖出的控件参数 (拖到画布)
 export interface WidgetDragSpec {
@@ -50,9 +50,9 @@ export interface GhostState {
   x: number;
   y: number;
   label: string;
-  /// 释放态 — 松手后的放大淡出与动量前冲。低动画偏好时整个字段缺省, 幽灵直接消失。
-  /// durationMs 是幽灵存活的唯一权威: 组件据此驱动补间, 清除定时器也据此安排。
-  release?: ReleasePlan;
+  /// 松手速度 (px/s) — 只在本次拖拽真正激活后携带。前冲距离、初速度与存活时长
+  /// 都由效果层从它推导 (`planRelease`), 交互层不认识弹簧令牌。
+  velocity?: { x: number; y: number };
 }
 
 type Hover =
@@ -89,11 +89,13 @@ const VELOCITY_WINDOW_MS = 90;
 let drag: ActiveDrag | null = null;
 /// 最近一次拖拽是否激活 — 用于抑制激活拖拽后跟随的 click (否则拖完会误触发点击)
 let suppressNextClick = false;
-/// 释放动画代际 — 新拖拽开始时递增, 使挂起的清除定时器失效
-let ghostEpoch = 0;
+/// 正在做释放动画的幽灵 — 效果层收尾时按它判断"是否还有该消失的幽灵"。
+/// 它同时是 subscribeGhost 迟到订阅要补发的状态: 订阅发生在松手之后时,
+/// 新组件仍要看到这次释放 (从前由 `setTimeout` 保存的闭包负责, 没有等价状态)。
+let released: GhostState | null = null;
 
-/// 低动画偏好 (无障碍) — 判定统一走 lib/motion 的唯一权威源: 系统媒体查询与
-/// 应用内设置已在 <html> 上合并成一个类, 这里不再自己查 matchMedia。
+/// 低动画偏好 (无障碍) — 判定统一走 lib/utils/reducedMotion 的唯一权威源:
+/// 系统媒体查询与应用内设置已在 <html> 上合并成一个类, 这里不再自己查 matchMedia。
 function prefersReducedMotion(): boolean {
   return motionIsReduced();
 }
@@ -123,7 +125,8 @@ export function begin(
   if (e.button !== undefined && e.button !== 0) return;
   if (drag) return; // 防御: 一次只允许一个拖拽
   suppressNextClick = false;
-  ghostEpoch++; // 使上一次释放动画的清除定时器失效
+  // 新拖拽接管幽灵: 上一次的释放动画已被组件 killTweensOf 取代, 其收尾报告不再有效
+  released = null;
   // 指针捕获: 在窗口外释放时 pointerup 仍会投递到捕获目标, 避免拖拽卡死
   const target = e.target as Element | null;
   if (target && typeof target.setPointerCapture === 'function' && e.pointerId !== undefined) {
@@ -214,19 +217,29 @@ function onUp(e: PointerEvent) {
   }
   finish();
   if (d.active && !prefersReducedMotion()) {
-    // 释放动画: 松手速度换算成前冲与初速度, 幽灵带着动量落到落点再放大淡出。
-    // 时长取自释放计划本身, 组件与清除定时器共用同一个数, 不再各写一份。
-    const velocity = releaseVelocity(d);
-    const release = planRelease(velocity.x, velocity.y);
-    const epoch = ghostEpoch;
-    emitGhost({ x: d.lastX, y: d.lastY, label: d.spec.label, release });
-    setTimeout(() => {
-      if (epoch === ghostEpoch) emitGhost(null);
-    }, release.durationMs);
+    // 释放动画: 这里只交出松手速度, 前冲距离/初速度/时长由效果层从速度推导
+    // (见 lib/motion/release.ts) —— 交互层不认识弹簧令牌。
+    // 幽灵的存活时长不再由本模块的定时器决定, 而是效果层的补间走完为止。
+    released = { x: d.lastX, y: d.lastY, label: d.spec.label, velocity: releaseVelocity(d) };
+    emitGhost(released);
   } else {
+    released = null;
     emitGhost(null);
   }
   emitCanvasHover(false);
+}
+
+/**
+ * 效果层报告"释放动画已收尾" — 幽灵从此不再存在。
+ *
+ * 存活时长的唯一权威是补间本身: 补间时长由 `planRelease` 的同一根弹簧算出,
+ * "动画结束"与"幽灵该消失"因而是同一时刻, 不需要第二个数字去对齐。从前交互层另起一个
+ * `setTimeout(release.durationMs)` 与补间赛跑, 两个数靠约定同步; 现在只剩一个。
+ */
+export function endGhostRelease(): void {
+  if (!released) return;
+  released = null;
+  emitGhost(null);
 }
 
 function onCancel() {
@@ -430,7 +443,10 @@ export function consumeClick(): boolean {
 /** 幽灵元素订阅 — 返回取消订阅函数 */
 export function subscribeGhost(fn: (g: GhostState | null) => void): () => void {
   ghostSubs.add(fn);
-  fn(drag?.active ? { x: drag.lastX, y: drag.lastY, label: drag.spec.label } : null);
+  // 迟到订阅要补发当前状态: 拖拽中看到指针位置, 释放动画中看到同一次释放 ——
+  // 释放态的幽灵此刻仍可见, 补 null 会让新挂载的幽灵元素凭空消失。
+  if (released) fn(released);
+  else fn(drag?.active ? { x: drag.lastX, y: drag.lastY, label: drag.spec.label } : null);
   return () => {
     ghostSubs.delete(fn);
   };
@@ -474,7 +490,7 @@ export function __resetForTests(): void {
     document.body.classList.remove('dragging-dock');
   }
   suppressNextClick = false;
-  ghostEpoch++; // 使挂起的释放动画定时器失效
+  released = null;
   canvasHandlers.clear();
   emitCanvasHover(false);
   emitGhost(null);

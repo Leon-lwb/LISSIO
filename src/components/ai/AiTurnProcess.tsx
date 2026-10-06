@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Think, ThoughtChain, XProvider, type ThoughtChainItemType } from '@ant-design/x';
+// 走具名子路径而非包根: 包根的 `es/index.js` 会连带 re-export CodeHighlighter,
+// 它经 react-syntax-highlighter 动态 import `highlight.js/lib/languages/sql_more`
+// (该文件在 highlight.js 10.7.3 才出现, 而依赖树里被解到 10.4.1), 构建因此失败。
+// 本文件只用这三个组件, 单独引用即可把那条链路排除在构建之外。
+import Think from '@ant-design/x/es/think';
+import ThoughtChain, { type ThoughtChainItemType } from '@ant-design/x/es/thought-chain';
+import XProvider from '@ant-design/x/es/x-provider';
 import { BookOpen, BrainCircuit, Globe2, Pencil, Search, Terminal, Wrench } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { translate, type Lang } from '../../i18n';

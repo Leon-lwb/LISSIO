@@ -3,7 +3,7 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { renderWithI18n } from '../../../../test/renderWithI18n';;
 import { PaletteRow } from '../PaletteRow';
 import type { PaletteEntry } from '../paletteModel';
-import { dockDrag, __resetForTests } from '../../../../lib/dockDrag';
+import { dockDrag, __resetForTests } from '../../../../lib/interaction/dockDrag';
 import { addPaletteNode } from '../../../../lib/utils/paletteCreation';
 import { type AcquisitionNodeData } from '../../../../lib/acquisition/acquisitionNodes';
 import { useAppStore } from '../../../../store/appStore';

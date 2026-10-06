@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useRef } from 'react';
+import { NUMERIC_CONTROL_BEHAVIOR, useNumericControl } from '../../../lib/interaction/useNumericControl';
 import type { WidgetConfig } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { snapControlValue } from '../../../lib/utils/numericControl';
@@ -19,7 +20,6 @@ export const Knob = memo(function Knob({ widget }: KnobProps) {
   const value = preview ?? widget.params.value;
   const valueRef = useRef(value);
   const knobRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ pointerId: number; startY: number; startValue: number } | null>(null);
   const wheelTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { valueRef.current = value; }, [value]);
@@ -35,14 +35,14 @@ export const Knob = memo(function Knob({ widget }: KnobProps) {
     sendBindingValue(binding, normalized);
   }, [binding, commitInputValue, id, max, min, step]);
 
-  const finishPointer = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-    commitValue();
-  };
+  // 垂直拖拽调值: 按下瞬间的取值是基准, 拖过 120px 走完整个量程; 抬起时提交
+  const dialHandlers = useNumericControl<number>({
+    baseline: () => valueRef.current,
+    onTravel: (upwardPx, startValue) => {
+      previewValue(startValue + (upwardPx / NUMERIC_CONTROL_BEHAVIOR.knobPxPerFullRange) * (max - min));
+    },
+    onEnd: () => commitValue(),
+  });
 
   useEffect(() => {
     const element = knobRef.current;
@@ -76,19 +76,10 @@ export const Knob = memo(function Knob({ widget }: KnobProps) {
           aria-valuemin={min}
           aria-valuemax={max}
           aria-valuenow={value}
-          onPointerDown={(event) => {
-            event.stopPropagation();
-            dragRef.current = { pointerId: event.pointerId, startY: event.clientY, startValue: valueRef.current };
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => {
-            const drag = dragRef.current;
-            if (drag?.pointerId !== event.pointerId) return;
-            const raw = drag.startValue + ((drag.startY - event.clientY) / 120) * (max - min);
-            previewValue(raw);
-          }}
-          onPointerUp={finishPointer}
-          onPointerCancel={finishPointer}
+          onPointerDown={dialHandlers.onPointerDown}
+          onPointerMove={dialHandlers.onPointerMove}
+          onPointerUp={dialHandlers.onPointerUp}
+          onPointerCancel={dialHandlers.onPointerCancel}
           onKeyDown={(event) => {
             event.stopPropagation();
             let next: number | null = null;

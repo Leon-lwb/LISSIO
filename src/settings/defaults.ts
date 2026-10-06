@@ -52,6 +52,16 @@ export interface AppSettings {
     floatingGlassOpacity: number;
     /// 整窗透明度 0.1-1.0, 1.0 为不透明; 与亚克力开关无关的独立维度 (CSS 层生效)
     windowOpacity: number;
+    /** 液态玻璃 (WebGPU/WebGL 折射) 开关。默认关闭 —— 关闭时全应用停留在
+     *  高斯模糊档 (纯 backdrop-filter), 即本设置引入前的既有行为, 因此升级
+     *  不改变任何默认观感。开启后浮层族才升级为折射玻璃。 */
+    liquidGlass: boolean;
+    /** 液态玻璃预设 id (定义见 lib/glass/glassPresets.ts)。仅在 liquidGlass
+     *  开启时生效; 每个预设打包 refraction/bevel/frost/specular/tilt 等一整套
+     *  参数, 避免把它们拆成一排互相制约的滑块。 */
+    liquidGlassPreset: string;
+    /** 液态玻璃强度 0.1-1.0, 缩放预设的折射与倒角强度。0.1 最通透, 1.0 最厚。 */
+    liquidGlassIntensity: number;
   };
   editor: {
     waveformFps: number;
@@ -177,6 +187,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
     floatingGlass: true,
     floatingGlassOpacity: 0.72,
     windowOpacity: 1,
+    /// 液态玻璃默认关闭: 默认观感 = 高斯模糊档 (backdrop-filter), 与本设置
+    /// 引入前完全一致。折射档是纯 opt-in 的升级路径。
+    liquidGlass: false,
+    liquidGlassPreset: 'balanced',
+    liquidGlassIntensity: 0.7,
   },
   editor: {
     waveformFps: 30,

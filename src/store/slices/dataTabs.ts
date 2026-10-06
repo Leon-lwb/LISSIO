@@ -4,7 +4,7 @@ import { NODE_PROPERTIES_TAB_ID } from '../../types';
 import { useAppStore } from '../appStore';
 import { widgetToTab, widgetTabType } from '../../lib/utils/widgetTab';
 import { selectWidgets } from '../appStoreHelpers';
-import { HOST_PANEL_DEFS, panelDefForTabType } from '../../components/panels/registry/panelDefs';
+import { HOST_PANEL_DEFS, panelDefForTabType } from '../../lib/panels/panelDefs';
 import type { PanelKind } from '../../types/generated/PanelKind';
 import type { AppSlice } from './types';
 

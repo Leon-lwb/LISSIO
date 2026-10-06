@@ -351,11 +351,23 @@
   --default-transition-duration: var(--motion-duration-control-in);
   --default-transition-timing-function: var(--ease-control-in);
 
-  /* 位移距离: 仅用于 CSS 关键帧的固定偏移与 transform-origin。真实位移由
-     src/lib/motion 按测得的路程换算时长 (spatialTiming), 不在此处定死。 */
-  --motion-distance-micro: 5px;
-  --motion-distance-small: 10px;
-  --motion-distance-panel: 24px;
+  /* 浮层几何: 只用于 CSS 关键帧的固定偏移, 兜底 JS 就绪前的首帧。数值的唯一来源
+     是 src/lib/motion/presence.ts 的 VARIANT_GEOMETRY, 由 installMotionTokens()
+     在运行时按角色写入 <html> 内联样式; 下面只是那之前的近似值。
+     travel 令牌会被插进 translate(), 所以必须是逗号分隔的两个参数。
+     未使用的主题变量会被 Tailwind 裁剪, 所以这里只登记当前真有关键帧消费的角色:
+     surface 对应 motion-surface-in, popover 对应 motion-pop-in (菜单与气泡共用),
+     message 对应 motion-message-in, banner 对应 motion-banner-in。
+     减速偏好下运行时把 travel 压成 0px, 0px、scale 压成 1 (时长同理压成 1ms)。
+     真实位移 (FLIP、Dock 换边) 不走这里, 由 spatialTiming 按实测路程换算时长。 */
+  --motion-travel-surface: 0px, 10px;
+  --motion-scale-surface: 0.97;
+  --motion-travel-popover: 0px, -6px;
+  --motion-scale-popover: 0.97;
+  --motion-travel-message: 0px, 8px;
+  --motion-scale-message: 0.99;
+  --motion-travel-banner: 0px, -8px;
+  --motion-scale-banner: 1;
 }
 
 /* ============ 层级令牌 (z-index) ============ */

@@ -1,6 +1,7 @@
 import { X, BookOpen, Code, Lightbulb, Send, Settings, Workflow } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
 interface CustomWidgetHelpModalProps {
   isOpen: boolean;
@@ -10,19 +11,11 @@ interface CustomWidgetHelpModalProps {
 export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModalProps) {
   const lang = useAppStore((s) => s.lang);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="flex flex-col dialog-surface overflow-hidden motion-surface-in"
-        style={{ width: '80vw', height: '85vh', maxWidth: 1000, maxHeight: 800 }}
+    <DialogOverlay open={isOpen} onDismiss={onClose}>
+      <DialogSurface
+        className="flex flex-col w-[80vw] h-[85vh] max-w-[1000px] max-h-[800px]"
+        label={translate('helpTitle', lang)}
       >
         <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">
           <BookOpen size={16} />
@@ -276,7 +269,7 @@ export function CustomWidgetHelpModal({ isOpen, onClose }: CustomWidgetHelpModal
             {translate('helpClose', lang)}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }

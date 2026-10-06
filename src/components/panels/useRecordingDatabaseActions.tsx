@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CornerUpLeft, ExternalLink, Trash2 } from 'lucide-react';
 import { platform } from '../../lib/platform';
 import { useAppStore } from '../../store/appStore';
@@ -6,6 +6,8 @@ import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 import { showContextMenu } from '../../lib/hooks/useContextMenu';
 import { translate } from '../../i18n';
+import { useAsyncAction } from '../../lib/interaction/useAsyncAction';
+import { notify, formatError } from '../../lib/tauri/notifications';
 import type { RecordingSessionSummary } from '../../lib/tauri/tauri';
 
 interface RecordingDatabaseActionsOptions {
@@ -21,8 +23,19 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   const cleanupSessions = useRecordingDatabaseStore((s) => s.cleanupSessions);
 
   const [keepLatest, setKeepLatest] = useState(10);
-  const [busy, setBusy] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+
+  // 失败必须让用户看见: 原先五处都是 catch 里 console.error 了事, 界面上毫无反应,
+  // 用户只会觉得"点了没反应"。这里统一走错误通知。
+  const fail = useCallback(
+    (error: unknown, messageKey: string) => {
+      notify.error(translate('recordingDatabaseErrorTitle', lang), `${translate(messageKey, lang)}: ${formatError(error)}`, {
+        source: 'recording-database',
+      });
+    },
+    [lang],
+  );
+  const { busy, run } = useAsyncAction({ onError: fail });
   const hintTimer = useRef<number | null>(null);
 
   useEffect(() => () => {
@@ -41,25 +54,11 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   }
 
   async function handleCreateSession(): Promise<void> {
-    setBusy(true);
-    try {
-      await createSession();
-    } catch (error) {
-      console.error('recording session creation failed', error);
-    } finally {
-      setBusy(false);
-    }
+    await run('recordingDatabaseCreateFailed', () => createSession());
   }
 
   async function handleSetActiveSession(sessionId: string): Promise<void> {
-    setBusy(true);
-    try {
-      await setActiveSession(sessionId);
-    } catch (error) {
-      console.error('recording session switch failed', error);
-    } finally {
-      setBusy(false);
-    }
+    await run('recordingDatabaseSwitchFailed', () => setActiveSession(sessionId));
   }
 
   function attemptSelect(summary: RecordingSessionSummary): void {
@@ -81,20 +80,15 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   async function deleteSession(sessionId: string): Promise<void> {
     const confirmed = await platform.confirm(translate('recordingDatabaseDeleteConfirm', lang), { kind: 'warning' });
     if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
+    await run('recordingDatabaseCleanupFailed', () =>
+      cleanupSessions({
         session_ids: [sessionId],
         delete_stopped: false,
         delete_failed: false,
         older_than_us: null,
         keep_latest: null,
-      });
-    } catch (error) {
-      console.error('recording cleanup failed', error);
-    } finally {
-      setBusy(false);
-    }
+      }),
+    );
   }
 
   function requestDelete(summary: RecordingSessionSummary): void {
@@ -134,20 +128,15 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
   async function cleanupStopped(): Promise<void> {
     const confirmed = await platform.confirm(translate('recordingDatabaseCleanupStoppedConfirm', lang), { kind: 'warning' });
     if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
+    await run('recordingDatabaseCleanupFailed', () =>
+      cleanupSessions({
         session_ids: [],
         delete_stopped: true,
         delete_failed: true,
         older_than_us: null,
         keep_latest: null,
-      });
-    } catch (error) {
-      console.error('recording cleanup failed', error);
-    } finally {
-      setBusy(false);
-    }
+      }),
+    );
   }
 
   async function cleanupKept(): Promise<void> {
@@ -156,20 +145,15 @@ export function useRecordingDatabaseActions({ paused }: RecordingDatabaseActions
       { kind: 'warning' },
     );
     if (confirmed === false) return;
-    setBusy(true);
-    try {
-      await cleanupSessions({
+    await run('recordingDatabaseCleanupFailed', () =>
+      cleanupSessions({
         session_ids: [],
         delete_stopped: false,
         delete_failed: false,
         older_than_us: null,
         keep_latest: keepLatest,
-      });
-    } catch (error) {
-      console.error('recording cleanup failed', error);
-    } finally {
-      setBusy(false);
-    }
+      }),
+    );
   }
 
   return {

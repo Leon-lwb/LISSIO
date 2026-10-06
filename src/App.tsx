@@ -16,7 +16,6 @@ import { SuspenseFallback } from './components/ui/SuspenseFallback';
 import { DialogHost } from './components/lazy/DialogHost';
 import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
-import { useHistoryStore } from './store/historyStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
 import { useLayoutStore, AI_FLOAT_MIN_W, AI_FLOAT_MIN_H } from './store/layoutStore';
@@ -30,6 +29,7 @@ import { useWorkspaceSeed } from './lib/startup/useWorkspaceSeed';
 import { useFirstFrameReveal } from './lib/startup/useFirstFrameReveal';
 import { startPerformanceTelemetry } from './lib/performance/telemetry';
 import { startAcrylicPerformanceGuard } from './lib/performance/acrylicGuard';
+import { useAppShortcuts, useShortcutDispatcher } from './lib/interaction/useAppShortcuts';
 import { useStartupDialogs } from './lib/startup/useStartupDialogs';
 import {
   LazyAboutModal,
@@ -190,47 +190,9 @@ function App() {
     };
   }, []);
 
-  // 全局快捷键: Cmd+, / Ctrl+, 打开设置
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === ',') {
-        e.preventDefault();
-        openSettings();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [openSettings]);
-
-  // 全局快捷键: 文档域撤销/重做 — Ctrl/Cmd+Z / Ctrl+Y (Shift 反转 Z 方向)。
-  // 焦点在文本输入类元素 (input/textarea/contentEditable, 含 CodeMirror) 时
-  // 直接放行 — 保留各输入控件自身的原生文本撤销, 与文档域历史互不干扰。
-  useEffect(() => {
-    const isEditableTarget = (target: EventTarget | null): boolean => {
-      if (!(target instanceof HTMLElement)) return false;
-      return (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
-      );
-    };
-    const handler = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.altKey) return;
-      const key = e.key.toLowerCase();
-      if (key !== 'z' && key !== 'y') return;
-      if (isEditableTarget(e.target)) return; // 文本框内: 原生文本撤销优先
-      const history = useHistoryStore.getState();
-      e.preventDefault();
-      if (key === 'y' || e.shiftKey) {
-        history.redo();
-      } else {
-        history.undo();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, []);
+  // 全局加速键: 声明在 useAppShortcuts, 派发在 useShortcutDispatcher
+  useAppShortcuts(openSettings);
+  useShortcutDispatcher();
 
   // 主横向面板组 — 按停靠位置拼装: [左侧停靠面板…] 中央 Dock [右侧停靠面板…]
   // (AI 面板 left/right 与侧边栏同级; bottom/float 在下方单独处理)
@@ -477,7 +439,13 @@ function App() {
           },
           { key: 'custom-editor', open: isCustomEditorOpen, element: <LazyCustomWidgetEditorContainer /> },
           { key: 'onboarding', open: isWizardOpen, element: <LazyOnboardingWizard /> },
-          { key: 'keychain', open: startupFlow.showKeychainPermissionPrompt, element: <LazyKeychainPermissionDialog /> },
+          {
+            key: 'keychain',
+            open: startupFlow.showKeychainPermissionPrompt,
+            element: (
+              <LazyKeychainPermissionDialog isOpen={startupFlow.showKeychainPermissionPrompt} />
+            ),
+          },
           { key: 'help', open: isHelpOpen, element: <LazyHelpCenterModal /> },
           { key: 'update', open: updateDialogOpen, element: <LazyUpdateDialog /> },
         ]}

@@ -49,6 +49,11 @@ export class AcrylicGuardState {
     this.notified = true;
     return true;
   }
+
+  /// 是否已判定效果过重。液态玻璃档据此降级到高斯模糊档。
+  hasTriggered(): boolean {
+    return this.notified;
+  }
 }
 
 function disableAcrylic(): void {
@@ -56,6 +61,7 @@ function disableAcrylic(): void {
 }
 
 const guard = new AcrylicGuardState();
+const subscribers = new Set<() => void>();
 let unsubscribe: (() => void) | null = null;
 let lastSample: FrontendPerformanceSnapshot | null = null;
 
@@ -67,6 +73,9 @@ function evaluate(): void {
   const acrylicEnabled =
     useSettingsStore.getState().settings.appearance.acrylicBackground === true;
   if (!guard.observe(sample.fps, acrylicEnabled)) return;
+
+  // 通知前端: 折射档需要在本帧之后降级, 否则用户会先看到一次卡顿再看到提示
+  for (const onChange of subscribers) onChange();
 
   const lang = useAppStore.getState().lang;
   notify.warn(
@@ -91,3 +100,24 @@ export function startAcrylicPerformanceGuard(): () => void {
     lastSample = null;
   };
 }
+
+/// 守护是否已判定"效果过重"。液态玻璃档据此降级到高斯模糊档, 于是同一次
+/// 帧率告警同时约束两个档位, 而不必为折射单独再写一套阈值。
+///
+/// 与既有行为保持一致: 只在亚克力开启时可能为 true。
+export function acrylicGuardActive(): boolean {
+  return (
+    useSettingsStore.getState().settings.appearance.acrylicBackground === true &&
+    guard.hasTriggered()
+  );
+}
+
+/// 订阅守护状态变化 — 供玻璃档位在用户点「关闭」后重新判定。
+export const acrylicGuard = {
+  subscribe(onChange: () => void): () => void {
+    subscribers.add(onChange);
+    return () => {
+      subscribers.delete(onChange);
+    };
+  },
+};

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { waitFor } from '@testing-library/react';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createElement } from 'react';
+import { createElement, StrictMode } from 'react';
 
 // dockStore/layoutStore 的 persist 中间件需要 localStorage — 在导入 store 前提供内存桩
 vi.hoisted(() => {
@@ -20,8 +21,8 @@ vi.hoisted(() => {
   g.localStorage = localStorageMock;
 });
 
-import { dockDrag, __resetForTests, subscribeGhost, type GhostState } from '../../../lib/dockDrag';
-import { MOMENTUM_FLOOR_PX_S } from '../../../lib/motion';
+import { dockDrag, __resetForTests, subscribeGhost, type GhostState } from '../../../lib/interaction/dockDrag';
+import { MOMENTUM_FLOOR_PX_S, planRelease } from '../../../lib/motion';
 import { DockDragGhost } from '../DockDragGhost';
 
 function moveTo(x: number, y: number) {
@@ -128,16 +129,20 @@ describe('松手时的动量交接', () => {
     return seen;
   }
 
-  const reachOf = (ghost: GhostState | null) => Math.hypot(ghost!.release!.dx, ghost!.release!.dy);
+  // 交出的只有松手速度; 前冲距离是效果层对速度的解算 (组件内调的就是这个 planRelease),
+  // 所以这里照样能问"幽灵会滑多远", 只是经由契约里真正存在的那一项推导。
+  const reachOf = (ghost: GhostState | null) => {
+    if (!ghost?.velocity) return 0;
+    const plan = planRelease(ghost.velocity.x, ghost.velocity.y);
+    return Math.hypot(plan.dx, plan.dy);
+  };
 
-  it('甩出去时幽灵带着动量前冲, 方向与松手速度一致', () => {
+  it('甩出去时交出松手速度, 方向与手势一致', () => {
     const ghost = fling(8, 90);
-    expect(ghost?.release).toBeDefined();
-    // 只断言方向与"确实发生了位移", 不锁死像素数
-    expect(ghost!.release!.dx).toBeGreaterThan(0);
-    expect(ghost!.release!.dy).toBeGreaterThan(0);
-    expect(ghost!.release!.initialVelocity).toBeGreaterThan(0);
-    expect(ghost!.release!.durationMs).toBeGreaterThan(0);
+    expect(ghost?.velocity).toBeDefined();
+    // 只断言方向与"确实有速度", 不锁死像素数
+    expect(ghost!.velocity!.x).toBeGreaterThan(0);
+    expect(ghost!.velocity!.y).toBeGreaterThan(0);
   });
 
   it('甩得越狠前冲越远 — 两种力度都取在航程上限以内, 才能看出递进', () => {
@@ -151,26 +156,26 @@ describe('松手时的动量交接', () => {
     expect(reachOf(absurd)).toBeLessThan(200);
   });
 
-  it('松手后幽灵仍带着释放态存在, 而不是瞬时消失', () => {
+  it('松手后幽灵仍带着释放速度存在, 而不是瞬时消失', () => {
     act(() => {
       dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Dragged' });
       clock += 16;
       moveTo(200, 0);
     });
     act(() => release());
-    expect(seen?.release).toBeDefined();
+    expect(seen?.velocity).toBeDefined();
   });
 
-  it('指针停住再松手属于"放稳了": 只有原地放大淡出, 不产生前冲', () => {
+  it('指针停住再松手属于"放稳了": 交出零速度, 不产生前冲', () => {
     act(() => {
       dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Dragged' });
       clock += 16;
       moveTo(400, 400);
     });
     act(() => release());
-    expect(seen?.release?.dx).toBe(0);
-    expect(seen?.release?.dy).toBe(0);
-    expect(seen?.release?.initialVelocity).toBe(0);
+    expect(seen?.velocity?.x).toBe(0);
+    expect(seen?.velocity?.y).toBe(0);
+    expect(reachOf(seen)).toBe(0);
   });
 
   it('低速甩动仍在动量下限之下, 与"放稳了"一致', () => {
@@ -178,5 +183,47 @@ describe('松手时的动量交接', () => {
     const slow = fling(6, 2);
     expect(reachOf(slow)).toBe(0);
     expect(MOMENTUM_FLOOR_PX_S).toBeGreaterThan(0);
+  });
+
+  it('补间走完即上报收尾, 幽灵随之消失 — 存活时长由补间而非计时器决定', async () => {
+    vi.restoreAllMocks(); // 这一步要真实时钟: GSAP 的补间由 rAF 驱动
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    act(() => {
+      createRoot(host).render(createElement(DockDragGhost));
+    });
+    act(() => {
+      dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Flying' });
+      for (let i = 1; i <= 6; i += 1) {
+        moveTo(i * 30, i * 30);
+      }
+    });
+    act(() => release());
+    expect(host.querySelector('[aria-hidden]')).not.toBeNull();
+
+    // 幽灵不早退: 收尾必须发生在补间结束, 而不是松手瞬间
+    await waitFor(() => {
+      expect(host.querySelector('[aria-hidden]')).toBeNull();
+    });
+  });
+
+  it('StrictMode 下幽灵照常出现并收尾 — 双重挂载不会让订阅或收尾错位', async () => {
+    vi.restoreAllMocks(); // 走真实补间路径需要真实时钟
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    act(() => {
+      createRoot(host).render(createElement(StrictMode, null, createElement(DockDragGhost)));
+    });
+    act(() => {
+      dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Strict' });
+      for (let i = 1; i <= 6; i += 1) {
+        moveTo(i * 30, i * 30);
+      }
+    });
+    expect(host.querySelector('[aria-hidden]')).not.toBeNull();
+    act(() => release());
+    await waitFor(() => {
+      expect(host.querySelector('[aria-hidden]')).toBeNull();
+    });
   });
 });

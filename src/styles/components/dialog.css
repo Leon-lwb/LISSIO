@@ -1,11 +1,24 @@
+/* 这里**不能**写 z-index: 层级由调用方通过 `zClassName` (`.z-modal` /
+   `.z-modal-secondary` / `.z-tour`) 指定。两条规则都是未分层的同等特异性, 后出现的
+   一条整体胜出 —— 基础规则里留一个 z-index 就会静默盖掉调用方的选择, 于是
+   `--z-modal-secondary` (110) 与 `--z-tour` (1100) 都退化成 100, 高于 1000 的
+   选中节点能穿透引导遮罩。默认层级由 `DialogOverlay` 的 `zClassName` 默认值给出。 */
 .dialog-overlay {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-bg-overlay);
+}
+
+/* 遮罩不自己压暗的少数场景 (引导聚光层): 压暗由层内自己画, 因为那份压暗带着
+   镂空 —— 一个 SVG mask 挖出目标区域, 让被讲解的界面保持原色可见。遮罩若也铺
+   一层实色, 它会画在那份镂空**下面**, 把洞填死。
+   为什么不是调用方给 `bg-transparent`: Tailwind utilities 在 @layer 里, 输给本文件
+   这种未分层规则 (见 layers.css 的同类说明), 写了也不生效。 */
+.dialog-overlay--bare {
+  background: transparent;
 }
 
 .dialog-surface {

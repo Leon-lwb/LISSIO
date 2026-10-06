@@ -1,6 +1,15 @@
-# 文案资源目录
+# Translation Resources
 
-文案按产品能力拆分为同名模块，语言目录保持一一对应：
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Localized product string organization and parity rules
+-->
+
+Translation resources are grouped by stable product capability:
 
 ```text
 src/i18n/resources/
@@ -20,10 +29,14 @@ src/i18n/resources/
     ...
 ```
 
-约定：
+Rules:
 
-- 文件名使用英文小写 kebab-case，描述一个稳定的产品能力域。
-- 两个语言目录必须包含完全相同的文件名和翻译键。
-- 每个文件只维护本能力域的扁平键；键名保持全局唯一，不使用 namespace 前缀。
-- 新增用户可见文案时，在对应能力域的两个语言文件中同步添加。
-- 运行时由 `src/i18n/resources.ts` 合并为 i18next 的 `translation` 资源。
+- use lowercase English kebab-case filenames for stable capability domains;
+- language directories must contain identical filenames and translation keys;
+- keep flat keys unique within each capability file;
+- add every user-visible string to both language directories;
+- `src/i18n/resources.ts` merges files into i18next `translation` resources.
+
+Repository documentation is authoritative in English. These product
+translations remain runtime localization, while repository translation backups
+are stored in `docs/community/`.

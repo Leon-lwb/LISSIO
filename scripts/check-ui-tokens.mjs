@@ -40,12 +40,25 @@ const ARBITRARY_OPACITY = /(?<![-\w])opacity-\[/;
 const TEXT_WHITE = /(?<![\w-])text-white(?![\w-])/;
 const RAW_FROST = /\bbackdrop-(?:blur(?:-|\[)|filter\s*:)/;
 const LEGACY_FROST_TOKEN = /--(?:widget-acrylic|blur-acrylic|saturate-acrylic|shadow-modal)-?/;
+// 折射档 (data-glass-tier='liquid'): 一个共享的选择器, 以及"必须显式夺回
+// pointer-events"的覆盖规则。两者都被规则 #5/#6 复用。
+const LIQUID_SELECTOR = /\[data-glass-tier=['"]liquid['"]\]/;
+const LIQUID_POINTER_EVENTS =
+  /\[data-glass-tier=['"]liquid['"]\][^{}]*\{[^{}]*pointer-events:\s*auto\s*!important/;
 const RAW_CSS_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
 const FRONTEND_LIMIT = 500;
 
 // 动画令牌检查
 const TAILWIND_ANIMATION = /\b(animate-spin|animate-pulse|animate-bounce|animate-ping)\b/;
-const DURATION_WHITELIST = ['theme.css', 'component-tokens.css', 'motion.css'];
+// 精确路径, 不能用 endsWith 后缀匹配: `reduced-motion.css` 会以 `motion.css` 结尾,
+// 于是"禁止硬编码时长"这条规则会静默地放它过去 —— 而它恰好是唯一一个**必须**
+// 硬编码时长的文件 (把动画压到 1ms 就是它的职责)。
+const DURATION_WHITELIST = [
+  'src/styles/theme.css',
+  'src/styles/component-tokens.css',
+  'src/styles/components/motion.css',
+  'src/styles/components/reduced-motion.css',
+];
 
 /** 递归收集 src 下指定后缀的文件。extensions 省略时收集 ts/tsx/css 全部。 */
 function collect(dir, extensions, out = []) {
@@ -65,23 +78,42 @@ function stripCommentLines(line) {
   return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') ? '' : line;
 }
 
-/** 去掉 @keyframes 块 (动画插值不属 token 层) */
+/** 去掉 CSS 注释块 — 换成等长空白而非直接删除, 使偏移量与行号保持与原文一致 */
+function stripCssComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '));
+}
+
+/**
+ * 去掉 @keyframes 块 (动画插值不属 token 层), 保留行号。
+ *
+ * 只挖掉 @keyframes 的块体: 关键帧里的 `opacity: 0.5` 是插值, 不该按档位令牌要求。
+ * 之前的实现按"遇到任何 `{` 就进入跳过态"来工作, 于是把**所有**规则的声明体都
+ * 吃掉了 —— 结果后面那两条规则 (裸 `opacity:` 与 `backdrop-filter:` 必须走
+ * `--frost-*`) 在整个仓库里从未命中过任何一条规则。这里改成显式匹配
+ * `@keyframes <name> {`, 再用花括号配平找到块尾。
+ */
 function stripKeyframes(css) {
-  let depth = 0;
+  const pattern = /@keyframes\s+[\w-]+\s*\{/g;
   let out = '';
-  let skipping = false;
-  for (const ch of css) {
-    if (!skipping && ch === '{') depth += 1;
-    if (depth > 0) {
-      if (ch === '{') skipping = true;
-      if (ch === '}') {
-        depth -= 1;
-        if (depth === 0) skipping = false;
-      }
-      continue;
+  let last = 0;
+  let match = pattern.exec(css);
+  while (match !== null) {
+    out += css.slice(last, match.index);
+    let depth = 1;
+    let cursor = pattern.lastIndex;
+    while (cursor < css.length && depth > 0) {
+      if (css[cursor] === '{') depth += 1;
+      else if (css[cursor] === '}') depth -= 1;
+      cursor += 1;
     }
-    out += ch;
+    // 换成等长空白 (保留换行), 使偏移量与行号与原文一致。
+    const block = css.slice(match.index, cursor);
+    out += block.replace(/[^\n]/g, ' ');
+    last = cursor;
+    pattern.lastIndex = cursor;
+    match = pattern.exec(css);
   }
+  out += css.slice(last);
   return out;
 }
 
@@ -92,7 +124,8 @@ for (const file of collect(path.join(root, 'src'))) {
   const lines = raw.split('\n');
 
   // 动画令牌检查 (在循环外，基于整个文件内容)
-  const isDurationWhitelist = DURATION_WHITELIST.some((w) => rel.endsWith(w));
+  const normalizedRel = rel.split(path.sep).join('/');
+  const isDurationWhitelist = DURATION_WHITELIST.includes(normalizedRel);
   if (!isDurationWhitelist && isCss) {
     const durationRe = /(?<![-\w])(\d+(?:\.\d+)?)(ms|s)\b/g;
     let dm;
@@ -411,7 +444,8 @@ const OPAQUE_ENOUGH = 85;
   //    判定只能建立在**同一个选择器**上 —— 同时被两个带模糊的类选中。这覆盖了
   //    `A.b { backdrop-filter }` 与 `.a.b { backdrop-filter }` 两种写法, 且不需要
   //    猜 DOM 结构。
-  for (const file of collect(path.join(root, 'src/styles'), ['.css'])) {
+  const styleFiles = collect(path.join(root, 'src/styles'), ['.css']);
+  for (const file of styleFiles) {
     const source = fs.readFileSync(file, 'utf8');
     const blurred = new Set();
     for (const m of source.matchAll(/([^{}]+)\{([^{}]*backdrop-filter[^{}]*)\}/g)) {
@@ -432,6 +466,62 @@ const OPAQUE_ENOUGH = 85;
           `WebKit 下只渲染最外层, 表现为磨砂静默消失`
       );
     }
+
+    // 5) 折射档 (data-glass-tier='liquid') 不得**新增** backdrop-filter。
+    //
+    //    这条与第 4 条同源, 但方向相反: 那里防的是"模糊叠了两层", 这里防的是
+    //    "折射表面还留着模糊"。liquidGL 的折射画布只能采到元素所在的 Backdrop
+    //    Root 之内的背景; 元素只要还带 backdrop-filter, 它就是自己的 Backdrop
+    //    Root, 折射于是折到已经模糊过的一层上 —— 弯折在视觉上凭空消失, 且没有
+    //    任何报错或告警。
+    //
+    //    判据是"带 liquid 选择器的规则里, backdrop-filter 只允许 none", 而不是
+    //    "每条 liquid 规则都必须写 backdrop-filter: none": 后者过宽, 会把
+    //    pointer-events 这类与模糊无关的规则也判违规。而把 none 放在哪条规则里
+    //    是有讲究的 —— 必须与角色类名同条 (特异性 (0,2,0)) 才能压过
+    //    `[data-floating-glass='true'] .dialog-surface`, 这条约束属于本文件上面
+    //    那段"实色规则 / 玻璃规则角色对齐"检查的职责范围。
+    //
+    //    扫描前必须先去注释: 规则正则的选择器部分是 `[^{}]+`, 它会一路吞掉上一条
+    //    规则后面跟着的注释块, 于是"注释里提到 liquid"被当成"规则声明了 liquid"。
+    //    注释内容换成等长空白而非直接删除 —— 偏移量与行号要保持与原文一致。
+    const code = stripCssComments(source);
+    for (const m of code.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!LIQUID_SELECTOR.test(m[1])) continue;
+      for (const bf of m[2].matchAll(/(?:^|;)\s*-?(?:webkit-)?backdrop-filter:\s*([^;]+)/g)) {
+        if (bf[1].trim() !== 'none') {
+          const line = code.slice(0, m.index).split('\n').length;
+          errors.push(
+            `磨砂: ${path.relative(root, file)}:${line} 的 \`${m[1].trim().slice(0, 70)}\` 对折射档 ` +
+              `新增了模糊 (${bf[1].trim().slice(0, 40)}) — 该元素仍是自己的 Backdrop Root, 折射会静默失效`
+          );
+        }
+      }
+    }
+  }
+
+  // 6) 折射档必须显式夺回 pointer-events。
+  //
+  //    liquidGL 的 _activate() 把目标设成 pointer-events: none, 假定交互由它
+  //    的"内容层"承担; 而那层是把元素画进 canvas 的像素镜像, 接不到指针事件。
+  //    于是折射档下表面一律点不动 —— 设置界面直接失去交互。
+  //
+  //    这条只能由 CSS `!important` 兜住: _activate() 可能延后到 GPU 后端就绪
+  //    才执行, 也就是它会在装配完成**之后**再把内联样式设成 none, 于是"装完
+  //    立刻清一次"是不确定的 (同一份代码实测两次运行一次可点一次不可点)。
+  //    作者样式的 !important 优先于普通内联样式, 与库的时机无关。
+  //
+  //    这是全局约束: 规则只可能在声明了 liquid 的表面样式里写一次, 所以对
+  //    src/styles 全部 CSS 的并集判断一次。逐文件判断会要求每个 CSS 文件都
+  //    自带这条规则, 属于作用域错误 (除 dialog-surface.css 外的文件全部误报)。
+  const allStylesCode = styleFiles
+    .map((file) => stripCssComments(fs.readFileSync(file, 'utf8')))
+    .join('\n');
+  if (!LIQUID_POINTER_EVENTS.test(allStylesCode)) {
+    errors.push(
+      "磨砂: 折射档缺少 `pointer-events: auto !important` 覆盖 — liquidGL 会把目标设成 " +
+        "pointer-events: none (它的内容层是像素镜像, 接不到事件), 表面将完全无法交互",
+    );
   }
 }
 

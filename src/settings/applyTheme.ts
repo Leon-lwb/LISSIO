@@ -65,6 +65,7 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
   const acrylic = appearance.acrylicBackground === true;
   if (acrylic) {
     root.dataset.acrylic = 'true';
+    root.dataset.acrylic = 'true';
     const opacity = Math.min(1, Math.max(0.1, appearance.acrylicOpacity ?? ACRYLIC_BASE_OPACITY));
     for (const [token, baseAlpha] of Object.entries(ACRYLIC_TOKEN_ALPHA) as [ThemeToken, number][]) {
       const varName = getCssVariableName(token);
@@ -102,6 +103,22 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
   root.dataset.floatingGlass = floatingGlass ? 'true' : 'false';
   const floatingOpacity = Math.min(1, Math.max(0.5, appearance.floatingGlassOpacity ?? 0.88));
   root.style.setProperty('--frost-alpha-floating', `${Math.round(floatingOpacity * 100)}%`);
+
+  // 液态玻璃 (折射档) 的 <html> 级标记。
+  //
+  // 这里只表达"折射功能已请求", 不表达"某个表面此刻是折射档" —— 后者由
+  // useGlassSurface() 逐表面判定并写 data-glass-tier。分成两级是因为粒度不同:
+  // 全应用一个总开关, 而每个表面的可达档位还取决于角色 (chrome/content/
+  // surface 永不到折射档)、后端是否可用、以及帧率守护是否已降级。
+  //
+  // 写入这一行时不做任何后端探测: 探测要 import 库并建测试画布, 属于启动
+  // 热路径上的异步工作, 由 useGlassSurface 的 effect 承担。关闭时删属性,
+  // 让 CSS 里任何 [data-liquid-glass] 选择器一并退场。
+  if (appearance.liquidGlass === true) {
+    root.dataset.liquidGlass = 'true';
+  } else {
+    delete root.dataset.liquidGlass;
+  }
 
   // 整窗透明度 (CSS 层): body 整体 alpha 同时作用于 backdrop-filter 链路,
   // 与亚克力开关完全独立; 1.0 时不写 style (保持默认不透明)

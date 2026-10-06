@@ -112,6 +112,10 @@ recordingDatabaseActiveBadge: writing
 recordingDatabasePausedOnlyHint: Only available while the run is paused
 recordingDatabaseOpenSession: Open in view
 recordingDatabaseCurrentTarget: Writing to
+recordingDatabaseErrorTitle: Recording database action failed
+recordingDatabaseCreateFailed: Could not create recording session
+recordingDatabaseSwitchFailed: Could not switch recording session
+recordingDatabaseCleanupFailed: Could not clean up recording sessions
 recordingDatabaseNoActiveTarget: none
 recordingDatabaseHintAlreadyActive: This session is already the write target
 recordingDatabaseHintNeedsPause: Pause the run first to switch the write target

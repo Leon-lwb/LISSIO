@@ -15,7 +15,7 @@ import { memo, useEffect } from 'react';
 import { useAppStore } from '../../store/appStore';
 import { selectWidgets } from '../../store/appStoreHelpers';
 import { useWaveformScopeStore } from '../../store/waveformScopeStore';
-import { isShellTabType, panelDefForTabType } from '../panels/registry/panelDefs';
+import { isShellTabType, panelDefForTabType } from '../../lib/panels/panelDefs';
 import { PANEL_VIEWS, SHELL_TAB_CONTENT } from '../panels/registry/panelViews';
 import { FrozenPanelOutline, LiveStatusBadge, PanelLivenessProvider } from '../displays/common/PanelLiveness';
 import type { WidgetConfig } from '../../types';

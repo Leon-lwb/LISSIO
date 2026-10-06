@@ -14,9 +14,6 @@ interface AnimatedSwitchProps {
   className?: string;
 }
 
-/** Fallback used only before the spring tokens have been baked onto <html>. */
-const FALLBACK_EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
-
 /// 通用切换转场容器
 /// 纯 CSS transition (transform + opacity) — 动画由合成器线程接管, 不触发任何
 /// React 状态更新 / rAF 逐帧重渲染, 也不依赖 Web Animations API。
@@ -41,11 +38,12 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
     const { order: ord, axis: ax } = navRef.current;
     const travel = switchTravel(from, switchKey, ord, ax);
 
-    // 时长与缓动都取自 content 家族的弹簧令牌, 与 CSS 其余部分同一来源;
-    // 令牌尚未烘焙时退回等价的三次贝塞尔, 避免无缓动的生硬切换。
+    // 时长与缓动都取自 content 家族的弹簧令牌, 与 CSS 其余部分同一来源。
+    // 缓动令牌固定由 installMotionTokens() 在 main.tsx 里于首次渲染前写入 <html>
+    // (main.tsx 在 createRoot 之前调用它), 所以这里不再需要本地的兜底曲线:
+    // 真有缺口也该暴露出来, 而不是被一条写死的 cubic-bezier 悄悄遮住。
     const duration = Math.round(motionDuration('content', 'in') * 1000);
-    const baked = getComputedStyle(el).getPropertyValue('--ease-content-in').trim();
-    const easing = baked || FALLBACK_EASE;
+    const easing = getComputedStyle(el).getPropertyValue('--ease-content-in').trim();
 
     const settle = el.style;
     settle.transition = 'none';
@@ -66,7 +64,7 @@ export function AnimatedSwitch({ switchKey, order, axis, children, className }: 
   }, [switchKey]);
 
   return (
-    <div ref={ref} className={`motion-switch ${className ?? ''}`} data-motion-switch="content">
+    <div ref={ref} className={`motion-switch ${className ?? ''}`}>
       {children}
     </div>
   );

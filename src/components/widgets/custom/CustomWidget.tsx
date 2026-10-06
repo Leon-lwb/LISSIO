@@ -36,36 +36,17 @@
 import { memo, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { AlertCircle } from 'lucide-react';
 import type { WidgetConfig } from '../../../types';
+import {
+  evalCustomWidgetDef,
+  type CustomWidgetDef,
+  type CustomWidgetRuntime,
+} from '../../../lib/models/customWidgetDef';
+
+// 求值内核与类型搬到实现层 (那里也用它), 这里只做转发, 保持既有导入路径可用。
+export type { CustomWidgetDef, CustomWidgetRuntime };
+
 import { useAppStore } from '../../../store/appStore';
 import { useNumericInputs } from '../../../lib/hooks/useNumericPort';
-
-/// 节点内嵌 iframe 高度 (原 WidgetNode 传入的 height 缺省值)
-const EMBEDDED_HEIGHT = 140;
-
-export interface CustomWidgetDef {
-  name?: string;
-  description?: string;
-  inputs?: { id: string; label: string }[];
-  outputs?: { id: string; label: string }[];
-  settings?: {
-    id: string;
-    label: string;
-    type: 'number' | 'text' | 'color' | 'boolean';
-    default: string | number | boolean;
-  }[];
-  onMount?: (ctx: CustomWidgetRuntime) => void;
-  onUnmount?: (ctx: CustomWidgetRuntime) => void;
-  render?: (ctx: CustomWidgetRuntime) => void;
-}
-
-export interface CustomWidgetRuntime {
-  el: HTMLElement;
-  inputs: Record<string, number>;
-  settings: Record<string, string | number | boolean>;
-  state: Record<string, unknown>;
-  send: (portId: string, value: number) => void;
-  log: (...args: unknown[]) => void;
-}
 
 interface CustomWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'Custom' }>;
@@ -75,31 +56,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-function isCustomWidgetDef(value: unknown): value is CustomWidgetDef {
-  return isRecord(value) && typeof value.render === 'function';
-}
-
-/// 求值用户代码并返回 widget 定义对象 (供外部使用, 如读取 ports/settings schema)
-export function evalCustomWidgetDef(code: string): {
-  def: CustomWidgetDef | null;
-  error: string | null;
-} {
-  try {
-    // User-authored widgets intentionally execute JavaScript in the isolated desktop webview.
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval
-    const fn = new Function(`'use strict'; return (${code});`) as () => unknown;
-    const def = fn();
-    if (!isRecord(def)) {
-      return { def: null, error: '代码必须返回一个对象' };
-    }
-    if (!isCustomWidgetDef(def)) {
-      return { def: null, error: '代码必须定义 render(ctx) 函数' };
-    }
-    return { def, error: null };
-  } catch (e) {
-    return { def: null, error: e instanceof Error ? e.message : String(e) };
-  }
-}
+/// 节点内嵌 iframe 高度 (原 WidgetNode 传入的 height 缺省值)
+const EMBEDDED_HEIGHT = 140;
 
 /// 生成 iframe srcdoc — 内含 bootstrap + 用户代码
 function buildSrcDoc(code: string, def: CustomWidgetDef): string {

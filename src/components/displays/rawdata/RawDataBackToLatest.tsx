@@ -13,7 +13,7 @@ export function RawDataBackToLatest({ lang, onClick }: Props) {
   return (
     <button
       type="button"
-      className="absolute bottom-3 right-3 z-10 grid size-7 place-items-center rounded-full border border-border bg-bg-panel-header text-text-primary shadow-lg transition-colors hover:bg-bg-hover motion-safe:active:scale-95 cursor-pointer"
+      className="motion-control absolute bottom-3 right-3 z-10 grid size-7 place-items-center rounded-full border border-border bg-bg-panel-header text-text-primary shadow-lg hover:bg-bg-hover cursor-pointer"
       title={label}
       aria-label={label}
       onClick={onClick}

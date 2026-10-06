@@ -3,7 +3,7 @@ import { MapPin } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { useDockStore } from '../../../store/dockStore';
 import { transitionStore } from '../../../lib/utils/transitionStore';
-import { compileErrorMessage } from '../../ui/CanvasErrorTooltip';
+import { compileErrorMessage } from '../../../lib/models/compileErrorMessage';
 import { translate } from '../../../i18n';
 import type { CompileError } from '../../../store/slices/compileError';
 

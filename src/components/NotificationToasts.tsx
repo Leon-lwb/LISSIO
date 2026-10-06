@@ -5,6 +5,8 @@ import { translate } from '../i18n';
 import { XCircle, AlertTriangle, Info, X, ChevronDown } from 'lucide-react';
 import { activateOnKeyboard } from '../lib/utils/a11y';
 import { MotionPresence } from '../lib/motion';
+import { useGlassSurface } from '../lib/glass/useGlassSurface';
+import { useGlassAppearance } from '../lib/hooks/useGlassAppearance';
 
 const MAX_VISIBLE = 5;
 
@@ -58,6 +60,7 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
   const [closing, setClosing] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const glass = useGlassSurface({ role: 'transient', appearance: useGlassAppearance() });
 
   const requestDismiss = () => {
     if (!closing) setClosing(true);
@@ -105,7 +108,9 @@ function ToastItem({ notif, lang, onDismiss }: ToastItemProps) {
       onExitComplete={onDismiss}
     >
     <div
+      ref={glass.ref}
       className="prompt-card frost-acrylic motion-float h-full relative w-full p-4 flex flex-col gap-2.5 overflow-hidden"
+      data-glass-tier={glass.tier}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

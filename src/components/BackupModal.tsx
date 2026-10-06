@@ -16,6 +16,7 @@ import {
   type AppSnapshot,
   type BackupSection,
 } from '../lib/tauri/appExport';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -38,14 +39,7 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
     if (!isOpen) return;
     setSelected(new Set(ALL_BACKUP_SECTIONS));
     setPendingSnapshot(null);
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  }, [isOpen]);
 
   const toggle = (s: BackupSection) => {
     setSelected((prev) => {
@@ -82,17 +76,10 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 dialog-overlay z-modal flex items-center justify-center motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="w-[460px] max-w-[92vw] max-h-[88vh] dialog-surface flex flex-col overflow-hidden motion-surface-in"
-        role="dialog"
-        aria-modal="true"
+    <DialogOverlay open={isOpen} onDismiss={onClose} zClassName="z-modal">
+      <DialogSurface
+        className="w-[460px] max-w-[92vw] max-h-[88vh]"
+        label={translate('backupModalTitle', lang)}
       >
         {/* 标题栏 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border dialog-chrome flex-shrink-0">
@@ -181,7 +168,7 @@ export function BackupModal({ isOpen, onClose }: BackupModalProps) {
             <span>{translate('backupImportFromFile', lang)}</span>
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }

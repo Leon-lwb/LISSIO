@@ -62,6 +62,40 @@ describe('numeric input controls', () => {
     expect((selectWidgets(useAppStore.getState())[0] as typeof widget).params.value).toBe(preview);
   });
 
+  it('拖过 120px 走完整个量程 — 12px 对应 10% 而非整个量程', () => {
+    const widget = widgetFixture('Knob');
+    if (widget.kind !== 'Knob') throw new Error('expected Knob');
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
+    renderWithI18n(<Knob widget={widget} />);
+    const knob = screen.getByRole('slider');
+
+    // 量程 0-100, 起值 50: 向上 12px = 10% = 60。
+    // 若误用档位旋钮的 12px/档比例, 12px 会当成走完整个量程 → 被截到 100。
+    fireEvent.pointerDown(knob, { pointerId: 1, clientY: 200 });
+    fireEvent.pointerMove(knob, { pointerId: 1, clientY: 188 });
+    expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBe(60);
+
+    // 继续拖到 60px = 50% → 100 (截断)
+    fireEvent.pointerMove(knob, { pointerId: 1, clientY: 140 });
+    expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBe(100);
+  });
+
+  it('另一根手指按在旋钮上时移动不改值 — 多指同时按下不该跳值', () => {
+    const widget = widgetFixture('Knob');
+    if (widget.kind !== 'Knob') throw new Error('expected Knob');
+    useAppStore.setState({ rfNodes: [widgetNodeOf(widget)] });
+    renderWithI18n(<Knob widget={widget} />);
+    const knob = screen.getByRole('slider');
+
+    fireEvent.pointerDown(knob, { pointerId: 1, clientY: 200 });
+    fireEvent.pointerMove(knob, { pointerId: 2, clientY: 40 });
+    expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBeUndefined();
+
+    // 发起手势的那根指针照常生效
+    fireEvent.pointerMove(knob, { pointerId: 1, clientY: 188 });
+    expect(useAppStore.getState().inputPreviewValues[widget.params.id]).toBe(60);
+  });
+
   it('commits manual input once on Enter and keeps invalid drafts visible', () => {
     const onCommit = vi.fn();
     const onPreview = vi.fn();

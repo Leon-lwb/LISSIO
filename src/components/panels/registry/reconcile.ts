@@ -15,8 +15,8 @@
 
 import { useMemo } from 'react';
 import { useModelCatalogStore } from '../../../store/modelCatalogStore';
-import { PANEL_DEFS_ORDERED, panelDefForKind } from './panelDefs';
-import type { PanelDef } from './panelTypes';
+import { PANEL_DEFS_ORDERED, panelDefForKind } from '../../../lib/panels/panelDefs';
+import type { PanelDef } from '../../../lib/panels/panelTypes';
 import type { PanelBinding } from '../../../types/generated/PanelBinding';
 import type { PanelDataPlane } from '../../../types/generated/PanelDataPlane';
 import type { PanelDescriptor } from '../../../types/generated/PanelDescriptor';

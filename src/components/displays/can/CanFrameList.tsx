@@ -14,6 +14,7 @@ import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
 import { Trash2, ArrowDown, Download, Copy, Check, X } from 'lucide-react';
 import type { CanFrame, CanFrameFilter } from '../../../types';
 import { errorText } from '../../../types/errors';
+import { isTextEntryTarget } from '../../../lib/utils/a11y';
 import { Row } from './CanFrameRow';
 import {
   exportFramesToCsv,
@@ -212,8 +213,8 @@ export function CanFrameList() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      // 输入类控件自己处理 Ctrl+A/C, 全局的列表全选要让路
+      if (isTextEntryTarget(e.target)) return;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();
         selection.selectAll();

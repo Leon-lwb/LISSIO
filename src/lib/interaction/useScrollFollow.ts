@@ -10,10 +10,10 @@
 // 用户滚动与自身写入), 动画立即取消; 位置明显不属于任何一次自身写入时同样归属用户。
 // 接管后按既有 <30px 视为在底部 的语义写入 userScrolledRef。
 // 脱离状态 (detached) 同时以 state 暴露, 供视口右下角"回到最新"按钮显示。
-// 低动画模式: 回退为瞬时跳底 (判定统一走 lib/motion 的唯一权威源)。
+// 低动画模式: 回退为瞬时跳底 (判定统一走 lib/utils/reducedMotion 的唯一权威源)。
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motionIsReduced } from '../../../lib/motion';
+import { motionIsReduced } from '../utils/reducedMotion';
 
 /// 距底部不足该值视为仍在底部 (与旧版判定一致)
 const AT_BOTTOM_PX = 30;
@@ -44,7 +44,7 @@ function isAtBottom(el: ScrollTarget): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight < AT_BOTTOM_PX;
 }
 
-export interface AutoScrollBottomControl {
+export interface ScrollFollowControl {
   /// Header 自动滚动按钮的激活态依据 (用户上滚后熄灭)
   userScrolledRef: React.MutableRefObject<boolean>;
   /// 已脱离最新数据的响应式副本 — 供"回到最新"按钮显示 (ref 本身不触发重渲染,
@@ -71,10 +71,10 @@ export interface AutoScrollBottomControl {
 }
 
 /// getEl 返回当前通道对应的滚动容器 (字节/数值/字符串三容器二选一)
-export function useAutoScrollBottom(
+export function useScrollFollow(
   enabled: boolean,
   getEl: () => ScrollTarget | null
-): AutoScrollBottomControl {
+): ScrollFollowControl {
   const userScrolledRef = useRef(false);
   // 脱离状态的响应式镜像 — 与 userScrolledRef 同步写入, 保证两者语义永不分离
   const [detached, setDetached] = useState(false);

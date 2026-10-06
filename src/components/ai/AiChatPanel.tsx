@@ -16,7 +16,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useSettingsStore } from '../../store/settingsStore';
-import { dockDrag } from '../../lib/dockDrag';
+import { dockDrag } from '../../lib/interaction/dockDrag';
 import { formatAiKindError } from '../../lib/ai/aiErrors';
 import { sessionFilename, sessionToMarkdown } from '../../lib/ai/chatMarkdown';
 import { readMdFile, saveMdFile } from '../../lib/tauri/mdFile';

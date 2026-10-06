@@ -7,8 +7,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
-import { useAppStore } from '../../store/appStore';
-import { translate } from '../../i18n';
+import { useTranslation } from '../../i18n';
 
 interface SearchInputProps {
   value: string;
@@ -42,7 +41,7 @@ export function SearchInput({
   inputRef,
   className,
 }: SearchInputProps) {
-  const lang = useAppStore((s) => s.lang);
+  const { t } = useTranslation();
   const [display, setDisplay] = useState(value);
   // 最近一次上报给父级的值 — 区分「父级回推 (外部清空/重置)」与「防抖期间尚未上报的本地输入」
   const lastReportedRef = useRef(value);
@@ -135,9 +134,9 @@ export function SearchInput({
       {display !== '' && !disabled && (
         <button
           type="button"
-          className="shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary transition-transform motion-safe:active:scale-95 cursor-pointer motion-icon-pop"
-          title={translate('clearSearch', lang)}
-          aria-label={translate('clearSearch', lang)}
+          className="motion-control shrink-0 flex items-center justify-center text-text-secondary hover:text-text-primary cursor-pointer motion-icon-pop"
+          title={t('clearSearch')}
+          aria-label={t('clearSearch')}
           onClick={handleClear}
         >
           <X size={iconSize} />

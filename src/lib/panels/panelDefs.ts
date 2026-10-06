@@ -34,9 +34,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import type { DataTabType } from '../../../types';
-import type { WidgetKind } from '../../widgets/registryTypes';
-import type { PanelKind } from '../../../types/generated/PanelKind';
+import type { DataTabType, WidgetKind } from '../../types';
+import type { PanelKind } from '../../types/generated/PanelKind';
 import type { PanelDef, ShellTabType } from './panelTypes';
 
 /// 12 个数据驱动面板 —— 键即 `PanelKind`, 遗漏或多余都会编译失败。

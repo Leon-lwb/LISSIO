@@ -3,14 +3,15 @@
 //! 仿 AboutModal: 遮罩 + 居中卡片, Esc/点遮罩关闭
 //! 下载中禁止关闭 (避免用户误以为更新已取消)
 
-import { useEffect } from 'react';
 import { X, RefreshCw } from 'lucide-react';
 import { useAppStore } from '../store/appStore';
 import { useUpdateStore } from '../store/updateStore';
 import { translate } from '../i18n';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
 export function UpdateDialog() {
   const lang = useAppStore((s) => s.lang);
+  const dialogOpen = useUpdateStore((s) => s.dialogOpen);
   const status = useUpdateStore((s) => s.status);
   const updateInfo = useUpdateStore((s) => s.updateInfo);
   const currentVersion = useUpdateStore((s) => s.currentVersion);
@@ -24,27 +25,14 @@ export function UpdateDialog() {
   /// 下载中禁止关闭
   const closable = status !== 'downloading';
 
-  useEffect(() => {
-    if (!closable) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeDialog();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [closable, closeDialog]);
-
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget && closable) closeDialog(); }}
-      onKeyDown={(event) => { if (closable && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); closeDialog(); } }}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="w-[440px] max-w-[90vw] max-h-[80vh] dialog-surface py-6 px-7 flex flex-col gap-2 relative motion-surface-in"
-        role="dialog"
-        aria-modal="true"
+    // `onDismiss` 在不可关闭时留空: 栈里的这一层仍然占位, Escape 到此为止, 不会
+    // 穿透到它背后的浮层 —— 用户看到的是"按了没反应", 而不是"更新弹窗背后的东西
+    // 被关掉了"。
+    <DialogOverlay open={dialogOpen} onDismiss={closable ? closeDialog : undefined}>
+      <DialogSurface
+        className="w-[440px] max-w-[90vw] max-h-[80vh] py-6 px-7 flex flex-col gap-2 relative"
+        label={translate('updateAvailableTitle', lang)}
       >
         {closable && (
           <button
@@ -152,8 +140,8 @@ export function UpdateDialog() {
             </button>
           )}
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }
 

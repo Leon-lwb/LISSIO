@@ -1,4 +1,5 @@
 import { memo, useCallback, useRef, useEffect } from 'react';
+import { NUMERIC_CONTROL_BEHAVIOR, useNumericControl } from '../../../lib/interaction/useNumericControl';
 
 interface StepKnobProps {
   /// 当前值
@@ -35,7 +36,6 @@ export const StepKnob = memo(function StepKnob({
   disabled = false,
 }: StepKnobProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ startY: number; startIdx: number } | null>(null);
 
   const currentIndex = steps.indexOf(value);
   const safeIdx = currentIndex >= 0 ? currentIndex : 0;
@@ -78,44 +78,22 @@ export const StepKnob = memo(function StepKnob({
     return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      if (disabled) return;
-      e.preventDefault();
-      e.stopPropagation();
-      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-      dragRef.current = { startY: e.clientY, startIdx: safeIdx };
-    },
-    [disabled, safeIdx]
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!dragRef.current || disabled) return;
-      const dy = dragRef.current.startY - e.clientY;
-      // 每 12px 一档
-      const delta = Math.round(dy / 12);
-      stepTo(dragRef.current.startIdx + delta);
-    },
-    [disabled, stepTo]
-  );
-
-  const handlePointerUp = useCallback(
-    (e: React.PointerEvent) => {
-      if (dragRef.current) {
-        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
-        dragRef.current = null;
-      }
-    },
-    []
-  );
-
   const handleDoubleClick = useCallback(() => {
     if (disabled) return;
     if (defaultValue !== undefined && defaultValue !== value) {
       onChange(defaultValue);
     }
   }, [disabled, defaultValue, value, onChange]);
+
+  // 垂直拖拽换档: 按下瞬间的档位索引是基准, 每 12px 一档
+  const dialHandlers = useNumericControl<number>({
+    disabled,
+    preventDefaultOnPress: true,
+    baseline: () => safeIdxRef.current,
+    onTravel: (upwardPx, startIdx) => {
+      stepToRef.current(startIdx + Math.round(upwardPx / NUMERIC_CONTROL_BEHAVIOR.stepKnobPxPerDetent));
+    },
+  });
 
   return (
     <div
@@ -130,9 +108,10 @@ export const StepKnob = memo(function StepKnob({
           height: size,
           transform: `rotate(${angle}deg)`,
         }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onPointerDown={dialHandlers.onPointerDown}
+        onPointerMove={dialHandlers.onPointerMove}
+        onPointerUp={dialHandlers.onPointerUp}
+        onPointerCancel={dialHandlers.onPointerCancel}
         onDoubleClick={handleDoubleClick}
       >
         <div className="step-knob-pointer" />

@@ -1,13 +1,13 @@
-//! Single authority for reduced-motion.
+//! 低动画偏好的唯一权威源 (实现层)。
 //!
-//! Three inputs exist — the OS `prefers-reduced-motion` media query and the
-//! in-app appearance setting — and previously each call site checked whichever it
-//! happened to know about, so behaviour drifted between a CSS `!important`
-//! blanket rule, a component-local `matchMedia` call, and the shared hook.
+//! 两个输入 —— 系统 `prefers-reduced-motion` 媒体查询与应用内外观设置 —— 都汇入
+//! `<html>` 上的同一个类, 那是唯一被读取的东西: JS 问 `motionIsReduced()`, CSS 认
+//! `.reduced-motion`。新增动画面不可能读错。
 //!
-//! Now both inputs funnel into one class on `<html>`, which is the only thing
-//! anyone reads: JavaScript asks `motionIsReduced()`, CSS keys off
-//! `.reduced-motion`. Adding a new animated surface cannot get this wrong.
+//! 判定属于实现层而不是效果层: 它是"用户要什么"的策略, 不含任何动画实现 ——
+//! 手势 (拖拽、滚动跟随) 与异步动作同样要在低动画下走无动画分支, 却不属于效果层。
+//! 判定若住在效果层, 这些调用点只能反向依赖效果层, 范式方向即被破坏。
+//! 效果层经 `lib/motion` 转发读取 (见 `motion/index.ts`), 调用方写法不变。
 
 const MEDIA_QUERY = '(prefers-reduced-motion: reduce)';
 

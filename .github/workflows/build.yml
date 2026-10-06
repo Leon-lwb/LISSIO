@@ -131,6 +131,7 @@ jobs:
           pnpm check:model-catalog
           pnpm check:tokens
           pnpm check:motion
+          pnpm check:layers
           pnpm check:docs
           pnpm typecheck
           pnpm lint:ci

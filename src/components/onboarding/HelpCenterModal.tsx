@@ -8,26 +8,18 @@ import { useAppStore } from '../../store/appStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { translate } from '../../i18n';
 import { HELP_SECTIONS } from './helpContent';
-import { activateOnKeyboard } from '../../lib/utils/a11y';
+import { DialogOverlay, DialogSurface } from '../ui/Dialog';
 
 export function HelpCenterModal() {
   const lang = useAppStore((s) => s.lang);
   const isOpen = useOnboardingStore((s) => s.isHelpOpen);
   const close = useOnboardingStore((s) => s.closeHelp);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) close(); }}
-      onKeyDown={activateOnKeyboard}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="flex flex-col dialog-surface overflow-hidden motion-surface-in"
-        style={{ width: '80vw', height: '85vh', maxWidth: 1000, maxHeight: 800 }}
+    <DialogOverlay open={isOpen} onDismiss={close}>
+      <DialogSurface
+        className="flex flex-col w-[80vw] h-[85vh] max-w-[1000px] max-h-[800px]"
+        label={translate('helpCenterTitle', lang)}
       >
         <div className="flex items-center gap-2 px-3 py-2 dialog-chrome border-b border-border text-text-primary font-semibold">
           <HelpCircle size={16} />
@@ -73,8 +65,8 @@ export function HelpCenterModal() {
             {translate('helpClose', lang)}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }
 

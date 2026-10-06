@@ -8,7 +8,7 @@
 //! 的构造, 供 addWidget (拖入自动开窗) 与 WidgetNode 双击重开窗口共用。
 
 import type { DataTab, DataTabType, WidgetConfig } from '../../types';
-import { panelDefForWidget } from '../../components/panels/registry/panelDefs';
+import { panelDefForWidget } from '../panels/panelDefs';
 
 /// 控件是否拥有可独立开合的窗口, 以及对应的 Tab 类型
 /// 与 addWidget 的建 Tab 逻辑保持一致: 仅这些控件会创建数据窗口

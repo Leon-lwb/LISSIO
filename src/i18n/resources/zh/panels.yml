@@ -113,6 +113,10 @@ recordingDatabaseActiveBadge: 写入中
 recordingDatabasePausedOnlyHint: 仅在暂停时可用
 recordingDatabaseOpenSession: 打开查看
 recordingDatabaseCurrentTarget: 当前写入
+recordingDatabaseErrorTitle: 录制数据库操作失败
+recordingDatabaseCreateFailed: 新建录制会话失败
+recordingDatabaseSwitchFailed: 切换录制会话失败
+recordingDatabaseCleanupFailed: 清理录制会话失败
 recordingDatabaseNoActiveTarget: 无
 recordingDatabaseHintAlreadyActive: 该会话已是当前写入目标
 recordingDatabaseHintNeedsPause: 仅暂停时可切换写入目标，请先暂停

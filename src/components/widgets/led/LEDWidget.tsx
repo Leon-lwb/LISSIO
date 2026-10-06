@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import type { WidgetConfig } from '../../../types';
 import { useNumericInput } from '../../../lib/hooks/useNumericPort';
-import { NumericPortStatus } from '../../displays/common/NumericPortStatus';
+import { NumericPortStatus } from '../shared/NumericPortStatus';
 
 interface LEDProps {
   widget: Extract<WidgetConfig, { kind: 'LED' }>;

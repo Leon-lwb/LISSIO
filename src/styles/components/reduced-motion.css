@@ -36,18 +36,14 @@
   transition-duration: 1ms;
 }
 
-/* 进场/离场关键帧压成终态: 这些动画都是 `both` 填充, 1ms 后停在终值,
-   不会留一个半透明的中间态给用户。 */
+/* 进场关键帧压成终态: 这些动画都是 `both` 填充, 1ms 后停在终值,
+   不会留一个半透明的中间态给用户。位移与缩放不用在这里登记 —— 它们在安装时
+   已被压成 0px 与 1 (见 easingTokens.ts)。 */
 .reduced-motion .motion-overlay-in,
-.reduced-motion .motion-overlay-exit,
 .reduced-motion .motion-surface-in,
-.reduced-motion .motion-surface-exit,
 .reduced-motion .motion-pop-in,
-.reduced-motion .motion-pop-exit,
 .reduced-motion .motion-message-in,
-.reduced-motion .motion-message-exit,
 .reduced-motion .motion-banner-in,
-.reduced-motion .motion-banner-exit,
 .reduced-motion .motion-tick-in,
 .reduced-motion .motion-icon-pop,
 .reduced-motion .animate-rawdata-enter {

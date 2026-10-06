@@ -5,6 +5,14 @@
      --motion-duration-<家族>-<阶段>   5 个家族 × 进/离场 = 10 个时长
      --ease-<家族>-<阶段>              同上, 为弹簧采样出的多段缓动函数
 
+   浮层几何同样只有一处来源 —— src/lib/motion/presence.ts 的 VARIANT_GEOMETRY,
+   在那里按角色声明"从哪来、缩放多少", 运行时投影成:
+
+     --motion-travel-<角色>    "0px, 10px" 这样的两个参数, 直接喂给 translate()
+     --motion-scale-<角色>     标量
+
+   本文件的关键帧因此不持有任何 px 字面量; 下面的兜底值只是 JS 就绪前的近似。
+
    这样 CSS 过渡与 GSAP 补间共用同一个求解器, 速度档位切换时整组一起重烘焙。
    本文件只负责"哪个角色用哪个家族"和"从哪个方向来"。
 
@@ -19,15 +27,6 @@
 /* ============ 交互态基元 ============ */
 /* 只对 transform/opacity 建立过渡。颜色类属性在组件规则里就地声明,
    避免高频控件凭空多出合成层。 */
-
-.motion-control,
-.motion-row,
-.motion-surface,
-.motion-float,
-.motion-pill,
-.motion-switch {
-  --motion-ease: var(--ease-control-in);
-}
 
 .motion-control {
   transition:
@@ -144,11 +143,14 @@
 }
 
 /* ============ 进场面板 ============ */
-/* 这些类是无 JS 时的降级路径: 有 JS 时同一个表面由 MotionPresence 驱动,
-   因为只有它能保住"退场播放完才卸载"的生命周期。两者不同时作用于一个元素。 */
+/* 无 JS 时的降级路径: 有 JS 时同一个表面由 MotionPresence 驱动, 因为只有它能保住
+   "退场播放完才卸载"的生命周期。两者不同时作用于一个元素。
+   家族取自 VARIANT_GEOMETRY 的 family, 不是按类名猜: 遮罩与气泡都是 surface
+   家族, 只有消息与横幅属于 content。写错家族会让同一次进场在兜底路径与 JS
+   路径上快慢不一, 与位移漂移是同一类问题。 */
 
 .motion-overlay-in {
-  animation: motion-overlay-in var(--motion-duration-surface-out) var(--ease-surface-in) both;
+  animation: motion-overlay-in var(--motion-duration-surface-in) var(--ease-surface-in) both;
 }
 
 .motion-surface-in {
@@ -156,7 +158,7 @@
 }
 
 .motion-pop-in {
-  animation: motion-pop-in var(--motion-duration-content-in) var(--ease-content-in) both;
+  animation: motion-pop-in var(--motion-duration-surface-in) var(--ease-surface-in) both;
 }
 
 /* 错峰延迟走自定义属性而不是内联 animation-delay: 内联的 animation-delay 会
@@ -173,107 +175,63 @@
   animation: motion-tick-in var(--motion-duration-toggle-in) var(--ease-toggle-in) both;
 }
 
-/* ============ 离场面板 ============ */
-/* 与进场刻意不同: 时长更短、缓动为临界阻尼、位移不越过进场偏移。
-   原路退回会让读感像"卡了一下", 继续沿原方向离场才是离开。 */
-
-.motion-overlay-exit {
-  animation: motion-overlay-out var(--motion-duration-surface-out) var(--ease-surface-out) both;
-}
-
-.motion-surface-exit {
-  animation: motion-surface-out var(--motion-duration-surface-out) var(--ease-surface-out) both;
-}
-
-.motion-pop-exit {
-  animation: motion-pop-out var(--motion-duration-content-out) var(--ease-content-out) both;
-}
-
-.motion-message-exit {
-  animation: motion-message-out var(--motion-duration-content-out) var(--ease-content-out) both;
-}
-
-.motion-banner-exit {
-  animation: motion-banner-out var(--motion-duration-content-out) var(--ease-content-out) both;
-}
+/* 离场没有对应的降级类: CSS `animation` 无法阻止 React 立刻卸载节点, 所以退场
+   一律由 MotionPresence 负责, 只有它能保证"退场播放完才卸载"。 */
 
 @keyframes motion-overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
+/* 进场的位移与缩放各读各的角色令牌, 值由 easingTokens.ts 从 presence.ts 的
+   VARIANT_GEOMETRY 投影而来。曾经这里逐个写死偏移, 于是同一个角色在 CSS 兜底
+   路径与 GSAP 路径上动画不同 (banner 5px vs 8px), 差异还取决于 JS 是否已就绪。
+   `translate()` 收两个参数, 所以 travel 令牌就是 "0px, 10px" 这种逗号分隔形式。 */
 @keyframes motion-surface-in {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance-small)) scale(0.97);
+    transform: translate(var(--motion-travel-surface)) scale(var(--motion-scale-surface));
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
 @keyframes motion-pop-in {
   from {
     opacity: 0;
-    transform: translateY(calc(var(--motion-distance-micro) * -1)) scale(0.97);
+    transform: translate(var(--motion-travel-popover)) scale(var(--motion-scale-popover));
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
 @keyframes motion-message-in {
   from {
     opacity: 0;
-    transform: translateY(var(--motion-distance-micro)) scale(0.99);
+    transform: translate(var(--motion-travel-message)) scale(var(--motion-scale-message));
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
 @keyframes motion-banner-in {
   from {
     opacity: 0;
-    transform: translateY(calc(var(--motion-distance-micro) * -1));
+    transform: translate(var(--motion-travel-banner)) scale(var(--motion-scale-banner));
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
 @keyframes motion-tick-in {
   from { opacity: 0; transform: scale(0.4); }
   to { opacity: 1; transform: scale(1); }
-}
-
-/* ============ 离场关键帧 ============ */
-
-@keyframes motion-overlay-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-@keyframes motion-surface-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * 0.4)) scale(0.985); }
-}
-
-@keyframes motion-pop-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * -0.5)) scale(0.985); }
-}
-
-@keyframes motion-message-out {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * 0.5)) scale(1); }
-}
-
-@keyframes motion-banner-out {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(calc(var(--motion-distance-micro) * -1)); }
 }

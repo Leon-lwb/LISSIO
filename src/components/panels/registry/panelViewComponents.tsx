@@ -31,7 +31,7 @@ import { Trigger } from '../../widgets/trigger/TriggerView';
 import { TableView } from '../../displays/widgets/TableView';
 import { SuspenseFallback } from '../../ui/SuspenseFallback';
 import type { WidgetConfig } from '../../../types';
-import type { PanelTabViewProps } from './panelTypes';
+import type { PanelTabViewProps } from '../../../lib/panels/panelTypes';
 
 // 重型 3D 控件 (Three.js) — 懒加载, 首次切到 model3d Tab 时才拉取
 // (清单见 components/lazy/lazyComponents.ts — 全仓唯一 React.lazy 声明点)

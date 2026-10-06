@@ -7,7 +7,6 @@ export {
   motionTiming,
   reflowSpring,
   REFLOW_TIMING,
-  MOTION_DISTANCE,
   type MotionFamily,
   type MotionPhase,
   type MotionPresenceVariant,
@@ -21,7 +20,7 @@ export {
   subscribeReducedMotion,
   syncReducedMotion,
   watchReducedMotion,
-} from './reducedMotion';
+} from '../utils/reducedMotion';
 export { installMotionTokens, springToLinearEasing } from './easingTokens';
 export { springEase, springTween, type SpringTweenVars } from './gsapSpring';
 export { createBorrowSlot, promote, promotionCount, type BorrowSlot } from './compositor';
@@ -42,5 +41,18 @@ export {
 export { useDockReorder } from './dockFlip';
 export { useFlipReorder, type FlipReorderOptions } from './flipReorder';
 export { dockPanelGeometry, type DockEdge, type DockPanelGeometry } from './presence';
+// 浮层几何令牌的读写点: presence.ts 是数值来源, easingTokens.ts 把它投影到 <html>。
+export {
+  VARIANT_GEOMETRY,
+  cssScaleToken,
+  cssScaleValue,
+  cssTravelToken,
+  cssTravelValue,
+  type TravelVector,
+  type VariantGeometry,
+} from './presence';
 export { useMotionPresence } from './useMotionPresence';
+export { usePresence, type PresenceOptions } from './usePresence';
+export { RetentionScope } from './RetentionScope';
+export { useRetention, useExitSnapshot } from './retention';
 export { MotionPresence, type MotionPresenceProps } from './MotionPresence';

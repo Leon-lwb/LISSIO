@@ -211,7 +211,7 @@ function checkCss(file) {
   const css = stripComments(raw);
   const { blocks, stripped } = extractKeyframes(css);
 
-  if (blocks.length === 0 && !/transition/.test(css)) return;
+  if (blocks.length === 0 && !/transition/.test(css) && !/--motion-(?:travel|scale)-/.test(css)) return;
 
   // @keyframes 帧内属性
   for (const block of blocks) {
@@ -221,6 +221,8 @@ function checkCss(file) {
       report(file, lineOf(css, block.offset + match.index), property, '@keyframes 里只能插值绘制层属性');
     }
   }
+
+  checkGeometryTokens(file, css);
 
   // transition / transition-property 声明
   for (const match of stripped.matchAll(/(?:^|[;{])\s*(transition(?:-property)?)\s*:\s*([^;]+)/g)) {
@@ -240,12 +242,123 @@ function checkCss(file) {
   }
 }
 
+// ---------- 浮层几何令牌 ----------
+//
+// presence.ts 的 VARIANT_GEOMETRY 是位移与缩放的唯一数值来源, easingTokens.ts 按角色
+// 投影成 --motion-travel-<角色> / --motion-scale-<角色>, CSS 关键帧只按名字消费。
+// 这条链路有两处不会报错的失效方式:
+//
+//   1. 角色名拼错。CSS 自定义属性没有"未定义"的概念 —— var() 取不到值时整条声明
+//      变成 invalid at computed-value time, 于是 transform 里的位移**和缩放**一起
+//      消失。页面看起来只是"没写动画", 控制台干净, 测试也不会红。
+//   2. 令牌没在 theme.css 的 @theme 里登记。@theme 变量按引用裁剪, 没有被 CSS 引用
+//      的会被删掉, 于是 JS 就绪前的首帧没有兜底值。
+//
+// 判据因此是双向的: CSS 引用的角色必须真实存在, 且必须已经登记。
+
+/** 取出 presence.ts 里 VARIANT_GEOMETRY 的顶层键名。 */
+function geometryRoles() {
+  const source = fs.readFileSync(path.join(SRC, 'lib/motion/presence.ts'), 'utf8');
+  const at = source.indexOf('VARIANT_GEOMETRY');
+  if (at < 0) return null;
+  const open = source.indexOf('{', at);
+  if (open < 0) return null;
+  let depth = 0;
+  let end = -1;
+  for (let i = open; i < source.length; i += 1) {
+    if (source[i] === '{') depth += 1;
+    else if (source[i] === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return null;
+  const roles = new Set();
+  for (const match of source.slice(open + 1, end).matchAll(/^ {2}([A-Za-z][A-Za-z0-9_]*)\s*:/gm)) {
+    roles.add(match[1]);
+  }
+  return roles;
+}
+
+const GEOMETRY_ROLES = geometryRoles();
+const THEME_CSS = path.join(SRC, 'styles/theme.css');
+
+function checkGeometryTokens(file, css) {
+  const refs = [...css.matchAll(/var\(\s*--motion-(travel|scale)-([a-z0-9-]+)\s*\)/g)];
+  if (refs.length === 0) return;
+
+  if (GEOMETRY_ROLES === null || GEOMETRY_ROLES.size === 0) {
+    report(file, 1, '--motion-travel-*', '无法从 presence.ts 解析 VARIANT_GEOMETRY, 几何令牌检查已失效');
+    return;
+  }
+
+  const themeCss = fs.readFileSync(THEME_CSS, 'utf8');
+  for (const match of refs) {
+    const [, kind, role] = match;
+    const token = `--motion-${kind}-${role}`;
+    if (!GEOMETRY_ROLES.has(role)) {
+      report(
+        file,
+        lineOf(css, match.index),
+        token,
+        `角色 "${role}" 不在 presence.ts 的 VARIANT_GEOMETRY 里; var() 取不到值会让整条 transform 失效 (位移与缩放一起丢)`
+      );
+      continue;
+    }
+    if (!new RegExp(`^\\s*${token}\\s*:`, 'm').test(themeCss)) {
+      report(file, lineOf(css, match.index), token, `${token} 未在 styles/theme.css 的 @theme 里登记, JS 就绪前的首帧没有兜底值`);
+    }
+  }
+
+  // 登记了却没有关键帧消费的角色会被 Tailwind 裁掉 —— 要么是笔误, 要么是残留登记。
+  const cssText = collect(SRC, ['.css']).map((other) => stripComments(fs.readFileSync(other, 'utf8')));
+  for (const match of themeCss.matchAll(/^\s*--motion-(travel|scale)-([a-z0-9-]+)\s*:/gm)) {
+    const [, kind, role] = match;
+    const token = `--motion-${kind}-${role}`;
+    const pattern = new RegExp(`var\\(\\s*${token}\\s*\\)`);
+    if (!cssText.some((text) => pattern.test(text))) {
+      report(THEME_CSS, lineOf(themeCss, match.index), token, `${token} 已登记但没有任何关键帧消费, 会被 @theme 裁剪掉`);
+    }
+  }
+}
+
 // ---------- TS / TSX ----------
 
 /** Tailwind arbitrary 值里 `_` 代表空格。 */
 function normalizeArbitrary(value) {
   return value.replace(/_/g, ' ').trim();
 }
+
+/**
+ * 解析同文件内的顶层字符串 / 模板串常量。
+ *
+ * 内联过渡的值常常是个模块常量 (例如 `transition: GEOMETRY_TRANSITION`)。
+ * 只看字面量会漏掉它们, 而 `TourSpotlight.tsx` 的豁免项在收紧本检查之前
+ * 正是因为"值不是字面量"而从未被真正触发过。
+ */
+function resolveConstant(source, name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(
+    `(?:const|let|var)\\s+${escaped}(?:\\s*:[^=]+)?\\s*=\\s*[\`'"]([^\`'"]*)[\`'"]`
+  );
+  const match = pattern.exec(source);
+  return match ? match[1] : null;
+}
+
+/** TS 类型位置上的原始类型名 —— 此时 `transitionProperty:` 是接口字段, 不是内联样式。 */
+const TS_TYPE_KEYWORDS = new Set([
+  'string',
+  'number',
+  'boolean',
+  'any',
+  'unknown',
+  'never',
+  'void',
+  'object',
+]);
 
 function checkScript(file) {
   const source = stripComments(fs.readFileSync(file, 'utf8'));
@@ -266,10 +379,38 @@ function checkScript(file) {
     report(file, lineOf(source, match.index), 'transition-all', '禁止使用; 显式列出属性, 避免布局属性被顺带过渡');
   }
 
-  // 内联样式: transition / transitionProperty
-  for (const match of source.matchAll(/(?<![\w-])transition(?:-property)?\s*:\s*([`'"](?:[^`'"]*)[`'"])/g)) {
-    const value = match[1].slice(1, -1);
+  // 内联样式: transition / transitionProperty, 三种写法都要认 ——
+  //   - 对象字面量: `transition: '…'` / `transitionProperty: '…'`
+  //   - 赋值:       `el.style.transition = '…'`
+  //   - 模块常量:   `transition: GEOMETRY_TRANSITION`
+  // 曾经的 `(?:-property)?\s*:` 匹配不到 camelCase 的 `transitionProperty`,
+  // 于是 `style={{ transitionProperty: 'width 200ms' }}` 可以静默通过。
+  //
+  // 值的形态决定了它是不是内联样式: 成员表达式 (`a.b.c`) 是在读写运行时状态,
+  // 原始类型名是接口字段 —— 两者都不是可以静态求值的 CSS 值。
+  const inlinePattern =
+    /(?<![\w-])transition(?:-?[Pp]roperty)?\s*[:=]\s*(?:[`'"]([^`'"]*)[`'"]|([A-Za-z_$][\w$.]*))/g;
+  for (const match of source.matchAll(inlinePattern)) {
+    const literal = match[1];
+    let value = literal;
+    if (value === undefined) {
+      const raw = match[2];
+      if (raw.includes('.') || TS_TYPE_KEYWORDS.has(raw)) continue;
+      const resolved = resolveConstant(source, raw);
+      if (resolved === null) {
+        report(
+          file,
+          lineOf(source, match.index),
+          raw,
+          '内联 transition 的值无法静态确认; 改成字面量或模块级字符串常量, 否则布局属性可以藏在这里'
+        );
+        continue;
+      }
+      value = resolved;
+    }
+    if (value === '' || value === 'none' || value === 'initial' || value === 'unset') continue;
     for (const part of splitTopLevel(value)) {
+      if (part === 'none' || part === 'initial' || part === 'unset') continue;
       const property = propertyOf(part);
       if (property === null) continue;
       if (COMPOSITOR_SAFE.has(property) || isExempt(file, property)) continue;

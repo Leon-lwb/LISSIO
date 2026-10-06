@@ -89,6 +89,81 @@
   box-shadow: var(--frost-shadow);
 }
 
+/* ============ 档位分流 (纯色 / 高斯模糊 / 折射) ============ */
+/* data-glass-tier 由 useGlassSurface() 写入, 是"这个表面此刻是什么档"的唯一
+   权威。CSS 在这里做无脑映射, 不做判定 —— 判定留在 JS 一处, 是因为下面这条
+   互斥规则不允许有第二份答案。
+
+   【blur 与 liquid 绝不能同元素共存】带 backdrop-filter 的元素就是它自己的
+   Backdrop Root; liquidGL 的折射画布于是只能采到这一层, 弯折在视觉上凭空
+   消失 —— 无报错、无告警, 只是"折射好像没生效"。
+
+   因此 `backdrop-filter: none` 必须与角色选择器**写在同一条规则**里, 而不是
+   靠一条独立的 `[data-glass-tier='liquid']`: 上面那条模糊规则是
+   `[data-floating-glass='true'] .dialog-surface` (0,2,0), 而独立规则只有
+   (0,1,0), 特异性更低, 于是模糊照旧生效、折射静默失效。
+   check:tokens 的折射档规则专门盯这一条 —— 声明了 liquid 却不关模糊即报错。 */
+
+/* ============ 折射档: 交互必须留在目标元素上 ============ */
+/* 库在 _activate() 里把目标设成 `pointer-events: none` —— 它假定交互由它的
+   "内容层"承担。但那个内容层是把元素**画进一张 canvas** 的像素镜像, 镜像
+   接不到指针事件; 库只在 `draggable` 时才把 pointer-events 装回去。
+
+   后果是致命的: 不带 draggable 的透镜一律点不动, 命中测试直接穿透到下层
+   遮罩 —— 设置界面在折射档下整个失去交互 (实测确认)。
+
+   为什么必须以 CSS 为准, 而不能只靠"装配后清一次内联样式": _activate() 可能是
+   **延后**执行的 (GPU 后端就绪前先进 _pendingLensActivation), 也就是它会在
+   factory() 返回**之后**再把 pointer-events 设成 none, 于是"装完立刻清"这件事
+   是不确定的 —— 实测同一份代码两次运行一次可点一次不可点。作者样式的
+   `!important` 优先于普通内联样式, 与库的时机无关, 这是唯一稳的位置。
+
+   前提是安全的: 底色已被库清成 transparent, 折射画布画在它下面一层, 子元素
+   仍是真实 DOM (opacity 还原为 1), 事件路径与不折射时一致。库的指针跟随绑在
+   window 上, 不经过目标元素, 所以放开命中不影响那个效果。 */
+[data-glass-tier='liquid'] {
+  pointer-events: auto !important;
+}
+
+/* 折射档: 只做减法, 边缘效果全部交给库。
+   底色保持半透明让折射内容透上来; 其余一律不画 ——
+     - 边框: transparent。1px 描边在折射玻璃上会读成一条贴在边上的硬线,
+       把库自己那圈倒角高光 (bevelWidth/bevelDepth 产出的) 盖掉, 于是玻璃
+       只剩"一圈亮边"而没有厚度。border-width 保持 1px 不动, 只改颜色,
+       免得档位切换时盒子尺寸跳一下。
+     - 阴影: none。库在 `shadow: true` 时自己插一张独立的阴影层 (position
+       absolute, z-index 比画布还低), 目标上再留 --frost-shadow 就成了双份
+       投影, 边缘显得脏。
+   模糊刻意不加回来 —— 那是 blur 档的职责, 加回来即触发文件头的互斥规则。 */
+[data-glass-tier='liquid'].dialog-surface,
+[data-glass-tier='liquid'].popover-surface,
+[data-glass-tier='liquid'].context-menu,
+[data-glass-tier='liquid'].prompt-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: color-mix(
+    in srgb,
+      var(--color-float-surface) var(--frost-alpha-floating),
+      transparent
+  );
+  border-color: transparent;
+  box-shadow: none;
+}
+
+/* 吐司 / 状态栏折射档。其模糊规则是 `[data-acrylic='true'] .frost-acrylic`
+   (0,2,0), 故同样必须把 none 写进带角色类名的这条里。 */
+[data-glass-tier='liquid'].frost-acrylic {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: color-mix(
+    in srgb,
+      var(--frost-acrylic-base) var(--frost-alpha-widget),
+      transparent
+  );
+  border-color: transparent;
+  box-shadow: none;
+}
+
 /* 浮层内容区底色 —— 刻意只做半透明, 不叠 backdrop-filter。
 
    浮层主体 (.dialog-surface 等) 已经过滤过背景, 子层再过滤一次会在已模糊的

@@ -131,16 +131,6 @@ export function ThemeEditor({
     loadCssTheme(theme);
   };
 
-  // ESC 关闭
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
-
   const allThemes = useMemo(
     () => [...BUILT_IN_THEMES, ...themes],
     [themes]
@@ -273,18 +263,10 @@ export function ThemeEditor({
     e.target.value = '';
   };
 
-  if (!isOpen) return null;
-
   return (
-    <DialogOverlay
-      className="motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={activateOnKeyboard}
-      role="button"
-      tabIndex={0}
-    >
+    <DialogOverlay open={isOpen} onDismiss={onClose} zClassName="z-modal-secondary">
       <DialogSurface
-        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh] motion-surface-in"
+        className="w-[880px] max-w-[94vw] h-[640px] max-h-[90vh]"
         label={translate('themeEditor', lang)}
       >
         {/* 顶部 */}

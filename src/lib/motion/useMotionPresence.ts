@@ -4,7 +4,7 @@ import { useRef, type RefObject } from 'react';
 import { createBorrowSlot, promote } from './compositor';
 import { springTween } from './gsapSpring';
 import { motionSpringFor, type MotionPresenceVariant } from './motionConfig';
-import { motionIsReduced } from './reducedMotion';
+import { motionIsReduced } from '../utils/reducedMotion';
 import { VARIANT_GEOMETRY } from './presence';
 
 interface MotionPresenceOptions {

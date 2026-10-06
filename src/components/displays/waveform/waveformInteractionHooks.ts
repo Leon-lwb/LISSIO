@@ -3,6 +3,7 @@ import { timeBaseToWindowSec, VERTICAL_DIVS } from '../../../lib/utils/scopeUtil
 import { getEffectiveChannel, TIME_BASES_SEC, V_PER_DIV } from '../../../types';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { maybeShowInteractHint } from './waveformInteractionHint';
+import { isTextEntryTarget } from '../../../lib/utils/a11y';
 import type { ScopeAxisConfig } from '../../../types';
 
 export function useWheelZoom(
@@ -159,13 +160,8 @@ export function useCursorHide() {
   );
 
   useEffect(() => {
-    const isInputTarget = (t: EventTarget | null) => {
-      if (!(t instanceof HTMLElement)) return false;
-      const tag = t.tagName.toLowerCase();
-      return tag === 'input' || tag === 'textarea' || tag === 'select' || t.isContentEditable;
-    };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (isInputTarget(e.target)) return;
+      if (isTextEntryTarget(e.target)) return;
       if (e.ctrlKey || e.metaKey) setCursorHidden(true);
     };
     const onKeyUp = (e: KeyboardEvent) => {

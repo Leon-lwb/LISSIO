@@ -1,8 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useAutoScrollBottom } from '../useAutoScrollBottom';
+import { useScrollFollow } from '../useScrollFollow';
 
-import type { ScrollTarget } from '../useAutoScrollBottom';
+import type { ScrollTarget } from '../useScrollFollow';
 
 /// 可编程的假滚动容器 (hook 只依赖 scrollTop/scrollHeight/clientHeight 三属性)
 function fakeEl(scrollTop: number, scrollHeight: number, clientHeight: number): ScrollTarget {
@@ -25,7 +25,7 @@ function pendingCount(): number {
   return rafQueue.size;
 }
 
-describe('useAutoScrollBottom - 平滑自动滚动', () => {
+describe('useScrollFollow - 平滑自动滚动', () => {
   beforeEach(() => {
     rafQueue = new Map();
     rafSeq = 0;
@@ -46,7 +46,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('小距离: rAF 指数逼近收敛到底部后停止', () => {
     const el = fakeEl(0, 250, 100); // target = 150, 距离 150 < 2 屏 → 平滑
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.scheduleToBottom();
@@ -62,7 +62,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('大距离: 逐帧连续追赶, 不做整屏跳变 (跟随刷新不再整屏替换可见内容)', () => {
     const el = fakeEl(0, 3000, 100); // 落后 2900px — 流式跟随的常见落后量
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.scheduleToBottom();
@@ -86,7 +86,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('落后到追赶无意义 (超过 20000px): 瞬时跳底, 不做长时间追赶', () => {
     const el = fakeEl(0, 30_000, 100); // target = 29900
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.scheduleToBottom();
@@ -101,14 +101,14 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('已在底部 / enabled=false / 用户上滚时 scheduleToBottom 不启动', () => {
     const pinned = fakeEl(400, 500, 100); // target = 400
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => pinned));
+    const { result } = renderHook(() => useScrollFollow(true, () => pinned));
     act(() => {
       result.current.scheduleToBottom();
     });
     expect(pendingCount()).toBe(0);
 
     const off = fakeEl(0, 500, 100);
-    const offCtrl = renderHook(() => useAutoScrollBottom(false, () => off));
+    const offCtrl = renderHook(() => useScrollFollow(false, () => off));
     act(() => {
       offCtrl.result.current.scheduleToBottom();
     });
@@ -116,7 +116,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
     expect(off.scrollTop).toBe(0);
 
     const scrolledUp = fakeEl(0, 500, 100);
-    const upCtrl = renderHook(() => useAutoScrollBottom(true, () => scrolledUp));
+    const upCtrl = renderHook(() => useScrollFollow(true, () => scrolledUp));
     act(() => {
       upCtrl.result.current.handleScroll(); // 不在底部 → 归属用户滚动
     });
@@ -129,7 +129,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('动画中用户接管 (滚动位置大幅偏离) → 取消动画并标记上滚', () => {
     const el = fakeEl(0, 250, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -154,7 +154,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('在底部时滚动归属不误标上滚; resetUserScroll 恢复追底', () => {
     const el = fakeEl(400, 500, 100); // 恰在底部 (距离 0 < 30)
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.handleScroll();
     });
@@ -179,7 +179,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
   it('prefers-reduced-motion: 跳过动画直接跳底', () => {
     vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({ matches: true }));
     const el = fakeEl(0, 250, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -190,7 +190,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
   it('enabled 变 false 时停掉进行中的动画', () => {
     const el = fakeEl(0, 250, 100);
     const { result, rerender } = renderHook(
-      ({ enabled }: { enabled: boolean }) => useAutoScrollBottom(enabled, () => el),
+      ({ enabled }: { enabled: boolean }) => useScrollFollow(enabled, () => el),
       { initialProps: { enabled: true } }
     );
     act(() => {
@@ -203,7 +203,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('detached 是上滚标记的响应式镜像 (供"回到最新"按钮显示)', () => {
     const el = fakeEl(400, 500, 100); // 恰在底部
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     expect(result.current.detached).toBe(false);
 
     act(() => {
@@ -235,7 +235,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('jumpToLatest: 瞬时跳回最新并恢复跟随 (脱离期间不追赶)', () => {
     const el = fakeEl(0, 100_000, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.handleScroll(); // 远离底部 → 脱离
@@ -268,7 +268,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('jumpToLatest 取消进行中的追底动画', () => {
     const el = fakeEl(0, 250, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -283,7 +283,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('滞后到达的自身写入事件不算用户接管 (跟随不半途中断)', () => {
     const el = fakeEl(0, 250, 100); // target = 150
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -305,7 +305,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('动画收敛后数据增长: 滞后写入事件不误判上滚, 真实上滚仍能脱离', () => {
     const el = fakeEl(0, 250, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -332,7 +332,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('上滚输入立即让位: 数据持续到达也不再抢回视口 (高频流下"滚不动")', () => {
     const el = fakeEl(0, 500, 100); // target = 400
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.scheduleToBottom();
     });
@@ -389,7 +389,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('朝最新的滚动输入不阻断跟随', () => {
     const el = fakeEl(0, 500, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.handleUserScrollIntent(false);
@@ -403,7 +403,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('内容不足一屏时的上滚输入不触发暂停也不停掉跟随', () => {
     const el = fakeEl(0, 80, 100); // 无滚动余量
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
 
     act(() => {
       result.current.handleUserScrollIntent(true);
@@ -426,7 +426,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('位置变小 (拖滚动条上滚) 同样触发"用户上滚"', () => {
     const el = fakeEl(300, 500, 100); // 远离底部
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     expect(result.current.userScrolledUp).toBe(false);
 
     act(() => {
@@ -444,7 +444,7 @@ describe('useAutoScrollBottom - 平滑自动滚动', () => {
 
   it('jumpToLatest 解除"用户上滚"约束 (显式回到最新)', () => {
     const el = fakeEl(300, 100_000, 100);
-    const { result } = renderHook(() => useAutoScrollBottom(true, () => el));
+    const { result } = renderHook(() => useScrollFollow(true, () => el));
     act(() => {
       result.current.handleUserScrollIntent(true);
     });

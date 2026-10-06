@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { X, Play, Save, FileCode, AlertCircle, AlertTriangle, RotateCcw, HelpCircle } from 'lucide-react';
 import { CodeEditor } from './CodeEditor';
-import { CustomWidget, evalCustomWidgetDef } from './widgets/custom/CustomWidget';
+import { CustomWidget } from './widgets/custom/CustomWidget';
+import { evalCustomWidgetDef } from '../lib/models/customWidgetDef';
 import { CustomWidgetHelpModal } from './CustomWidgetHelpModal';
 import type { WidgetConfig } from '../types';
 import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
-import { activateOnKeyboard } from '../lib/utils/a11y';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
 interface CustomWidgetEditorProps {
   widget: Extract<WidgetConfig, { kind: 'Custom' }>;
@@ -173,20 +174,11 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
     setPreviewKey((k) => k + 1);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={activateOnKeyboard}
-      role="button"
-      tabIndex={0}
-      aria-label={translate('close', lang)}
-    >
-      <div
-        className="dialog-surface flex flex-col overflow-hidden motion-surface-in"
-        style={{ width: '90vw', height: '85vh', maxWidth: 1200, maxHeight: 800 }}
+    <DialogOverlay open={isOpen} onDismiss={onClose}>
+      <DialogSurface
+        className="flex flex-col w-[90vw] h-[85vh] max-w-[1200px] max-h-[800px]"
+        label={translate('customWidgetEditor', lang)}
       >
         <div className="flex items-center gap-3 px-4 py-3 dialog-chrome border-b border-border text-text-bright font-semibold flex-shrink-0">
           <FileCode size={16} />
@@ -378,10 +370,10 @@ export function CustomWidgetEditor({ widget, isOpen, onClose, onSave }: CustomWi
             {translate('customSave', lang)}
           </button>
         </div>
-      </div>
+      </DialogSurface>
 
       {/* 帮助说明弹窗 */}
       <CustomWidgetHelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-    </div>
+    </DialogOverlay>
   );
 }

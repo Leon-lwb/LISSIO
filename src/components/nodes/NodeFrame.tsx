@@ -3,7 +3,8 @@ import { Handle, NodeResizer, Position, useUpdateNodeInternals } from '@xyflow/r
 import { X } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { translate } from '../../i18n';
-import { CanvasErrorTooltip, useCanvasNodeError } from '../ui/CanvasErrorTooltip';
+import { CanvasErrorTooltip } from '../ui/CanvasErrorTooltip';
+import { useCanvasNodeError } from '../../lib/hooks/useCanvasNodeError';
 import { domainColor } from '../widgets/shared/portVisuals';
 
 export interface CanvasPort { id: string; label?: string; domain: string }

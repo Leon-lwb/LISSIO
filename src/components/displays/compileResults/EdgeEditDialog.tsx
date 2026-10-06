@@ -2,10 +2,11 @@ import type { Dispatch, SetStateAction } from 'react';
 import { X } from 'lucide-react';
 import { useAppStore } from '../../../store/appStore';
 import { translate } from '../../../i18n';
+import { useExitSnapshot } from '../../../lib/motion';
 import type { GraphHir } from '../../../store/slices/compileHir';
 import { DialogFooter, DialogHeader, DialogOverlay, DialogSurface } from '../../ui/Dialog';
 import { FormField } from '../../ui/Form';
-import type { EdgeModalState } from './compileResultsModel';
+import { EMPTY_MODAL, type EdgeModalState } from './compileResultsModel';
 
 interface EdgeEditDialogProps {
   modal: EdgeModalState;
@@ -25,14 +26,16 @@ export function EdgeEditDialog({
   submitModal,
 }: EdgeEditDialogProps) {
   const lang = useAppStore((s) => s.lang);
-  if (!modal.open) return null;
+  // 关闭时调用方会把整份状态重置成 EMPTY_MODAL (输入框清空)。保活期间节点还在,
+  // 直接读就会看到表单在滑出的同时变白, 所以退场沿用最后一份有内容的表单。
+  const shown = useExitSnapshot(modal.open ? modal : null) ?? EMPTY_MODAL;
 
   return (
-    <DialogOverlay>
-      <DialogSurface className="w-[420px] p-4">
+    <DialogOverlay open={modal.open} onDismiss={closeModal}>
+      <DialogSurface className="w-[420px] p-4" titleId="edge-edit-dialog-title">
         <DialogHeader className="justify-between border-0 p-0 mb-3">
-          <h3 className="text-sm font-semibold text-text-primary">
-            {modal.mode === 'add' ? translate('modalAddEdge', lang) : translate('modalModifyEdge', lang)}
+          <h3 id="edge-edit-dialog-title" className="text-sm font-semibold text-text-primary">
+            {shown.mode === 'add' ? translate('modalAddEdge', lang) : translate('modalModifyEdge', lang)}
           </h3>
           <button className="p-1 text-text-muted hover:text-text-primary" onClick={closeModal}>
             <X size={14} />
@@ -42,7 +45,7 @@ export function EdgeEditDialog({
           <FormField label={translate('fieldSourceNode', lang)}>
             <select
               className="form-select"
-              value={modal.sourceNode}
+              value={shown.sourceNode}
               onChange={(e) => setModal((m) => ({ ...m, sourceNode: e.target.value }))}
             >
               {(hir?.nodes ?? []).map((node) => (
@@ -54,7 +57,7 @@ export function EdgeEditDialog({
             <input
               type="text"
               className="form-input font-mono"
-              value={modal.sourceHandle}
+              value={shown.sourceHandle}
               onChange={(e) => setModal((m) => ({ ...m, sourceHandle: e.target.value }))}
               placeholder="value / result / ch0..."
             />
@@ -62,7 +65,7 @@ export function EdgeEditDialog({
           <FormField label={translate('fieldTargetNode', lang)}>
             <select
               className="form-select"
-              value={modal.targetNode}
+              value={shown.targetNode}
               onChange={(e) => setModal((m) => ({ ...m, targetNode: e.target.value }))}
             >
               {(hir?.nodes ?? []).map((node) => (
@@ -74,7 +77,7 @@ export function EdgeEditDialog({
             <input
               type="text"
               className="form-input font-mono"
-              value={modal.targetHandle}
+              value={shown.targetHandle}
               onChange={(e) => setModal((m) => ({ ...m, targetHandle: e.target.value }))}
               placeholder="in0 / in1 / str..."
             />
@@ -87,7 +90,7 @@ export function EdgeEditDialog({
           <button
             className="dialog-button dialog-button--primary disabled:opacity-disabled"
             onClick={() => void submitModal()}
-            disabled={!modal.sourceNode || !modal.targetNode || modal.sourceNode === modal.targetNode}
+            disabled={!shown.sourceNode || !shown.targetNode || shown.sourceNode === shown.targetNode}
           >
             {translate('confirmAdd', lang)}
           </button>

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // dockStore/layoutStore 的 persist 中间件需要 localStorage — 在导入 store 前提供内存桩
 vi.hoisted(() => {
@@ -17,9 +17,9 @@ vi.hoisted(() => {
   g.localStorage = localStorageMock;
 });
 
-import { dockDrag, __resetForTests, type WidgetDragSpec } from '../dockDrag';
-import { useDockStore } from '../../store/dockStore';
-import { useLayoutStore } from '../../store/layoutStore';
+import { dockDrag, endGhostRelease, __resetForTests, subscribeGhost, type GhostState, type WidgetDragSpec } from '../dockDrag';
+import { useDockStore } from '../../../store/dockStore';
+import { useLayoutStore } from '../../../store/layoutStore';
 
 /// 构造投放区元素: 挂在 document.body 上, 供 elementFromPoint 命中
 function makeZone(attrs: Record<string, string>, parent?: HTMLElement): HTMLElement {
@@ -414,5 +414,108 @@ describe('dockDrag 指针拖拽控制器', () => {
     // 穿透 canvas → 命中 card-edge → right
     expect(useDockStore.getState().dropTarget).toEqual({ cardId: 'control-2', edge: 'right' });
     vi.restoreAllMocks();
+  });
+});
+
+describe('幽灵释放契约', () => {
+  /// 手动时钟: 松手速度由最近 90ms 的位移算出, 不推进时钟则所有采样落在同一毫秒,
+  /// 速度退化为无穷大, 各种力度都撞上航程上限而看不出差别。
+  let clock: number;
+  /// 最新一次订阅到的幽灵 — 声明处不给初值, 否则闭包里的赋值会被判定成不可达
+  let seen: GhostState | null;
+
+  beforeEach(() => {
+    __resetForTests();
+    document.body.innerHTML = '';
+    document.elementFromPoint = () => null;
+    clock = 0;
+    seen = null;
+    subscribeGhost((state) => {
+      seen = state;
+    });
+    vi.spyOn(performance, 'now').mockImplementation(() => clock);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  /** 甩动 steps 步后松手, 返回订阅到的最后一次幽灵状态。 */
+  function flingAndObserve(steps: number, stepPx: number, msPerStep = 16) {
+    dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Dragged' });
+    for (let i = 1; i <= steps; i += 1) {
+      clock += msPerStep;
+      moveTo(i * stepPx, i * stepPx);
+    }
+    releaseAt(0, 0);
+    return seen;
+  }
+
+  it('松手只交出速度, 不交出动画数值 — 前冲距离与时长是效果层的职责', () => {
+    const ghost = flingAndObserve(6, 30);
+    expect(ghost?.velocity).toBeDefined();
+    // 契约里不该出现动画数值: 一旦它们出现在这里, 交互层就又认识了弹簧令牌
+    expect(ghost).not.toHaveProperty('release');
+    expect(ghost).not.toHaveProperty('dx');
+    expect(ghost).not.toHaveProperty('durationMs');
+  });
+
+  it('幽灵一直存活到效果层报告补间结束 — 交互层不再自己计时', () => {
+    dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Dragged' });
+    clock += 16;
+    moveTo(200, 200);
+    releaseAt(0, 0);
+    // 松手后仍在释放动画中: 幽灵必须还在, 不能松手即消失
+    expect(seen?.velocity).toBeDefined();
+
+    // 没有第二个数字在计时: 清除只可能来自效果层的收尾报告
+    expect(seen?.velocity).toBeDefined();
+
+    endGhostRelease();
+    expect(seen).toBeNull();
+  });
+
+  it('收尾报告是幂等的 — 重复上报不会波及下一次拖拽', () => {
+    expect(flingAndObserve(6, 30)?.velocity).toBeDefined();
+    endGhostRelease();
+    endGhostRelease();
+
+    // 收尾后再起一次拖拽: 订阅仍应看到拖拽中的幽灵, 而不是残留的释放态
+    dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Again' });
+    clock += 16;
+    moveTo(120, 120);
+    expect(seen?.label).toBe('Again');
+    expect(seen?.velocity).toBeUndefined();
+  });
+
+  it('迟到订阅在释放动画期间补发释放态 — 否则新挂载的幽灵会凭空消失', () => {
+    flingAndObserve(6, 30);
+    // 组件在松手之后才挂载 (订阅), 此刻幽灵仍可见
+    const late: { state: GhostState | null } = { state: null };
+    subscribeGhost((state) => {
+      late.state = state;
+    });
+    expect(late.state?.velocity).toBeDefined();
+  });
+
+  it('收尾之后迟到订阅补发 null — 否则幽灵会被永久复活且再也无人清除', () => {
+    flingAndObserve(6, 30);
+    endGhostRelease();
+    // 幽灵已消失; 此后挂载的组件必须看到"没有幽灵", 不能重放一段早已播完的释放动画
+    const late: { state: GhostState | null } = { state: null };
+    subscribeGhost((state) => {
+      late.state = state;
+    });
+    expect(late.state).toBeNull();
+  });
+
+  it('新拖拽接管幽灵: 上一次的收尾报告不再清除新状态', () => {
+    flingAndObserve(6, 30);
+    dockDrag.begin({ clientX: 0, clientY: 0, button: 0 }, { kind: 'sidebar', label: 'Second' });
+    clock += 16;
+    moveTo(90, 90);
+    // 第二次拖拽已接管: 此刻的收尾报告不该清掉正在拖的幽灵
+    endGhostRelease();
+    expect(seen?.label).toBe('Second');
   });
 });

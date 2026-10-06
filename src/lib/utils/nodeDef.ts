@@ -6,7 +6,7 @@
 
 import type { Edge } from '@xyflow/react';
 import type { WidgetConfig } from '../../types';
-import { evalCustomWidgetDef } from '../../components/widgets/custom/CustomWidget';
+import { evalCustomWidgetDef } from '../models/customWidgetDef';
 
 /// RawData 动态输入端口 id 约定: `src:<sourceId>:<sourceHandle>`
 /// 每个已连接的 (source, sourceHandle) 组合 = 一个通道端口 (后端 describe 同规则派生)

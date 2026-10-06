@@ -7,6 +7,7 @@ import { FONT_ATTRIBUTIONS } from '../lib/fontAttributions';
 import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
 import { LissajousMark } from './brand/LissajousMark';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -14,9 +15,9 @@ interface AboutModalProps {
 }
 
 const APP_AUTHOR = 'Horldsence';
-// 开源轨的 SPDX 标识, 与 package.json / 各 crate 的 license 字段同源;
-// 双许可的存在与商业轨状态见 NOTICE 与 docs/governance/open-source-and-ip.md
-const APP_LICENSE = 'GPL-2.0-only';
+// SPDX identifier shared by package.json and the Rust workspace manifests.
+// Historical-release scope and attribution are defined by NOTICE and the IP policy.
+const APP_LICENSE = 'Apache-2.0';
 // 仓库托管地为 Codeberg; 改仓库地址时这里与 i18n 的 aboutRepo 文案、README 一并更新
 const APP_REPO = 'https://codeberg.org/Horldsence/Lissio';
 const APP_DOCS = `${APP_REPO}/src/branch/main/docs/README.md`;
@@ -32,29 +33,11 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
     void platform.getAppVersion().then(setAppVersion).catch(() => setAppVersion('0.0.0'));
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="w-[400px] max-w-[90vw] dialog-surface py-7 px-8 flex flex-col items-center gap-2 relative motion-surface-in"
-        role="dialog"
-        aria-modal="true"
+    <DialogOverlay open={isOpen} onDismiss={onClose}>
+      <DialogSurface
+        className="w-[400px] max-w-[90vw] py-7 px-8 flex flex-col items-center gap-2 relative"
+        label={translate('aboutTitle', lang)}
       >
         <button
           className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer bg-transparent border-none"
@@ -127,8 +110,8 @@ export function AboutModal({ isOpen, onClose }: AboutModalProps) {
             {translate('aboutClose', lang)}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }
 

@@ -12,7 +12,9 @@
 
 import type { MotionFamily, MotionPresenceVariant } from './motionConfig';
 
-/** Travel vector in px. Sign encodes which edge the surface belongs to. */
+/**
+ * Travel vector in px. Sign encodes which edge the surface belongs to.
+ */
 export interface TravelVector {
   x: number;
   y: number;
@@ -41,8 +43,15 @@ export interface VariantGeometry {
 const NO_TRAVEL: TravelVector = { x: 0, y: 0 };
 
 /**
- * Nominal travel per role. These are the values the CSS keyframes also use, so a
- * role animates identically whether it is driven by GSAP or by an `animation`.
+ * Nominal geometry per role — where a surface comes from, where it goes to, and
+ * which point it scales out of.
+ *
+ * `motion.css` does **not** repeat these numbers. `installMotionTokens` projects
+ * every role onto `--motion-travel-<role>` / `--motion-scale-<role>`, and each
+ * entrance keyframe reads the tokens of its own role. Without that projection the
+ * two systems drifted: the keyframes hardcoded their own offsets, so a banner
+ * travelled 5px on the CSS fallback path and 8px on the GSAP path — the same role,
+ * two different animations, depending on whether JS had installed the tokens yet.
  */
 export const VARIANT_GEOMETRY: Record<MotionPresenceVariant, VariantGeometry> = {
   // A scrim has no position of its own; only its opacity means anything.
@@ -267,7 +276,37 @@ export function exitVars(
   return { opacity: 0, x: from.x, y: from.y, scaleX: endScale, scaleY: endScale };
 }
 
-/** CSS custom property pair consumed by the keyframe fallbacks. */
+/**
+ * CSS custom property holding a role's entrance displacement, as the two
+ * comma-separated arguments of a `translate()` (e.g. `0px, -6px`).
+ *
+ * 这个函数是**唯一的命名点**: `installMotionTokens` 按它写令牌, 关键帧按它读令牌。
+ * 两边曾经各写一份数字, 于是同一条 banner 在无 JS 的兜底路径走 5px、在 GSAP 路径
+ * 走 8px —— 同一个角色, 两套动画, 取决于 JS 有没有装好令牌。
+ *
+ * 逗号是必须的: 令牌被塞进 `translate(...)` 而不是 `translateY(...)`, 空格分隔的
+ * 两值会让整条 `transform` 在计算值阶段失效, 连缩放一起丢掉。
+ */
 export function cssTravelToken(variant: MotionPresenceVariant): string {
   return `--motion-travel-${variant}`;
+}
+
+/** 同上, 持有该角色进场的缩放 (`enterScale`), 无单位。 */
+export function cssScaleToken(variant: MotionPresenceVariant): string {
+  return `--motion-scale-${variant}`;
+}
+
+/**
+ * 写入 `cssTravelToken(variant)` 的值。
+ *
+ * 输出形如 `0px, -6px`, 直接作为 `translate()` 的两个参数。
+ */
+export function cssTravelValue(variant: MotionPresenceVariant): string {
+  const { x, y } = VARIANT_GEOMETRY[variant].enterFrom;
+  return `${x}px, ${y}px`;
+}
+
+/** 写入 `cssScaleToken(variant)` 的值。 */
+export function cssScaleValue(variant: MotionPresenceVariant): string {
+  return String(VARIANT_GEOMETRY[variant].enterScale);
 }

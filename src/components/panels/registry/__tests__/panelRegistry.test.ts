@@ -41,7 +41,7 @@ import {
   panelDefForWidget,
   panelIconForTabType,
   panelKindOfWidget,
-} from '../panelDefs';
+} from '../../../../lib/panels/panelDefs';
 import { PANEL_VIEWS, SHELL_TAB_CONTENT } from '../panelViews';
 import { WIDGET_REGISTRY } from '../../../widgets/registry';
 import type { WidgetKind } from '../../../widgets/registryTypes';

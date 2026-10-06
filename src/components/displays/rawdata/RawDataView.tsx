@@ -6,12 +6,12 @@ import { useSelection } from '../../../lib/hooks/useSelection';
 import { writeTextToClipboard } from '../../../lib/utils/clipboard';
 import { traceTransportSource } from '../../../store/appStoreHelpers';
 import { translate } from '../../../i18n';
-import type { RawDataGrouping, RawDataRepr, DirectionFilter, HexColorMode, AppendMode, SendPanelMode } from './rawDataViewHelpers';
+import type { RawDataGrouping } from './rawDataViewHelpers';
 import { byteToHex, byteToAscii, formatTime } from './rawDataViewHelpers';
 import { decodeText, isTextEncoding, type TextEncoding } from '../../../lib/utils/textEncoding';
 import { useLongTaskMonitor, useRawDataBuffer, useRawNumericSamples, useRawStringSamples } from './useRawDataBuffer';
 import { useRawDataChannel } from './useRawDataChannel';
-import { useAutoScrollBottom } from './useAutoScrollBottom';
+import { useScrollFollow } from '../../../lib/interaction/useScrollFollow';
 import { useTerminalLines } from '../../../lib/terminal/terminalBuffer';
 import { DroppedInfoPopover } from '../../common/DroppedInfoPopover';
 import { RawDataViewHeader } from './RawDataViewHeader';
@@ -23,7 +23,8 @@ import { RawDataViewSettings } from './RawDataViewSettings';
 import { RawDataBackToLatest } from './RawDataBackToLatest';
 import { usePanelFollowing, usePanelGoLive, usePanelKey } from '../common/PanelLiveness';
 import { useListScrollPause } from '../../../lib/buffers/listScrollPause';
-import { getRawDataViewPrefs } from '../../../lib/buffers/rawDataViewStore';
+import { isTextEntryTarget } from '../../../lib/utils/a11y';
+import { useRawDataPrefs } from './useRawDataPrefs';
 /// 原始数据显示 — Grid/Line/终端 × HEX/ASCII/UTF-8/GBK 视图, 支持虚拟滚动、文本选中/行选中复制、时间戳、发送
 /// 纯端口制: 每张卡片独立的输入选择 (存 RawDataConfig.selectedInput), 选择器只列该卡片
 /// 已连接的端口 (Transport.rx / Protocol.out / FrameDecoder.raw / 字符串口 / 数值口);
@@ -51,18 +52,31 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
   // 持久化 key: widgetId 存在时按控件独立保存, 否则共享 'global' 配置
   const persistKey = widgetId ?? 'global';
 
-  const [grouping, setGrouping] = useState<RawDataGrouping>(() => getRawDataViewPrefs(persistKey).grouping);
-  const [repr, setRepr] = useState<RawDataRepr>(() => getRawDataViewPrefs(persistKey).repr);
-  const [directionFilter, setDirectionFilter] = useState<DirectionFilter>(() => getRawDataViewPrefs(persistKey).directionFilter);
+  const {
+    grouping,
+    setGrouping,
+    repr,
+    setRepr,
+    directionFilter,
+    setDirectionFilter,
+    autoScroll,
+    setAutoScroll,
+    showTimestamp,
+    setShowTimestamp,
+    showOffset,
+    setShowOffset,
+    appendMode,
+    setAppendMode,
+    sendPanelMode,
+    setSendPanelMode,
+    hexColorMode,
+    setHexColorMode,
+    localEcho,
+    setLocalEcho,
+    ansiDecode,
+    setAnsiDecode,
+  } = useRawDataPrefs(persistKey);
   const [searchTerm, setSearchTerm] = useState('');
-  const [autoScroll, setAutoScroll] = useState(() => getRawDataViewPrefs(persistKey).autoScroll);
-  const [showTimestamp, setShowTimestamp] = useState(() => getRawDataViewPrefs(persistKey).showTimestamp);
-  const [showOffset, setShowOffset] = useState(() => getRawDataViewPrefs(persistKey).showOffset);
-  const [appendMode, setAppendMode] = useState<AppendMode>(() => getRawDataViewPrefs(persistKey).appendMode);
-  const [sendPanelMode, setSendPanelMode] = useState<SendPanelMode>(() => getRawDataViewPrefs(persistKey).sendPanelMode);
-  const [hexColorMode, setHexColorMode] = useState<HexColorMode>(() => getRawDataViewPrefs(persistKey).hexColorMode);
-  const [localEcho, setLocalEcho] = useState(() => getRawDataViewPrefs(persistKey).localEcho);
-  const [ansiDecode, setAnsiDecode] = useState(() => getRawDataViewPrefs(persistKey).ansiDecode);
   const [showSettings, setShowSettings] = useState(false);
   const [droppedInfoOpen, setDroppedInfoOpen] = useState(false);
   const [sendContent, setSendContent] = useState('');
@@ -153,7 +167,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     return parentRef.current;
   }, [isNum, isStr]);
   const { detached, userScrolledUp, scheduleToBottom, handleScroll, handleUserScrollIntent, resetUserScroll, jumpToLatest } =
-    useAutoScrollBottom(autoScroll, getScrollEl);
+    useScrollFollow(autoScroll, getScrollEl);
 
   // 显示时效: 跟随最新 = 自动滚动开启且未被用户上滚拖离
   const reportFollowing = usePanelFollowing();
@@ -173,7 +187,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     setAutoScroll(true);
     resetUserScroll();
     jumpToLatest();
-  }, [resetUserScroll, jumpToLatest]);
+  }, [resetUserScroll, jumpToLatest, setAutoScroll]);
   usePanelGoLive(handleGoLive);
 
   useEffect(() => {
@@ -181,7 +195,7 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
     resetUserScroll();
   }, [clearSelection, grouping, channel, resetUserScroll]);
 
-  // 自动滚动到最新结果: 数据帧到来时安排一次平滑追底 (useAutoScrollBottom
+  // 自动滚动到最新结果: 数据帧到来时安排一次平滑追底 (useScrollFollow
   // 内部合并高频帧为单一 rAF 循环; reduced-motion 下瞬时跳底)
   const activeCount = isNum
     ? numRows.length
@@ -261,8 +275,8 @@ export function RawDataView({ widgetId }: { widgetId?: string }) {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      // 输入类控件自己处理 Ctrl+A/C, 全局的列表全选要让路
+      if (isTextEntryTarget(e.target)) return;
       if (isTerm) return; // 终端视图无行选中语义, 用原生文本选择复制
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
         e.preventDefault();

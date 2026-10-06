@@ -4,11 +4,11 @@
 //! - variant='pipeline': 指引到 设置→性能 (并行 worker / 缓冲项)
 //! - ESC / 点击遮罩关闭
 
-import { useEffect } from 'react';
 import { X, Settings } from 'lucide-react';
 import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { translate } from '../../i18n';
+import { DialogOverlay, DialogSurface } from '../ui/Dialog';
 
 interface DroppedInfoPopoverProps {
   open: boolean;
@@ -20,34 +20,16 @@ export function DroppedInfoPopover({ open, onClose, variant }: DroppedInfoPopove
   const lang = useAppStore((s) => s.lang);
   const openSettings = useSettingsStore((s) => s.open);
 
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   const isRawdata = variant === 'rawdata';
   const titleKey = isRawdata ? 'droppedInfoTitleRawdata' : 'droppedInfoTitle';
   const whatKey = isRawdata ? 'droppedInfoWhatRawdata' : 'droppedInfoWhatPipeline';
   const howKey = isRawdata ? 'droppedInfoHowRawdata' : 'droppedInfoHowPipeline';
 
   return (
-    <div
-      className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}
-      onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onClose(); } }}
-      role="button"
-      tabIndex={0}
-    >
-      <div
-        className="w-[420px] max-w-[90vw] dialog-surface p-6 flex flex-col gap-3 relative motion-surface-in"
-        role="dialog"
-        aria-modal="true"
+    <DialogOverlay open={open} onDismiss={onClose}>
+      <DialogSurface
+        className="w-[420px] max-w-[90vw] p-6 flex flex-col gap-3 relative"
+        label={translate(titleKey, lang)}
       >
         <button
           className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded text-text-secondary hover:bg-bg-hover hover:text-text-bright transition-colors cursor-pointer bg-transparent border-none"
@@ -82,7 +64,7 @@ export function DroppedInfoPopover({ open, onClose, variant }: DroppedInfoPopove
             {translate('droppedInfoOpenSettings', lang)}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }

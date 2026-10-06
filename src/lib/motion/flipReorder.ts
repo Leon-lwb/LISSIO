@@ -26,7 +26,7 @@ import {
   type MotionPhase,
   type Spring,
 } from './motionConfig';
-import { motionIsReduced } from './reducedMotion';
+import { motionIsReduced } from '../utils/reducedMotion';
 
 /** 默认的身份属性: 换序后仍能对上同一个元素的那个值。 */
 const DEFAULT_KEY_ATTR = 'data-flip-key';

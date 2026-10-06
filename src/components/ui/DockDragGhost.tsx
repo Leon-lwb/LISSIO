@@ -1,13 +1,14 @@
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { useEffect, useRef, useState } from 'react';
-import { subscribeGhost, type GhostState } from '../../lib/dockDrag';
+import { endGhostRelease, subscribeGhost, type GhostState } from '../../lib/interaction/dockDrag';
 import {
   createBorrowSlot,
   GHOST_RELEASE_SCALE,
   GHOST_REST_OPACITY,
   motionIsReduced,
   motionSpringFor,
+  planRelease,
   promote,
   springTween,
 } from '../../lib/motion';
@@ -35,7 +36,9 @@ export function DockDragGhost() {
       gsap.killTweensOf(element);
       borrow.current.release();
 
-      const plan = ghost.release;
+      // 释放计划由速度在此推导: 交互层只交出松手速度, 前冲距离/初速度/时长都是
+      // 弹簧令牌的函数, 因此只有效果层认识它们 (见 lib/motion/release.ts)。
+      const plan = ghost.velocity ? planRelease(ghost.velocity.x, ghost.velocity.y) : null;
       if (!plan || motionIsReduced()) {
         gsap.set(element, {
           x: ghost.x,
@@ -45,6 +48,8 @@ export function DockDragGhost() {
           scale: 1,
           opacity: GHOST_REST_OPACITY,
         });
+        // 没有补间可等, 幽灵的寿命就到此为止 (放稳了 / 低动画偏好)。
+        endGhostRelease();
         return;
       }
 
@@ -60,7 +65,11 @@ export function DockDragGhost() {
           spring: motionSpringFor('spatial', 'out', Math.hypot(plan.dx, plan.dy)),
           initialVelocity: plan.initialVelocity,
         }),
-        onComplete: () => borrow.current.release(),
+        // 补间走完即幽灵寿终 —— 存活时长就是这一步, 不存在第二个要手工对齐的数字。
+        onComplete: () => {
+          borrow.current.release();
+          endGhostRelease();
+        },
       });
     },
     { scope: ownRef, dependencies: [ghost] }

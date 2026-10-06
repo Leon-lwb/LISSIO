@@ -3,7 +3,7 @@ import type { WidgetConfig } from '../../../types';
 import { useNumericInput } from '../../../lib/hooks/useNumericPort';
 import { useAutoRange } from '../../../lib/hooks/useAutoRange';
 import { formatTick, tickValues } from '../../../lib/utils/valueRange';
-import { NumericPortStatus } from '../../displays/common/NumericPortStatus';
+import { NumericPortStatus } from '../shared/NumericPortStatus';
 
 interface GaugeProps {
   widget: Extract<WidgetConfig, { kind: 'Gauge' }>;

@@ -41,6 +41,38 @@ export const appearanceFields: SettingFieldDef[] = [
   },
   {
     category: 'appearance',
+    field: 'liquidGlass',
+    labelKey: 'settingLiquidGlass',
+    descKey: 'settingLiquidGlassDesc',
+    control: { kind: 'toggle' },
+    keywords: ['liquid', 'glass', 'refraction', '液态玻璃', '折射', '玻璃', '磨砂'],
+  },
+  {
+    category: 'appearance',
+    field: 'liquidGlassPreset',
+    labelKey: 'settingLiquidGlassPreset',
+    descKey: 'settingLiquidGlassPresetDesc',
+    control: {
+      kind: 'select',
+      options: [
+        { value: 'balanced', label: 'Balanced' },
+        { value: 'thin', label: 'Thin' },
+        { value: 'thick', label: 'Thick' },
+        { value: 'frost', label: 'Frost' },
+      ],
+    },
+    keywords: ['preset', 'liquid', 'glass', '预设', '液态玻璃', '折射'],
+  },
+  {
+    category: 'appearance',
+    field: 'liquidGlassIntensity',
+    labelKey: 'settingLiquidGlassIntensity',
+    descKey: 'settingLiquidGlassIntensityDesc',
+    control: { kind: 'slider', min: 0.1, max: 1, step: 0.01, unit: 'percent' },
+    keywords: ['intensity', 'liquid', 'glass', '强度', '液态玻璃', '折射'],
+  },
+  {
+    category: 'appearance',
     field: 'windowOpacity',
     labelKey: 'settingWindowOpacity',
     descKey: 'settingWindowOpacityDesc',

@@ -17,7 +17,7 @@ import {
   cycleDataPanelTab,
   type DataPanelEntry,
 } from '../../store/slices/dataTabs';
-import { panelIconForTabType } from './registry/panelDefs';
+import { panelIconForTabType } from '../../lib/panels/panelDefs';
 import { panelContractIssues, unsupportedPanels, useReconciledPanels } from './registry/reconcile';
 import { openDataPanelAndReveal, openNodePropertiesPanel } from '../../lib/utils/revealDataTab';
 import { translate } from '../../i18n';

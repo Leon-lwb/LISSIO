@@ -11,8 +11,8 @@ import {
   unsupportedPanels,
   type ReconciledPanel,
 } from '../reconcile';
-import { PANEL_DEFS, PANEL_DEFS_ORDERED } from '../panelDefs';
-import type { PanelDef } from '../panelTypes';
+import { PANEL_DEFS, PANEL_DEFS_ORDERED } from '../../../../lib/panels/panelDefs';
+import type { PanelDef } from '../../../../lib/panels/panelTypes';
 import type { PanelDescriptor } from '../../../../types/generated/PanelDescriptor';
 import type { PanelKind } from '../../../../types/generated/PanelKind';
 

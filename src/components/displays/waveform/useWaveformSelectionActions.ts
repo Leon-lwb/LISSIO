@@ -1,4 +1,4 @@
-import { useCallback, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
 import type uPlot from 'uplot';
 import { api } from '../../../lib/tauri/tauri';
 import { notify, formatError } from '../../../lib/tauri/notifications';
@@ -34,6 +34,16 @@ export function useWaveformSelectionActions({
   setCopyFeedback,
 }: WaveformSelectionActionsOptions) {
   const lang = useAppStore((s) => s.lang);
+
+  // 反馈计时器只留一个: 连续复制时若各自 setTimeout, 先前那个会提前把后一次的
+  // "已复制"提示关掉。卸载时也要清, 否则组件走了回调还会去 setState。
+  const feedbackTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current);
+    },
+    [],
+  );
 
   const getAbsoluteSelection = useCallback(() => {
     if (!selectedRange) return null;
@@ -82,7 +92,11 @@ export function useWaveformSelectionActions({
       const ok = await writeTextToClipboard(csv);
       if (ok) {
         setCopyFeedback(true);
-        setTimeout(() => setCopyFeedback(false), 1200);
+        if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current);
+        feedbackTimer.current = window.setTimeout(() => {
+          feedbackTimer.current = null;
+          setCopyFeedback(false);
+        }, 1200);
       }
     } catch (error) {
       notify.warn(translate('waveformCopyTitle', lang), formatError(error));

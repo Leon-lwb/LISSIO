@@ -32,7 +32,7 @@ import { setWaveformOverviewActive } from '../../../lib/buffers/sourceManagers';
 import { usePanelFollowing, usePanelGoLive } from '../common/PanelLiveness';
 import { traceProtocolSource } from '../../../store/appStoreHelpers';
 import type { ProtocolConfig, ScopeAxisConfig, WidgetConfig } from '../../../types';
-import type { PanelTabViewProps } from '../../panels/registry/panelTypes';
+import type { PanelTabViewProps } from '../../../lib/panels/panelTypes';
 
 interface WaveformScopeViewProps {
   widget: Extract<WidgetConfig, { kind: 'Waveform' }>;

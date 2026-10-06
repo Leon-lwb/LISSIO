@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { motionIsReduced, setReducedMotionSetting } from '../reducedMotion';
+import { motionIsReduced, setReducedMotionSetting } from '../../utils/reducedMotion';
 import { STAGGER_CAP_MS, STAGGER_STEP_MS, staggerDelayMs, useStaggerEntrance } from '../stagger';
 
 // 断言的是顺序与封顶这类空间关系, 不是具体毫秒数 —— 毫秒数会随调参变化,

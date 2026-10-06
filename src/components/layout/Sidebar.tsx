@@ -3,7 +3,7 @@ import { useAppStore } from '../../store/appStore';
 import type { SidebarView } from '../../store/appStore';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
-import { dockDrag } from '../../lib/dockDrag';
+import { dockDrag } from '../../lib/interaction/dockDrag';
 import { translate, type TranslationKey } from '../../i18n';
 import { CategoryPanel } from '../panels/widgetPalette';
 import { QuickStartPanel } from '../panels/QuickStartPanel';

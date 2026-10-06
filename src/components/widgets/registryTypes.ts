@@ -8,9 +8,10 @@
 
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { DomainType, WidgetConfig } from '../../types';
+import type { WidgetConfig, WidgetKind } from '../../types';
 
-export type WidgetKind = WidgetConfig['kind'];
+// 种类的唯一权威在实现层 (src/types/widgets.ts); 这里只做转发, 免得出现第二处定义。
+export type { WidgetKind };
 
 export interface WidgetComponentProps<K extends WidgetKind = WidgetKind> {
   widget: Extract<WidgetConfig, { kind: K }>;
@@ -22,26 +23,16 @@ export interface WidgetPropertiesProps<K extends WidgetKind = WidgetKind> {
   update: (next: Extract<WidgetConfig, { kind: K }>) => void;
 }
 
-export interface WidgetPortDef {
-  id: string;
-  label: string;
-  domain: DomainType;
-}
-
-export interface WidgetPortSet {
-  inputs: WidgetPortDef[];
-  outputs: WidgetPortDef[];
-}
-
 /// 单个控件 kind 的声明式定义
+///
+/// 这里**没有**端口表: 端口的唯一权威是后端 `describe_node_documents`
+/// (见 `nodes/WidgetNode.tsx`), 前端再声明一份就会造出第二处真相。
 export interface WidgetDef<K extends WidgetKind = WidgetKind> {
   kind: K;
   /// 节点内 / 数据窗口共用的内容组件
   Component: ComponentType<WidgetComponentProps<K>>;
   /// 属性面板专用编辑节; 缺省 = 仅通用字段 (名称/尺寸)
   Properties?: ComponentType<WidgetPropertiesProps<K>>;
-  /// 端口表 (输入/输出); 缺省 = 单 value 输入
-  ports?(widget: Extract<WidgetConfig, { kind: K }>): WidgetPortSet;
   /// palette / 历史面板图标
   icon: LucideIcon;
   /// i18n key (widget.<labelKey>) — palette 与窗口标题共用

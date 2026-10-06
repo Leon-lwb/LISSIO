@@ -9,6 +9,11 @@ import type { Lang } from '../../i18n';
 import type { ContextMenuEntry, ContextMenuItem } from '../../types';
 
 /// 保留原生右键的元素标签，避免破坏输入体验
+/// 右键保留浏览器原生菜单的元素。
+///
+/// 与键盘侧 `isTextEntryTarget` **故意不同**: `select` 不在其中。左键展开下拉是
+/// select 的主交互, 而它没有值得保留的原生右键菜单 —— 应用内菜单更有用;
+/// 键盘侧则相反, select 会自己消费 Ctrl+A/方向键, 必须让路。
 const NATIVE_RIGHT_CLICK_TAGS = new Set(['INPUT', 'TEXTAREA']);
 
 /// 构建检查元素菜单项

@@ -7,8 +7,9 @@
 //
 // 拆分理由是模块图, 不是语义: 视图面传递引用整个显示层 (WaveformChart /
 // TableView / Model3D …), 而 widgetTab → dataTabs → appStore 链路必须保持
-// 无显示层依赖 (既有代码刻意规避该循环, 见 dataTabs.ts 的 widgetTabTypeOfKind
-// 注释)。两个面都以 `Record<PanelKind, …>` 穷举, 新增面板时任一面遗漏都编译失败。
+// 无显示层依赖。元数据面因此住在实现层 (`lib/panels/`), 视图面留在视图层
+// (`components/panels/registry/`), 依赖方向单向。两个面都以 `Record<PanelKind, …>`
+// 穷举, 新增面板时任一面遗漏都编译失败。
 //
 // 权威划分 (与后端 `PanelDescriptor` 一致):
 //   后端权威 = 面板枚举 / tabType / category / labelKey / dataPlane / binding / 端口
@@ -18,11 +19,10 @@
 
 import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { DataTab, DataTabType, WidgetConfig } from '../../../types';
-import type { WidgetKind } from '../../widgets/registryTypes';
-import type { PanelBinding } from '../../../types/generated/PanelBinding';
-import type { PanelDataPlane } from '../../../types/generated/PanelDataPlane';
-import type { PanelKind } from '../../../types/generated/PanelKind';
+import type { DataTab, DataTabType, WidgetKind, WidgetConfig } from '../../types';
+import type { PanelBinding } from '../../types/generated/PanelBinding';
+import type { PanelDataPlane } from '../../types/generated/PanelDataPlane';
+import type { PanelKind } from '../../types/generated/PanelKind';
 
 /// 纯应用外壳的 tab 类型 — 不是数据面板, 没有后端契约。
 ///

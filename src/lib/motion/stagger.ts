@@ -8,7 +8,7 @@
 //! 完了前面几行 —— 迟钝比齐飞更糟。
 
 import { useCallback } from 'react';
-import { motionIsReduced } from './reducedMotion';
+import { motionIsReduced } from '../utils/reducedMotion';
 
 /** 相邻两项之间的间隔 (ms)。 */
 export const STAGGER_STEP_MS = 18;

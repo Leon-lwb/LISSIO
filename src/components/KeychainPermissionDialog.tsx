@@ -5,8 +5,24 @@ import { KeyRound, RefreshCw, ShieldCheck } from 'lucide-react';
 import { translate } from '../i18n';
 import { useAppStore } from '../store/appStore';
 import { useSettingsStore } from '../store/settingsStore';
+import { DialogOverlay, DialogSurface } from './ui/Dialog';
 
-export function KeychainPermissionDialog() {
+export interface KeychainPermissionDialogProps {
+  /**
+   * 是否显示。
+   *
+   * 由启动流程门控传入 (`resolveStartupFlow().showKeychainPermissionPrompt`), 而不是
+   * 组件自己读 `keychainPermissionPromptOpen`: 那个原始标记不知道"首次引导是否已结束",
+   * 于是引导期间它就可能已经是真。
+   *
+   * 更关键的是它必须与宿主描述符的 `open` **同一个值** —— 保活期间节点是否还在屏幕
+   * 上由宿主的 `RetentionScope` 决定, 而组件自己的 `open` 决定它是否持票。两者不一致
+   * 时 (宿主说关、组件说开) 这张票永远收不回来, 浮层会一直卡在屏幕上。
+   */
+  isOpen: boolean;
+}
+
+export function KeychainPermissionDialog({ isOpen }: KeychainPermissionDialogProps) {
   const lang = useAppStore((state) => state.lang);
   const retrying = useSettingsStore((state) => state.keychainPermissionRetrying);
   const retryError = useSettingsStore((state) => state.keychainPermissionRetryError);
@@ -15,12 +31,10 @@ export function KeychainPermissionDialog() {
   const [dontRemind, setDontRemind] = useState(false);
 
   return (
-    <div className="fixed inset-0 dialog-overlay flex items-center justify-center z-modal motion-overlay-in">
-      <div
-        className="w-[460px] max-w-[92vw] dialog-surface px-7 py-6 flex flex-col gap-4 motion-surface-in"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="keychain-permission-title"
+    <DialogOverlay open={isOpen} onDismiss={() => dismiss(dontRemind)}>
+      <DialogSurface
+        className="w-[460px] max-w-[92vw] px-7 py-6 flex flex-col gap-4"
+        titleId="keychain-permission-title"
       >
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 shrink-0 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
@@ -89,8 +103,8 @@ export function KeychainPermissionDialog() {
             {translate(retrying ? 'keychainPermissionRequesting' : 'keychainPermissionRequestAgain', lang)}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogSurface>
+    </DialogOverlay>
   );
 }
 

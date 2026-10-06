@@ -6,7 +6,7 @@ import { ActivityBar } from '../../../layout/ActivityBar';
 import { CategoryPanel } from '../CategoryPanel';
 import { useAppStore } from '../../../../store/appStore';
 import { useHistoryStore } from '../../../../store/historyStore';
-import { dockDrag, __resetForTests } from '../../../../lib/dockDrag';
+import { dockDrag, __resetForTests } from '../../../../lib/interaction/dockDrag';
 import { addPaletteNode } from '../../../../lib/utils/paletteCreation';
 import { api } from '../../../../lib/tauri/tauri';
 import { resetCapabilityCatalogForTests } from '../../../../lib/acquisition/capabilityCatalog';

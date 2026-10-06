@@ -14,7 +14,7 @@ import { translate } from '../../i18n';
 import { notify } from '../../lib/tauri/notifications';
 import { useContextMenu } from '../../lib/hooks/useContextMenu';
 import { transitionStore } from '../../lib/utils/transitionStore';
-import { dockDrag, type WidgetDragSpec } from '../../lib/dockDrag';
+import { dockDrag, type WidgetDragSpec } from '../../lib/interaction/dockDrag';
 import { applyTestAttribute } from '../../lib/acquisition/simulation';
 import { addPaletteNode } from '../../lib/utils/paletteCreation';
 import { deviceTreeCanvasNodes, deviceTreeCanvasEdges } from '../../lib/acquisition/deviceTreeModel';

@@ -29,7 +29,7 @@ import {
   TriggerPanelView,
 } from './panelViewComponents';
 import type { PanelKind } from '../../../types/generated/PanelKind';
-import type { PanelTabView, ShellTabType } from './panelTypes';
+import type { PanelTabView, ShellTabType } from '../../../lib/panels/panelTypes';
 
 /// 面板身份 → 停靠区视图 —— 与 `PANEL_DEFS` 同一键空间, 编译期穷举。
 export const PANEL_VIEWS: Readonly<Record<PanelKind, PanelTabView>> = {

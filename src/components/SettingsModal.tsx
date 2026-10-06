@@ -7,7 +7,6 @@
 //! - ESC 关闭, 点击遮罩关闭
 
 import { Fragment, useEffect, useMemo, useRef, useState, useActionState } from 'react';
-import { activateOnKeyboard } from '../lib/utils/a11y';
 import {
   X,
   RotateCcw,
@@ -88,21 +87,6 @@ export function SettingsModal() {
     void platform.getAppVersion().then(setAppVersion).catch(() => setAppVersion(''));
   }, []);
 
-  // ESC 关闭 + 自动聚焦搜索框
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    window.addEventListener('keydown', handler);
-    // 延迟聚焦避免与打开动画冲突
-    const t = setTimeout(() => searchInputRef.current?.focus(), 50);
-    return () => {
-      window.removeEventListener('keydown', handler);
-      clearTimeout(t);
-    };
-  }, [isOpen, close]);
-
   // 设置项清单 — AI provider 选项来自模型目录 (aiProvider 家族)
   const catalogModels = useModelCatalogStore((s) => s.models);
   const settingFields = useMemo(() =>
@@ -169,9 +153,6 @@ export function SettingsModal() {
     { ok: true }
   );
 
-  if (!isOpen) return null;
-
-  // 更新按钮行为与状态文案
   const updateBusy = updateStatus === 'checking' || updateStatus === 'downloading';
   const updateLabel =
     updateStatus === 'checking'
@@ -214,16 +195,11 @@ export function SettingsModal() {
       : null;
 
   return (
-    <DialogOverlay
-      className="motion-overlay-in"
-      onClick={(event) => { if (event.target === event.currentTarget) close(); }}
-      onKeyDown={activateOnKeyboard}
-      role="button"
-      tabIndex={0}
-    >
+    <DialogOverlay open={isOpen} onDismiss={close}>
       <DialogSurface
-        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh] motion-surface-in"
+        className="w-[820px] max-w-[92vw] h-[600px] max-h-[88vh]"
         label={translate('settingsTitle', lang)}
+        initialFocus={searchInputRef}
       >
         {/* 顶部 — 标题 + 搜索框 + 关闭 */}
         <DialogHeader className="gap-3">

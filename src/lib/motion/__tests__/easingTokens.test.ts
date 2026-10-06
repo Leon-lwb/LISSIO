@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { motionDuration, motionSpring, motionTiming } from '../motionConfig';
-import { springToLinearEasing } from '../easingTokens';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { motionDuration, motionSpring, motionTiming, type MotionPresenceVariant } from '../motionConfig';
+import { installMotionTokens, springToLinearEasing } from '../easingTokens';
+import { VARIANT_GEOMETRY, cssScaleToken, cssTravelToken } from '../presence';
 import { springSettleTime, SPRING_REST_DELTA } from '../spring';
+
+const VARIANTS = Object.keys(VARIANT_GEOMETRY) as MotionPresenceVariant[];
 
 function parseLinear(value: string): number[] {
   const inner = value.slice(value.indexOf('(') + 1, value.lastIndexOf(')'));
@@ -61,6 +64,105 @@ describe('springToLinearEasing', () => {
   it('is stable across repeated calls (cache-safe)', () => {
     const spring = motionSpring('content', 'in');
     expect(springToLinearEasing(spring)).toBe(springToLinearEasing(spring));
+  });
+});
+
+describe('installMotionTokens', () => {
+  // jsdom 没有 matchMedia, reducedMotion 因此把环境当作"已开启减弱动效"。
+  // 这里显式声明偏好, 让断言不依赖那个默认推断。
+  function stubMatchMedia(matches: boolean) {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches,
+        media: '',
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })
+    );
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete document.documentElement.dataset.motionTokens;
+    document.documentElement.removeAttribute('style');
+  });
+
+  it('projects every variant geometry onto its own travel and scale token', () => {
+    stubMatchMedia(false);
+    expect(installMotionTokens(true)).toBe(true);
+
+    // 期望值写成字面量而不是读 VARIANT_GEOMETRY: 读同一张表只能证明"投影等于它自己",
+    // 改表时两边一起变, 测试照样绿。这些数字是角色的外观契约 (横幅从上往下 8px、
+    // 气泡从上方 6px 等), 改动应当在此处被显式确认。
+    const expected: Record<string, string> = {
+      overlay: '0px, 0px',
+      surface: '0px, 10px',
+      popover: '0px, -6px',
+      menu: '0px, -6px',
+      toast: '16px, 0px',
+      banner: '0px, -8px',
+      message: '0px, 8px',
+      row: '0px, -4px',
+      panel: '0px, 0px',
+      window: '0px, 16px',
+    };
+    const expectedScale: Record<string, string> = {
+      overlay: '1',
+      surface: '0.97',
+      popover: '0.97',
+      menu: '0.97',
+      toast: '0.98',
+      banner: '1',
+      message: '0.99',
+      row: '1',
+      panel: '0.98',
+      window: '0.97',
+    };
+
+    expect(VARIANTS.slice().sort()).toEqual(Object.keys(expected).sort());
+    const style = document.documentElement.style;
+    for (const variant of VARIANTS) {
+      expect(style.getPropertyValue(cssTravelToken(variant)).trim()).toBe(expected[variant]);
+      expect(style.getPropertyValue(cssScaleToken(variant)).trim()).toBe(expectedScale[variant]);
+    }
+  });
+
+  it('keeps travel comma-separated so translate() receives two values', () => {
+    // translate() 收两个参数: 空格分隔会让整条 transform 计算值失效, 缩放一起丢。
+    stubMatchMedia(false);
+    installMotionTokens(true);
+
+    const style = document.documentElement.style;
+    for (const variant of VARIANTS) {
+      const travel = style.getPropertyValue(cssTravelToken(variant));
+      expect(travel).toContain(',');
+      expect(travel.split(',')).toHaveLength(2);
+    }
+  });
+
+  it('collapses travel to zero and scale to one under reduced motion', () => {
+    stubMatchMedia(true);
+    installMotionTokens(true);
+
+    const style = document.documentElement.style;
+    for (const variant of VARIANTS) {
+      expect(style.getPropertyValue(cssTravelToken(variant)).trim()).toBe('0px, 0px');
+      expect(style.getPropertyValue(cssScaleToken(variant)).trim()).toBe('1');
+    }
+  });
+
+  it('re-bakes only when the input signature actually changed', () => {
+    stubMatchMedia(false);
+    expect(installMotionTokens(true)).toBe(true);
+    // 同档位重复调用不该重写整组令牌
+    expect(installMotionTokens()).toBe(false);
+    // 强制重烘焙仍然可行
+    expect(installMotionTokens(true)).toBe(true);
   });
 });
 

@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from '../appStore';
 import { cycleDataPanelTab, getAvailableDataPanelEntries } from '../slices/dataTabs';
-import { HOST_PANEL_DEFS, SINGLETON_PANEL_DEFS } from '../../components/panels/registry/panelDefs';
+import { HOST_PANEL_DEFS, SINGLETON_PANEL_DEFS } from '../../lib/panels/panelDefs';
 import type { WidgetConfig } from '../../types';
 
 /// 面板条目顺序 (standalone 7 + derived 9); table-view 是注册表补齐的派生面板。

@@ -17,6 +17,7 @@ import { useOnboardingStore } from '../../store/onboardingStore';
 import { useLayoutStore } from '../../store/layoutStore';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 import { translate } from '../../i18n';
+import { DialogOverlay } from '../ui/Dialog';
 import { TourSpotlight, type TourRect } from './TourSpotlight';
 import { TourPopover, type TourAlign, type TourSide } from './TourPopover';
 
@@ -232,6 +233,7 @@ export function OnboardingWizard() {
 
   // ---- 步骤进入: prepare + 门控观测 ----
   useEffect(() => {
+    if (!isOpen) return;
     def.prepare?.();
     setGatePassed(false);
     if (!def.gate) return;
@@ -289,10 +291,11 @@ export function OnboardingWizard() {
       disposers.forEach((d) => d());
       clearAdvanceTimer();
     };
-  }, [stepIndex, def, gotoNext]);
+  }, [stepIndex, def, gotoNext, isOpen]);
 
   // ---- 锚点矩形跟踪 (rAF 循环): 延迟出现/动画/缩放自动收敛 ----
   useEffect(() => {
+    if (!isOpen) return;
     let raf = 0;
     let lastKey = '';
     let scrolled = false;
@@ -326,14 +329,19 @@ export function OnboardingWizard() {
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [def.anchor]);
-
-  if (!isOpen) return null;
+  }, [def.anchor, isOpen]);
 
   const tr = (key: string) => translate(key, lang);
 
   return (
-    <div className="pointer-events-none fixed inset-0 z-tour">
+    // 遮罩自己不上色: 压暗由 `TourSpotlight` 画, 因为它带着镂空 (目标区域保持原色
+    // 可见)。这里若也压一层, 它会画在镂空**下面**把洞填死。
+    <DialogOverlay
+      open={isOpen}
+      onDismiss={close}
+      className="pointer-events-none dialog-overlay--bare"
+      zClassName="z-tour"
+    >
       <TourSpotlight rect={frame.rect} />
       <TourPopover
         key={stepIndex}
@@ -367,7 +375,7 @@ export function OnboardingWizard() {
         }}
         onClose={close}
       />
-    </div>
+    </DialogOverlay>
   );
 }
 
