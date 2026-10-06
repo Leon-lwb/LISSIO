@@ -116,7 +116,7 @@ sees `RecordingHub`. The boundary that matters for the whole product:
   writer-failed / writer-closed) may stop the run, and only those set
   `RecordingHub::fault`. A successful write clears it again, so a transient
   fault cannot stick for the rest of the session.
-- `AppSettings.data.recordingEnabled` (default on) disables the database
+- `AppSettings.data.recordingEnabled` (default off) disables the database
   entirely and is hot-swappable at any run state; `backend-host` replays it for
   desktop, server, and CLI from the same `settings.json`.
 - **One connection, owned by the writer thread.** Queries, exports, session

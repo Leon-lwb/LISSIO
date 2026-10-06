@@ -15,7 +15,7 @@ use crate::{
 };
 
 impl RecordingHub {
-    /// 数据库写入当前是否开启 (设置项, 默认开)。
+    /// 数据库写入当前是否开启 (设置项, 默认关)。
     #[must_use]
     pub fn is_enabled(&self) -> bool {
         self.state.read().enabled

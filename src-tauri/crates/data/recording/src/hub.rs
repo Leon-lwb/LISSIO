@@ -32,7 +32,7 @@ struct HubDatabase {
     limits: RecordingLimits,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct HubState {
     recorder: Option<Arc<Recorder>>,
     active: HashMap<PortIdentity, DisplayBinding>,
@@ -47,30 +47,14 @@ struct HubState {
     /// 打开时自动重建过数据库 — **可见但非故障**的消息 (走健康报告的 warning,
     /// 绝不进 `failed`: 那会被当成录制契约破坏而停掉采集)。
     recovered: Option<String>,
-    /// 数据库写入总开关 (设置项, 默认开)。`false` 时不建任何 DuckDB 连接,
-    /// 所有生产者看到未绑定, 采集与运行控制完全不受影响。
+    /// 数据库写入总开关 (设置项, 默认关)。`false` 时不建任何 DuckDB 连接,
+    /// 所有生产者看到未绑定, 采集与运行控制完全不受影响; 开启录制是用户显式
+    /// 选择, 装配期由设置回放覆盖。
     enabled: bool,
     /// 数据库文件的进程级独占守卫 — 两个实例同时写一个 DuckDB 文件会互相
     /// checkpoint 覆盖, 静默抹掉已提交写入。
     guard: Option<InstanceGuard>,
     database: Option<HubDatabase>,
-}
-
-impl Default for HubState {
-    fn default() -> Self {
-        Self {
-            recorder: None,
-            active: HashMap::new(),
-            sequences: HashMap::new(),
-            fault: None,
-            unavailable: None,
-            recovered: None,
-            // 默认开启: 关闭是用户显式选择, 不是默认行为。
-            enabled: true,
-            guard: None,
-            database: None,
-        }
-    }
 }
 
 /// Cloneable recording port shared by producers in all four domains.

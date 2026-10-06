@@ -58,6 +58,13 @@ describe('settingsStore', () => {
     expect(settings.appearance.uiFontSize).toBe(DEFAULT_SETTINGS.appearance.uiFontSize);
   });
 
+  it('keeps the recording database off until the user opts in', async () => {
+    await useSettingsStore.getState().load();
+
+    expect(DEFAULT_SETTINGS.data.recordingEnabled).toBe(false);
+    expect(useSettingsStore.getState().settings.data.recordingEnabled).toBe(false);
+  });
+
   it('toggles modal state and category via open/close slice actions', () => {
     useSettingsStore.getState().open('serial');
     expect(useSettingsStore.getState().isOpen).toBe(true);
@@ -167,7 +174,11 @@ describe('settingsStore', () => {
 
   it('replays recording storage settings and runs enabled cleanup rules on load', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, {
-      data: { recordingDatabaseDir: '/tmp/rec-storage', cleanupDeleteFailed: true },
+      data: {
+        recordingEnabled: true,
+        recordingDatabaseDir: '/tmp/rec-storage',
+        cleanupDeleteFailed: true,
+      },
     });
 
     await useSettingsStore.getState().load();
@@ -193,10 +204,18 @@ describe('settingsStore', () => {
   });
 
   it('skips the cleanup invocation when no rule is enabled', async () => {
+    // 默认总开关已关; 本用例验的是「录制开启但没有清理规则」, 显式置为开启
+    tauriMock.seedFile(STORE_FILE, STORE_KEY, { data: { recordingEnabled: true } });
+
     await useSettingsStore.getState().load();
 
     await vi.waitFor(() => {
       expect(invokeCalls('apply_recording_settings')).toHaveLength(1);
+    });
+    expect(invokeCalls('apply_recording_settings')[0]).toEqual({
+      databaseDir: '',
+      continueEmptySession: true,
+      enabled: true,
     });
     expect(invokeCalls('cleanup_recording_sessions')).toHaveLength(0);
   });
@@ -227,6 +246,13 @@ describe('settingsStore', () => {
   it('debounces recording side effects while cleanup numbers are edited', async () => {
     vi.useFakeTimers();
     try {
+      // 清理只在录制开启时推送 — 本用例验证防抖, 先把总开关置于开启态
+      useSettingsStore.setState({
+        settings: {
+          ...DEFAULT_SETTINGS,
+          data: { ...DEFAULT_SETTINGS.data, recordingEnabled: true },
+        },
+      });
       useSettingsStore.getState().update('data', 'cleanupDeleteFailed', true);
       useSettingsStore.getState().update('data', 'cleanupKeepLatest', 5);
       expect(invokeCalls('apply_recording_settings')).toHaveLength(0);

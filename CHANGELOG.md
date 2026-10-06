@@ -17,6 +17,10 @@ semantic versioning.
 
 ### Changed
 
+- Disabled the recording database by default. A fresh install or a settings
+  reset opens no DuckDB connection until recording is enabled in
+  Settings → Data → Recording database; persisted `true` values keep recording
+  on.
 - Separated workspace pause and stop semantics. Pause keeps connections,
   acquisition, parsing, caches, graph evaluation, and recording active while
   disabling automatic sends and device writes. Stop is a hard gate that drops

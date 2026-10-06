@@ -21,8 +21,8 @@ pub const SETTINGS_FILE_NAME: &str = "settings.json";
 /// 设置文档顶层键 (与桌面 `LazyStore` 的 `'app'` 键一致)。
 pub const SETTINGS_KEY: &str = "app";
 
-/// 录制数据库总开关的默认值 — 关闭必须是用户显式选择。
-pub const RECORDING_ENABLED_DEFAULT: bool = true;
+/// 录制数据库总开关的默认值 — 开启必须是用户显式选择。
+pub const RECORDING_ENABLED_DEFAULT: bool = false;
 
 /// 配置目录下 `settings.json` 的读写。
 pub struct SettingsStore {
@@ -71,7 +71,7 @@ impl SettingsStore {
     /// 录制数据库总开关 — 读 `app.data.recordingEnabled`, 缺失或类型不对时回落
     /// [`RECORDING_ENABLED_DEFAULT`]。
     ///
-    /// 读取失败同样回落默认值: 读不到设置绝不该让录制悄悄消失。
+    /// 读取失败同样回落默认值: 读不到设置就是默认关闭, 绝不擅自开始录制。
     #[must_use]
     pub fn recording_enabled(&self) -> bool {
         self.read()
@@ -169,29 +169,29 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// 总开关默认开启; 显式 false 才关闭; 类型不对或文件缺失一律回落默认。
+    /// 总开关默认关闭; 显式 true 才开启; 类型不对或文件缺失一律回落默认。
     #[test]
-    fn recording_switch_defaults_to_on_and_reads_the_persisted_value() {
+    fn recording_switch_defaults_to_off_and_reads_the_persisted_value() {
         let dir = temp_dir("recording-switch");
         std::fs::create_dir_all(&dir).expect("目录应可创建");
         let store = SettingsStore::new(&dir);
 
-        assert!(store.recording_enabled(), "缺文件必须默认开启");
+        assert!(!store.recording_enabled(), "缺文件必须默认关闭");
 
         let mut document = Map::new();
         document.insert(
             SETTINGS_KEY.to_string(),
-            json!({ "data": { "recordingEnabled": false } }),
+            json!({ "data": { "recordingEnabled": true } }),
         );
         store.write(&document).expect("写入应成功");
-        assert!(!store.recording_enabled(), "持久化的 false 必须生效");
+        assert!(store.recording_enabled(), "持久化的 true 必须生效");
 
         document.insert(
             SETTINGS_KEY.to_string(),
             json!({ "data": { "recordingEnabled": "no" } }),
         );
         store.write(&document).expect("写入应成功");
-        assert!(store.recording_enabled(), "类型不对必须回落默认开启");
+        assert!(!store.recording_enabled(), "类型不对必须回落默认关闭");
 
         let _ = std::fs::remove_dir_all(&dir);
     }

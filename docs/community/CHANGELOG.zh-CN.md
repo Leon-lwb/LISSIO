@@ -19,6 +19,7 @@ applies-to: Non-authoritative Chinese translation backup
 
 ### 变更
 
+- **录制数据库默认关闭**:全新安装或重置设置后不再自动建库写盘,需在 设置 → 数据 → 录制数据库 显式开启;已持久化 `true` 的用户继续录制
 - **工作区暂停/停止语义分离**:暂停不再丢数据 — 保持连接与采集,字节继续解析并写入波形/原始数据/CAN/逻辑缓存与录制数据库,图求值照常,只停自动发送与设备写;停止是硬门控,在途数据直接丢弃且不进入任何缓存,已有缓存保留
   - `ExecutionControl` 拆出数据链票据 `ingest_ticket` (运行/暂停有效) 与发送票据 `ticket` (仅运行):读任务路由与评估批次走前者,自动发送/命令帧/TextOut 走后者;恢复点只在真正启动 (Stopped→Running) 推进
   - acquisition 侧只有 `Stopped` 中止采集:S7/Modbus 轮询、字节模拟源、点位模拟与采样消费者在暂停态继续产出

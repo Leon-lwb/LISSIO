@@ -63,7 +63,7 @@ pub async fn assemble(
         );
     }
     state.signal_restore_done();
-    // 用户设置回放: 录制总开关 (默认开)。桌面壳与 Web 出口写的是同一份
+    // 用户设置回放: 录制总开关 (默认关)。桌面壳与 Web 出口写的是同一份
     // settings.json, 三个组合根因此行为一致 — 无界面出口也能被用户关掉。
     let recording_enabled = crate::SettingsStore::new(&config_dir).recording_enabled();
     // 录制会话与后台任务由 spawn_backend_tasks 统一启动 (与 GUI 组合根一致)

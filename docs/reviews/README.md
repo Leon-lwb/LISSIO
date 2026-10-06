@@ -52,6 +52,7 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-06 | Interaction extraction and motion handoff | passed | [records/2026-10-06-interaction-extraction-and-motion-handoff.md](records/2026-10-06-interaction-extraction-and-motion-handoff.md) |
 | 2026-10-06 | Layer exemptions and effect input ports | passed | [records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md](records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md) |
 | 2026-10-07 | Apache-2.0 relicensing and documentation authority | passed with conditions | [records/2026-10-07-apache-relicensing-and-documentation.md](records/2026-10-07-apache-relicensing-and-documentation.md) |
+| 2026-10-07 | Recording database default-off | passed with conditions | [records/2026-10-07-recording-database-default-off.md](records/2026-10-07-recording-database-default-off.md) |
 
 ## Retention
 

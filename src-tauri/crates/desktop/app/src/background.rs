@@ -22,7 +22,7 @@ pub type TaskSpawner = dyn Fn(Pin<Box<dyn Future<Output = ()> + Send + 'static>>
 /// ticker / 自动发送调度。
 ///
 /// `config_dir`: workspace.json 与 recordings/ 所在目录 (app config dir)。
-/// `recording_enabled`: 用户设置里的录制总开关 (默认开)。关闭时**不建立任何
+/// `recording_enabled`: 用户设置里的录制总开关 (默认关)。关闭时**不建立任何
 /// DuckDB 连接** — 只登记坐标, 采集与其它后台任务照常。
 pub fn spawn_backend_tasks(
     state: &AppState,
