@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use Lissio, please cite this software record."
+type: software
+title: "Lissio"
+version: "0.7.2"
+date-released: "2026-10-01"
+abstract: "A Rust and Tauri desktop data-acquisition and debugging host for embedded, automotive, and industrial workflows."
+authors:
+  - family-names: "Wang"
+    given-names: "Peng Heng"
+    alias: "Horldsence"
+  - family-names: "Huang"
+    given-names: "Haoyu"
+    alias: "sloray"
+repository-code: "https://codeberg.org/Horldsence/Lissio"
+url: "https://codeberg.org/Horldsence/Lissio"
+license: "Apache-2.0"
+keywords:
+  - "data acquisition"
+  - "embedded debugging"
+  - "serial port"
+  - "CAN"
+  - "waveform"
+  - "Tauri"
+  - "Rust"

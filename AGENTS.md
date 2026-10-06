@@ -1,5 +1,13 @@
 # Lissio repository guide
 
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Repository development instructions
+-->
 ## Read before editing
 
 Before changing Rust code, read `docs/architecture/crates.md` and run

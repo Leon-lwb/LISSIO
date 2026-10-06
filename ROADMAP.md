@@ -1,129 +1,92 @@
-# 路线图
+# Lissio Roadmap
 
-本文记录 Lissio 已交付的范围、未实现项的优先级与验收判据。
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Delivered scope, release hygiene, and explicit project non-goals
+-->
 
-**权威来源**：功能与接口的事实以代码和
-[docs/architecture/](docs/architecture/crates.md) 为准；许可与合规状态以
-[NOTICE](NOTICE) 与
-[docs/governance/open-source-and-ip.md](docs/governance/open-source-and-ip.md) 为准。本文不
-重复技术细节，也不承诺尚未实现的对外能力——凡标注「未实现」者，在代码具备对应实现前，
-不得出现在任何对外材料的能力清单里。
+This roadmap records delivered scope and concrete follow-up work. It is not a
+schedule or a promise of delivery dates. Implementation facts remain in code,
+tests, and release artifacts.
 
-本文不写死具体版本号与交付日期。排序按优先级给出，版本归属由
-[GOVERNANCE.md](GOVERNANCE.md)「发布」在每次发布时确定。
+## Delivered
 
-## 已交付
+Lissio currently provides:
 
-下列能力已在代码中实现并有门禁或基准覆盖：
+- serial, TCP, UDP, test-signal, Slcan, CandleLight, and typed industrial
+  acquisition paths;
+- waveform, RawData, CAN, logic, command-frame, diagnostic, and recording
+  workflows;
+- a node graph with typed compilation and evaluation, DSP nodes, filters, FFT,
+  frame decoding, and sandboxed custom JavaScript;
+- desktop, static Web, standalone server, headless CLI, MCP, and built-in AI
+  integration;
+- architecture, dependency, contract, model-catalog, token, motion,
+  documentation, performance, and license gates.
 
-- 统一传输端口与协议引擎：串口、TCP、UDP、SLCAN、CandleLight（USB-CAN）、测试数据源，
-  以及 JustFloat / FireWater / RawData / LogicDecode 等内置协议与 schema 驱动的自定义帧
-  解析；
-- 工业协议采集：Modbus TCP / RTU 与 Siemens S7 适配器，具备请求合并、批量读写、质量映射
-  与有界退避重连；
-- 数据面三平面结构（字节 / 记录 / 求值）与五项结构不变量，含采样时钟锁定、容量自洽、
-  记录与求值解耦、一次解析多路分发与丢弃显式化；
-- 节点图四段式编译流水线与求值运行时，端口域在编译期完成类型检查；
-- 内置 AI 工具与 MCP 双向集成，与手工编辑共享同一提交路径与撤销历史；
-- 可运行的桌面端、无前端依赖的独立服务端、CLI 与容器镜像构建；
-- 架构、依赖、契约、令牌、文档与许可证五类可执行门禁，基准结果由仓库脚本一键复现。
+Validated boundaries, including real PLC and multi-vendor hardware coverage,
+are documented in `docs/architecture/industrial-protocol-integration.md` and
+review records.
 
-已验证与待验证的范围边界（真实 PLC、多厂商硬件、电气终端、长时运行稳定性等）见
-[open-source-and-ip.md](docs/governance/open-source-and-ip.md) 与最近一次文档评审记录。
+## Release and compliance work
 
-## 合规履约项（优先级最高）
-
-这些不是新功能，而是**已经到期的义务**，排在功能计划之前。未完成前不得对外发布二进制
-产物，见 `GOVERNANCE.md`「发布」第 3 条。
-
-| # | 事项 | 验收判据 |
+| Priority | Item | Acceptance criterion |
 | --- | --- | --- |
-| 1 | 分发二进制时提供 GPL-2.0 §2 / §3 要求的完整对应源码或书面要约 | 发布流水线产出源码包（含构建脚本与依赖锁文件），或 README 与产物内提供书面要约；`open-source-and-ip.md` 分发合规表相应状态改为已满足 |
-| 2 | 字体许可原文随字体提供 | `src/assets/fonts/*-LICENSE.txt` 被打包进桌面安装包、Web 产物与容器镜像，校验产物内可达 |
-| 3 | 确认所用字体的许可是否允许当前的裁剪子集化 | 就 `MiSans` 许可条款与 OFL 的重命名要求给出书面结论与依据；不允许时改用允许的字体或停止裁剪 |
-| 4 | 容器镜像内提供 `LICENSE` 与 `NOTICE` 及源码获取入口 | 镜像内校验文件存在 |
-| 5 | 桌面安装包与 Web 产物内包含 `LICENSE` 与 `NOTICE` | 同上 |
+| 1 | Keep `LICENSE`, `NOTICE`, and required third-party notices with every binary | Desktop, Web, server, CLI, and container artifacts contain or link the required texts |
+| 2 | Package font license texts | `src/assets/fonts/*-LICENSE.txt` are present in all distributions that contain fonts |
+| 3 | Resolve MiSans subset-modification questions | Record a documented legal conclusion or replace the font if subsetting is not permitted |
+| 4 | Provide checksums and source links on releases | Published releases identify the exact source revision and artifact hashes |
+| 5 | Keep historical GPL release statements accurate | Release notes distinguish current Apache-2.0 releases from earlier GPL-only releases |
 
-## 发布卫生
+Apache-2.0 permits commercial use and proprietary derivatives. Lissio does not
+sell a separate commercial license.
 
-| # | 事项 | 验收判据 |
-| --- | --- | --- |
-| 1 | 清理与 `vX.Y.Z` 约定不一致的历史 tag | 无 `v` 前缀的重复 tag、误建的 `issue-1` 与 `beta` 已删除或改名，`GOVERNANCE.md` 的版本约定与实际 tag 一致 |
-| 2 | 托管地口径统一 | 仓库描述、双语 README、About 弹窗、发布流水线的更新地址与 `git remote` 一致；镜像托管平台在文档中明确标注为镜像 |
-| 3 | 首个 GitHub Release | 含上述合规履约项 1 的源码包，并在 `CHANGELOG.md` 留下版本条目 |
+## Release hygiene
 
-## 中介层的策略约束
+| Item | Acceptance criterion |
+| --- | --- |
+| Normalize historical tags | Public tag names match `vX.Y.Z` or an approved pre-release form |
+| Unify hosting references | Documentation, manifests, About, release automation, and `git remote` use Codeberg as canonical |
+| Publish reproducible release metadata | Release records include source revision, artifacts, checksums, and verification results |
 
-当前中介层已实现的结构约束覆盖类型、时序与可回退语义；**未实现**的是回答「谁授权」的
-策略约束：写操作与读操作在权限上没有区别，入站 MCP 服务没有鉴权，破坏性操作没有确认或
-审批环节。因此当前能提供的是可解释、可追溯、可回退，**不是**可授权。
+## Industrial protocols
 
-优先级第一，因为它决定中介层能否用于写操作。验收判据：
+Current adapters and evidence are listed in
+`docs/architecture/industrial-protocol-integration.md`. Candidate protocols must
+pass licensing, dependency health, cross-platform, interoperability, and
+failure-recovery review before becoming supported features.
 
-- 内置工具按只读 / 写入 / 破坏性分级，越权调用在执行前被拒绝；
-- 破坏性操作需要显式确认或走审批，AI 发起的调用与人工发起遵循同一策略；
-- 入站 MCP 服务具备令牌校验与来源校验，未通过时拒绝连接；
-- 子进程调用受可配置白名单约束；
-- 上述四项均有自动化测试覆盖，并作为 `SECURITY.md` 支持范围内的既定行为对外说明。
+## Hardware interoperability
 
-## 工业协议扩展
+Future validation should cover representative USB serial devices, Slcan and
+CandleLight CAN adapters, Modbus TCP/RTU equipment, S7 PLCs, long disconnects,
+clock drift, malformed frames, and sustained high-rate input. Unsupported
+hardware must not be described as verified.
 
-按「先以模拟服务走通契约、再引入真实硬件」的顺序推进，每个适配器进入发行构建前完成
-负载、安全与互操作三类证据：
+## Benchmarks and sustained operation
 
-- 计划中：OPC UA、MQTT、EtherNet/IP；
-- 每个适配器的验收判据：进程内模拟服务覆盖四类地址空间、连续批量读写、逐项错误、协议
-  异常、超时、断线重连与会话纪元推进；负载基准给出请求合并收益与并发下的延迟分布；
-  配置错误映射为诊断而非静默截断。
+Maintain waveform-ingestion, graph-evaluation, recording, and full-pipeline
+baselines. Long-running tests should account for dropped data explicitly and
+distinguish normal zero-drop operation from intentional bounded degradation.
 
-## 真实硬件互操作验证
+## Low-code user research
 
-依赖硬件实验室与外部合作，当前**未开始**：
+Validate node discovery, error recovery, graph readability, and terminology
+with embedded, automotive, and industrial users before treating usability
+findings as requirements.
 
-- 真实 PLC 与仪表；多种 USB 与 RS-485 转换器；串口热拔插；电气终端条件；
-- 长时间噪声环境下的稳定性；
-- 上述项均需记录环境、样本与结论，并区分「特定设备互操作通过」与「符合标准认证」——
-  后者不在本项目自证范围内。
+## Governance coverage
 
-## 基准矩阵与长时运行
+Add a second maintainer or delegated reviewer when a qualified contributor is
+available. Until then, publish the single-maintainer response limitation and
+retain explicit review records for governance changes.
 
-当前基准只覆盖单台机器上的数百秒量级，长跑基准只到数百秒。计划中：
+## Explicit non-goals
 
-- 三个目标平台的基准矩阵，替代单平台数字；
-- 数小时到数天量级的长时运行稳定性数据；
-- 不同图结构下的求值吞吐曲线（并行度与 SIMD 的反例已有初步数据，需扩展图结构集合）。
-
-结论只采信可复现的实测值，不做跨修订的倍数比较——仓库不保留旧修订的可复现环境，
-跨修订比较会失去依据。
-
-## 低代码路径的用户研究
-
-低代码编排层的机制（schema 驱动表单、端口域编译期检查、模板与撤销）已实现，但
-**没有任何用户研究证据**：没有真实驻场工程师的任务时长数据，也没有可用性观察。本文不以
-「降低门槛」为已验证结论。需要的是可复现的任务设计、对照任务集与外部被试记录。
-
-## 治理补足
-
-| # | 事项 | 验收判据 |
-| --- | --- | --- |
-| 1 | 补足第二位提交者 | 依 `GOVERNANCE.md` 的条件提名并公开说明，合入权限不再由单一身份独占 |
-| 2 | 确认对外联络信箱可用 | `SECURITY.md` 与行为准则举报渠道的信箱有人查看，并留一次确认记录 |
-| 3 | 明确版权归属是否需要机构承接 | 与合作方洽谈的现状写入 `docs/reviews/records/`，结论同步 `NOTICE` 与 `CLA.md` |
-| 4 | 为社区开一个可提问的场所 | 选定 issue tracker 之外的渠道并写入双语 README |
-
-## 不承诺的事项
-
-以下不在计划内，写明以免读者按相反预期使用：
-
-- 不提供标准符合性认证；「与某设备互操作通过」不等于「符合标准认证要求」；
-- 不替代产线控制系统（DCS / PLC 的控制职责），只做数据接入、分析与受控操作；
-- 不承诺商业许可的可购买性。商业轨文本尚未发布，见 `NOTICE`；
-- 不承诺人均响应速度。合入权限集中于单一维护者，见 `MAINTAINERS.md`。
-
-## 优先级依据
-
-排序遵循两条规则，冲突时合规履约项在前：
-
-1. **对外承诺之前必须先能兑现**。已被写进文档、许可证或分发形态的义务，优先于新增能力。
-2. **限制适用范围的因素先解除**。策略约束决定中介层能否用于写操作，硬件验证决定互操作
-   结论能否成立，二者都排在依赖它们的扩展之前。
+Lissio does not currently promise certified safety systems, guaranteed
+real-time behavior, support for every PLC, arbitrary custom hardware drivers,
+unlimited historical compatibility, legal advice, or contractual support.

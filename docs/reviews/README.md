@@ -1,51 +1,61 @@
-# 文档评审记录
+# Documentation Review Records
 
 <!-- lissio-doc
 status: maintained
-owner: 维护者（Horldsence）
-last-reviewed: 2026-10-04
-applies-to: docs/reviews/records/ 下的全部记录
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Historical records under docs/reviews/records
 -->
 
-本目录保存每次文档评审的历史事实：评了什么、结论是什么、还欠什么。记录一经写入即
-不修改；需要更正时新增一条记录并指向旧记录。现行规范写在 `docs/governance/`，见
-[../governance/document-review.md](../governance/document-review.md)。
+This directory preserves historical review facts: what was reviewed, the
+decision, and outstanding work. Records are not rewritten after publication.
+Corrections are added as new records that reference the old record. Current
+policy lives in [`../governance/document-review.md`](../governance/document-review.md).
 
-## 记录格式
+## Record format
 
-- 文件名：`YYYY-MM-DD-<范围>.md`，范围用小写短横线（如 `open-source-ip-baseline`）。
-- 文件开头是元数据块，`pnpm check:docs` 会校验：
+- Name records `YYYY-MM-DD-<scope>.md` using lowercase kebb-case scopes.
+- Begin with metadata that `pnpm check:docs` validates:
 
 ```markdown
-# <范围> 文档评审
+# <scope> documentation review
 
 <!-- lissio-review
 date: 2026-10-04
-scope: 评审范围一句话
-reviewer: 评审人
-verdict: 通过 | 有条件通过 | 不通过
+scope: one-sentence review scope
+reviewer: reviewer identity
+verdict: passed | passed-with-conditions | failed
 -->
 ```
 
-- 正文三段固定：**范围**（评审了哪些文件 / 回答了哪些问题）、**结论**
-  （逐条说明清单结果）、**遗留项**（待办、负责人、到期日）。
+- Preserve three sections: **Scope**, **Findings**, and **Follow-ups**.
+- Historical records retain their original language and established verdict
+  labels. New records use English and the labels above.
 
-## 索引
+## Index
 
-| 日期 | 范围 | 结论 | 记录 |
+| Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
-| 2026-10-04 | 开源与知识产权基线 | 有条件通过 | [records/2026-10-04-open-source-ip-baseline.md](records/2026-10-04-open-source-ip-baseline.md) |
-| 2026-10-04 | 事实不一致修正（关闭基线遗留项 3、4、6） | 通过 | [records/2026-10-04-fact-consistency-fixes.md](records/2026-10-04-fact-consistency-fixes.md) |
-| 2026-10-04 | 项目治理基线（GOVERNANCE / MAINTAINERS / ROADMAP） | 有条件通过 | [records/2026-10-04-project-governance-baseline.md](records/2026-10-04-project-governance-baseline.md) |
-| 2026-10-04 | 动效弹簧续作（错峰进场 / 拖拽释放动量） | 有条件通过 | [records/2026-10-04-motion-stagger-and-release.md](records/2026-10-04-motion-stagger-and-release.md) |
-| 2026-10-04 | 控件面板粘性分区条（去色块 / 字缘发光 / 局部磨砂） | 有条件通过 | [records/2026-10-04-palette-sticky-section-bar.md](records/2026-10-04-palette-sticky-section-bar.md) |
-| 2026-10-05 | 前端动效与磨砂成本治理（删无效高斯预算 / 抽屉改 transform 让位 / 新增 check:motion） | 通过 | [records/2026-10-05-frontend-motion-and-frost-budget.md](records/2026-10-05-frontend-motion-and-frost-budget.md) |
-| 2026-10-05 | 停靠面板退场的物理与时长（GSAP 弹簧从未生效 / 退场收拢 / 让位分流 / 单一属性写者） | 通过 | [records/2026-10-05-docked-panel-exit-physics.md](records/2026-10-05-docked-panel-exit-physics.md) |
-| 2026-10-04 | 动效弹簧续作（列表让位 / 求解缓存 / 文档失真） | 有条件通过 | [records/2026-10-04-motion-list-reorder-and-solve-cache.md](records/2026-10-04-motion-list-reorder-and-solve-cache.md) |
+| 2026-10-04 | Open-source and IP baseline | passed with conditions | [records/2026-10-04-open-source-ip-baseline.md](records/2026-10-04-open-source-ip-baseline.md) |
+| 2026-10-04 | Fact consistency corrections | passed | [records/2026-10-04-fact-consistency-fixes.md](records/2026-10-04-fact-consistency-fixes.md) |
+| 2026-10-04 | Project governance baseline | passed with conditions | [records/2026-10-04-project-governance-baseline.md](records/2026-10-04-project-governance-baseline.md) |
+| 2026-10-04 | Motion stagger and release behavior | passed with conditions | [records/2026-10-04-motion-stagger-and-release.md](records/2026-10-04-motion-stagger-and-release.md) |
+| 2026-10-04 | Sticky widget palette section bar | passed with conditions | [records/2026-10-04-palette-sticky-section-bar.md](records/2026-10-04-palette-sticky-section-bar.md) |
+| 2026-10-05 | Frontend motion and frost budget | passed | [records/2026-10-05-frontend-motion-and-frost-budget.md](records/2026-10-05-frontend-motion-and-frost-budget.md) |
+| 2026-10-05 | Docked-panel exit physics | passed | [records/2026-10-05-docked-panel-exit-physics.md](records/2026-10-05-docked-panel-exit-physics.md) |
+| 2026-10-04 | Motion reorder and solve cache | passed with conditions | [records/2026-10-04-motion-list-reorder-and-solve-cache.md](records/2026-10-04-motion-list-reorder-and-solve-cache.md) |
+| 2026-10-06 | UI layers and gate coverage | passed | [records/2026-10-06-ui-layers-and-gate-holes.md](records/2026-10-06-ui-layers-and-gate-holes.md) |
+| 2026-10-06 | Motion token single source and fallback cleanup | passed | [records/2026-10-06-motion-token-single-source-and-dead-fallback.md](records/2026-10-06-motion-token-single-source-and-dead-fallback.md) |
+| 2026-10-06 | Dialog primitive and interaction contract | passed | [records/2026-10-06-dialog-primitive-and-interaction-layer.md](records/2026-10-06-dialog-primitive-and-interaction-layer.md) |
+| 2026-10-06 | Interaction extraction and motion handoff | passed | [records/2026-10-06-interaction-extraction-and-motion-handoff.md](records/2026-10-06-interaction-extraction-and-motion-handoff.md) |
+| 2026-10-06 | Layer exemptions and effect input ports | passed | [records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md](records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md) |
+| 2026-10-07 | Apache-2.0 relicensing and documentation authority | passed with conditions | [records/2026-10-07-apache-relicensing-and-documentation.md](records/2026-10-07-apache-relicensing-and-documentation.md) |
 
-## 保留与时效
+## Retention
 
-- 记录永久保留，不做归档压缩。
-- 旧记录中的结论若被后续改动推翻，由后续记录说明。
-- 治理文档的时效由元数据 `last-reviewed` 控制，
-  `pnpm check:docs -- --stale-days <天数>` 超期即报错；与本索引无关。
+Records are permanent and are not compressed or archived away from the
+repository. A later record supersedes an earlier conclusion when needed.
+Governance freshness is controlled by `last-reviewed` and
+`pnpm check:docs -- --stale-days <days>`.

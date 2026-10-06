@@ -1,4 +1,13 @@
-# Lissio crate architecture
+# Lissio Crate Architecture
+
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Rust workspace ownership, domains, layers, and dependency direction
+-->
 
 ## Physical layout
 
@@ -37,8 +46,8 @@ same registry at runtime. Capability coverage
 matrix and conventions: [exits.md](exits.md); Web protocol contract and the
 per-command capability matrix: [web-exit.md](web-exit.md).
 
-设备拓扑、驱动契约、能力投影和子树生命周期的统一模型见
-[device-tree.md](device-tree.md)。
+The unified device topology, driver contract, capability projection, and subtree
+lifecycle model is documented in [device-tree.md](device-tree.md).
 
 ## Domains
 
@@ -99,7 +108,7 @@ dev-dependency only.
 `recording` owns the DuckDB store behind one writer thread; `pipeline` only ever
 sees `RecordingHub`. The boundary that matters for the whole product:
 
-- **数据库侧的任何问题都不得波及采集。** A database that cannot be opened, a
+- **Database-side failures must never interrupt acquisition.** A database that cannot be opened, a
   writer that stopped answering, a queue that filled up, or the user turning the
   switch off are all *"no recording"* — never *"recording failed"*. `pipeline`
   keeps acquiring in every one of those cases.
@@ -137,12 +146,12 @@ fault flag was sticky.
 
 ## Performance monitor boundary
 
-性能监视器按“谁运行谁测量”划边界：
+Performance monitoring is bounded by “the runtime that performs the work owns its measurement”:
 
-- 前端采集 WebView/浏览器自身的帧率、帧时间、Long Task 与可选 JS Heap；这些值只在前端产生，不向后端伪造或回传为权威状态。
-- `performance` (L4) 采集 `lissio-server` 进程 CPU/RSS/运行时长，并由 `backend-server` 埋点记录 RPC 延迟、WebSocket 输出与有界队列丢弃；`pipeline::EvalDiagnostics` 与 `bus::RuntimeHealth` 投影为同一后端快照。
-- `rpc-api::get_performance_snapshot` 是后端快照唯一出口，前端只拉取、合并和绘制两类序列。监控 UI 不读取内部锁、不解析日志文本，也不通过 Tauri IPC旁路 Web 合同。
-- 监控请求本身计入 RPC 统计；前端历史是显示层短时环形数据，后端快照仍是当前状态的权威来源。
+- The frontend measures WebView/browser frame timing, long tasks, and optional JavaScript heap. Those values are never fabricated as backend state.
+- `performance` (L4) samples `lissio-server` CPU, RSS, uptime, and runtime counts. `backend-server` records RPC latency, WebSocket output, and bounded queue drops. `pipeline::EvalDiagnostics` and `bus::RuntimeHealth` project into the same backend snapshot.
+- `rpc-api::get_performance_snapshot` is the only backend snapshot exit. The frontend fetches, merges, and renders the two sequences. Monitoring UI does not read internal locks, parse logs, or bypass the Web contract through Tauri IPC.
+- Monitoring requests are included in RPC statistics. Frontend history is short-lived display data; the backend snapshot remains authoritative for current state.
 
 ## Command-name contract
 

@@ -1,44 +1,62 @@
-# 安全与知识产权举报
+# Security and Intellectual Property Policy
 
-## 报告漏洞
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Vulnerability, abuse, trademark, and rights reports
+-->
 
-- 渠道：`pengheng.wang@foxmail.com`（维护者邮箱，也是行为准则的举报渠道）。
-- 请**不要**在公开 issue、discussion 或 PR 中披露可利用的漏洞细节。
-- 报告内容：受影响版本或 commit、复现步骤、影响面、是否已知被利用。
-- 建议使用带附件的加密邮件；未提供时普通邮件即可。
+## Reporting a security vulnerability
 
-## 响应时限
+Email `pengheng.wang@foxmail.com`. Do not disclose exploitable details in a
+public issue, discussion, or pull request.
 
-| 阶段 | 目标 |
+Include:
+
+- affected release or commit;
+- reproduction steps;
+- impact and known exploitation;
+- suggested mitigation, if available.
+
+Encrypted email is preferred when attachments are required. Plain email is
+acceptable when encryption is unavailable.
+
+## Response targets
+
+| Stage | Target |
 | --- | --- |
-| 确认收到 | 3 个工作日 |
-| 初步定级与修复方案 | 10 个工作日 |
-| 修复发布 | 定级后 30 日内，或与报告者另行商定 |
+| Acknowledgement | 3 business days |
+| Initial severity and plan | 10 business days |
+| Fix release | Within 30 days of severity confirmation, or another agreed date |
 
-定级参考：可远程触发的越权执行与提权为最高；本地提权与信息泄露次之；崩溃与资源耗尽
-最低。定级结果与依据会同步给报告者。
+Remote code execution and privilege escalation receive the highest severity.
+Local privilege escalation and information disclosure follow. Crashes and
+resource exhaustion are generally lower severity. The rationale is shared with
+the reporter.
 
-## 披露
+## Disclosure
 
-- 修复随下一个版本发布；安全相关的披露说明会指明受影响版本。
-- 报告者在修复发布前不公开细节；发布后是否公开由双方商定，默认公开。
-- 修复完成后公开致谢，署名方式由报告者选择。
+Fixes are published in the next appropriate release. The reporter should keep
+details confidential until release unless both parties agree otherwise. Public
+credit is offered after remediation, with the attribution chosen by the reporter.
 
-## 知识产权与商标举报
+## Intellectual property and trademark reports
 
-- 发现本项目使用了无授权的第三方作品，或第三方权利人认为本项目侵犯其权利，同样使用
-  上述邮箱。请提供权利证明、涉及的具体文件与位置。
-- 商标滥用（以"Lissio"作为自身产品名、域名或商标）同样适用上述渠道。
-- 许可证口径见 `docs/governance/open-source-and-ip.md`；已受理事项的处理结论会在
-  `docs/reviews/records/` 留下记录。
+Use the same email for suspected unauthorized third-party material, copyright or
+patent claims, and misuse of the Lissio name. Include proof of rights and exact
+file or product locations. Accepted matters are recorded in
+`docs/reviews/records/` when they affect project policy or releases.
 
-## 不予受理
+## Out of scope
 
-- 未提供复现步骤且无法自行验证的问题，按普通 issue 处理。
-- 通过公开渠道先行披露的漏洞细节，无法保证修复前的协调窗口。
-- 上游依赖自身的漏洞：请同时向上游报告，并告知我们以便在 `src-tauri/deny.toml`
-  的 advisories 忽略清单中体现。
+Issues without enough information to reproduce are handled as ordinary issues.
+Public disclosure before coordination cannot guarantee a private remediation
+window. Dependency vulnerabilities should also be reported upstream.
 
-## 支持范围
+## Support window
 
-仅当前发布版本与 `main` / `develop` 分支。历史版本不单独修复，请升级到当前版本。
+Security fixes target current releases and the active development branch.
+Historical releases are not maintained separately; users should upgrade.

@@ -1,6 +1,19 @@
 # Lissio
 
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: zh-CN
+authoritative: false
+translation-of: README.md
+applies-to: Non-authoritative Chinese translation backup
+-->
+
+> 中文翻译备份；对应的英文源文件为权威版本。若中英文不一致，以英文为准。
+> Chinese translation backup. The English source is authoritative; English controls in case of conflict.
+
+[英文（权威）](../../README.md) | [简体中文翻译](./README.zh-CN.md)
 
 一个使用 Rust + Tauri 完全重构的下一代串口助手 —— 面向嵌入式调试、波形可视化、节点式数据流编排、CAN / 汽车诊断与逻辑分析。
 
@@ -67,7 +80,7 @@ Lissio 是一款面向嵌入式调试场景的桌面串口助手。前端基于 
 
 ### 协议引擎
 
-- **JustFloat** & **FireWater** —— VOFA+ 协议，支持通道自动检测。
+- **JustFloat** & **FireWater** —— VOFA+ 兼容协议格式，支持通道自动检测。
 - **RawData** —— 原始字节流查看。
 - **Slcan** / **CandleLight** —— CAN 帧解析。
 - **LogicDecode** —— 从数字电平采样解码 UART / I2C / SPI 协议。
@@ -438,14 +451,12 @@ cd src-tauri && cargo deny check
 
 ## 开源协议
 
-双许可：可在 **GNU GPL v2 only**（[LICENSE](./LICENSE)）或单独议定的商业许可下使用。
-商业许可尚未发布，当前唯一可用的授权是 GPL-2.0-only。版权 © 2026 Horldsence；贡献者
-按 [CLA.md](./CLA.md) 授权。第三方归属、专利说明与再分发者的源码义务见
-[NOTICE](./NOTICE)，完整口径见
-[docs/governance/open-source-and-ip.md](docs/governance/open-source-and-ip.md)。
+Lissio 使用 **Apache License 2.0**，原文见 [LICENSE](../../LICENSE)。
+Apache-2.0 允许商业使用、修改和闭源衍生作品，但须遵守署名、声明修改等许可条件。
+版权 © 2026 Horldsence 与 Lissio 贡献者；贡献依据 [CLA.md](../../CLA.md) 提交。
+历史 GPL-only 发布物继续适用其随附许可。第三方归属和义务见 [NOTICE](../../NOTICE) 与
+[docs/governance/third-party-licenses.md](../governance/third-party-licenses.md)。
 
-贡献请先阅读 [CONTRIBUTING.md](./CONTRIBUTING.md)、
-[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) 与 [SECURITY.md](./SECURITY.md)。
 
 ## 鸣谢
 

@@ -1,11 +1,20 @@
 ---
 name: Feature request
-about: Suggest an idea for vofa-NEXT
+about: Suggest an idea for Lissio
 title: '[Feat] '
 labels: enhancement
 assignees: ''
 
 ---
+
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Lissio community issue intake
+-->
 
 **Is your feature request related to a problem? Please describe.**
 A clear and concise description of what the problem is. Ex. When monitoring a high-rate serial stream, I'm always frustrated when [...]
@@ -14,7 +23,7 @@ A clear and concise description of what the problem is. Ex. When monitoring a hi
 A clear and concise description of what you want to happen. If it involves a specific area (widget, protocol parser, node graph, transport, CAN diagnostics, ...), name it.
 
 **Describe alternatives you've considered**
-A clear and concise description of any alternative solutions, workarounds, or features in other tools (e.g. the original VOFA+) you've considered.
+A clear and concise description of any alternative solutions, workarounds, or features in other tools (e.g. the VOFA+ or another compatible tool) you've considered.
 
 **Mockups / references (optional)**
 Screenshots, sketches, links to similar implementations, or protocol documents that help explain the request.

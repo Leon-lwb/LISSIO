@@ -1,11 +1,20 @@
 ---
 name: Bug report
-about: Report a reproducible problem in vofa-NEXT
+about: Report a reproducible problem in Lissio
 title: '[Bug] '
 labels: bug
 assignees: ''
 
 ---
+
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Lissio community issue intake
+-->
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -31,7 +40,7 @@ paste logs here
 If applicable, add screenshots or a screen recording to help explain your problem.
 
 **Environment (please complete the following information):**
-- vofa-NEXT version or commit: [e.g. 0.1.0, or `git rev-parse HEAD`]
+- Lissio version or commit: [e.g. 0.1.0, or `git rev-parse HEAD`]
 - OS and version: [e.g. macOS 15.2, Windows 11 23H2, Ubuntu 24.04]
 - Connection type: [e.g. serial @ 115200, TCP client, UDP]
 - Connected device / firmware (if relevant): [e.g. STM32 running FireWater protocol]

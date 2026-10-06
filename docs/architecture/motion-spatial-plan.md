@@ -1,213 +1,101 @@
-# 动效空间化改造计划
+# Spatial Motion Decisions
 
-本文件描述 `src/lib/motion/` 落地之后**尚未完成**的界面改造，以及已经收尾的部分。
-已完成的物理引擎与令牌层见 `motion-tokens.md`；本文只讲还剩什么、为什么。
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Spatial motion implementation decisions and acceptance criteria
+-->
 
-## 判断标准
+This document records completed spatial-motion work and intentional
+non-goals. Runtime tokens are in [`motion-tokens.md`](motion-tokens.md).
 
-一条动效是否合格，用三个问题检验：
+## Acceptance questions
 
-1. **它从哪里来？** 观众能不能从位移方向和缩放原点推断出这个表面归属哪里。
-   不能，就是纯装饰。
-2. **它有多远？** 幅度与实际路程是否匹配。移动 600px 与移动 40px 用同一组
-   参数，其中一个必然读错。
-3. **它凭什么这样动？** 能否用"一个被弹簧约束的物体"解释。
-   解释不了的（尤其是匀速、匀加速、线性淡入）都是待改项。
+A motion is acceptable only when all three are true:
 
-不满足以上任意一条的现有动效，都进入下面的清单。
+1. **Where does it come from?** Direction and scale origin reveal the owning surface.
+2. **How far does it move?** Duration and amplitude match measured travel.
+3. **Why does it move this way?** A spring-constrained object explains the motion.
 
-## 已具备的能力
+Uniform or linear movement without a physical reading remains a candidate for
+replacement.
 
-改造时直接使用，不需要重新实现：
+## Available building blocks
 
-| 能力 | 入口 | 说明 |
-| --- | --- | --- |
-| 物理弹簧 | `motionSpring(family, phase)` | 闭合解，`duration` 是解出来的 |
-| 距离感知时长 | `motionSpringFor(family, phase, px)` | 按实测路程拉伸 |
-| 进场/离场几何 | `MotionPresence` 的 `origin` / `travel` / `scale` / `exitTravel` / `exitScale` | 传真实锚点 |
-| 进场/离场不同令牌 | `--ease-<家族>-out` | 离场恒为临界阻尼 |
-| dock 边锚点 | `dockPanelGeometry(edge)` | 由停靠边推导 origin、进场位移与退场收拢 |
-| 停靠面板抽屉 | `components/layout/DockedPanel.tsx` | 宽度收拢 + `MotionPresence` 退场 |
-| 组内几何连续性 | `useDockReorder(container, layoutKey, sizeEpoch)` | 手写 FLIP，纯 transform；换边与开合读各自该读的时序 |
-| 列表换槽位连续性 | `useFlipReorder(container, trigger, opts)` | 换序 / 删除 / 插入共用一次测量；`spring` 决定这次位移读哪份时序 |
-| 错峰 | `useStaggerEntrance()` | 按索引延迟，封顶封在 `STAGGER_CAP_MS` |
-| 共享元素与重排 | `pillTransform()` 的 FLIP 姿态换算 | 已由滑动指示器落地 |
-| 合成器图层预算 | `promote()` / `release()` | 引用计数，用完即卸 |
-| 非零初速度 | `springAtWithVelocity(spring, t, v₀)` | 离场可带着动量落点，不过冲 |
-| 单一属性写者 | `promote()` | 借走合成层时一并接管 `transform`，避免 CSS 过渡与补间互相追赶 |
-| 松手动量 | `planRelease(vx, vy)` | 前冲距离与时长，一次算清 |
+| Capability | Entry |
+| --- | --- |
+| Family spring | `motionSpring(family, phase)` |
+| Distance-aware timing | `motionSpringFor(family, phase, px)` |
+| Entry/exit geometry | `MotionPresence` origin, travel, scale, exit geometry |
+| Dock-edge geometry | `dockPanelGeometry(edge)` |
+| Dock drawer | `DockedPanel` |
+| Dock group continuity | `useDockReorder` |
+| List slot continuity | `useFlipReorder` |
+| Bounded stagger | `useStaggerEntrance` |
+| Shared indicator movement | `pillTransform` FLIP |
+| Compositor layer ownership | `promote`, `release` |
+| Nonzero initial velocity | `springAtWithVelocity` |
+| Release momentum | `planRelease` |
 
-## 已完成
+## Completed decisions
 
-### 停靠面板的进场与离场
+### Docked panels
 
-停靠面板（侧边栏与 AI 面板的 left / right / bottom）统一由 `DockedPanel` 驱动，
-方向性 CSS 关键帧（`animate-ai-in-*`）已删除。它把一次开合拆成三段，各用各的长处：
+`DockedPanel` owns sidebar and AI panel entry/exit. Width is committed once;
+group FLIP preserves continuity with transforms only. `MotionPresence` plays
+exit before the panel is removed, and `useDockReorder` moves neighbors.
 
-- **宽度**只提交一次，不逐帧插值。在 flex 行里外侧边不动、内侧边行走，所以面板收拢时
-  卡片是被"压"向所属 dock 边的 —— 空间关系由布局本身给出，不必再补一条位移；
-  连续性由面板组的 FLIP 接手（只写 transform）。
-- **进退场**由 `MotionPresence`（`variant="panel"`）负责，`origin` / `travel` /
-  `scale` / `exitTravel` / `exitScale` 全部来自 `dockPanelGeometry(edge)`。它还带来
-  此前拿不到的能力：退场播完才卸载。CSS `animation` 拦不住 React 卸载节点，所以关闭
-  时曾经是瞬时消失。
-- **相邻面板的让位**由 `useDockReorder` 负责，见下节。
+Close is serial: exit completes first, then width collapses. This prevents the
+panel library's forced overflow from clipping the exit. Exit moves toward its
+dock edge, scales down, and yields space. Bottom panels use a smaller scale
+change because they span the full window width.
 
-面板收起后仍留在组内（宽度为 0），这正是退场得以播放的原因。
+### Reordering within a dock group
 
-关闭必须**串行**：先播退场，`onExitComplete` 里才收宽度。库给 Panel 强制
-`overflow: hidden`，先收布局会把卡片当场裁没，退场将完全不可见。
+Removing a forced React `key` allowed panel DOM to survive edge changes.
+`useDockReorder` measures final rectangles and returns panels to their settled
+slots. Edge changes use `spatial/in`; simple open/close yielding uses a faster
+reflow motion because the panels themselves did not move.
 
-退场本身是一次朝所属 dock 边的**收拢**：以那条边为原点缩到 0.9，并向外让出 10px，
-与进场（0.98 → 1，从边外侧 28px 处进来）互为镜像。这一段不是装饰 —— 少了它，关闭就
-是"原地淡出 150ms，然后宽度一步收掉、邻居再滑 180ms"，两段之间没有任何衔接。
+### List yielding
 
-底部面板的缩放量压到 0.97：它横跨整个窗口宽度，均匀收窄一条只该竖向收拢的抽屉是
-错的读法。与 `enterScale` 同理。
+`useFlipReorder` shares one measurement across insertion, removal, and reorder.
+Yield distance is scaled from measured travel. Zero bounce is intentional:
+surrounding rows have no source object or momentum.
 
-### 组内换边
+### Drag release
 
-`App.tsx` 不再用 `key` 强制重挂载 `PanelGroup` —— 面板 DOM 本来就能跨换边存活
-（`order` 变化只触发重新注册），是 `key` 把它变成了瞬移。删除后由
-`useDockReorder` 补上连续性：提交后测量各面板矩形，把仍在飞行的位移减掉得到落定
-槽位，再让 `spatial` 家族的弹簧把它送回原位。只写 transform，留在合成器上。
+Pointer velocity is derived from recent movement and passed to the spring
+solver. The drag ghost travels toward the drop point without overshooting it.
+Very small release velocity uses an in-place fade. Release duration comes from
+the plan and is shared by the component and cleanup timer.
 
-换边不涉及尺寸变化（布局存档按 panel id 索引），所以 FLIP 不碰 width/height。
+## Intentional non-goals
 
-面板组里会触发 FLIP 的变化有**两种**，物理性质不同，因此读不同的时序：
+### Canvas node entry/exit
 
-- **换边**（`layoutKey` 变了）：面板真的搬到了另一个位置，到位后沉降一点是弹性，读
-  `spatial/in`。
-- **开合**（只有 `sizeEpoch` 加一）：面板组没动过，相邻面板的位置是被别人的缺席或
-  presence 顶上去的。它们既没有来源也没有动量，越过槽位再荡回来只会读成渲染故障 ——
-  读让位那份临界阻尼的时序（`reflowSpring`），它也更短：观众已经看清内容去了哪里，
-  动画还在收，迟钝比回弹更糟。
+Nodes appear and disappear immediately. React Flow owns node transforms, node
+position is data, and batch creation can add many nodes at once. A generic
+entry animation would be decorative and could make user-authored graph data
+appear self-moving. Drag feedback already communicates insertion.
 
-此前两者共用 `spatial/in`，于是**抽屉开合时中央面板会冲过自己的槽位约 4% 再荡回来**，
-且 300px 的让位要读满 510ms。这条分流由 `dockYieldSpring()` 决定，测试钉的是阻尼比
-而不是毫秒数 —— 迁移与让位的区别不在快慢，在过冲。
+### Chart data transitions
 
-**未覆盖**：跨容器迁移（side ↔ bottom ↔ float）仍是瞬时。那条路径上面板会真的
-卸载再挂载到另一个面板组，FLIP 需要在提交前捕获矩形、在新容器里重新落位，是另一件事。
+Chart values are measurements. Animating data changes can misrepresent readings.
 
-## 待改造界面
+### Cross-host panel migration
 
-按"违反上述判断标准的严重程度"排序，不按实现难度排序。
+Moving among sidebar, bottom dock, and floating window remains immediate because
+the three hosts do not share one intermediate geometry.
 
-### 已完成：错峰进场
+## Completion criteria
 
-`useStaggerEntrance()` 返回一个按索引取延迟的解析器，延迟累加到
-`STAGGER_CAP_MS` 封顶 —— 线性累加会让长列表末尾在用户读完前几行时还完全没动，
-迟钝比齐飞更糟。已接入 AI 对话气泡。
-
-**索引方向由调用方决定**，这是接入时唯一需要判断的事：
-
-- 对话气泡从**尾部**反向取索引。级联从视线所在的最新一条开始，而追加新气泡时
-  最后一条的索引正好是 0 —— 不会因为前面已经攒了 50 条而被推迟半秒才出现。
-  气泡的 `key` 是数组下标，追加不会重挂载历史项，所以正常使用中每条都是单独
-  进场、延迟为 0；真正需要错峰的是**整份历史一次性挂载**（切回旧会话）。
-- 列表行、菜单项这类头部锚定的列表正向取索引即可。
-
-延迟走 `--motion-stagger-delay` 自定义属性而不是内联 `animation-delay`，否则内联
-声明会盖过 `reduced-motion.css` 的降级，见 `ui-motion.md` 规则 9。
-
-**控件调色板行原本不在此列**：它的进场早已是死代码 —— `CategoryPanel` 一直硬传
-`entering={false}`，`animate-palette-row` 只剩 `reduced-motion.css` 的登记在引用。
-本轮把那套死管道与孤立 CSS 一并删除，没有新写进场动画。
-
-**未覆盖**：菜单项只有 `motion-row`（悬停/按下的过渡），本来就没有进场动画，
-错峰要先新写关键帧才能谈；时间线节点同样待查。
-
-### 已完成：退场时的位移补偿 —— 兄弟节点跳变
-
-删除一行时其余行瞬间上移填补空位，整列看上去是突然塌了一块。
-
-改为 `useFlipReorder()`：容器内每个键控子元素在换槽位时先被按偏移放回旧槽位，再由
-弹簧送到位（机制从 `useDockReorder` 提取到 `flipReorder.ts`，两者共用）。
-
-此前担心的"退出状态怎么暴露"不成立，因为**退出项不需要任何状态**：对 FLIP 而言
-删除、插入、换序是同一件事 —— 只有槽位变了，缺席本身就是位移的来源。删除的那一行
-立即卸载，其余行各自从自己的旧槽位平滑让位；不需要保留占位，也不需要延迟卸载。
-
-已接入三处块列表（帧解码器 / 命令发送 / 协议 schema 编辑器），触发条件只编码块的
-顺序，不含展开状态 —— 展开改变的是高度而非槽位，由块自身的尺寸过渡负责，混进来
-会让两者争夺同一批像素。
-
-三处都读让位自己的时序（`reflowSpring`），而不是任何家族令牌。让位不是"某块被送来"，
-行的位置是被别人的缺席顶上去的，既没有来源也没有动量；用进场令牌（允许回弹）会让它
-越过槽位再荡回来，那读起来是渲染故障，与离场晃动是同一类错误。
-
-让位还刻意比任何家族令牌都快，因为**事件本身更小**：家族按"移动了屏幕多少"排序，
-`content` 那一档是消息、Toast、横幅这类整块表面的出现与消失，让位是相邻两三行之间
-挪一格。借用家族令牌只能得到一个为更大的事件调的时长，于是观众已经看清行去了哪里、
-动画还在收。所以它是一份具名时序而不是新家族 —— 数值见 `motion-tokens.md` 的让位节。
-
-面板换边仍用 `spatial/in`：那是真的迁移到另一个位置，到位后沉降一点是弹性。
-
-### 已完成：拖拽释放的动量交接
-
-松手速度取自 pointermove 最近 90ms 的首尾位移（不新增采样循环），交给
-`springAtWithVelocity()` 求值。幽灵从原地放大淡出改为带着松手速度前冲到落点。
-
-读感上刻意只取"甩得越狠滑得越远"，没有取"甩得越猛起步越快"：在线性系统里航程正比
-于初速度，两者互斥，而越过落点再荡回来的离场读起来是渲染故障，不是物理。初速度
-因此钳在 `springNoOvershootVelocity()` 以内，测试同时钉住边界内不过冲、边界外确实
-过冲两侧。
-
-低于 `MOMENTUM_FLOOR_PX_S` 视为"放稳了"，只有原地放大淡出。释放时长由计划本身给出，
-组件与清除定时器共用这一个数 —— 从前 `RELEASE_MS` 与组件的 CSS transition 是两份
-必须手工对齐的副本。幽灵位置同时从 `left/top` 移到 transform，留在合成器上。
-
-### 不改造：节点编辑器
-
-节点在画布上瞬时出现、瞬时消失，**这是有意保留的**，不补进场。
-
-先纠正一处事实：本文件此前写的"`@xyflow/react` 自带节点增删过渡"不成立 ——
-`node_modules/@xyflow/react/dist/{style,base}.css` 里 `transition` 出现次数为 0。
-React Flow 提供的是**空间连续性**（拖动节点时节点与视口位置连续），不是增删过渡，
-这两件事此前被当成了一件。
-
-不补的理由，按本文件开头的判断标准：
-
-- **它从哪里来？** 读不出来。节点是用户拖到画布上、直接出现在那一点的，它下方并没有
-  任何来源。一个"从下方缩放淡入"的进场会被读成"它从下面上来"，但下面什么也没有 ——
-  纯装饰，且是误导性的装饰。
-- **它凭什么这样动？** 画布节点的瞬时出现是空间编辑器的主流约定。给节点加自发动效会
-  让用户怀疑节点是不是自己动了，而节点的位置在这个界面里是**数据**（每个节点归属
-  一个创建页签，布局要能存进文档），不是可以随手一弹的表面。
-
-批量创建是决定性的反对理由：模板与快速开始一次添加十几个节点（`batchCreateFromCatalog`
-单次提交），逐个播进场会让整张图看起来在抽搐。
-
-即便只看单节点从控件面板拖入那一例，收益也不足：落点已经有指针位置作为确认，而拖拽
-幽灵本身已经提供了足够的动效反馈。
-
-技术上还有两条约束，即便将来要改也不能直接套 `useFlipReorder`：
-
-- `.react-flow__node` 的 `transform` 归 React Flow 所有，内联写成 `translate(x px, y px)`，
-  任何位移补间都会被下一次渲染覆盖，能动的只有节点**内部**元素。
-- 节点卡片自身已有 `translateZ(0)` 与 hover 位移（`widget-card-acrylic`），再叠一层
-  transform 补间会与之争夺同一属性。
-
-### 事实修正：块列表与图表
-
-本文件此前写的"Widget 卡片布局重排（FRUIT 拖拽改序）"并不存在 —— `FRUIT` 在整个
-仓库（含全部历史提交）里没有任何命中，Widget 卡片也没有可拖拽改序的布局。
-
-真实存在的块列表有三处（帧解码器 / 命令发送 / 协议 schema 编辑器），它们的排序与
-增删已由上面的 `useFlipReorder()` 覆盖。
-
-图表本身不需要改造：数据更新不该有动画（会误导读数），而波形与频谱的数据来自数据
-通道推送、逐帧重绘是连续的，谈不上"转场"。"数据源切换"确实存在，但不在图表里 ——
-数据源由画布连线决定（`SpectrumChart` 读 `rfEdges` 里连到 `spectrum` 端口的边），
-换源是画布上的一次连线操作，而画布节点本身按上一节判定不补动效。
-
-## 每项改造的完成标准
-
-- 新增动效必须走 `motionSpring*()` 或家族令牌，不允许新写 `cubic-bezier(...)`
-- 新增界面动效必须有对应的低动画退化路径，且退化路径只在
-  `reduced-motion.css` 的清单里登记一次
-- 每个改造配一条 Vitest，用断言空间关系（方向、距离、是否位移）而不是断言
-  具体的毫秒数 —— 毫秒数会随调参变化，断言它必然在调参时失败
-- `pnpm typecheck`、`pnpm lint:ci`、`pnpm test`、`pnpm build:web`、
-  `pnpm test:e2e` 全绿，且 `pnpm dev:desktop` 实际点开确认
+- New motion uses family tokens or spring APIs, not local cubic Béziers.
+- Every motion has one reduced-motion path registered in `reduced-motion.css`.
+- Tests assert direction, distance, or ownership rather than exact millisecond
+  values.
+- Typecheck, lint, unit, production build, e2e, and desktop manual verification
+  pass.

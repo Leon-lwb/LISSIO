@@ -1,6 +1,19 @@
 # Lissio
 
-[English](./README.md) | [简体中文](./README.zh-CN.md)
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Product overview, setup, development, and distribution
+-->
+
+All repository documentation is authoritative in English. Chinese files under
+`docs/community/` are informational translations; if they differ, English
+controls.
+
+[English (authoritative)](./README.md) | [Simplified Chinese translation](./docs/community/README.zh-CN.md)
 
 A next-generation serial assistant fully rebuilt with Rust + Tauri — built for embedded debugging, waveform visualization, node-based dataflow orchestration, CAN/automotive diagnostics, and logic analysis.
 
@@ -66,7 +79,7 @@ The UI features a **dock-style window layout**: control canvases and data views 
 
 ### Protocol Engines
 
-- **JustFloat** & **FireWater** — VOFA+ protocols with automatic channel detection.
+- **JustFloat** & **FireWater** — VOFA+-compatible protocol formats with automatic channel detection.
 - **RawData** — raw byte stream inspection.
 - **Slcan** / **CandleLight** — CAN frame parsing.
 - **LogicDecode** — UART / I2C / SPI protocol decoding from sampled digital levels.
@@ -116,7 +129,7 @@ The UI features a **dock-style window layout**: control canvases and data views 
   - Drag a tab to a card's edge → split it into a standalone panel;
   - Drag an empty area of the title bar → move the whole card next to another card;
   - Drag a tab / card to the four edges of the page → dock as a full row / column strip.
-  - The layout tree and card sizes persist automatically (`vofa-dock`) and survive restarts.
+  - The layout tree and card sizes persist automatically (`vofa-dock`, an internal persistence identifier) and survive restarts.
 - **Dual tab system** — control-canvas tabs (node editor) and data tabs (waveform / raw data / CAN / logic analyzer, etc.) can be mixed and arranged freely.
 - **Status bar** — connection state, transport / protocol, RX / TX bytes and frames, CAN load, and buffer usage at a glance.
 - **Multiple tabs** — each tab can be named, renamed, duplicated, and closed independently.
@@ -451,19 +464,21 @@ This project is managed with Git. Available releases can be found on the [Releas
 
 ## License
 
-Dual-licensed: you may use Lissio under **GNU GPL v2 only** (see [LICENSE](./LICENSE)), or
-under a separate commercial license — the commercial track has not been published yet, so
-GPL-2.0-only is the only available grant today. Copyright © 2026 Horldsence; contributors
-license their work to the project via [CLA.md](./CLA.md). Attribution, patent notes and the
-source-code obligation for redistributors are in [NOTICE](./NOTICE); the full policy is in
-[docs/governance/open-source-and-ip.md](docs/governance/open-source-and-ip.md).
+Lissio is licensed under the **Apache License, Version 2.0**; see
+[LICENSE](./LICENSE). Apache-2.0 permits commercial use, modification, and
+closed-source derivatives subject to its notice and attribution conditions.
+Copyright © 2026 Horldsence and Lissio contributors. Contributions are made
+under [CLA.md](./CLA.md). Historical GPL-only releases remain governed by the
+license supplied with those releases. Attribution and third-party obligations
+are maintained in [NOTICE](./NOTICE) and
+[docs/governance/third-party-licenses.md](docs/governance/third-party-licenses.md).
 
 Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) and [SECURITY.md](./SECURITY.md).
 
 ## Acknowledgements
 
-- [VOFA+](https://www.vofa.plus/) for the FireWater / JustFloat protocol references
+- [VOFA+](https://www.vofa.plus/) for the FireWater / JustFloat compatibility protocol references
 - [Tauri](https://tauri.app/)
 - [React Flow](https://reactflow.dev/)
 - [uPlot](https://github.com/leeoniya/uPlot)

@@ -1,56 +1,61 @@
-# 文档评审清单
+# Documentation Review Checklist
 
 <!-- lissio-doc
 status: maintained
-owner: 维护者（Horldsence）
-last-reviewed: 2026-10-04
-applies-to: docs/** 与根目录治理文件的每次实质变更
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Substantive repository documentation and governance changes
 -->
 
-逐项确认后在评审记录里给出结论，不要只写"已看"。机器可判定项（1.1-1.7）由
-`pnpm check:docs` 自动执行，人工只需确认其结果符合预期。
+Record findings and a conclusion; do not write only “reviewed.” Machine-checkable
+items are executed by `pnpm check:docs`; reviewers confirm that the results match
+the intended change.
 
-## 事实一致性
+## Factual consistency
 
-- [ ] 1.1 `LICENSE` 仍是未改动的 GPL-2.0 原文
-- [ ] 1.2 `package.json` 与每个 crate 的 `license` 字段与文档所述一致
-- [ ] 1.3 文档引用的文件路径、命令、crate 名、端口名真实存在
-- [ ] 1.4 文档引用的数量、清单、统计与实际产物一致（依赖变动后重新统计）
-- [ ] 1.5 文档没有复述本该由代码单独提供的事实，或复述时已标明代码为权威
-- [ ] 1.6 外链可达且指向预期内容；仓库地址与 `git remote` 一致
-- [ ] 1.7 `docs/README.md` 索引覆盖全部文档，无游离文档
+- [ ] 1.1 `LICENSE` is canonical Apache-2.0 text and its checksum passes.
+- [ ] 1.2 `package.json` and every Rust package use `Apache-2.0`.
+- [ ] 1.3 Referenced paths, commands, crates, identifiers, and endpoints exist.
+- [ ] 1.4 Counts and inventories match regenerated dependency data.
+- [ ] 1.5 Code or configuration is named as authority for duplicated facts.
+- [ ] 1.6 External links resolve and hosting references match `git remote`.
+- [ ] 1.7 All documents and translation backups are indexed.
+- [ ] 1.8 VOFA+ and `vofa` references are limited to compatibility and attribution.
 
-## 许可证与知识产权
+## License and intellectual property
 
-- [ ] 2.1 许可证表述与 `LICENSE`、`NOTICE`、`package.json` 三处一致，无 `OR Commercial` 之类非法 SPDX 表达
-- [ ] 2.2 未把"尚未发布"的能力写成已提供（尤其商业许可一轨）
-- [ ] 2.3 新引入的依赖 / 字体 / 图标 / 数据集已登记进 `third-party-licenses.md`，含许可证与义务
-- [ ] 2.4 `deny.toml` 的 `[licenses]` 变更都有理由记录，且未放宽到与 `GPL-2.0-only` 冲突的许可证
-- [ ] 2.5 第三方归属、许可文本、署名入口仍然可达（仓库内与产物内分别确认）
-- [ ] 2.6 未承诺尚未实现的对外表述红线项（见 `open-source-and-ip.md`）
-- [ ] 2.7 `CLA.md` 的授权与专利条款与实际贡献者关系相符
+- [ ] 2.1 `LICENSE`, `NOTICE`, SPDX fields, and public prose agree.
+- [ ] 2.2 No separate commercial license or unimplemented service is promised.
+- [ ] 2.3 New dependencies and assets are recorded with their obligations.
+- [ ] 2.4 `deny.toml` remains narrow and compatible with Apache-2.0 distribution.
+- [ ] 2.5 License texts and attribution remain reachable in source and artifacts.
+- [ ] 2.6 Historical GPL statements are limited to historical releases.
+- [ ] 2.7 `CLA.md` matches contribution and patent arrangements.
 
-## 结构与格式
+## Structure and format
 
-- [ ] 3.1 文件落在正确的目录，落位符合 `documentation-standards.md` 的表
-- [ ] 3.2 文件名为小写短横线；评审记录为 `YYYY-MM-DD-<范围>.md`
-- [ ] 3.3 元数据块存在且取值合法，`last-reviewed` 已更新
-- [ ] 3.4 H1 唯一且是结论式标题；标题层级不超过四级
-- [ ] 3.5 代码块标了语言；表格用于对照；相对链接有效
-- [ ] 3.6 全文无过程痕迹标记（`Stage N` / `Task #N` / `Phase N` / 迭代编号 / "待后续阶段"）
+- [ ] 3.1 Files are placed according to `documentation-standards.md`.
+- [ ] 3.2 Names use lowercase kebab-case; reviews use `YYYY-MM-DD-<scope>.md`.
+- [ ] 3.3 Metadata is complete and `last-reviewed` is current.
+- [ ] 3.4 There is one clear H1 and no heading level beyond four.
+- [ ] 3.5 Code blocks are labeled and relative links resolve.
+- [ ] 3.6 English is authoritative and Chinese backups declare their source.
+- [ ] 3.7 No development-process markers remain.
 
-## 可维护性
+## Maintainability
 
-- [ ] 4.1 开头交代权威来源，不一致时的处理方式明确
-- [ ] 4.2 能被脚本判定的规则已写成门禁，而不是只写在文档里
-- [ ] 4.3 未引入与其他文档重复的维护面（同一事实只有一处手工维护）
-- [ ] 4.4 遗留项已写入本次记录，含负责人与到期日
-- [ ] 4.5 下次触发复核的时点明确（依赖变化、发布、季度）
+- [ ] 4.1 Each document names its authoritative source.
+- [ ] 4.2 Script-detectable rules are enforced by a gate.
+- [ ] 4.3 The change does not create competing hand-maintained facts.
+- [ ] 4.4 Follow-ups have owners and dates in the review record.
+- [ ] 4.5 The next review trigger is clear.
 
-## 门禁与记录
+## Gates and records
 
-- [ ] 5.1 `pnpm check:docs` 通过
-- [ ] 5.2 `pnpm check:all`（或本次改动涉及的其他门禁）通过
-- [ ] 5.3 评审记录已写入 `docs/reviews/records/` 并登记进索引
-- [ ] 5.4 记录三段（范围 / 结论 / 遗留项）齐全，结论取值合法
-- [ ] 5.5 需要同步的地方（README 双语 License 段落、`AGENTS.md` 命令清单、CI 配置）已同步
+- [ ] 5.1 `pnpm check:docs` passes.
+- [ ] 5.2 Every gate affected by the change passes.
+- [ ] 5.3 A record exists in `docs/reviews/records/` and is indexed.
+- [ ] 5.4 Scope, findings, and follow-ups are complete.
+- [ ] 5.5 README, notices, manifests, CI, and release instructions are synchronized.

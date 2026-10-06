@@ -1,72 +1,117 @@
-# 文档索引
+# Lissio Documentation Index
 
-仓库地址：<https://codeberg.org/Horldsence/Lissio>（`git remote origin` 指向该地址，
-`README.md` 的 clone 命令与此一致）。
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Repository documentation index and language policy
+-->
 
-Lissio 文档的唯一入口。写作规范见
-[governance/documentation-standards.md](governance/documentation-standards.md)；新增或删除
-文档必须同步本表，`pnpm check:docs` 校验。
+This is the entry point for Lissio documentation. English documents are
+authoritative. Chinese translation backups under [`community/`](community/) are
+non-authoritative; if they differ, English controls.
 
-## 治理与合规
+Historical review records preserve their original language and facts.
 
-| 文档 | 内容 |
+## Project and governance
+
+| Document | Purpose |
 | --- | --- |
-| [governance/open-source-and-ip.md](governance/open-source-and-ip.md) | 许可模型、版权与贡献者授权、专利、分发义务、对外表述红线 |
-| [governance/third-party-licenses.md](governance/third-party-licenses.md) | 第三方依赖与资源许可证清单、需人工留意的条目、新增依赖审查流程 |
-| [governance/documentation-standards.md](governance/documentation-standards.md) | 文档落位、命名、元数据、行文禁则、单一来源、评审触发 |
-| [governance/document-review.md](governance/document-review.md) | 文档审查的触发条件、流程、结论与豁免 |
-| ../../GOVERNANCE.md | 项目治理结构：角色、决策、合入权限、发布前置条件、维护者产生与移交 |
-| ../../MAINTAINERS.md | 维护者名单、职责分工、联络渠道与响应时效 |
-| ../../ROADMAP.md | 已交付能力、合规履约项、未实现项的优先级与验收判据 |
+| [`../README.md`](../README.md) | Product overview and setup |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Release history |
+| [`../AUTHORS.md`](../AUTHORS.md) | Authors and contributors |
+| [`../SUPPORT.md`](../SUPPORT.md) | Support channels and boundaries |
+| [`../MAINTAINERS.md`](../MAINTAINERS.md) | Maintainer authority and response targets |
+| [`../RELEASING.md`](../RELEASING.md) | Release process |
+| [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Contribution workflow and gates |
+| [`../SECURITY.md`](../SECURITY.md) | Security and rights reporting |
+| [`../GOVERNANCE.md`](../GOVERNANCE.md) | Governance and release authority |
+| [`../ROADMAP.md`](../ROADMAP.md) | Delivered scope and non-goals |
+| [`../LICENSE`](../LICENSE) | Apache License 2.0 |
+| [`../NOTICE`](../NOTICE) | Copyright and attribution |
+| [`../CITATION.cff`](../CITATION.cff) | Citation metadata |
 
-根目录的对外文件构成治理主体：`LICENSE`（GPL-2.0 原文）、`NOTICE`、`CLA.md`、
-`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`、`GOVERNANCE.md`
-（治理结构、决策、合入与发布）、`MAINTAINERS.md`（维护者名单与响应时效）、
-`ROADMAP.md`（已交付范围与未实现项的验收判据）。
+## Licensing and documentation governance
 
-贡献与评审的入口模板在 `.github/`：`PULL_REQUEST_TEMPLATE.md`、
-`ISSUE_TEMPLATE/`（含 `config.yml` 的非公开渠道指引）。
-
-## 评审
-
-| 文档 | 内容 |
+| Document | Purpose |
 | --- | --- |
-| [reviews/README.md](reviews/README.md) | 评审记录格式、索引、保留规则 |
-| [reviews/checklist.md](reviews/checklist.md) | 评审清单（事实一致性 / 许可证与知识产权 / 结构与格式 / 可维护性 / 门禁与记录） |
-| [reviews/records/](reviews/records/) | 历次评审记录 |
+| [governance/open-source-and-ip.md](governance/open-source-and-ip.md) | License, copyright, patents, notices, and claims |
+| [governance/third-party-licenses.md](governance/third-party-licenses.md) | Dependency and asset obligations |
+| [governance/documentation-standards.md](governance/documentation-standards.md) | Language, placement, metadata, and maintenance |
+| [governance/document-review.md](governance/document-review.md) | Review triggers, process, and records |
 
-## 架构
+## Architecture
 
-| 文档 | 内容 |
+| Document | Purpose |
 | --- | --- |
-| [architecture/crates.md](architecture/crates.md) | crate 分层、领域 DAG、依赖规则 |
-| [architecture/device-tree.md](architecture/device-tree.md) | 设备拓扑与驱动契约 |
-| [architecture/exits.md](architecture/exits.md) | 能力出口与覆盖矩阵 |
-| [architecture/web-exit.md](architecture/web-exit.md) | Web 协议契约与命令能力矩阵 |
-| [architecture/data-plane.md](architecture/data-plane.md) | 数据面设计 |
-| [architecture/backend-model-catalog-plan.md](architecture/backend-model-catalog-plan.md) | 后端模型目录方案 |
-| [architecture/shared-model-inventory.md](architecture/shared-model-inventory.md) | 共享模型清单 |
-| [architecture/shared-model-catalog-progress.md](architecture/shared-model-catalog-progress.md) | 共享模型目录进度 |
-| [architecture/industrial-protocol-integration.md](architecture/industrial-protocol-integration.md) | 工业协议接入 |
-| [architecture/modbus-capability-cards.md](architecture/modbus-capability-cards.md) | Modbus 能力卡 |
-| [architecture/ui-color-tokens.md](architecture/ui-color-tokens.md) | 颜色与透明度令牌 |
-| [architecture/ui-motion.md](architecture/ui-motion.md) | 动效体系 |
-| [architecture/motion-tokens.md](architecture/motion-tokens.md) | 动效时序令牌 |
-| [architecture/motion-spatial-plan.md](architecture/motion-spatial-plan.md) | 动效界面改造清单 |
-| [architecture/architecture-review-2026-09.md](architecture/architecture-review-2026-09.md) | 2026-09 架构评审记录 |
-| [architecture/cleanup-plan-2026-09.md](architecture/cleanup-plan-2026-09.md) | 2026-09 清理计划 |
-| [performance/frontend-render-budget.md](performance/frontend-render-budget.md) | 前端渲染预算门禁：交互场景的每帧成本计量与回归门禁 |
+| [architecture/crates.md](architecture/crates.md) | Domains, layers, ownership, and dependencies |
+| [architecture/architecture-review-2026-09.md](architecture/architecture-review-2026-09.md) | September 2026 architecture conclusions |
+| [architecture/cleanup-plan-2026-09.md](architecture/cleanup-plan-2026-09.md) | Remaining structural debt |
+| [architecture/data-plane.md](architecture/data-plane.md) | Byte, record, evaluation, and storage planes |
+| [architecture/device-tree.md](architecture/device-tree.md) | Device topology and driver/runtime contracts |
+| [architecture/exits.md](architecture/exits.md) | UI, Web, MCP, and CLI exits |
+| [architecture/web-exit.md](architecture/web-exit.md) | HTTP/WebSocket wire protocol |
+| [architecture/backend-model-catalog-plan.md](architecture/backend-model-catalog-plan.md) | Shared model catalog and wire generation |
+| [architecture/shared-model-inventory.md](architecture/shared-model-inventory.md) | Shared model ownership inventory |
+| [architecture/shared-model-catalog-progress.md](architecture/shared-model-catalog-progress.md) | Current catalog implementation |
+| [architecture/industrial-protocol-integration.md](architecture/industrial-protocol-integration.md) | Industrial adapters and evidence |
+| [architecture/modbus-capability-cards.md](architecture/modbus-capability-cards.md) | Modbus capability projection |
+| [architecture/ui-layers.md](architecture/ui-layers.md) | Frontend dependency layers |
+| [architecture/ui-color-tokens.md](architecture/ui-color-tokens.md) | Color, opacity, frost, and glass tokens |
+| [architecture/ui-motion.md](architecture/ui-motion.md) | Motion modules and rules |
+| [architecture/motion-tokens.md](architecture/motion-tokens.md) | Generated spring tokens |
+| [architecture/motion-spatial-plan.md](architecture/motion-spatial-plan.md) | Spatial motion decisions |
 
-## 开发约定
+## Performance
 
-| 文档 | 内容 |
+| Document | Purpose |
 | --- | --- |
-| [AGENTS.md](AGENTS.md) | AI Agent 开发指南与 PR 前硬性要求 |
+| [performance/frontend-render-budget.md](performance/frontend-render-budget.md) | Per-frame frontend performance budget |
 
-## 门禁
+## Reviews
 
-| 命令 | 覆盖 |
+| Document | Purpose |
 | --- | --- |
-| `pnpm check:docs` | 许可证原文与字段一致性、治理文件齐备、文档索引与链接、元数据与评审记录 |
-| `pnpm perf:check` | 前端渲染预算：交互场景的每帧成本速率与基线比较，见 [performance/frontend-render-budget.md](performance/frontend-render-budget.md) |
-| `pnpm check:all` | 上述全部门禁，汇总输出 |
+| [reviews/README.md](reviews/README.md) | Historical review index and format |
+| [reviews/checklist.md](reviews/checklist.md) | Documentation review checklist |
+| [reviews/records/](reviews/records/) | Immutable historical records |
+
+## Development and source documentation
+
+| Document | Purpose |
+| --- | --- |
+| [`../AGENTS.md`](../AGENTS.md) | Repository development instructions |
+| [AGENTS.md](AGENTS.md) | Documentation-specific development guidance |
+| [`../src-tauri/crates/README.md`](../src-tauri/crates/README.md) | Rust crate domain layout |
+| [`../src-tauri/crates/desktop/performance/README.md`](../src-tauri/crates/desktop/performance/README.md) | Backend performance ownership |
+| [`../src-tauri/crates/transport/device-tree/README.md`](../src-tauri/crates/transport/device-tree/README.md) | Device-tree crate summary |
+| [`../packaging/server/README.md`](../packaging/server/README.md) | Server and CLI package |
+| [`../src/i18n/README.md`](../src/i18n/README.md) | i18n runtime |
+| [`../src/i18n/resources/README.md`](../src/i18n/resources/README.md) | Translation resource rules |
+
+Runtime capability help is authoritative in
+[`../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/`](../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/).
+The `zh/` files are product translations. The built-in AI prompt is
+[`../src-tauri/crates/desktop/ai-host/default-system-prompt.md`](../src-tauri/crates/desktop/ai-host/default-system-prompt.md).
+
+## Chinese translation backups
+
+The mapping of every backup and its authoritative English source is in
+[`community/INDEX.zh-CN.md`](community/INDEX.zh-CN.md). Backup paths mirror the
+source repository path and add `.zh-CN` to the filename.
+
+## Gates
+
+| Command | Coverage |
+| --- | --- |
+| `pnpm check:docs` | License text and SPDX, notices, metadata, language authority, indexes, and links |
+| `pnpm check:architecture` | Crate layout, metadata, domain DAG, layers, and adapter isolation |
+| `pnpm check:web-contract` | Public command, dispatch, and frontend call consistency |
+| `pnpm check:contracts` | Rust wire types and generated TypeScript |
+| `pnpm check:model-catalog` | Catalog fixtures, contract version, and widget coverage |
+| `pnpm check:tokens` | Color, opacity, frost, and structural budgets |
+| `pnpm check:motion` | Paint-only transition properties and motion invariants |
+| `pnpm perf:check` | Per-frame frontend cost against baseline |
+| `pnpm check:all` | Full local quality surface |

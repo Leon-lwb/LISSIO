@@ -1,265 +1,307 @@
 #!/usr/bin/env node
 /**
- * check-docs.mjs — 开源 / 知识产权 / 文档集门禁
+ * check-docs.mjs — licensing, governance, indexing, translation, and link gate.
  *
- * 规则 (docs/governance/open-source-and-ip.md、documentation-standards.md、document-review.md):
- *   1. LICENSE 必须是未改动的 GPL-2.0 官方文本 (逐字节 sha256), 许可声明只能写在 NOTICE;
- *   2. 许可证字段全仓唯一: package.json 与每个 workspace 成员 crate 都是 GPL-2.0-only
- *      (SPDX 无 "OR 商业许可" 表达, 商业轨由 CLA 授予的再许可权承担, 见 CLA.md);
- *   3. deny.toml 的 [licenses] allow 只能取脚本内 KNOWN_COMPATIBLE 白名单, 且必须含
- *      GPL-2.0-only — 放行新许可证等于修改常量, 天然落进人工评审;
- *   4. 根目录治理文件齐备, NOTICE 含版权行 / 双许可声明 / 第三方归属 / 源码获取四要素;
- *   5. docs 目录下全部 .md 登记在 docs/README.md 索引里, 无游离文档;
- *   6. 治理文档与评审记录带合法元数据块, 评审记录命名与字段完整;
- *   7. 受检 .md 的相对链接全部可达, 全文无过程痕迹标记 (Stage N / Task #N / Phase N 等)。
- *
- * 用法:
- *   pnpm check:docs                    # 常规门禁
- *   pnpm check:docs -- --stale-days 180  # 额外要求治理文档在 N 天内评审过
+ * Policy sources:
+ * - docs/governance/open-source-and-ip.md
+ * - docs/governance/documentation-standards.md
+ * - docs/governance/document-review.md
  */
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tauriRoot = join(repoRoot, 'src-tauri');
+const docsDir = join(repoRoot, 'docs');
+const communityDir = join(docsDir, 'community');
+const recordsDir = join(docsDir, 'reviews', 'records');
 const errors = [];
 
-/** GPL-2.0 官方文本指纹 — LICENSE 只能整份复制, 任何改动都需重新评审 */
-const GPL_2_SHA256 = '8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643';
-const PROJECT_LICENSE = 'GPL-2.0-only';
-
-/**
- * 与 GPL-2.0-only 兼容、且不引入额外分发义务的 SPDX 标识。
- * 出现列表外的标识必须先在本文档与 third-party-licenses.md 中记录理由。
- */
+const APACHE_2_SHA256 = 'c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4';
+const PROJECT_LICENSE = 'Apache-2.0';
 const KNOWN_COMPATIBLE = new Set([
   '0BSD', 'Apache-2.0', 'Apache-2.0 WITH LLVM-exception', 'BSD-2-Clause', 'BSD-3-Clause',
   'CC0-1.0', 'CDLA-Permissive-2.0', 'ISC', 'MIT', 'MIT-0', 'MPL-2.0', 'Unicode-3.0',
-  'Unlicense', 'Zlib', 'GPL-2.0-only',
+  'Unlicense', 'Zlib',
 ]);
 
 const ROOT_FILES = [
-  'LICENSE', 'NOTICE', 'CONTRIBUTING.md', 'CLA.md', 'CODE_OF_CONDUCT.md', 'SECURITY.md',
-  'GOVERNANCE.md', 'MAINTAINERS.md', 'ROADMAP.md',
+  'LICENSE', 'NOTICE', 'AUTHORS.md', 'SUPPORT.md', 'MAINTAINERS.md', 'RELEASING.md',
+  'CONTRIBUTING.md', 'CLA.md', 'CODE_OF_CONDUCT.md', 'SECURITY.md', 'GOVERNANCE.md',
+  'ROADMAP.md', 'CHANGELOG.md', 'README.md', 'AGENTS.md',
 ];
-const INDEX_FILES = ['README.md', 'README.zh-CN.md', 'AGENTS.md', 'CHANGELOG.md'];
-const CHECKLIST_SECTIONS = ['事实一致性', '许可证与知识产权', '结构与格式', '可维护性', '门禁与记录'];
-const TRACE_MARKERS = /\b(?:Stage \d+|Task #\d+|Phase \d+|迭代\s*\d+|TODO:?\s*待后续阶段)/i;
+const REQUIRED_LINKS = [
+  'AUTHORS.md', 'SUPPORT.md', 'MAINTAINERS.md', 'RELEASING.md', 'CITATION.cff',
+  '.forgejo/CODEOWNERS',
+];
+const DOC_META_KEYS = ['status', 'owner', 'last-reviewed', 'applies-to', 'language', 'authoritative'];
+const REVIEW_KEYS = ['date', 'scope', 'reviewer', 'verdict'];
+const STATUSES = new Set(['maintained', 'draft', 'deprecated']);
+const REVIEW_VERDICTS = new Set(['passed', 'passed-with-conditions', 'failed', '通过', '有条件通过', '不通过']);
+const TRACE_MARKERS = /\b(?:Stage \d+|Task #\d+|Phase \d+|iteration\s+\d+|迭代\s*\d+|TODO:?\s*待后续阶段)/i;
 
 let staleDays = 0;
 const argv = process.argv.slice(2);
-for (let i = 0; i < argv.length; i++) {
+for (let i = 0; i < argv.length; i += 1) {
   if (argv[i] === '--stale-days') staleDays = Number(argv[i + 1] ?? 0);
 }
 
-function fail(message) { errors.push(message); }
-
-function readText(path) { return readFileSync(path, 'utf8'); }
-
-const SKIP_DIRS = new Set(['node_modules', '.git', 'target', 'dist', 'output', 'test-results']);
+const fail = (message) => errors.push(message);
+const readText = (path) => readFileSync(path, 'utf8');
+const rel = (path) => relative(repoRoot, path).split(/[\\/]/).join('/');
+const SKIP_DIRS = new Set(['node_modules', '.git', 'target', 'dist', 'output', 'test-results', '.pnpm-store']);
 
 function walk(dir, filter, out = []) {
+  if (!existsSync(dir)) return out;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) walk(full, filter, out);
-    else if (filter(entry.name)) out.push(full);
+    else if (filter(entry.name, full)) out.push(full);
   }
-  return out;
+  return out.sort();
 }
 
-function daysBetween(from, to) {
-  return Math.round((to.getTime() - Date.parse(from)) / 86_400_000);
-}
-
-// ── 1. LICENSE 原文完整性 ─────────────────────────────────────
-const licensePath = join(repoRoot, 'LICENSE');
-if (!existsSync(licensePath)) {
-  fail('LICENSE 缺失 — 双许可项目的开源轨必须保留 GPL-2.0 全文');
-} else {
-  const digest = createHash('sha256').update(readFileSync(licensePath)).digest('hex');
-  if (digest !== GPL_2_SHA256) {
-    fail(`LICENSE 不是 GPL-2.0 官方原文 (sha256 ${digest.slice(0, 12)}…) — 许可原文不可修改, 改用 NOTICE 承载项目声明`);
-  }
-}
-
-// ── 2. 许可证字段唯一 ─────────────────────────────────────────
-const pkg = JSON.parse(readText(join(repoRoot, 'package.json')));
-if (pkg.license !== PROJECT_LICENSE) fail(`package.json license 应为 ${PROJECT_LICENSE}, 实际 ${pkg.license}`);
-
-let members = [];
-try {
-  const metadata = JSON.parse(execFileSync('cargo', [
-    'metadata', '--format-version', '1', '--no-deps', '--manifest-path', join(tauriRoot, 'Cargo.toml'),
-  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
-  members = metadata.packages.filter((p) => new Set(metadata.workspace_members).has(p.id));
-} catch {
-  fail('cargo metadata 失败 — 无法校验 workspace 成员许可证字段 (CI 需安装 Rust 工具链)');
-}
-for (const member of members) {
-  if (member.license !== PROJECT_LICENSE) {
-    fail(`${member.name}: license 应为 ${PROJECT_LICENSE}, 实际 ${member.license ?? '<缺失>'}`);
-  }
-}
-
-// ── 3. deny.toml 许可证白名单 ─────────────────────────────────
-const denyPath = join(tauriRoot, 'deny.toml');
-if (!existsSync(denyPath)) {
-  fail('src-tauri/deny.toml 缺失 — 第三方许可证放行策略无单一来源');
-} else {
-  const deny = readText(denyPath);
-  const lines = deny.split(/\r?\n/);
-  const start = lines.findIndex((line) => /^\[licenses\]\s*$/.test(line));
-  const section = start < 0 ? '' : lines.slice(start + 1, lines.findIndex((line, i) => i > start && /^\[/.test(line)) < 0 ? undefined : lines.findIndex((line, i) => i > start && /^\[/.test(line))).join('\n');
-  const allowed = [...section.matchAll(/^\s*"([^"]+)",/gm)].map((m) => m[1]);
-  if (!allowed.includes(PROJECT_LICENSE)) fail(`deny.toml [licenses] allow 未放行 ${PROJECT_LICENSE} (本仓自身即为该许可)`);
-  for (const id of allowed) {
-    if (!KNOWN_COMPATIBLE.has(id)) fail(`deny.toml [licenses] allow 含未经评审的许可证 "${id}" — 先在 third-party-licenses.md 记录理由再改 KNOWN_COMPATIBLE`);
-  }
-}
-
-// ── 4. 根目录治理文件与 NOTICE 四要素 ──────────────────────────
-for (const name of ROOT_FILES) {
-  if (!existsSync(join(repoRoot, name))) fail(`缺少 ${name} — 见 docs/governance/open-source-and-ip.md「治理文件」`);
-}
-const noticePath = join(repoRoot, 'NOTICE');
-if (existsSync(noticePath)) {
-  const notice = readText(noticePath);
-  const required = [
-    ['版权行', /Copyright \(C\)/],
-    ['开源轨许可标识', /GPL[- ]?2\.0[- ]only/],
-    ['双许可声明', /双许可|dual licen/i],
-    ['商业许可状态', /商业许可/],
-    ['第三方归属指引', /第三方/],
-    ['源码获取方式', /源码|源代码|source code/i],
-  ];
-  for (const [label, pattern] of required) {
-    if (!pattern.test(notice)) fail(`NOTICE 缺少「${label}」段落`);
-  }
-}
-
-// ── 5-7. 文档索引、元数据、评审记录 ─────────────────────────────
-const docsDir = join(repoRoot, 'docs');
-const docsFiles = existsSync(docsDir) ? walk(docsDir, (name) => name.endsWith('.md')) : [];
-const indexPath = join(docsDir, 'README.md');
-const indexText = existsSync(indexPath) ? readText(indexPath) : '';
-if (!existsSync(indexPath)) {
-  fail('docs/README.md 缺失 — 文档集必须有索引, 新增文档要在此登记');
-}
-const reviewDir = join(docsDir, 'reviews');
-const recordsDir = join(reviewDir, 'records');
-const reviewIndex = existsSync(join(reviewDir, 'README.md')) ? readText(join(reviewDir, 'README.md')) : '';
-const inRecords = (file) => file.startsWith(`${recordsDir}/`);
-for (const file of docsFiles) {
-  if (file === indexPath) continue;
-  // 评审记录由 docs/reviews/README.md 的索引表登记, 其余文档由 docs/README.md 登记
-  const base = inRecords(file) ? recordsDir : docsDir;
-  const haystack = inRecords(file) ? reviewIndex : indexText;
-  const target = relative(base, file).split(/[\\/]/).join('/');
-  if (!haystack.includes(target)) {
-    fail(`${relative(repoRoot, file)} 未登记在 ${inRecords(file) ? 'docs/reviews/README.md' : 'docs/README.md'} 索引 — 新增文档必须入索引`);
-  }
-}
-
-/** 解析 <!-- lissio-doc key: value ... --> 元数据块 */
 function parseMeta(text, key) {
   const block = text.match(new RegExp(`<!--\\s*lissio-${key}\\b([\\s\\S]*?)-->`));
   if (!block) return null;
   const meta = new Map();
   for (const line of block[1].split(/\r?\n/)) {
     const pair = line.match(/^\s*([a-z-]+)\s*:\s*(.+?)\s*$/);
-    if (pair) meta.set(pair[1], pair[2]);
+    if (pair) meta.set(pair[1], pair[2].trim());
   }
   return meta;
 }
 
-const DOC_META_KEYS = ['status', 'owner', 'last-reviewed', 'applies-to'];
-const STATUSES = new Set(['maintained', 'draft', 'deprecated']);
-const now = new Date();
+function daysBetween(from, to) {
+  return Math.round((to.getTime() - Date.parse(from)) / 86_400_000);
+}
 
-function checkDocMeta(file) {
-  const rel = relative(repoRoot, file).split(/[\\/]/).join('/');
-  const meta = parseMeta(readText(file), 'doc');
-  if (!meta) { fail(`${rel} 缺少 <!-- lissio-doc --> 元数据块`); return; }
+// 1. Canonical Apache-2.0 license text.
+const licensePath = join(repoRoot, 'LICENSE');
+if (!existsSync(licensePath)) {
+  fail('LICENSE is missing');
+} else {
+  const digest = createHash('sha256').update(readFileSync(licensePath)).digest('hex');
+  if (digest !== APACHE_2_SHA256) {
+    fail(`LICENSE is not the canonical Apache-2.0 text (sha256 ${digest.slice(0, 12)}…)`);
+  }
+}
+
+// 2. SPDX metadata is uniform across JavaScript and Rust packages.
+const pkg = JSON.parse(readText(join(repoRoot, 'package.json')));
+if (pkg.license !== PROJECT_LICENSE) fail(`package.json license must be ${PROJECT_LICENSE}, found ${pkg.license}`);
+
+let members = [];
+try {
+  const metadata = JSON.parse(execFileSync('cargo', [
+    'metadata', '--format-version', '1', '--no-deps', '--manifest-path', join(tauriRoot, 'Cargo.toml'),
+  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+  members = metadata.packages.filter((item) => new Set(metadata.workspace_members).has(item.id));
+  for (const member of members) {
+    if (member.license !== PROJECT_LICENSE) {
+      fail(`${member.name}: license must be ${PROJECT_LICENSE}, found ${member.license ?? '<missing>'}`);
+    }
+  }
+} catch {
+  fail('cargo metadata failed; workspace license fields could not be verified');
+}
+
+// 3. Dependency allow-list remains deliberately narrow.
+const denyText = readText(join(tauriRoot, 'deny.toml'));
+const allowBlock = denyText.match(/\[licenses\][\s\S]*?allow\s*=\s*\[([\s\S]*?)\]/)?.[1] ?? '';
+const allowed = [...allowBlock.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+if (!allowed.includes(PROJECT_LICENSE)) fail(`src-tauri/deny.toml must allow ${PROJECT_LICENSE}`);
+for (const id of allowed) {
+  if (!KNOWN_COMPATIBLE.has(id)) fail(`src-tauri/deny.toml allows unreviewed license "${id}"`);
+}
+if (allowed.includes('GPL-2.0-only') || allowed.includes('AGPL-3.0-only') || allowed.includes('SSPL-1.0')) {
+  fail('src-tauri/deny.toml must not allow strong copyleft for the Apache-2.0 codebase');
+}
+
+// 4. Required root policy and community files.
+for (const name of ROOT_FILES) {
+  if (!existsSync(join(repoRoot, name))) fail(`missing required root file: ${name}`);
+}
+for (const name of REQUIRED_LINKS) {
+  if (!existsSync(join(repoRoot, name))) fail(`missing community metadata file: ${name}`);
+}
+
+const noticePath = join(repoRoot, 'NOTICE');
+if (!existsSync(noticePath)) {
+  fail('NOTICE is missing');
+} else {
+  const notice = readText(noticePath);
+  for (const [label, pattern] of [
+    ['Apache-2.0 notice', /Apache License, Version 2\.0/i],
+    ['historical-release scope', /historical|earlier binary releases/i],
+    ['third-party attribution', /third-party/i],
+    ['canonical source URL', /https:\/\/codeberg\.org\/Horldsence\/Lissio/],
+  ]) {
+    if (!pattern.test(notice)) fail(`NOTICE is missing ${label}`);
+  }
+}
+
+const codeowners = join(repoRoot, '.forgejo', 'CODEOWNERS');
+if (existsSync(codeowners) && !/@Horldsence/.test(readText(codeowners))) {
+  fail('.forgejo/CODEOWNERS must assign ownership to @Horldsence');
+}
+
+const citation = join(repoRoot, 'CITATION.cff');
+if (existsSync(citation)) {
+  const text = readText(citation);
+  for (const value of ['Lissio', 'Apache-2.0', 'Horldsence', 'https://codeberg.org/Horldsence/Lissio']) {
+    if (!text.includes(value)) fail(`CITATION.cff is missing ${value}`);
+  }
+} else {
+  fail('CITATION.cff is missing');
+}
+
+// 5. Document scope and language authority.
+const markdown = [
+  ...walk(repoRoot, (name, full) => name.endsWith('.md') && !rel(full).includes('/') && !rel(full).startsWith('docs/community/')),
+  ...walk(docsDir, (name, full) => name.endsWith('.md') && !rel(full).startsWith('docs/community/')),
+  ...walk(join(repoRoot, '.github'), (name) => name.endsWith('.md')),
+  ...walk(join(repoRoot, 'packaging'), (name) => name.endsWith('.md')),
+  ...walk(join(repoRoot, 'src', 'i18n'), (name) => name.endsWith('.md')),
+  ...walk(join(repoRoot, 'src-tauri', 'crates'), (name) => name.endsWith('.md')),
+].filter((file, index, all) => all.indexOf(file) === index);
+
+const historical = (file) => {
+  const path = rel(file);
+  return path.startsWith('docs/reviews/records/') || path.startsWith('docs/releaselog/');
+};
+const canonicalDocs = markdown.filter((file) => !historical(file));
+const docsFiles = walk(docsDir, (name) => name.endsWith('.md'));
+const reviewFiles = walk(recordsDir, (name) => name.endsWith('.md'));
+const translationFiles = walk(communityDir, (name) => name.endsWith('.md'));
+
+function checkMeta(file, expectedLanguage, authoritative) {
+  const path = rel(file);
+  const text = readText(file);
+  const meta = parseMeta(text, 'doc');
+  if (!meta) {
+    fail(`${path} is missing <!-- lissio-doc --> metadata`);
+    return meta;
+  }
   for (const key of DOC_META_KEYS) {
-    if (!meta.get(key)?.trim()) fail(`${rel}: 元数据缺少 ${key}`);
+    if (!meta.get(key)) fail(`${path}: metadata is missing ${key}`);
   }
   const status = meta.get('status');
-  if (status && !STATUSES.has(status)) fail(`${rel}: status "${status}" 非法 (${[...STATUSES].join(' / ')})`);
+  if (status && !STATUSES.has(status)) fail(`${path}: invalid status "${status}"`);
   const reviewed = meta.get('last-reviewed');
   if (reviewed && !/^\d{4}-\d{2}-\d{2}$/.test(reviewed)) {
-    fail(`${rel}: last-reviewed 必须是 YYYY-MM-DD, 实际 "${reviewed}"`);
+    fail(`${path}: last-reviewed must use YYYY-MM-DD`);
   } else if (reviewed && Number.isNaN(Date.parse(reviewed))) {
-    fail(`${rel}: last-reviewed "${reviewed}" 不是合法日期`);
-  } else if (reviewed && staleDays > 0 && daysBetween(reviewed, now) > staleDays) {
-    fail(`${rel}: 已 ${daysBetween(reviewed, now)} 天未评审 (阈值 ${staleDays} 天) — 见 docs/reviews/checklist.md`);
+    fail(`${path}: invalid last-reviewed date`);
+  } else if (reviewed && staleDays > 0 && daysBetween(reviewed, new Date()) > staleDays) {
+    fail(`${path}: review is older than ${staleDays} days`);
+  }
+  if (meta.get('language') !== expectedLanguage) fail(`${path}: language must be ${expectedLanguage}`);
+  if (meta.get('authoritative') !== String(authoritative)) fail(`${path}: authoritative must be ${authoritative}`);
+  return meta;
+}
+
+for (const file of canonicalDocs) {
+  const runtimeTranslation = rel(file).startsWith('src-tauri/crates/desktop/control-api/src/capabilities/docs/zh/');
+  if (runtimeTranslation) {
+    const meta = checkMeta(file, 'zh-CN', false);
+    const expectedSource = rel(file).replace('/docs/zh/', '/docs/en/');
+    if (meta?.get('translation-of') !== expectedSource) {
+      fail(`${rel(file)}: translation-of must be ${expectedSource}`);
+    }
+  } else {
+    checkMeta(file, 'en', true);
+  }
+}
+for (const file of translationFiles) {
+  const meta = checkMeta(file, 'zh-CN', false);
+  const source = meta?.get('translation-of');
+  if (!source) {
+    fail(`${rel(file)}: metadata is missing translation-of`);
+  } else if (!existsSync(resolve(communityDir, source)) && !existsSync(resolve(repoRoot, source))) {
+    fail(`${rel(file)}: translation-of target does not exist → ${source}`);
+  }
+  if (!readText(file).includes('English') || !/authoritative|controls/i.test(readText(file))) {
+    fail(`${rel(file)} must state that English is authoritative`);
   }
 }
 
-const reviewFiles = docsFiles.filter((f) => f.startsWith(`${recordsDir}/`));
-const metaScoped = docsFiles.filter((f) => /docs[\\/](governance|reviews)[\\/]/.test(f) && !reviewFiles.includes(f));
-for (const file of metaScoped) checkDocMeta(file);
-
-const REVIEW_KEYS = ['date', 'scope', 'reviewer', 'verdict'];
-const VERDICTS = new Set(['通过', '有条件通过', '不通过']);
-if (!existsSync(recordsDir) || readdirSync(recordsDir).filter((n) => n.endsWith('.md')).length === 0) {
-  fail('docs/reviews/records/ 为空 — 每次文档审查都要留记录 (格式见 docs/reviews/README.md)');
-}
+// 6. Review records remain historical and use their own metadata contract.
+if (reviewFiles.length === 0) fail('docs/reviews/records/ must not be empty');
 for (const file of reviewFiles) {
-  const rel = relative(repoRoot, file).split(/[\\/]/).join('/');
-  if (!/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/.test(rel.split('/').pop() ?? '')) {
-    fail(`${rel} 命名不符 — 评审记录用 YYYY-MM-DD-<范围>.md`);
+  const path = rel(file);
+  if (!/\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/.test(path.split('/').pop() ?? '')) {
+    fail(`${path}: review records must use YYYY-MM-DD-<scope>.md`);
   }
   const meta = parseMeta(readText(file), 'review');
-  if (!meta) { fail(`${rel} 缺少 <!-- lissio-review --> 元数据块`); continue; }
-  for (const key of REVIEW_KEYS) {
-    if (!meta.get(key)?.trim()) fail(`${rel}: 元数据缺少 ${key}`);
+  if (!meta) {
+    fail(`${path} is missing <!-- lissio-review --> metadata`);
+    continue;
   }
+  for (const key of REVIEW_KEYS) if (!meta.get(key)) fail(`${path}: review metadata is missing ${key}`);
   const verdict = meta.get('verdict');
-  if (verdict && !VERDICTS.has(verdict)) fail(`${rel}: verdict "${verdict}" 非法 (${[...VERDICTS].join(' / ')})`);
+  if (verdict && !REVIEW_VERDICTS.has(verdict)) fail(`${path}: invalid verdict "${verdict}"`);
 }
 
-const checklistPath = join(docsDir, 'reviews', 'checklist.md');
-if (!existsSync(checklistPath)) {
-  fail('docs/reviews/checklist.md 缺失 — 人工评审清单是文档审查的必需产物');
-} else {
-  const checklist = readText(checklistPath);
-  for (const section of CHECKLIST_SECTIONS) {
-    if (!checklist.includes(section)) fail(`docs/reviews/checklist.md 缺少「${section}」分节`);
-  }
+// 7. Canonical documents and translations must be indexed.
+const docsIndex = existsSync(join(docsDir, 'README.md')) ? readText(join(docsDir, 'README.md')) : '';
+for (const file of docsFiles.filter((item) => !rel(item).startsWith('docs/community/') && !historical(item))) {
+  const target = relative(docsDir, file).split(/[\\/]/).join('/');
+  if (!docsIndex.includes(target)) fail(`${rel(file)} is not indexed in docs/README.md`);
+}
+const translationIndexFile = join(communityDir, 'INDEX.zh-CN.md');
+const translationIndex = existsSync(translationIndexFile) ? readText(translationIndexFile) : '';
+if (!translationIndex) fail('docs/community/INDEX.zh-CN.md is missing');
+for (const file of translationFiles.filter((item) => rel(item) !== 'docs/community/INDEX.zh-CN.md')) {
+  const target = relative(communityDir, file).split(/[\\/]/).join('/');
+  if (!translationIndex.includes(target)) fail(`${rel(file)} is not indexed in docs/community/INDEX.zh-CN.md`);
 }
 
-// ── 8. 受检文档的相对链接与过程痕迹 ────────────────────────────
-const linkScope = [
-  ...docsFiles,
-  ...ROOT_FILES.map((name) => join(repoRoot, name)),
-  ...INDEX_FILES.map((name) => join(repoRoot, name)),
-].filter((file) => file.endsWith('.md') && existsSync(file));
-const seen = new Set();
+// 8. Relative links and forbidden process traces.
+const linkScope = [...canonicalDocs, ...reviewFiles, ...translationFiles];
 for (const file of linkScope) {
-  if (seen.has(file)) continue;
-  seen.add(file);
   const text = readText(file);
+  let base = dirname(file);
+  if (translationFiles.includes(file)) {
+    const source = parseMeta(text, 'doc')?.get('translation-of');
+    if (source) base = dirname(resolve(repoRoot, source));
+  }
   for (const match of text.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
     const href = match[1];
     if (/^(?:[a-z]+:|#)/i.test(href)) continue;
-    const target = resolve(dirname(file), href.split('#')[0]);
-    if (!existsSync(target)) {
-      fail(`${relative(repoRoot, file)}: 相对链接失效 → ${href}`);
-    }
+    const source = translationFiles.includes(file)
+      ? parseMeta(text, 'doc')?.get('translation-of')
+      : null;
+    const candidates = [
+      resolve(dirname(file), href.split('#')[0]),
+      resolve(base, href.split('#')[0]),
+      href.startsWith('/') ? resolve(repoRoot, href.slice(1)) : resolve(base, href.split('#')[0]),
+    ];
+    if (source) candidates.push(resolve(dirname(resolve(repoRoot, source)), href.split('#')[0]));
+    if (!candidates.some((target) => existsSync(target))) fail(`${rel(file)}: broken relative link → ${href}`);
   }
   const trace = text.match(TRACE_MARKERS);
-  if (trace) fail(`${relative(repoRoot, file)}: 含过程痕迹标记 "${trace[0]}" — 文档描述现状, 不写重构历史`);
+  if (trace && !historical(file)) fail(`${rel(file)} contains process marker "${trace[0]}"`);
+}
+
+// 9. Current policy text must not claim a dual/commercial license.
+const currentTextFiles = [...canonicalDocs].filter((file) => !rel(file).startsWith('docs/reviews/records/'));
+for (const file of currentTextFiles) {
+  const text = readText(file);
+  if (/Dual-licensed:|commercial track has not been published|GPL-2\.0-only is the only available/i.test(text)) {
+    fail(`${rel(file)} contains obsolete GPL dual-license language`);
+  }
 }
 
 if (errors.length > 0) {
-  console.error(`✗ 文档与许可证门禁失败 (${errors.length} 处):\n`);
-  for (const e of errors) console.error(`  - ${e}`);
-  console.error('\n规则见 docs/governance/open-source-and-ip.md 与 docs/reviews/checklist.md');
+  console.error(`Documentation and license gate failed (${errors.length} issues):\n`);
+  for (const error of errors) console.error(`  - ${error}`);
+  console.error('\nSee docs/governance/open-source-and-ip.md and docs/reviews/checklist.md');
   process.exit(1);
 }
 
-console.log(`✓ 文档与许可证门禁通过 — ${members.length} 个 workspace 包许可证一致, ${docsFiles.length} 篇文档已登记并可链接, ${reviewFiles.length} 份评审记录合规`);
+console.log(`Documentation and license gate passed — ${members.length} workspace packages use ${PROJECT_LICENSE}, ${canonicalDocs.length} authoritative documents are indexed, and ${translationFiles.length} Chinese backups are mapped.`);

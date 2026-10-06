@@ -1,68 +1,74 @@
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Pull request intake and verification checklist
+-->
 <!--
-本模板对应 CONTRIBUTING.md 的合入前置条件。删掉用不上的段落，不要删掉「门禁自检」——
-未实际运行的检查不得声明通过。
+This checklist mirrors CONTRIBUTING.md. Do not claim a command passed unless it
+was actually run successfully.
 -->
 
-## 变更动机
+## Motivation
 
-<!-- 关联 issue，或说明为什么需要这次改动。先说清问题，再说方案。 -->
+<!-- Link the issue or explain the problem before describing the solution. -->
 
 Closes #
 
-## 变更范围
+## Scope
 
-| 区域 | 是否涉及 |
+| Area | Changed |
 | --- | --- |
-| Rust crate（`src-tauri/crates/<域>/`） | |
-| 前端（`src/`） | |
-| IPC / 事件契约 / wire 类型 | |
-| 协议或传输适配器 | |
-| 文档 | |
-| 依赖或第三方资源 | |
+| Rust crate (`src-tauri/crates/<domain>/`) | |
+| Frontend (`src/`) | |
+| IPC, event contract, or wire type | |
+| Protocol or transport adapter | |
+| Documentation | |
+| Dependency or third-party resource | |
 
-<!-- 改 Rust 前先读 docs/architecture/crates.md，并运行 pnpm architecture 确认定义者与
-     反向依赖。若新增 crate，说明它承担的是独立能力、依赖倒置端口、重适配器还是跨 crate
-     测试支持，并附 package.metadata.lissio 的域与依赖层。 -->
+Before changing Rust, read `docs/architecture/crates.md` and run
+`pnpm architecture` to identify the owner and reverse dependencies.
 
-## 门禁自检
+## Verification
 
-勾选已在本机实际跑通的项。未运行的项不要勾，也不要在描述里声明通过。
-
-- [ ] `pnpm architecture` `pnpm check:architecture` `pnpm check:deps`
-- [ ] `pnpm check:web-contract` `pnpm check:contracts` `pnpm check:model-catalog` `pnpm check:tokens`
+- [ ] `pnpm architecture`, `pnpm check:architecture`, `pnpm check:deps`
+- [ ] `pnpm check:web-contract`, `pnpm check:contracts`, `pnpm check:model-catalog`, `pnpm check:tokens`
 - [ ] `pnpm check:docs`
-- [ ] `pnpm typecheck` `pnpm lint:ci` `pnpm test` `pnpm build:web` `pnpm test:e2e`
-- [ ] `cargo fmt --check` `cargo clippy --workspace --all-targets` `cargo test --workspace` `cargo deny check`
-- [ ] 涉及 UI 的改动已用 `pnpm dev:desktop` 实际打开验证
+- [ ] `pnpm typecheck`, `pnpm lint:ci`, `pnpm test`, `pnpm build:web`, `pnpm test:e2e`
+- [ ] `pnpm perf:check`
+- [ ] `cargo fmt --check`, `cargo clippy --workspace --all-targets`, `cargo test --workspace`, `cargo deny check`
+- [ ] UI changes were opened and exercised in `pnpm dev:desktop`
 
-需要 `cargo` 检查但本机未装 Rust 工具链的，在这里写明「未运行」及原因：
+Write “not run” and the reason here if a required toolchain is unavailable.
 
-## 兼容性
+## Compatibility
 
-- [ ] 不涉及前后端契约变更
-- [ ] 涉及契约：已同步 Rust 侧的 serde owner 与生成的 TS，并逐一核对字段名
-- [ ] 涉及持久化文件、IPC 载荷或配置格式：按当前格式读写，未做旧格式兼容或迁移
-- [ ] 涉及公开接口或配置项变更：已在 `CHANGELOG.md` 记录，并说明迁移方式
+- [ ] No contract change
+- [ ] Rust serde owners and generated TypeScript were updated and compared
+- [ ] Persisted files, IPC payloads, and configuration use only the current format
+- [ ] Public changes are recorded in `CHANGELOG.md`
 
-## 视觉与交互
+## Visual and interaction behavior
 
-- [ ] 无界面改动
-- [ ] 有界面改动：附前后截图，说明深浅色主题与文字缩放下的表现
-- [ ] 动效遵循 `docs/architecture/ui-motion.md`，尊重 `prefers-reduced-motion`
-- [ ] 新增用户可见文案：`src/i18n/resources/{zh,en}/` 已同步，未硬编码
+- [ ] No UI change
+- [ ] UI screenshots cover light/dark themes and text scaling
+- [ ] Motion follows `docs/architecture/ui-motion.md` and reduced-motion behavior
+- [ ] User-visible strings were added to both i18n language directories
 
-## 许可证与第三方
+## Licensing and third parties
 
-- [ ] 未引入新的第三方代码、字体、图标、数据集或规范文本
-- [ ] 有引入：已确认权利来源与许可证，并登记进 `docs/governance/third-party-licenses.md`
-- [ ] 新增依赖已登记到根 `[workspace.dependencies]`，且许可证落在 `src-tauri/deny.toml` 的白名单内
-- [ ] 未移除或弱化许可证、第三方归属与署名声明
+- [ ] No new third-party code, fonts, icons, data, or specification text
+- [ ] New material has confirmed rights and is recorded in `docs/governance/third-party-licenses.md`
+- [ ] New Rust dependencies use root `[workspace.dependencies]` and an allowed license
+- [ ] License, attribution, and notice statements were preserved
 
-## 风险与回滚
+## Risk and rollback
 
-<!-- 这次改动可能影响哪些既有行为？出问题如何回滚？需要哪些配置迁移或人工步骤？ -->
+<!-- Describe affected behavior, rollback steps, and any manual operations. -->
 
-## 许可确认
+## Contribution terms
 
-提交本 PR 即表示同意 [CLA.md](../CLA.md)，并确认有权提交上述内容；若属受雇作品，已取得
-雇主许可。
+Submitting this pull request confirms acceptance of `CLA.md` and that the
+submitter has authority to provide the contribution.

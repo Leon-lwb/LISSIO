@@ -1,60 +1,64 @@
-# 贡献者许可协议（CLA）
+# Lissio Contributor Agreement
 
-版本：2026-10-04。适用于向 Lissio 提交的一切贡献。
+<!-- lissio-doc
+status: maintained
+owner: Lissio maintainers
+last-reviewed: 2026-10-07
+language: en
+authoritative: true
+applies-to: Contributions to Lissio
+-->
 
-本协议以中文文本为准；英文版本可向维护者索取，法律效力以中文文本为准。本协议不是
-法律意见，签署前请自行咨询专业法律顾问。
+Version: 2026-10-07. This English text is authoritative. Chinese translations
+are informational backups only.
 
-## 1. 定义
+This agreement describes the terms for contributing to Lissio. It is not legal
+advice; contributors should seek independent advice when needed.
 
-- **项目**：Lissio，仓库地址见 `docs/README.md` 首段。
-- **许可方**：签署本协议并提交贡献的人；**被许可方**：Horldsence，即版权持有人。
-- **贡献**：许可方提交的、供纳入项目的任何代码、文档、配置、设计、测试或其他作品，
-  含其修改。
+## 1. Definitions
 
-## 2. 背景
+- **Project** means Lissio, hosted at `https://codeberg.org/Horldsence/Lissio`.
+- **Contribution** means code, documentation, configuration, designs, tests, or
+  other material submitted for inclusion in the Project.
+- **Maintainer** means a person listed in `MAINTAINERS.md` and authorized to
+  accept Contributions.
 
-项目以 GPL-2.0-only 分发，并保留在商业许可下另行授权的权利。GPL 是单向授权：仅靠
-GPL 或 DCO 无法把同一作品另行以商业条款发出。项目需要许可方授予再许可权，才能实现
-上述双许可安排。
+## 2. Grant of license
 
-## 3. 版权保留与授权
+The contributor retains copyright in the Contribution. By submitting a
+Contribution, the contributor grants the Project and its maintainers a
+worldwide, royalty-free, non-exclusive, irrevocable, sublicensable license to
+use, reproduce, modify, prepare derivative works from, distribute, perform, and
+display the Contribution as part of the Project under the Apache License,
+Version 2.0.
 
-许可方保留其贡献的著作权。被许可方获得在全世界范围、免版税、不可撤销（除本协议第 5 条
-外）、可再授权的许可，对贡献进行复制、修改、准备衍生作品、分发、公开展示、执行，
-以及再许可给他人，**包括但不限于**以 GPL-2.0-only 授权和以商业或其他条款授权。
+The contributor also grants the recipients of the Project the patent license
+provided by Apache-2.0 for patent claims necessarily infringed by the
+Contribution alone or by its combination with the Project.
 
-上述授权包含为行使权利所必需的技术手段（如翻译、格式化、去除无关部分、子集化）。
-仅在商业许可实际发布后，第三方才可依据商业条款使用；在此之前项目仅按 GPL-2.0-only
-分发。
+## 3. Authority and compatibility
 
-## 4. 专利授权
+The contributor represents that they have the right to submit the Contribution,
+that it does not violate third-party rights or legal obligations, and that any
+required employer or client permission has been obtained. The Contribution must
+be compatible with Apache-2.0 and the third-party policy in
+`docs/governance/open-source-and-ip.md`.
 
-许可方就其贡献中由其本人可主张的必然专利侵权，授予被许可方、项目贡献者与项目接收者
-免费的、不可撤销的许可，并承诺不以主张专利侵权为由起诉本项目或其贡献者。若许可方
-在贡献中获得第三方专利许可，许可方就此向被许可方作出同等授权。
+## 4. Historical contributions
 
-## 5. 不主张与终止
+Contributions made before 2026-10-07 were made under the contributor agreement
+then published in this repository. Those terms included the right to relicense
+contributions and are relied upon for the transition of the current source tree
+to Apache-2.0. Historical binary releases are not retroactively changed.
 
-许可方不以著作权或专利权主张限制本项目的使用、分发或再许可，并同意不针对本项目或其
-贡献者提起诉讼。若本协议被违反，被许可方可终止本协议授予的授权；恢复须另获许可方书面
-同意。
+## 5. No additional services
 
-## 6. 无担保
+Contributions are provided without warranties. This agreement does not create
+an employment, partnership, agency, support, or confidentiality relationship.
 
-贡献按现状提供，不附带任何明示或默示担保，包括适销性与适用性担保。
+## 6. Acceptance and changes
 
-## 7. 签署
-
-提交 pull request 即视为签署本协议，无需另附签署文件。许可方声明：
-
-1. 有权提交该贡献；
-2. 提交不违反任何第三方协议或法定义务；
-3. 若贡献涉及受雇作品，已取得雇主许可。
-
-## 8. 变更
-
-本协议的任何修改仅对修改后提交的贡献生效；既有贡献仍受签署时版本约束。被许可方须在
-本文档所在仓库保留历史版本。
-
-联系邮箱见 `SECURITY.md`。
+Submitting a pull request or otherwise intentionally submitting a Contribution
+for inclusion constitutes acceptance of this agreement. Changes to this
+agreement apply only to Contributions submitted after the revised version is
+published.

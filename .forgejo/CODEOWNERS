@@ -1,0 +1,8 @@
+# Default ownership for Codeberg/Forgejo reviews.
+* @Horldsence
+
+# Documentation and frontend reviews also involve @sloray.
+/docs/ @Horldsence @sloray
+/src/ @Horldsence @sloray
+/README.md @Horldsence @sloray
+/CHANGELOG.md @Horldsence @sloray
