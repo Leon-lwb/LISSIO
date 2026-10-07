@@ -66,7 +66,10 @@ export const PaletteRow = memo(function PaletteRow({ entry, category, onActivate
       title={entry.title}
     >
       <div className={tileClass(category)}>{entry.icon}</div>
-      <span className="text-[length:var(--font-size-sm)] leading-none truncate text-text-secondary transition-colors group-hover:text-text-primary">
+      {/* 行盒必须容得下中日韩字形的上缘: `truncate` 的 overflow:hidden 以行盒为裁剪线,
+          而多数中文字体的 ascent+descent 超过 1em —— leading-none 会把「右/插/删」这类
+          顶到字身框上缘的字切掉上半 (codeberg #8)。leading-normal(1.5) 留出半行距即可覆盖 */}
+      <span className="text-[length:var(--font-size-sm)] leading-normal truncate text-text-secondary transition-colors group-hover:text-text-primary">
         {entry.label}
       </span>
     </div>
