@@ -15,6 +15,12 @@ applies-to: Non-authoritative Chinese translation backup
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 约定。
 
+## [0.8.0] - 2026-10-07
+
+### 变更
+
+- **发布版本改由变更文件推导**:不再手工挑选版本号 — 每处改动在 `.changes/` 下登记一个变更文件,`pnpm release:prepare` 据此算出下一个版本、生成 `CHANGELOG.md` 条目并同步全部版本文件;新增两道 PR 级门禁守住这条链路:`check:changes` 拒绝 covector 会静默丢弃的变更文件,`check:release-sync` 在版本字段、更新日志与其中文备份不一致时失败
+
 ## [0.7.2] - 2026-10-01 (pre-release)
 
 ### 变更
