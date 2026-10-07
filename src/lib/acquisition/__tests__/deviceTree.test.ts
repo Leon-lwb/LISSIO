@@ -131,6 +131,14 @@ describe('device-tree view and canvas projection', () => {
     expect(buildDeviceTree([root, canvas('legacy')], [edge('nested', 'legacy', 'out')])[0].children[0].children[0].children[0].id).toBe('legacy');
   });
 
+  it('把实测尺寸回填给投影协议卡片 — 缺高度时 React Flow 会把卡片判为无尺寸并隐藏', () => {
+    const root = acquisitionNodeFromDecl(decl('root', [protocol('parser')]));
+    // 投影节点是派生的: 尺寸必须由画布缓存还回来, 否则 nodeHasDimensions 恒为假
+    expect(deviceTreeCanvasNodes([root], new Map([['parser', { width: 200, height: 113 }]]))[0].measured)
+      .toEqual({ width: 200, height: 113 });
+    expect(deviceTreeCanvasNodes([root])[0].measured).toBeUndefined();
+  });
+
   it('shows disabled protocol branches without exposing them as active data connections', () => {
     const root = acquisitionNodeFromDecl(decl('root', [{ ...protocol('parser', [protocol('nested')]), enabled: false }]));
     expect(deviceTreeCanvasNodes([root]).map(node => [node.data.enabled, node.connectable])).toEqual([[false, false], [false, false]]);

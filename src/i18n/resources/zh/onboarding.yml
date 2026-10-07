@@ -16,7 +16,7 @@ tourFinish: 完成
 tourWelcomeTitle: 欢迎使用 Lissio
 tourWelcomeContent: 三分钟跑通核心工作流。高亮区是当前讲解对象，<strong>带勾选框的步骤需要动手完成</strong>；右上角 × 随时退出。
 tourQuickStartTitle: 快速开始 · 模板起步
-tourQuickStartContent: 左侧活动栏的<strong>火箭图标</strong>打开此面板——7 个模板一键生成画布与连线，应用后默认落在<strong>编译结果</strong>页核对。
+tourQuickStartContent: 左侧活动栏的<strong>火箭图标</strong>打开此面板——8 个模板一键生成画布与连线，应用后默认落在<strong>编译结果</strong>页核对。
 tourPaletteTitle: 控件分类 · 素材总览
 tourPaletteContent: 全部素材分<strong>九大分类</strong>——连接设备、解析与编码、发送、信号处理、文本处理、显示、交互输入、属性、自定义，图标常驻最左侧栏。
 tourJumpbarTitle: 控件分类 · 切换与搜索

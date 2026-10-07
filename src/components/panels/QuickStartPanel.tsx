@@ -13,6 +13,7 @@ import {
   Usb,
   Sparkles,
   Rocket,
+  Type,
   Upload,
   type LucideIcon,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
   filter: Waves,
   can: Cpu,
   serial: Usb,
+  'text-protocol': Type,
   demo: Sparkles,
 };
 

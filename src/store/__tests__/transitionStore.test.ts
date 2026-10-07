@@ -16,10 +16,10 @@ describe('transitionStore', () => {
     vi.mocked(startTransition).mockReset();
     useAppStore.setState({
       dataTabs: [
-        { id: 'waveform-fixed', type: 'waveform', name: 'Waveform', closable: false },
+        { id: 'compile-results-fixed', type: 'compile-results', name: 'Compile Results', closable: false },
         { id: 'can-tab', type: 'can', name: 'CAN', closable: true },
       ],
-      activeDataTabId: 'waveform-fixed',
+      activeDataTabId: 'compile-results-fixed',
       sidebarView: 'quickstart',
       sidebarVisible: true,
     });
@@ -33,7 +33,7 @@ describe('transitionStore', () => {
     const transitionScope = vi.mocked(startTransition).mock.calls[0][0];
 
     // transition 作用域执行前, 状态不变 (渲染被延迟, 不阻塞当前帧)
-    expect(useAppStore.getState().activeDataTabId).toBe('waveform-fixed');
+    expect(useAppStore.getState().activeDataTabId).toBe('compile-results-fixed');
 
     // 作用域执行后状态生效
     void transitionScope();

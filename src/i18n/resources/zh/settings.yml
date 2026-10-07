@@ -105,6 +105,8 @@ templateSerial: 串口
 templateSerialDesc: 串口浮点数据流 + 仪表 / 数字显示控件
 templateCustomProtocol: 自定义协议
 templateCustomProtocolDesc: 自定义块协议（命名通道 speed/temp）+ 多帧命令发送器，串口设备测试属性无需硬件
+templateTextProtocol: 文本协议
+templateTextProtocolDesc: ASCII 文本 (FireWater) 解析 + 协议转换到数值 (JustFloat)，数字显示与波形直接可读
 templateDemo: 综合演示
 templateDemoDesc: 滤波 + 数学 + 波形 / 仪表的完整流水线示例
 templateApplyTitle: 应用模板

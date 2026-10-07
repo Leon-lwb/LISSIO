@@ -105,6 +105,8 @@ templateSerial: Serial
 templateSerialDesc: Serial float stream + gauge / number display widgets
 templateCustomProtocol: Custom Protocol
 templateCustomProtocolDesc: Custom block protocol (named channels speed/temp) plus command sender, using a simulated Serial device attribute
+templateTextProtocol: Text Protocol
+templateTextProtocolDesc: Parse ASCII text (FireWater) and convert it to numeric JustFloat frames for readouts and waveforms
 templateDemo: Combined Demo
 templateDemoDesc: Full pipeline example with filter + math + waveform / gauge
 templateApplyTitle: Apply Template

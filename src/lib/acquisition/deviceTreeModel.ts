@@ -67,8 +67,13 @@ export function uniqueDeviceTreeName(parent: DeviceTreeNodeDecl, base: string): 
   return `${base} ${suffix}`;
 }
 
+/// 投影卡片尺寸 — 投影节点由 rfNodes 派生 (每次重算都是新对象), React Flow 量到的
+/// 尺寸写不回用户节点; 不把尺寸还回去, `nodeHasDimensions` 恒为假, React Flow 会把
+/// 卡片设成 `visibility: hidden` (表现就是"快速开始没生成协议引擎")。
+export type DeviceTreeCardSizes = ReadonlyMap<string, { width: number; height: number }>;
+
 /** Canvas protocol cards are projections only; declarations remain in the root document. */
-export function deviceTreeCanvasNodes(nodes: Node[]): Node[] {
+export function deviceTreeCanvasNodes(nodes: Node[], sizes?: DeviceTreeCardSizes): Node[] {
   const result: Node[] = [];
   for (const root of nodes.filter(node => node.type === 'acquisition')) {
     const declaration = (root.data as AcquisitionNodeData).node;
@@ -80,11 +85,14 @@ export function deviceTreeCanvasNodes(nodes: Node[]): Node[] {
           const childConfig = child.config as Record<string, unknown>;
           const config = (childConfig.protocol ?? { kind: 'JustFloat', channels: null }) as ProtocolConfig;
           const schema = childConfig.schema as ProtocolSchema;
+          const measured = sizes?.get(child.id);
           result.push({
             id: child.id,
             type: 'protocol',
             position: { x: root.position.x + depth * 240, y: root.position.y + row++ * 120 },
             width: 200,
+            // 实测高度回填 (宽由 width 固定) — 缺了它节点不会进入可见态
+            ...(measured ? { measured: { width: measured.width, height: measured.height } } : {}),
             draggable: false,
             selectable: false,
             deletable: false,

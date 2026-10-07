@@ -7,6 +7,7 @@ import {
   MiniMap,
   useReactFlow,
   Panel,
+  type NodeChange,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useAppStore } from '../../store/appStore';
@@ -96,13 +97,43 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
   // React Flow 容器引用 — 仅用于视觉反馈 (drag-over 高亮)
   const wrapperRef = useRef<HTMLDivElement>(null);
 
+  // 投影协议卡片的实测尺寸缓存 — 投影节点不在 rfNodes 里, React Flow 量到的尺寸
+  // 没有落点; 不还回去 `nodeHasDimensions` 恒为假, 卡片会一直 visibility: hidden
+  // (用户看到的就是"快速开始没有生成协议引擎")。尺寸变了才 bump 版本号触发重算。
+  const cardSizesRef = useRef(new Map<string, { width: number; height: number }>());
+  const [cardSizeVersion, setCardSizeVersion] = useState(0);
+  const projectedIds = useMemo(
+    () => new Set(deviceTreeCanvasNodes(rfNodes).map((node) => node.id)),
+    [rfNodes]
+  );
+
   // 所有节点均归属创建页签，画布只显示当前页签节点。
   const tabNodes = useMemo(
     () =>
-      [...rfNodes, ...deviceTreeCanvasNodes(rfNodes)]
+      [...rfNodes, ...deviceTreeCanvasNodes(rfNodes, cardSizesRef.current)]
         .filter((n) => n.data.tabId === tabId)
         .map((n) => ({ ...n, dragHandle: '.node-drag-handle' })),
-    [rfNodes, tabId]
+    // cardSizeVersion 只用于在实测尺寸到达后重算投影
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rfNodes, tabId, cardSizeVersion]
+  );
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      let sized = false;
+      for (const change of changes) {
+        if (change.type !== 'dimensions' || !change.dimensions || !projectedIds.has(change.id)) continue;
+        const next = { width: Math.round(change.dimensions.width), height: Math.round(change.dimensions.height) };
+        const prev = cardSizesRef.current.get(change.id);
+        if (prev?.width === next.width && prev?.height === next.height) continue;
+        cardSizesRef.current.set(change.id, next);
+        sized = true;
+      }
+      if (sized) setCardSizeVersion((version) => version + 1);
+      // 投影卡片不在 rfNodes 里 — 其余变更照旧只作用于真实节点
+      onNodesChange(changes.filter((change) => 'id' in change && rfNodes.some((node) => node.id === change.id)));
+    },
+    [onNodesChange, projectedIds, rfNodes]
   );
 
   const tabNodeIds = useMemo(
@@ -226,7 +257,7 @@ function NodeEditorInner({ tabId }: NodeEditorProps) {
       <ReactFlow
         nodes={tabNodes}
         edges={tabEdges}
-        onNodesChange={changes => onNodesChange(changes.filter(change => 'id' in change && rfNodes.some(node => node.id === change.id)))}
+        onNodesChange={handleNodesChange}
         onEdgesChange={changes => onEdgesChange(changes.filter(change => 'id' in change && rfEdges.some(edge => edge.id === change.id)))}
         onConnect={onConnect}
         isValidConnection={isValidConnection}

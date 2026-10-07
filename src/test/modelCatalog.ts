@@ -182,6 +182,7 @@ export function mockPrepareEcho(): MockInstance<typeof api.prepareNodeDocuments>
       tabId?: string;
       label?: string | null;
       configPatch?: Record<string, unknown>;
+      layout?: { x: number; y: number; width: number | null; height: number | null };
     }[];
   }) => {
     const { byId } = useModelCatalogStore.getState();
@@ -190,7 +191,8 @@ export function mockPrepareEcho(): MockInstance<typeof api.prepareNodeDocuments>
       const model = byId[modelId];
       const nodeId = op.nodeId ?? 'node-test';
       const tabId = op.tabId ?? 'default';
-      const layout = { x: 0, y: 0, width: null, height: null };
+      // 真实后端回显请求里的画布布局 — 模板/种子的位置断言依赖它
+      const layout = op.layout ?? { x: 0, y: 0, width: null, height: null };
       const variantPatch = (() => {
         const variantId = op.variantId;
         if (!variantId) return {} as Record<string, unknown>;

@@ -16,7 +16,7 @@ tourFinish: Finish
 tourWelcomeTitle: Welcome to Lissio
 tourWelcomeContent: The core workflow in three minutes. The spotlight marks each topic; steps with a <strong>checkbox are hands-on</strong>. Exit anytime via ×.
 tourQuickStartTitle: Quick Start · Templates
-tourQuickStartContent: The <strong>rocket icon</strong> in the activity bar opens this panel — 7 templates generate a canvas plus wiring in one click, landing on <strong>Compile Results</strong> for review.
+tourQuickStartContent: The <strong>rocket icon</strong> in the activity bar opens this panel — 8 templates generate a canvas plus wiring in one click, landing on <strong>Compile Results</strong> for review.
 tourPaletteTitle: Widget Categories · Assets
 tourPaletteContent: Every asset lives in <strong>nine categories</strong> — Connections, Parsing & encoding, Sending, Signal processing, Text processing, Display, Interactive inputs, Attributes, Custom. Their icons live in the leftmost bar.
 tourJumpbarTitle: Widget Categories · Switch & Search

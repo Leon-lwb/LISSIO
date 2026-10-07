@@ -150,7 +150,7 @@ export const createWidgetSlice: AppSlice<WidgetSlice> = (set, get) => {
               const remaining = s.dataTabs.filter((t) => t.id !== id);
               newState.dataTabs = remaining;
               if (s.activeDataTabId === id) {
-                newState.activeDataTabId = remaining[0]?.id ?? 'waveform-fixed';
+                newState.activeDataTabId = remaining[0]?.id ?? 'compile-results-fixed';
               }
             }
             return newState;

@@ -58,7 +58,7 @@ export const createDataTabSlice: AppSlice<DataTabSlice> = (set, get) => {
         return {
           dataTabs: remaining,
           activeDataTabId:
-            s.activeDataTabId === tabId ? remaining[0]?.id ?? 'waveform-fixed' : s.activeDataTabId,
+            s.activeDataTabId === tabId ? remaining[0]?.id ?? 'compile-results-fixed' : s.activeDataTabId,
         };
       }),
 
