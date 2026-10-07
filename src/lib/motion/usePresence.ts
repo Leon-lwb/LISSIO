@@ -116,8 +116,20 @@ export function usePresence<T extends HTMLElement>(
       // 收尾要清两样: 内联 transform/opacity, 以及借来的图层与所有权。
       // `will-change: opacity` 会让元素成为自己的 Backdrop Root, 自己的
       // backdrop-filter 只采样自身, 浮层磨砂随即静默消失 —— 所以不能只留 will-change。
-      const settle = () => {
+      const settleEnter = () => {
         gsap.set(element, { clearProps: 'transform,opacity' });
+        borrow.current.release();
+      };
+      // 退场收尾只归还 transform, opacity **必须**显式留在 0。
+      //
+      // 样式表里的自然值是不透明的 —— 遮罩是一整屏压暗层, 卡片是实心表面 —— 而卸载
+      // 由调用方在一次新的 React 调度里提交, 与这段收尾之间夹着一帧完整渲染。把
+      // opacity 一并交还样式表, 就是在那一帧把已经淡出的表面重新点亮: 用户看到的是
+      // "关闭动画播完了, 又闪一下, 然后才消失"。低动画分支 (见下) 早就绕开了同一个
+      // 坑 —— 那里写的是同一个判断 —— 这里补的是动画分支缺的同一份约束。
+      const settleExit = () => {
+        gsap.set(element, { clearProps: 'transform' });
+        gsap.set(element, { opacity: 0 });
         borrow.current.release();
       };
 
@@ -136,16 +148,16 @@ export function usePresence<T extends HTMLElement>(
             ...springTween(geometry.family, 'in', { opacity: 1, x: 0, y: 0, scaleX: 1, scaleY: 1 }, {
               spring: motionSpringFor(geometry.family, 'in', distance),
             }),
-            onComplete: settle,
+            onComplete: settleEnter,
           }
         );
-        return settle;
+        return settleEnter;
       }
 
       if (!retained) {
         setRetained(false);
         overrides.current.onExitComplete?.();
-        return settle;
+        return settleExit;
       }
 
       const exit = exitVars(geometry, overrides.current.exitTravel, overrides.current.exitScale);
@@ -161,13 +173,13 @@ export function usePresence<T extends HTMLElement>(
           spring: motionSpringFor(geometry.family, 'out', exitDistance),
         }),
         onComplete: () => {
-          settle();
+          settleExit();
           setRetained(false);
           overrides.current.onExitComplete?.();
         },
       });
 
-      return settle;
+      return settleExit;
     },
     { scope: ref, dependencies: [visible, retained, variant] }
   );

@@ -53,6 +53,8 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-06 | Layer exemptions and effect input ports | passed | [records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md](records/2026-10-06-layer-exemption-paydown-and-effect-input-port.md) |
 | 2026-10-07 | Apache-2.0 relicensing and documentation authority | passed with conditions | [records/2026-10-07-apache-relicensing-and-documentation.md](records/2026-10-07-apache-relicensing-and-documentation.md) |
 | 2026-10-07 | Recording database default-off | passed with conditions | [records/2026-10-07-recording-database-default-off.md](records/2026-10-07-recording-database-default-off.md) |
+| 2026-10-07 | CI reorganization and gate single-sourcing | passed with conditions | [records/2026-10-07-ci-reorganization-and-gate-single-sourcing.md](records/2026-10-07-ci-reorganization-and-gate-single-sourcing.md) |
+| 2026-10-07 | Change-file release flow and release gates | passed with conditions | [records/2026-10-07-change-file-release-flow-and-gates.md](records/2026-10-07-change-file-release-flow-and-gates.md) |
 
 ## Retention
 

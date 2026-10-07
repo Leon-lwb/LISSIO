@@ -30,7 +30,7 @@ pub mod ids {
     pub const ZOOM_IN: &str = "menu:zoom-in";
     pub const ZOOM_OUT: &str = "menu:zoom-out";
     pub const ZOOM_RESET: &str = "menu:zoom-reset";
-    pub const GITHUB: &str = "menu:github";
+    pub const REPO: &str = "menu:github";
     pub const DOCS: &str = "menu:docs";
 
     // 数据面板 (Panel 菜单) — 前端菜单事件通过 menu-event 转发,
@@ -204,13 +204,7 @@ pub fn build_menu(app: &App) -> tauri::Result<Menu<Wry>> {
         true,
         &[
             &MenuItem::with_id(app_handle, ids::DOCS, "Documentation", true, None::<&str>)?,
-            &MenuItem::with_id(
-                app_handle,
-                ids::GITHUB,
-                "Open on GitHub",
-                true,
-                None::<&str>,
-            )?,
+            &MenuItem::with_id(app_handle, ids::REPO, "Open Repository", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app_handle)?,
             &MenuItem::with_id(app_handle, ids::ABOUT, "About Lissio", true, None::<&str>)?,
         ],
@@ -230,21 +224,21 @@ pub fn build_menu(app: &App) -> tauri::Result<Menu<Wry>> {
     )
 }
 
+/// 帮助菜单里指向仓库的地址。仓库托管在 Codeberg; 原先指向 GitHub
+/// (`github.com/Horldsence/lissio`), 该地址已 404, 点开只会得到错误页。
+const REPO_URL: &str = "https://codeberg.org/Horldsence/Lissio";
+const DOCS_URL: &str = "https://codeberg.org/Horldsence/Lissio/src/branch/develop/README.md";
+
 /// 处理菜单点击事件 — 转发到前端或执行内置操作
 pub fn on_menu_event(app: &tauri::AppHandle, id: &str) {
     match id {
-        ids::GITHUB => {
-            if let Err(e) =
-                tauri_plugin_opener::open_url("https://github.com/Horldsence/lissio", None::<&str>)
-            {
-                log::warn!("打开 GitHub 失败: {e}");
+        ids::REPO => {
+            if let Err(e) = tauri_plugin_opener::open_url(REPO_URL, None::<&str>) {
+                log::warn!("打开仓库页面失败: {e}");
             }
         }
         ids::DOCS => {
-            if let Err(e) = tauri_plugin_opener::open_url(
-                "https://github.com/Horldsence/lissio#readme",
-                None::<&str>,
-            ) {
+            if let Err(e) = tauri_plugin_opener::open_url(DOCS_URL, None::<&str>) {
                 log::warn!("打开文档失败: {e}");
             }
         }

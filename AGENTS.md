@@ -49,38 +49,76 @@ platform-shell commands and supervised `lissio-server` lifecycle.
 - A new crate requires metadata, documentation, architecture tests, and a root
   workspace dependency entry inherited by consumers.
 
+## Release changes
+
+Record user-visible, contract, packaging, and command changes as one change file
+in `.changes/` (`pnpm changes:add` prompts for the package, bump, section, and
+summary). `pnpm release:prepare` turns the accumulated files into the next
+version and the `CHANGELOG.md` entry; never edit a version field or
+`CHANGELOG.md` by hand. `RELEASING.md` owns the release sequence, and
+`check:changes` / `check:release-sync` enforce the invariants along the way.
+
 ## Commands
 
-- `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory
-- `pnpm check:architecture` — layout, metadata, DAG, layer, adapter, and testkit rules
-- `pnpm check:deps` — centralized third-party dependency versions
-- `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED ↔ dispatch) consistency
-- `pnpm check:contracts` — generated TypeScript must match the Rust wire types byte for byte
-- `pnpm generate:contracts` — regenerate `src/types/generated` after a wire change; local
-  step only, CI verifies its output via `check:contracts`
-- `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
-- `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace,
-  documentation index and links, review-record metadata; see `docs/governance/`
-- `pnpm check:tokens` — color/opacity token unification (text/symbol layer) plus the
-  frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
-- `pnpm check:motion` — every `transition`/`@keyframes` property must stay on the
-  paint layer. Layout animations are invisible to the browser perf probe (they run
-  in C++, not JS), so they can only be caught statically
-- `pnpm typecheck`, `pnpm lint:ci` (zero warnings), `pnpm test`
-- `pnpm build:web` — production frontend build
-- `pnpm test:e2e` — Playwright browser smoke tests
-- `pnpm perf:check` — frontend render budget: per-frame cost rates for interaction
-  scenarios against a committed baseline. Gate counts per frame, never wall-clock fps
-  (headless has no vsync); see `docs/performance/frontend-render-budget.md` before
-  changing a budget or adding a scenario. `pnpm perf:baseline` overwrites the baseline
-  and is only for an intended change.
-- `cd src-tauri && cargo fmt --check`
-- `cd src-tauri && cargo clippy --workspace --all-targets`
-- `cd src-tauri && cargo test --workspace`
-- `cd src-tauri && cargo deny check`
+The gate list below is generated from `scripts/gates.mjs`, which is the single
+source of truth. `pnpm check:ci-gates` fails if this block, `CONTRIBUTING.md`, the
+pull-request template, or the `.forgejo` workflows disagree with the registry.
+Change the registry, then run `pnpm check:ci-gates --fix`.
 
-That list is what CI (`.github/workflows/build.yml`, job `quality`) runs — all of it,
-not a subset. Do not treat a green subset as a green build.
+<!-- lissio-gates:start -->
+
+**Architecture and contracts**
+
+- `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory for finding the type owner; prints a report and never fails, so it is informational — `check:architecture` is the gate that enforces these rules
+- `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules
+- `pnpm check:deps` — centralized third-party dependency versions inherited from the root workspace
+- `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
+- `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
+- `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
+- `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
+- `pnpm check:motion` — every `transition`/`@keyframes` property stays on the paint layer; layout animations run in C++ and are invisible to the browser probe, so only a static check can catch them
+- `pnpm check:layers` — frontend implementation/interaction/effects/view layers must not cross their boundaries
+- `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, review-record metadata; see `docs/governance/`
+- `pnpm check:ci-gates` — documentation and `.forgejo` workflows match this file; keeps the gate list from being re-written by hand
+
+**Frontend**
+
+- `pnpm typecheck` — TypeScript compiles under strict mode
+- `pnpm lint:ci` — lint with zero warnings tolerated
+- `pnpm test` — frontend unit tests, colocated with the code they cover
+
+**Rust**
+
+- `pnpm check:rust-size` — production Rust files stay within 500 lines; test files and benches are exempt
+- `(cd src-tauri && cargo fmt --check)` — formatting has no diff
+- `(cd src-tauri && cargo clippy --workspace --all-targets)` — workspace lints deny all/pedantic/nursery/cargo
+- `(cd src-tauri && cargo test --workspace)` — every workspace test target, including test-target compilation
+
+**Release**
+
+- `pnpm check:changes` — every change file declares a known package, a valid bump, and a declared tag, so covector cannot drop a release note silently; see `.changes/README.md`
+- `pnpm check:release-sync` — `package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` plus its Chinese backup carry that version; see `RELEASING.md`
+
+**Frontend (slow: complete flow only)**
+
+- `pnpm build:web` — production frontend build; catches bundling errors that type checking cannot see
+- `pnpm test:e2e` — browser smoke tests; install with `pnpm exec playwright install --with-deps chromium`
+- `bash scripts/perf-gate.sh` — measures per-frame cost in a real browser, then compares against the committed baseline; counts per frame, never wall-clock fps. `pnpm perf:baseline` overwrites the baseline and is only for an intended change; see `docs/performance/frontend-render-budget.md`
+
+**Rust (slow: complete flow only)**
+
+- `(cd src-tauri && cargo deny check)` — advisories, licenses, bans, and sources; requires cargo-deny 0.20.2
+
+<!-- lissio-gates:end -->
+
+That list is what CI runs — all of it, not a subset. Do not treat a green subset
+as a green build. Two notes that do not fit the one-line form above:
+
+- `pnpm generate:contracts` is a local step, not a gate: run it after a wire
+  change to regenerate `src/types/generated`; CI verifies its output with
+  `check:contracts`.
+- `pnpm perf:baseline` overwrites the committed render baseline and is only for
+  an intended change; the gate itself only compares.
 
 Rust production files are limited to 500 lines; split implementation modules
 without changing the stable crate API. No legacy-format compatibility: persisted

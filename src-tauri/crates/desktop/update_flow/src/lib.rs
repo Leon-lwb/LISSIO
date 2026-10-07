@@ -1,8 +1,10 @@
 //! 按通道 (stable/beta) 检查应用更新。
 //!
-//! 两个通道各对应一个静态 manifest URL, 不经 GitHub API, 避免未认证
-//! 请求 60 次/小时/出口 IP 的限流 (超额返回 403):
-//! - stable: GitHub 最新正式 release 的 latest.json
+//! 两个通道各对应一个 Codeberg 上的静态 manifest URL, 不经 GitHub API, 避免
+//! 未认证请求 60 次/小时/出口 IP 的限流 (超额返回 403)。Codeberg 不实现
+//! `releases/latest/download/...` 伪路径 (实测 404), 因此两个通道都使用固定
+//! 的滚动 tag, 资产由 release CI 在每次发布时覆盖:
+//! - stable: 滚动 tag `stable` 上的 latest.json
 //! - beta: 滚动 tag `beta` 上的 beta-latest.json,
 //!   由 release CI 在每次发布(含正式版)时更新, 语义等同"所有 release 中取最新"
 //!

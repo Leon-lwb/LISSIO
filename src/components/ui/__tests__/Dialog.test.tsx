@@ -267,6 +267,37 @@ describe('Dialog 保活期间的行为', () => {
     expect(retained).toHaveAttribute('inert');
   });
 
+  it('离场播完后遮罩不再回到不透明 — 否则关闭时会整屏又暗一下才卸载', async () => {
+    // 遮罩的自然值是不透明。卸载由 React 在一次新的调度里提交, 与退场收尾之间夹着
+    // 一帧完整渲染 —— 收尾若把 opacity 交还样式表, 那一帧整屏就重新暗回来, 读出来
+    // 正是"关闭动画播完了, 又闪一下, 然后才退出"。
+    document.documentElement.classList.remove('reduced-motion');
+
+    function Content({ open }: { open: boolean }) {
+      return (
+        <DialogOverlay open={open}>
+          <DialogSurface label="card">
+            <span>payload</span>
+          </DialogSurface>
+        </DialogOverlay>
+      );
+    }
+
+    const { rerender } = renderWithI18n(<Content open />);
+    const scrim = document.querySelector<HTMLElement>('.dialog-overlay');
+    expect(scrim).not.toBeNull();
+
+    act(() => {
+      rerender(<Content open={false} />);
+    });
+    await waitFor(() => expect(document.querySelector('.dialog-overlay')).toBeNull(), {
+      timeout: 5000,
+    });
+
+    // 节点已经摘掉, 但收尾留在它身上的样式就是卸载前那一帧的样式。
+    expect(scrim?.style.opacity).toBe('0');
+  });
+
   it('关闭态不保留可交互的遮罩', async () => {
     // 关着的浮层必须变成零成本: 不拦截指针, 不进无障碍树。
     renderWithI18n(<Harness />);

@@ -1,0 +1,48 @@
+# Post-publish verification of a Lissio release, on a SELF-HOSTED Forgejo runner.
+#
+# This is the check whose absence let the in-app updater stay broken: the old
+# pipeline published on Codeberg while the updater read `github.com/Horldsence/lissio`,
+# which returns 404, and nothing ever fetched the URL. Static assertions on URL
+# strings cannot catch that — only a real request can. `scripts/verify-release.mjs`
+# makes real requests and reports every failure with the reproducing URL.
+#
+# It needs no build artifacts: it inspects the published release over HTTP, so it
+# runs in seconds and can be re-run at any time to answer "are downloads and
+# in-app updates actually working for users right now?".
+#
+# Kept separate from `release.yml` on purpose: that workflow is the pre-publish
+# gate, this one is the post-publish audit. Neither is gated on a condition that
+# could silently skip it — a skipped job would look like a pass.
+name: Release verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Published version to verify, e.g. 0.8.0 or 0.8.0-beta.1'
+        required: true
+        type: string
+
+concurrency:
+  group: release-verify-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify downloads and the updater channel
+    runs-on: lissio-ci
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fails when a release is missing, when SHA256SUMS was never uploaded,
+      # when there is no updater signature, or when the rolling channel manifest
+      # is absent — each with the URL that reproduces it.
+      - name: Check the published release
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: node scripts/verify-release.mjs --version "$INPUT_VERSION"

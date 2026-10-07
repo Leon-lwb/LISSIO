@@ -1,0 +1,123 @@
+# Lissio CI, on a SELF-HOSTED Forgejo runner.
+#
+# THE POINT OF THIS FILE IS WHAT IT DOES NOT CONTAIN.
+#
+# It does not name a single gate. `scripts/gates.mjs` owns the list, and
+# `scripts/check-all.sh` reads that list and runs it. Each job below invokes one
+# script and nothing else. There is therefore no per-gate step to comment out, no
+# step whose command can be replaced with `echo`, and no gate to move into a job
+# that never runs on a pull request — the three most common ways CI silently
+# stops testing something while still reporting green.
+#
+# An earlier version listed every gate as its own step and used a checker that
+# searched the workflow text for each gate's command. An independent audit
+# defeated that in twelve ways: a commented-out `# pnpm check:tokens`, an
+# `echo "would run: ..."`, an `if false; then ... fi`, an `exit 0` above the
+# command, a here-doc, a trailing `|| true`, job-level `if: false`, a job parked
+# behind `needs:` on a guarded job, a bogus `runs-on` label, and a second
+# workflow with no `pull_request` trigger. Every one of those leaves the command
+# *present* in the text while the gate does not run. `pnpm check:ci-gates` now
+# enforces the inverse property instead, which is checkable exactly: a workflow
+# must not name a gate, and the tier command must match byte for byte.
+#
+# Forgejo-specific notes:
+#   - `permissions:` is ignored at workflow and job level.
+#   - Job-level `continue-on-error` is ignored; the step-level form works.
+#   - Action references are full URLs; there is no default action registry.
+#   - `github.*` works as an alias of `forgejo.*`.
+#   - Artifacts cannot be shared across runs.
+# See docs/ci.md.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Keep cargo and the browser probes from fighting over cores.
+  CARGO_BUILD_JOBS: 4
+
+jobs:
+  pr:
+    name: PR gates
+    runs-on: lissio-ci
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Toolchain versions
+        run: |
+          node --version
+          pnpm --version
+          cargo --version
+
+      # Step-level `continue-on-error` IS honoured by Forgejo (the job-level form
+      # is not), so an unavailable cache service costs time rather than failing
+      # the build. Paths are workspace-relative: `defaults.run.working-directory`
+      # applies to `run:` steps only, never to action inputs.
+      - name: Cache cargo registry and build output
+        continue-on-error: true
+        uses: https://code.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The complete PR gate surface, in one command. `--quick` selects the `pr`
+      # tier and `--no-fix` makes it read-only, so a CI run can never rewrite the
+      # tree it is judging. No gate names appear above: the registry owns them.
+      - name: PR gates (complete pr tier)
+        run: bash scripts/check-all.sh --quick --no-fix
+
+  # The gates that are too slow for every push, plus a re-run of the PR tier so a
+  # single green check means "the whole list passed", not "the fast subset did".
+  # The registry makes `full` a strict superset of `pr`.
+  full:
+    name: Full gates
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    runs-on: lissio-ci
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Cache cargo registry and build output
+        continue-on-error: true
+        uses: https://code.forgejo.org/actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: cargo-full-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # The `full` tier needs a browser for the render-budget and smoke gates, and
+      # a writable advisory database for `cargo deny`. Both are environment
+      # setup, not gates, so they are plain commands and are not in the registry.
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # The complete gate surface: every `pr` gate plus `build-web`, `e2e`,
+      # `perf-check`, and `cargo-deny`. Still one command and no gate names.
+      - name: Full gates (complete full tier)
+        run: bash scripts/check-all.sh --no-fix

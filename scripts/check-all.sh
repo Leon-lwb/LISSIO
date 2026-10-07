@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 #
-# check-all.sh — 一键格式化 + 全量质量门禁 (行为对齐 .github/workflows/build.yml 的 quality job)
+# check-all.sh — 一键格式化 + 全量质量门禁
 #
-# 阶段:
+# 检查项来自唯一事实源 scripts/gates.mjs (不再在本文件手写清单, 避免漂移):
 #   1. 格式化 (默认开启): cargo fmt / eslint --fix / 重新生成前端合同 —— 写入修复
-#   2. 检查: 依次跑架构、前端、Rust 全部门禁, 失败不中断, 全部跑完再汇总
+#   2. 检查: 依次跑 gates.mjs 里登记的每条门禁, 失败不中断, 全部跑完再汇总
 #   3. 汇总: 通过/失败清单 + 每项复现命令 + 失败日志末尾片段与完整日志路径
 #
 # 用法:
-#   pnpm check:all                # 全量: 含 build:web / e2e / cargo deny
-#   pnpm check:all -- --quick     # 快速: 跳过 build:web / e2e / cargo deny
+#   pnpm check:all                # 全量: full tier (含 build:web / e2e / perf / cargo deny)
+#   pnpm check:all -- --quick     # 快速: pr tier (CI 合入门禁)
 #   pnpm check:all -- --no-fix    # 只读: 跳过格式化写入, 仅检查
 #   pnpm check:all -- --list      # 只列出计划执行的检查项, 不运行
 #   pnpm check:all -- -h          # 帮助
+#
+# 查询门禁清单本身: pnpm gates --list [--set pr|full]
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -57,37 +59,20 @@ add_plan() { PLAN+=("$1|$2|$3|$4"); }
 
 build_plan() {
   PLAN=()
+  # 格式化阶段是本地专属的"写入"步骤, 不属于 CI 门禁, 因此不进 gates.mjs。
   if [ "$FIX" = true ]; then
     add_plan "格式化" "cargo fmt (写入)"          "tauri" "cargo fmt"
     add_plan "格式化" "eslint --fix (写入)"       "root"  "pnpm lint:fix"
     add_plan "格式化" "生成前端合同 (写入)"        "root"  "pnpm generate:contracts"
   fi
-  # 架构与契约门禁
-  add_plan "架构" "crate 架构清单"                 "root" "pnpm architecture"
-  add_plan "架构" "架构门禁 (领域/层级/适配器)"     "root" "pnpm check:architecture"
-  add_plan "架构" "第三方依赖版本统一"             "root" "pnpm check:deps"
-  add_plan "架构" "命令出口契约"                   "root" "pnpm check:web-contract"
-  add_plan "架构" "Rust↔TS 合同一致"               "root" "pnpm check:contracts"
-  add_plan "架构" "模型目录"                       "root" "pnpm check:model-catalog"
-  add_plan "架构" "UI 颜色令牌"                    "root" "pnpm check:tokens"
-  add_plan "架构" "动效属性 (只走绘制层)"           "root" "pnpm check:motion"
-  add_plan "架构" "前端分层 (实现/交互/效果/视图)"   "root" "pnpm check:layers"
-  add_plan "架构" "文档与许可证"                   "root" "pnpm check:docs"
-  # 前端
-  add_plan "前端" "TypeScript 类型"                "root" "pnpm typecheck"
-  add_plan "前端" "ESLint (零警告)"                "root" "pnpm lint:ci"
-  add_plan "前端" "Vitest 单测"                    "root" "pnpm test"
-  # Rust
-  add_plan "Rust" "cargo fmt --check"              "tauri" "cargo fmt --check"
-  add_plan "Rust" "cargo clippy --all-targets"     "tauri" "cargo clippy --workspace --all-targets"
-  add_plan "Rust" "cargo test --workspace"         "tauri" "cargo test --workspace"
-  # 慢项 (仅全量)
-  if [ "$MODE_FULL" = true ]; then
-    add_plan "前端·慢" "Web 生产构建"              "root"  "pnpm build:web"
-    add_plan "前端·慢" "Playwright E2E"            "root"  "pnpm test:e2e"
-    add_plan "前端·慢" "前端渲染预算"                "root"  "bash scripts/perf-gate.sh"
-    add_plan "Rust·慢" "cargo deny"                "tauri" "cargo deny check"
-  fi
+  # 检查项全部来自唯一事实源 scripts/gates.mjs —— 这里不再手写清单,
+  # 否则又会多出第五份会漂移的门禁列表。--quick 对应 PR tier, 全量对应 full tier。
+  local tier="full"
+  [ "$MODE_FULL" = false ] && tier="pr"
+  local line
+  while IFS= read -r line; do
+    [ -n "$line" ] && PLAN+=("$line")
+  done < <(node "$REPO_ROOT/scripts/gates.mjs" --plan --set "$tier")
 }
 
 build_plan

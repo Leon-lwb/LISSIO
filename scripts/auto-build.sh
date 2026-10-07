@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# auto-build.sh — 本地自动构建 (仅 macOS 宿主), 行为对齐 .github/workflows/build.yml
+# auto-build.sh — 本地自动构建 (仅 macOS 宿主), 行为对齐 .forgejo/workflows/release.yml
 #
 # 对应关系:
-#   CI set-version job  → --bump / --version 升版本 (+0.0.1, 取 tag/当前版本较大者, 交互确认)
+#   release workflow 校验 → --bump / --version 升版本 (+0.0.1, 取 tag/当前版本较大者, 交互确认)
 #                         + pnpm set-version (--commit 时提交)
-#   CI build matrix     → --target macos-arm64|macos-amd64|windows|linux 或 --all / --all-macos
+#   release 打包矩阵     → --target macos-arm64|macos-amd64|windows|linux 或 --all / --all-macos
 #                         macos-*  : 本机构建 (amd64 走 rustup 交叉)
 #                         windows  : cargo-xwin 交叉编译 (MSVC, 打包 NSIS)
 #                         linux    : Docker ubuntu:24.04 容器内构建 (WebKit/GTK 无法在 macOS 直接交叉链接)
 #   CI 签名 secrets     → --key-file / --key-password 或环境变量 TAURI_SIGNING_PRIVATE_KEY(_PASSWORD)
 #   CI macOS 产物重命名 → 自动给 .app.tar.gz(.sig) 补架构后缀 (防 Release 上传 422 冲突)
-#   CI upload-artifact  → 产物收集到 output/build/artifacts-<name>/
+#   CI 产物收集         → 产物收集到 output/build/artifacts-<name>/
 #
 # 用法示例:
 #   scripts/auto-build.sh                                  # 当前 Mac 原生 target

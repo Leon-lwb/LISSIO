@@ -24,7 +24,8 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = join(repoRoot, 'src-tauri', 'Cargo.toml');
 const REGISTRY_API = 'https://crates.io/api/v1';
-const USER_AGENT = 'lissio-publish-script (https://github.com/Horldsence/Lissio)';
+// crates.io 要求 UA 里带可达的项目主页; 仓库已迁到 Codeberg。
+const USER_AGENT = 'lissio-publish-script (https://codeberg.org/Horldsence/Lissio)';
 const INDEX_POLL_INTERVAL_MS = 4_000;
 const INDEX_POLL_TIMEOUT_MS = 180_000;
 const INTER_PUBLISH_PAUSE_MS = 2_000;

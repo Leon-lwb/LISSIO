@@ -52,6 +52,7 @@ applies-to: Chinese translation backup mapping
 | [docs/architecture/ui-layers.zh-CN.md](docs/architecture/ui-layers.zh-CN.md) | `docs/architecture/ui-layers.md` |
 | [docs/architecture/ui-motion.zh-CN.md](docs/architecture/ui-motion.zh-CN.md) | `docs/architecture/ui-motion.md` |
 | [docs/architecture/web-exit.zh-CN.md](docs/architecture/web-exit.zh-CN.md) | `docs/architecture/web-exit.md` |
+| [docs/ci.zh-CN.md](docs/ci.zh-CN.md) | `docs/ci.md` |
 | [docs/governance/document-review.zh-CN.md](docs/governance/document-review.zh-CN.md) | `docs/governance/document-review.md` |
 | [docs/governance/documentation-standards.zh-CN.md](docs/governance/documentation-standards.zh-CN.md) | `docs/governance/documentation-standards.md` |
 | [docs/governance/open-source-and-ip.zh-CN.md](docs/governance/open-source-and-ip.zh-CN.md) | `docs/governance/open-source-and-ip.md` |

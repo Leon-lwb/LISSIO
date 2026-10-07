@@ -1,0 +1,72 @@
+# Release preflight, on a SELF-HOSTED Forgejo runner.
+#
+# This runs the complete gate surface on the revision about to be released. A
+# release is the most expensive place to discover a red gate, and the most
+# expensive to undo.
+#
+# Packaging deliberately does NOT run in CI. A desktop release needs signed
+# bundles for macOS (arm64 + x64), Windows, and Linux; that needs a native macOS
+# host plus Docker and `cargo-xwin`, which one runner cannot provide. The
+# maintainer builds with `pnpm auto-build` (cross-target builds, signing, and
+# arch-suffixed `.sig` naming already implemented) and publishes with
+# `pnpm publish:release`. See docs/ci.md.
+#
+# Publishing it is NOT this workflow's job — which is why there is a separate
+# `release-verify.yml` for checking a published release. An earlier draft gated
+# two jobs on an `inputs.stage` condition; if that form were unsupported the jobs
+# would skip silently and the pipeline would report success while doing nothing.
+# One workflow, one job, no conditional no-op.
+#
+# The gate list is not repeated here. `scripts/gates.mjs` owns it, and
+# `check-all.sh` runs exactly that list, so this cannot drift out of step.
+name: Release preflight
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version being released, e.g. 0.8.0 or 0.8.0-beta.1'
+        required: true
+        type: string
+
+concurrency:
+  group: release-preflight-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  preflight:
+    name: Complete gate surface
+    runs-on: lissio-ci
+    timeout-minutes: 150
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Fail before packaging when the tree and the requested version disagree,
+      # rather than shipping artifacts whose filename lies about their contents.
+      - name: Confirm the requested version matches the tree
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          TREE_VERSION="$(node -p "require('./package.json').version")"
+          echo "tree=$TREE_VERSION requested=$INPUT_VERSION"
+          if [ "$TREE_VERSION" != "$INPUT_VERSION" ]; then
+            echo "package.json says $TREE_VERSION but the release input says $INPUT_VERSION."
+            echo "Run 'pnpm set-version $INPUT_VERSION' and commit the result first."
+            exit 1
+          fi
+
+      # Reads scripts/gates.mjs and runs exactly that list, so no gate names are
+      # copied into this file.
+      - name: All gates (complete surface)
+        run: bash scripts/check-all.sh --no-fix

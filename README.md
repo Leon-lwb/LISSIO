@@ -407,7 +407,15 @@ pnpm build:desktop
 
 Web assets are output to `dist/`, server and CLI binaries to `src-tauri/target/release/`, and desktop installers to `src-tauri/target/release/bundle/`.
 
-Cross-platform build examples (see `scripts/build.sh`):
+Cross-platform builds and releases are handled by one script, which covers the
+cross-target builds, the updater signing, and the artifact collection:
+
+```sh
+pnpm auto-build              # current platform
+pnpm auto-build --all        # macOS (arm64 + x64), Windows, Linux
+```
+
+To drive Tauri directly, for example to build a single bundle:
 
 ```sh
 # Windows cross-compilation
@@ -417,34 +425,25 @@ pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
 pnpm tauri build --bundles dmg
 ```
 
-CI workflows are provided in `.github/workflows/` (`build.yml`, `release.yml`).
+CI runs on Codeberg with Forgejo Actions, from `.forgejo/workflows/` (`ci.yml`
+for quality gates, `release.yml` for releases). The gate list is defined once in
+`scripts/gates.mjs`. See [`docs/ci.md`](docs/ci.md) for runner setup, the gate
+registry, and the release pipeline.
 
 ## Testing
 
-Run the same quality surface as CI:
+Run the same quality surface as CI in one command:
 
 ```sh
-pnpm architecture
-pnpm check:architecture
-pnpm check:deps
-pnpm check:web-contract
-pnpm check:contracts
-pnpm check:model-catalog
-pnpm check:tokens
-pnpm check:docs
-pnpm typecheck
-pnpm lint:ci
-pnpm test
-pnpm build:web
-pnpm test:e2e
-cd src-tauri && cargo fmt --check
-cd src-tauri && cargo clippy --workspace --all-targets
-cd src-tauri && cargo test --workspace
-cd src-tauri && cargo deny check
+pnpm check:all          # everything, with formatting fixes
+pnpm check:all --quick  # PR-tier gates only
+pnpm gates --list       # print the gate inventory
 ```
 
-A green subset is not a green build; all commands above are part of the CI
-quality gate.
+The individual gates are listed in
+[`AGENTS.md`](AGENTS.md#commands); that list is generated from
+`scripts/gates.mjs`, which CI and `pnpm check:all` both read. A green subset is
+not a green build.
 
 ## Contributing
 

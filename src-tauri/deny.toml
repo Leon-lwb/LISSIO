@@ -1,4 +1,5 @@
-# cargo-deny 依赖审查配置 — 与 .github/workflows/lint.yml 的 cargo-deny job 配套。
+# cargo-deny 依赖审查配置 — 由 .forgejo/workflows/ci.yml 的 full job 与
+# `pnpm check:all` 的 full 模式执行。
 # 本地运行: cargo deny check (advisories licenses bans sources 全检)
 # 规则说明:
 #   - advisories: RustSec 公告 deny;存量不可修复项逐条 ignore 并注明理由与复查期限

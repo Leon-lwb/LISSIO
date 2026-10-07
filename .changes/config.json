@@ -1,0 +1,30 @@
+{
+  "gitSiteUrl": "https://codeberg.org/Horldsence/Lissio/",
+  "changeTags": {
+    "added": "Added",
+    "changed": "Changed",
+    "deprecated": "Deprecated",
+    "removed": "Removed",
+    "fixed": "Fixed",
+    "security": "Security",
+    "performance": "Performance",
+    "ci": "CI"
+  },
+  "defaultChangeTag": "changed",
+  "pkgManagers": {
+    "javascript": {
+      "version": true,
+      "postversion": {
+        "command": "node scripts/changelog-normalize.mjs",
+        "runFromRoot": true,
+        "dryRunCommand": false
+      }
+    }
+  },
+  "packages": {
+    "lissio": {
+      "path": ".",
+      "manager": "javascript"
+    }
+  }
+}

@@ -1,5 +1,9 @@
 use super::*;
 
+// 面板投影在 `panels` 子模块内消费这些类型, `use super::*` 不会把它们带进
+// 本模块作用域 — 拆分 `panels.rs` 时漏了这三条, 会让整个 lib test target 编译失败。
+use data_model::panel_descriptor::{PanelBinding, PanelDelivery, PanelKind};
+
 /// 测试用最小 AI provider 描述 (生产由 L4 组合根注入)。
 fn sample_provider() -> ModelDescriptor {
     ModelDescriptor {

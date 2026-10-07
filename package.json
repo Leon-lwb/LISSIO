@@ -37,6 +37,14 @@
     "check:tokens": "node scripts/check-ui-tokens.mjs",
     "check:motion": "node scripts/check-motion-css.mjs",
     "check:layers": "node scripts/check-ui-layers.mjs",
+    "check:rust-size": "node scripts/check-crate-size.mjs",
+    "check:ci-gates": "node scripts/check-ci-gates.mjs",
+    "check:changes": "node scripts/check-changes.mjs",
+    "check:release-sync": "node scripts/check-release-sync.mjs",
+    "changes:add": "covector add",
+    "changes:status": "covector status",
+    "release:prepare": "node scripts/release-prepare.mjs",
+    "gates": "node scripts/gates.mjs",
     "docs:motion": "node scripts/gen-motion-docs.mjs",
     "check:all": "bash scripts/check-all.sh",
     "check:all:quick": "bash scripts/check-all.sh --quick",
@@ -51,7 +59,9 @@
     "perf:baseline": "node scripts/perf-collect.mjs --update-baseline",
     "set-version": "node scripts/set-version.mjs",
     "auto-build": "bash scripts/auto-build.sh",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "publish:release": "node scripts/publish-release.mjs",
+    "release:verify": "node scripts/verify-release.mjs"
   },
   "dependencies": {
     "@ant-design/x": "2.5.0",
@@ -111,6 +121,7 @@
     "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^4.6.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "covector": "0.13.2",
     "eslint": "^9.39.5",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react": "^7.37.5",

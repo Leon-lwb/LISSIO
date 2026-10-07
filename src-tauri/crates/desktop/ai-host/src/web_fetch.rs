@@ -77,7 +77,7 @@ pub async fn fetch_page(input: &str) -> Result<WebFetchPage> {
         .user_agent(concat!(
             "Lissio/",
             env!("CARGO_PKG_VERSION"),
-            " (+https://github.com/Horldsence/lissio)"
+            " (+https://codeberg.org/Horldsence/Lissio)"
         ))
         .build()
         .map_err(|error| fetch_error(format!("HTTP 客户端初始化失败: {error}")))?;

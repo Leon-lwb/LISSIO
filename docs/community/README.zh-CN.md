@@ -395,7 +395,14 @@ pnpm build:desktop
 
 web 资源输出到 `dist/`，server 和 CLI 二进制输出到 `src-tauri/target/release/`，桌面安装包输出到 `src-tauri/target/release/bundle/`。
 
-跨平台构建示例（见 `scripts/build.sh`）：
+跨平台构建与发布由同一个脚本负责，涵盖跨目标构建、更新器签名与产物收集：
+
+```sh
+pnpm auto-build              # 当前平台
+pnpm auto-build --all        # macOS (arm64 + x64)、Windows、Linux
+```
+
+如需直接调用 Tauri（例如只打一种安装包）：
 
 ```sh
 # Windows 交叉编译
@@ -405,7 +412,9 @@ pnpm tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc
 pnpm tauri build --bundles dmg
 ```
 
-CI 工作流位于 `.github/workflows/`（`build.yml`、`release.yml`）。
+CI 运行在 Codeberg 的 Forgejo Actions 上，工作流位于 `.forgejo/workflows/`
+（`ci.yml` 质量门禁、`release.yml` 发布）。门禁清单一处定义于
+`scripts/gates.mjs`。详见 [`docs/ci.md`](../ci.md)。
 
 ## 测试
 

@@ -26,6 +26,7 @@ Historical review records preserve their original language and facts.
 | [`../MAINTAINERS.md`](../MAINTAINERS.md) | Maintainer authority and response targets |
 | [`../RELEASING.md`](../RELEASING.md) | Release process |
 | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) | Contribution workflow and gates |
+| [ci.md](ci.md) | CI platform, runner setup, gate registry, and release pipeline |
 | [`../SECURITY.md`](../SECURITY.md) | Security and rights reporting |
 | [`../GOVERNANCE.md`](../GOVERNANCE.md) | Governance and release authority |
 | [`../ROADMAP.md`](../ROADMAP.md) | Delivered scope and non-goals |

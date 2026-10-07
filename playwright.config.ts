@@ -7,6 +7,11 @@ export default defineConfig({
   // 跑一遍 —— 在并行 worker 下抢 CPU，量出来的速率是噪声，还会污染产物。
   testIgnore: '**/perf/**',
   timeout: 30_000,
+  // 动画采样类断言 (e2e/sliding-pill.spec.ts) 靠 requestAnimationFrame 数静止帧:
+  // 机器有负载时帧会变稀疏, 采样可能停在插值中途, 于是容差从 0.48px 的取整差
+  // 涨到 1.7px 而误报。它在空闲机器上 8/8 通过, 只在满载时偶发。
+  // 仅在 CI 重试: 本地失败仍应立即暴露。
+  retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: 'http://localhost:1420',
     trace: 'retain-on-failure',

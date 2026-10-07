@@ -44,6 +44,7 @@ Closes #
 - [ ] `pnpm architecture` `pnpm check:architecture` `pnpm check:deps`
 - [ ] `pnpm check:web-contract` `pnpm check:contracts` `pnpm check:model-catalog` `pnpm check:tokens`
 - [ ] `pnpm check:docs`
+- [ ] `pnpm check:changes` `pnpm check:release-sync`
 - [ ] `pnpm typecheck` `pnpm lint:ci` `pnpm test` `pnpm build:web` `pnpm test:e2e`
 - [ ] `cargo fmt --check` `cargo clippy --workspace --all-targets` `cargo test --workspace` `cargo deny check`
 - [ ] 涉及 UI 的改动已用 `pnpm dev:desktop` 实际打开验证
@@ -55,7 +56,8 @@ Closes #
 - [ ] 不涉及前后端契约变更
 - [ ] 涉及契约：已同步 Rust 侧的 serde owner 与生成的 TS，并逐一核对字段名
 - [ ] 涉及持久化文件、IPC 载荷或配置格式：按当前格式读写，未做旧格式兼容或迁移
-- [ ] 涉及公开接口或配置项变更：已在 `CHANGELOG.md` 记录，并说明迁移方式
+- [ ] 涉及用户可见行为、契约、打包或命令变更：已在 `.changes/` 记录一个变更文件
+      （`pnpm changes:add`），未手改 `CHANGELOG.md`
 
 ## 视觉与交互
 
