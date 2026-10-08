@@ -53,6 +53,7 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-07 | Recording database default-off | passed with conditions | [records/2026-10-07-recording-database-default-off.md](records/2026-10-07-recording-database-default-off.md) |
 | 2026-10-07 | CI reorganization and gate single-sourcing | passed with conditions | [records/2026-10-07-ci-reorganization-and-gate-single-sourcing.md](records/2026-10-07-ci-reorganization-and-gate-single-sourcing.md) |
 | 2026-10-07 | Change-file release flow and release gates | passed with conditions | [records/2026-10-07-change-file-release-flow-and-gates.md](records/2026-10-07-change-file-release-flow-and-gates.md) |
+| 2026-10-08 | Database backend investigation and plan | passed with conditions | [records/2026-10-08-database-backend-investigation.md](records/2026-10-08-database-backend-investigation.md) |
 | 2026-10-08 | English-only documentation policy | passed with conditions | [records/2026-10-08-english-only-documentation.md](records/2026-10-08-english-only-documentation.md) |
 
 ## Retention

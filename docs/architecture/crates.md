@@ -103,8 +103,10 @@ dev-dependency only.
 
 ## Recording contract boundary
 
-`recording` owns the DuckDB store behind one writer thread; `pipeline` only ever
-sees `RecordingHub`. The boundary that matters for the whole product:
+`recording` owns the recording store behind one writer thread; `pipeline` only ever
+sees `RecordingHub`. The storage engine sits behind the store port in `port.rs`,
+whose current implementation is DuckDB under `backend/`, so no module above the
+port names an engine. The boundary that matters for the whole product:
 
 - **Database-side failures must never interrupt acquisition.** A database that cannot be opened, a
   writer that stopped answering, a queue that filled up, or the user turning the
@@ -119,11 +121,16 @@ sees `RecordingHub`. The boundary that matters for the whole product:
   desktop, server, and CLI from the same `settings.json`.
 - **One connection, owned by the writer thread.** Queries, exports, session
   checks, history paging, database info, and read-only SQL all travel over
-  `writer::RecordingReader` to the writer's single DuckDB connection; nothing
+  `writer::RecordingReader` to the writer's single store session; nothing
   opens a second instance on the same file. Only construction-time and
   "database already closed" maintenance paths open their own connection. Multiple
   instances checkpoint over each other and silently erase committed writes, which
   is what corrupted history before.
+- **The engine sits behind a store port.** `StoreEngine` opens sessions and owns
+  recovery; `StoreSession` is the writer thread's single handle; engine-specific
+  repair (damage classification, rebuild, file quarantine) belongs to that
+  implementation. Adding or swapping a backend touches the port implementation and
+  the selection point in `backend/` only.
 - **Every writer round trip is bounded**, on both the send and the reply side
   (run control 5 s, shutdown 10 s, maintenance/reads 120 s). A writer that stops
   answering is detached and reported as *unavailable* instead of blocking

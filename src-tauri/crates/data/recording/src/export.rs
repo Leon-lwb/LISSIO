@@ -1,28 +1,11 @@
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
-use duckdb::{Connection, params};
-use serde::Serialize;
-
+use crate::port::ExportRow;
 use crate::{
     BatchPayload, HistoryQuery, RecordingError, RecordingExportFormat, RecordingExportRequest,
     RecordingExportResult, RecordingStore, StoredBatch,
 };
-
-#[derive(Debug, Serialize)]
-struct ExportRow {
-    session_id: String,
-    binding_id: String,
-    domain: String,
-    row_id: i64,
-    sequence: u64,
-    first_timestamp_us: u64,
-    last_timestamp_us: u64,
-    index: u64,
-    value: Option<f64>,
-    text: Option<String>,
-    frequency: Option<f64>,
-}
 
 pub fn export_recording_data(
     store: &RecordingStore,
@@ -236,41 +219,17 @@ fn write_json(
     Ok(RecordingExportResult { rows, bytes })
 }
 
+/// Parquet goes through the engine's own sink.
+///
+/// Parquet is an engine capability rather than a portable format: an engine that
+/// cannot write it refuses here, and the refusal reaches the user as a normal
+/// export error.
 fn write_parquet(
     store: &RecordingStore,
     request: &RecordingExportRequest,
 ) -> Result<RecordingExportResult, RecordingError> {
-    let connection = Connection::open_in_memory()?;
-    connection.execute_batch(
-        "CREATE TABLE export_rows( \
-            session_id VARCHAR, binding_id VARCHAR, domain VARCHAR, row_id BIGINT, \
-            sequence UBIGINT, first_timestamp_us UBIGINT, last_timestamp_us UBIGINT, \
-            index UBIGINT, value DOUBLE, text VARCHAR, frequency DOUBLE);",
-    )?;
-    let rows = {
-        let mut appender = connection.appender("export_rows")?;
-        for_each_export_row(store, request, |row| {
-            appender
-                .append_row(params![
-                    row.session_id,
-                    row.binding_id,
-                    row.domain,
-                    row.row_id,
-                    row.sequence,
-                    row.first_timestamp_us,
-                    row.last_timestamp_us,
-                    row.index,
-                    row.value,
-                    row.text,
-                    row.frequency,
-                ])
-                .map_err(RecordingError::from)?;
-            Ok(())
-        })?
-    };
-    let escaped_path = request.path.replace('\'', "''");
-    let copy_sql = format!("COPY (SELECT * FROM export_rows) TO '{escaped_path}' (FORMAT PARQUET)");
-    connection.execute_batch(&copy_sql)?;
-    let bytes = std::fs::metadata(&request.path)?.len();
+    let mut writer = store.parquet_writer()?;
+    let rows = for_each_export_row(store, request, |row| writer.append(&row))?;
+    let bytes = writer.finish(&request.path)?;
     Ok(RecordingExportResult { rows, bytes })
 }

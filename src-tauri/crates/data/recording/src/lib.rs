@@ -8,11 +8,13 @@
 //! 用户关掉总开关 ([`RecordingHub::disable`])、队列一时打满, 一律只是「没有
 //! 录制」; 只有已受理批次真的落不了盘才允许停止采集 ([`RecordingFault`])。
 
+mod backend;
 mod codec;
 mod export;
 mod hub;
 mod maintenance;
 mod model;
+mod port;
 mod read_model;
 mod repair;
 mod schema;

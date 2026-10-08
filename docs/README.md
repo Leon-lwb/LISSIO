@@ -48,6 +48,7 @@ Historical review records preserve their original language and facts.
 | [architecture/architecture-review-2026-09.md](architecture/architecture-review-2026-09.md) | September 2026 architecture conclusions |
 | [architecture/cleanup-plan-2026-09.md](architecture/cleanup-plan-2026-09.md) | Remaining structural debt |
 | [architecture/data-plane.md](architecture/data-plane.md) | Byte, record, evaluation, and storage planes |
+| [architecture/database-backend-plan.md](architecture/database-backend-plan.md) | Recording storage engine selection and backend adapters |
 | [architecture/device-tree.md](architecture/device-tree.md) | Device topology and driver/runtime contracts |
 | [architecture/exits.md](architecture/exits.md) | UI, Web, MCP, and CLI exits |
 | [architecture/web-exit.md](architecture/web-exit.md) | HTTP/WebSocket wire protocol |

@@ -1,13 +1,15 @@
 //! Writer-thread loop: transaction batching, healing cleanup, session state.
+//!
+//! The loop holds one [`StoreSession`] and never names an engine: everything it
+//! executes goes through the store port.
 
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
-use duckdb::Connection;
-
 use super::{Command, HealthState};
+use crate::port::StoreSession;
 use crate::{
     RecordingCleanupResult, RecordingError, RecordingLimits, RecordingStore, SessionState,
 };
@@ -22,77 +24,75 @@ pub(super) fn run_writer(
     let result = run_writer_inner(store, session_id, limits, &receiver, health);
     if let Err(error) = result {
         *health.failed.lock() = Some(error.to_string());
-        if let Ok(connection) = store.connect() {
-            let _ = RecordingStore::update_session(&connection, session_id, SessionState::Failed);
+        // The writer failed: mark the session failed on a fresh handle when one
+        // can still be opened.
+        if let Ok(mut session) = store.connect() {
+            let _ = session.update_session(session_id, SessionState::Failed);
         }
     }
 }
 
 /// The writer thread's single database handle.
 ///
-/// Cleanup can detect a damaged database catalog, which requires closing the
-/// handle, rebuilding the file, and reopening it.
+/// Cleanup can detect a damaged catalog, which requires closing the handle,
+/// rebuilding the file, and reopening it; the session performs that in place, so
+/// the writer keeps its one handle across a heal.
 struct WriterStorage {
-    connection: Option<Connection>,
+    session: Option<Box<dyn StoreSession>>,
 }
 
 impl WriterStorage {
     fn open(store: &RecordingStore) -> Result<Self, RecordingError> {
         Ok(Self {
-            connection: Some(store.connect()?),
+            session: Some(store.connect()?),
         })
     }
 
-    fn connection(&self) -> Result<&Connection, RecordingError> {
-        self.connection.as_ref().ok_or_else(|| {
+    fn session_mut(&mut self) -> Result<&mut (dyn StoreSession + 'static), RecordingError> {
+        self.session.as_deref_mut().ok_or_else(|| {
             RecordingError::Failed("the recording database connection is closed".into())
         })
     }
 
     /// Rebuild the database file and reopen it, keeping the writer usable.
-    fn rebuild(&mut self, store: &RecordingStore) -> Result<PathBuf, RecordingError> {
-        self.connection = None;
-        let outcome = crate::repair::rebuild_database(store.path());
-        self.connection = Some(store.connect()?);
-        outcome
+    fn rebuild(&mut self) -> Result<PathBuf, RecordingError> {
+        self.session_mut()?.rebuild()
     }
+}
 
-    /// 在唯一连接上执行一次读 — 连接暂时不可用时把原因回报给调用方, **不**结束
-    /// 写线程 (读失败不该让正在进行的录制一起停)。
-    fn read<T>(
-        &self,
-        run: impl FnOnce(&Connection) -> Result<T, RecordingError>,
-    ) -> Result<T, RecordingError> {
-        run(self.connection()?)
-    }
+/// One read on the writer's connection.
+///
+/// A failure is reported to the caller and **never** ends the writer: a failed
+/// read must not stop an active recording.
+fn read<T>(
+    storage: &mut WriterStorage,
+    run: impl FnOnce(&mut (dyn StoreSession + 'static)) -> Result<T, RecordingError>,
+) -> Result<T, RecordingError> {
+    run(storage.session_mut()?)
 }
 
 /// Delete sessions, rebuilding the database file once when its catalog is damaged.
 fn delete_sessions_healing(
-    store: &RecordingStore,
     storage: &mut WriterStorage,
     current_session_id: &str,
     session_ids: &[String],
 ) -> Result<RecordingCleanupResult, RecordingError> {
-    let failure = match crate::maintenance::delete_sessions_on(
-        storage.connection()?,
-        current_session_id,
-        session_ids,
-    ) {
+    let failure = match storage
+        .session_mut()?
+        .delete_sessions(current_session_id, session_ids)
+    {
         Ok(result) => return Ok(result),
         Err(error) => error,
     };
-    if !crate::repair::is_catalog_damage(&failure) {
+    if !storage.session_mut()?.is_recoverable(&failure) {
         return Err(failure);
     }
-    let backup = storage.rebuild(store).map_err(|repair| {
+    let backup = storage.rebuild().map_err(|repair| {
         RecordingError::Failed(format!("{failure}; database rebuild failed: {repair}"))
     })?;
-    let mut result = crate::maintenance::delete_sessions_on(
-        storage.connection()?,
-        current_session_id,
-        session_ids,
-    )?;
+    let mut result = storage
+        .session_mut()?
+        .delete_sessions(current_session_id, session_ids)?;
     let healed = format!(
         "the recording database catalog was damaged and was rebuilt automatically \
          (the damaged copy is kept at {})",
@@ -113,7 +113,7 @@ fn run_writer_inner(
     health: &HealthState,
 ) -> Result<(), RecordingError> {
     let mut storage = WriterStorage::open(store)?;
-    let mut row_id = RecordingStore::next_row_id(storage.connection()?)?;
+    let mut row_id = storage.session_mut()?.next_row_id()?;
     let interval = Duration::from_millis(limits.commit_interval_ms);
     let mut transaction_open = false;
     let mut pending = Vec::new();
@@ -124,17 +124,18 @@ fn run_writer_inner(
         match command {
             Ok(Command::Append(batch)) => {
                 if !transaction_open {
-                    storage.connection()?.execute_batch("BEGIN TRANSACTION")?;
+                    storage.session_mut()?.begin()?;
                     transaction_open = true;
                 }
-                let bytes =
-                    RecordingStore::write_batch(storage.connection()?, session_id, row_id, &batch)?;
+                let bytes = storage
+                    .session_mut()?
+                    .write_batch(session_id, row_id, &batch)?;
                 row_id = row_id.saturating_add(1);
                 pending_bytes = pending_bytes.saturating_add(bytes);
                 pending.push((batch.sequence_end(), bytes));
                 if pending_bytes >= limits.transaction_bytes {
                     commit(
-                        storage.connection()?,
+                        storage.session_mut()?,
                         health,
                         &mut pending,
                         &mut pending_bytes,
@@ -144,29 +145,31 @@ fn run_writer_inner(
                 }
             }
             Ok(Command::Bind(binding, reply)) => {
-                let result =
-                    RecordingStore::insert_binding(storage.connection()?, session_id, &binding)
-                        .map_err(|error| error.to_string());
+                let result = storage
+                    .session_mut()?
+                    .insert_binding(session_id, &binding)
+                    .map_err(|error| error.to_string());
                 let _ = reply.send(result);
             }
             Ok(Command::Unbind(binding_id, reply)) => {
-                let result =
-                    RecordingStore::close_binding(storage.connection()?, session_id, &binding_id)
-                        .map_err(|error| error.to_string());
+                let result = storage
+                    .session_mut()?
+                    .close_binding(session_id, &binding_id)
+                    .map_err(|error| error.to_string());
                 let _ = reply.send(result);
             }
             Ok(Command::State(state, reply)) => {
                 let result = (|| {
                     if transaction_open {
                         commit(
-                            storage.connection()?,
+                            storage.session_mut()?,
                             health,
                             &mut pending,
                             &mut pending_bytes,
                         )?;
                         transaction_open = false;
                     }
-                    RecordingStore::update_session(storage.connection()?, session_id, state)
+                    storage.session_mut()?.update_session(session_id, state)
                 })()
                 .map_err(|error| error.to_string());
                 let _ = reply.send(result);
@@ -176,14 +179,14 @@ fn run_writer_inner(
                 let result = (|| {
                     if transaction_open {
                         commit(
-                            storage.connection()?,
+                            storage.session_mut()?,
                             health,
                             &mut pending,
                             &mut pending_bytes,
                         )?;
                         transaction_open = false;
                     }
-                    delete_sessions_healing(store, &mut storage, session_id, &session_ids)
+                    delete_sessions_healing(&mut storage, session_id, &session_ids)
                 })()
                 .map_err(|error| error.to_string());
                 let _ = reply.send(result);
@@ -192,7 +195,7 @@ fn run_writer_inner(
             Ok(Command::Flush(reply)) => {
                 let result = if transaction_open {
                     commit(
-                        storage.connection()?,
+                        storage.session_mut()?,
                         health,
                         &mut pending,
                         &mut pending_bytes,
@@ -205,61 +208,49 @@ fn run_writer_inner(
                 let _ = reply.send(result);
                 last_commit = Instant::now();
             }
-            // 读命令 — 全部落在**同一个**连接上, 因此读不会开第二个 DuckDB 实例。
+            // Read commands — all on the **same** connection, so a read never
+            // opens a second instance on the database file.
             Ok(Command::ListSessions(reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(RecordingStore::list_sessions_on)
+                    read(&mut storage, StoreSession::list_sessions)
                         .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::SessionSummaries(reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(RecordingStore::list_session_summaries_on)
+                    read(&mut storage, StoreSession::list_session_summaries)
                         .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::DatabaseInfo(reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(|connection| RecordingStore::database_info_on(store, connection))
+                    read(&mut storage, StoreSession::database_info)
                         .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::Bindings(session_id, reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(|connection| {
-                            RecordingStore::list_bindings_on(connection, &session_id)
-                        })
+                    read(&mut storage, |session| session.list_bindings(&session_id))
                         .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::SessionIsEmpty(session_id, reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(|connection| {
-                            RecordingStore::session_is_empty_on(connection, &session_id)
-                        })
-                        .map_err(|error| error.to_string()),
+                    read(&mut storage, |session| {
+                        session.session_is_empty(&session_id)
+                    })
+                    .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::DeleteSession(session_id, reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(|connection| {
-                            RecordingStore::delete_session_on(connection, &session_id)
-                        })
+                    read(&mut storage, |session| session.delete_session(&session_id))
                         .map_err(|error| error.to_string()),
                 );
             }
             Ok(Command::HistoryPage(query, reply)) => {
                 let _ = reply.send(
-                    storage
-                        .read(|connection| {
-                            RecordingStore::history_page_query_on(connection, &query)
-                        })
+                    read(&mut storage, |session| session.history_page(&query))
                         .map_err(|error| error.to_string()),
                 );
             }
@@ -269,11 +260,8 @@ fn run_writer_inner(
                 cancellation,
                 reply,
             }) => {
-                let result = storage.read(|connection| {
-                    cancellation.attach(connection.interrupt_handle());
-                    let result = RecordingStore::query_sql_on(connection, &sql, max_rows);
-                    cancellation.detach();
-                    result
+                let result = read(&mut storage, |session| {
+                    session.query_sql(&sql, max_rows, &cancellation)
                 });
                 let _ = reply.send(result.map_err(|error| error.to_string()));
             }
@@ -281,17 +269,15 @@ fn run_writer_inner(
                 let result = (|| {
                     if transaction_open {
                         commit(
-                            storage.connection()?,
+                            storage.session_mut()?,
                             health,
                             &mut pending,
                             &mut pending_bytes,
                         )?;
                     }
-                    RecordingStore::update_session(
-                        storage.connection()?,
-                        session_id,
-                        SessionState::Stopped,
-                    )
+                    storage
+                        .session_mut()?
+                        .update_session(session_id, SessionState::Stopped)
                 })()
                 .map_err(|error| error.to_string());
                 let _ = reply.send(result);
@@ -300,7 +286,7 @@ fn run_writer_inner(
             Err(mpsc::RecvTimeoutError::Timeout) => {
                 if transaction_open {
                     commit(
-                        storage.connection()?,
+                        storage.session_mut()?,
                         health,
                         &mut pending,
                         &mut pending_bytes,
@@ -316,12 +302,12 @@ fn run_writer_inner(
 }
 
 fn commit(
-    connection: &duckdb::Connection,
+    session: &mut (dyn StoreSession + 'static),
     health: &HealthState,
     pending: &mut Vec<(u64, usize)>,
     pending_bytes: &mut usize,
 ) -> Result<(), RecordingError> {
-    connection.execute_batch("COMMIT")?;
+    session.commit()?;
     let count = pending.len() as u64;
     let sequence = pending
         .iter()
