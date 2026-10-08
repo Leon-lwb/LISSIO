@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-08
 applies-to: Repository development instructions
 -->
 ## Read before editing
@@ -46,6 +46,33 @@ platform-shell commands and supervised `lissio-server` lifecycle.
   name.
 - A new crate requires metadata, documentation, architecture tests, and a root
   workspace dependency entry inherited by consumers.
+
+## Commit messages
+
+Commits use Conventional Commits: a `type(scope): summary` subject, an
+explanatory body, and `Files:` / `Refs:` trailers when the change maps to a
+known set of paths and issues.
+
+```text
+<type>(<scope>): <summary> (#issue)
+
+<body: why the change is needed, what behavior changes, and the trade-off>
+
+Files: path/one.rs,
+       path/two.tsx
+Refs: #4, #9
+```
+
+- `type` is `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `build`, `ci`, or
+  `chore`; `scope` names the crate, directory, or surface, and is dropped when no
+  single one fits.
+- The summary names the change rather than the process, and the body carries what
+  a reviewer cannot read off the diff. Write in English, and leave a blank line
+  before the trailers.
+- `Files:` lists every touched path, comma-separated with continuation lines
+  aligned under the key. A repo-wide change describes its scope in the body
+  instead.
+- `Refs:` lists the issues or discussions the commit closes or advances.
 
 ## Release changes
 
