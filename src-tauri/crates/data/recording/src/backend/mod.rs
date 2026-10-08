@@ -8,8 +8,24 @@
 mod duckdb;
 mod duckdb_read_sql;
 mod duckdb_sql;
+// The SeaORM engine is compiled in behind `database`, but `default_engine` still
+// selects DuckDB, so no production path constructs it yet and its whole module
+// tree is unreachable. The `allow` is scoped to these modules and goes away with
+// the engine switch, when `default_engine` selects `SeaOrmEngine`.
 #[cfg(feature = "database")]
+#[allow(dead_code)]
 mod sea;
+#[cfg(feature = "database")]
+#[allow(dead_code)]
+mod sea_cleanup;
+#[cfg(feature = "database")]
+#[allow(dead_code)]
+mod sea_read_sql;
+#[cfg(feature = "database")]
+#[allow(dead_code)]
+mod sea_sql;
+#[cfg(all(test, feature = "database-sqlite"))]
+mod sea_tests;
 
 use std::sync::Arc;
 
