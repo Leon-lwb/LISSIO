@@ -55,7 +55,7 @@ The recording crate is roughly 4 850 production lines and 1 500 test lines, with
 | --- | --- | --- |
 | `src/schema.rs` | `UBIGINT`, `BLOB` column types | Mostly; unsigned columns become 64-bit integers |
 | `src/store.rs` | `preserve_insertion_order`, `threads`, `checkpoint_threshold` session pragmas; `AccessMode::ReadOnly`; `enable_external_access(false)`; `QueryReturnedNoRows` | No; each engine needs its own session setup |
-| `src/export.rs` | `COPY (SELECT …) TO '…' (FORMAT PARQUET)` | No; Parquet requires an Arrow/Parquet writer or removal |
+| `src/export.rs` | `COPY (SELECT …) TO '…' (FORMAT PARQUET)` | Removed with the format: Parquet was only reachable through DuckDB |
 | `src/read_model.rs` | `ValueRef` typed extraction and the `SELECT * FROM (…) LIMIT n` result wrapper | Partially |
 | `src/maintenance.rs` | `duckdb_indexes()`; the drop-index-before-delete workaround for DuckDB's fatal index inconsistency | No; the workaround becomes engine-specific |
 | `src/repair.rs` | DuckDB catalog-damage classification and database-file quarantine | No; recovery semantics are engine-specific |
@@ -70,12 +70,11 @@ Consumer surfaces that also name the engine:
   `docs/en` and `docs/zh` tool guides describe read-only SQL as DuckDB dialect.
 - `src-tauri/crates/desktop/backend-cli/src/cmd/schema.rs` labels its SQL output
   as DuckDB dialect.
-- `src/components/displays/recording/RecordingDatabaseView.tsx` offers Parquet
-  as an export format.
 
-Read-only user SQL and Parquet export are the two surfaces that cannot be
-abstracted behind an entity layer, because both are engine dialect by
-definition.
+Parquet export was removed with the engine: it existed only as DuckDB's
+`COPY … (FORMAT PARQUET)`, and no other engine in the set writes it. Read-only
+user SQL stays, but it cannot be abstracted behind an entity layer because it is
+engine dialect by definition.
 
 ## Benchmark evidence
 

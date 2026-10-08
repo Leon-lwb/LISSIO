@@ -155,7 +155,7 @@ export interface RecordingDatabaseInfo {
   effective_bytes: number;
 }
 
-export type RecordingExportFormat = 'csv' | 'json' | 'parquet';
+export type RecordingExportFormat = 'csv' | 'json';
 
 export interface RecordingExportRequest {
   session_id: string;

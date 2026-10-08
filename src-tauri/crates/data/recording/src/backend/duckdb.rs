@@ -1,16 +1,16 @@
 //! DuckDB engine — the current recording backend.
 //!
 //! Everything DuckDB-specific is confined to this module and
-//! [`super::duckdb_sql`]: the connection, the session parameters, the recovery
-//! rules, and the Parquet sink.
+//! [`super::duckdb_sql`]: the connection, the session parameters, and the
+//! recovery rules.
 
 use std::path::{Path, PathBuf};
 
-use duckdb::{Connection, params};
+use duckdb::Connection;
 
 use super::duckdb_read_sql as read_sql;
 use super::duckdb_sql as sql;
-use crate::port::{ExportRow, ParquetWriter, StoreEngine, StoreSession};
+use crate::port::{StoreEngine, StoreSession};
 use crate::writer::QueryCancellation;
 use crate::{
     BindingInfo, DisplayBinding, HistoryPage, HistoryQuery, RecordBatch, RecordingCleanupResult,
@@ -36,10 +36,6 @@ impl StoreEngine for DuckDbEngine {
             sql::connect_read_only(path)?,
             path,
         )))
-    }
-
-    fn parquet_writer(&self) -> Result<Box<dyn ParquetWriter>, RecordingError> {
-        Ok(Box::new(DuckDbParquetWriter::new()?))
     }
 }
 
@@ -192,78 +188,5 @@ impl StoreSession for DuckDbSession {
     /// catalog damage that rebuilding heals.
     fn is_recoverable(&self, error: &RecordingError) -> bool {
         crate::repair::is_catalog_damage(error)
-    }
-}
-
-/// Rows staged before one appender flush — bounds memory without paying an
-/// appender per row.
-const PARQUET_FLUSH_ROWS: usize = 4096;
-
-/// Parquet export sink: a standalone in-memory DuckDB instance.
-///
-/// It deliberately never opens the recording file — exports run while the writer
-/// thread holds that file's single connection.
-struct DuckDbParquetWriter {
-    connection: Connection,
-    staged: Vec<ExportRow>,
-}
-
-impl DuckDbParquetWriter {
-    fn new() -> Result<Self, RecordingError> {
-        let connection = Connection::open_in_memory()?;
-        connection.execute_batch(
-            "CREATE TABLE export_rows( \
-                session_id VARCHAR, binding_id VARCHAR, domain VARCHAR, row_id BIGINT, \
-                sequence UBIGINT, first_timestamp_us UBIGINT, last_timestamp_us UBIGINT, \
-                index UBIGINT, value DOUBLE, text VARCHAR, frequency DOUBLE);",
-        )?;
-        Ok(Self {
-            connection,
-            staged: Vec::new(),
-        })
-    }
-
-    /// Append every staged row through one appender, which flushes on drop.
-    fn flush(&mut self) -> Result<(), RecordingError> {
-        if self.staged.is_empty() {
-            return Ok(());
-        }
-        let staged = std::mem::take(&mut self.staged);
-        let mut appender = self.connection.appender("export_rows")?;
-        for row in staged {
-            appender.append_row(params![
-                row.session_id,
-                row.binding_id,
-                row.domain,
-                row.row_id,
-                row.sequence,
-                row.first_timestamp_us,
-                row.last_timestamp_us,
-                row.index,
-                row.value,
-                row.text,
-                row.frequency,
-            ])?;
-        }
-        Ok(())
-    }
-}
-
-impl ParquetWriter for DuckDbParquetWriter {
-    fn append(&mut self, row: &ExportRow) -> Result<(), RecordingError> {
-        self.staged.push(row.clone());
-        if self.staged.len() >= PARQUET_FLUSH_ROWS {
-            self.flush()?;
-        }
-        Ok(())
-    }
-
-    fn finish(mut self: Box<Self>, path: &str) -> Result<u64, RecordingError> {
-        self.flush()?;
-        let escaped_path = path.replace('\'', "''");
-        let copy_sql =
-            format!("COPY (SELECT * FROM export_rows) TO '{escaped_path}' (FORMAT PARQUET)");
-        self.connection.execute_batch(&copy_sql)?;
-        Ok(std::fs::metadata(path)?.len())
     }
 }

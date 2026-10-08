@@ -19,8 +19,7 @@ use crate::{
 
 /// One row of an export stream.
 ///
-/// The shape is engine-independent: CSV and JSON write it directly, and an
-/// engine's Parquet sink receives it through [`ParquetWriter`].
+/// The shape is engine-independent: CSV and JSON write it directly.
 #[derive(Debug, Clone, Serialize)]
 pub struct ExportRow {
     pub session_id: String,
@@ -34,17 +33,6 @@ pub struct ExportRow {
     pub value: Option<f64>,
     pub text: Option<String>,
     pub frequency: Option<f64>,
-}
-
-/// Engine-owned sink for one Parquet export.
-///
-/// It is a standalone writer, not a store session: exports run while the writer
-/// thread holds the database file's single connection.
-pub trait ParquetWriter: Send {
-    /// Stage one row for the export.
-    fn append(&mut self, row: &ExportRow) -> Result<(), RecordingError>;
-    /// Materialize the staged rows at `path` and return the file size in bytes.
-    fn finish(self: Box<Self>, path: &str) -> Result<u64, RecordingError>;
 }
 
 /// Engine-owned handle to one open recording database.
@@ -138,6 +126,4 @@ pub trait StoreEngine: Send + Sync + std::fmt::Debug {
     fn connect(&self, path: &Path) -> Result<Box<dyn StoreSession>, RecordingError>;
     /// Open `path` read-only for paths that own no writer thread.
     fn connect_read_only(&self, path: &Path) -> Result<Box<dyn StoreSession>, RecordingError>;
-    /// A standalone Parquet sink, or an error when this engine cannot write it.
-    fn parquet_writer(&self) -> Result<Box<dyn ParquetWriter>, RecordingError>;
 }

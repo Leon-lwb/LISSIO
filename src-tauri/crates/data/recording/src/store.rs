@@ -11,7 +11,7 @@ use std::sync::Arc;
 use serde::{Deserialize, Serialize};
 
 use crate::backend::default_engine;
-use crate::port::{ParquetWriter, StoreEngine, StoreSession};
+use crate::port::{StoreEngine, StoreSession};
 use crate::writer::{QueryCancellation, RecordingReader};
 use crate::{DisplayBinding, RecordingError, SessionInfo, SessionState, StoredBatch};
 
@@ -105,11 +105,6 @@ impl RecordingStore {
     /// A read-only session — used by reads that own no writer thread.
     pub(crate) fn connect_read_only(&self) -> Result<Box<dyn StoreSession>, RecordingError> {
         self.engine.connect_read_only(&self.path)
-    }
-
-    /// A standalone Parquet sink, or the engine's refusal to write one.
-    pub(crate) fn parquet_writer(&self) -> Result<Box<dyn ParquetWriter>, RecordingError> {
-        self.engine.parquet_writer()
     }
 
     pub(crate) fn create_session(

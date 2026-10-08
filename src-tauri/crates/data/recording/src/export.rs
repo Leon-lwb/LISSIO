@@ -18,7 +18,6 @@ pub fn export_recording_data(
     let result = match request.format {
         RecordingExportFormat::Csv => write_csv(store, request, file),
         RecordingExportFormat::Json => write_json(store, request, file),
-        RecordingExportFormat::Parquet => write_parquet(store, request),
     }?;
     Ok(result)
 }
@@ -216,20 +215,5 @@ fn write_json(
     writer.write_all(b"]")?;
     writer.flush()?;
     let bytes = writer.get_ref().metadata()?.len();
-    Ok(RecordingExportResult { rows, bytes })
-}
-
-/// Parquet goes through the engine's own sink.
-///
-/// Parquet is an engine capability rather than a portable format: an engine that
-/// cannot write it refuses here, and the refusal reaches the user as a normal
-/// export error.
-fn write_parquet(
-    store: &RecordingStore,
-    request: &RecordingExportRequest,
-) -> Result<RecordingExportResult, RecordingError> {
-    let mut writer = store.parquet_writer()?;
-    let rows = for_each_export_row(store, request, |row| writer.append(&row))?;
-    let bytes = writer.finish(&request.path)?;
     Ok(RecordingExportResult { rows, bytes })
 }

@@ -274,7 +274,6 @@ pub struct RecordingDatabaseInfo {
 pub enum RecordingExportFormat {
     Csv,
     Json,
-    Parquet,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

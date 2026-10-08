@@ -14,7 +14,6 @@ import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 const exportFormats: { value: RecordingExportFormat; label: string; extension: string }[] = [
   { value: 'csv', label: 'CSV', extension: 'csv' },
   { value: 'json', label: 'JSON', extension: 'json' },
-  { value: 'parquet', label: 'Parquet', extension: 'parquet' },
 ];
 
 function stateClass(state: string): string {

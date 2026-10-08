@@ -168,21 +168,6 @@ fn persists_and_queries_all_domains_without_loss() {
     .unwrap();
     assert!(json_export.rows > 0);
     let _ = std::fs::remove_file(json_path);
-    let parquet_path = path.with_extension("parquet");
-    let parquet_export = export_recording_data(
-        &store,
-        &RecordingExportRequest {
-            session_id: session_id.clone(),
-            binding_id: Some("spectrum".to_string()),
-            from_us: None,
-            to_us: None,
-            format: RecordingExportFormat::Parquet,
-            path: parquet_path.to_string_lossy().into_owned(),
-        },
-    )
-    .unwrap();
-    assert!(parquet_export.rows > 0);
-    let _ = std::fs::remove_file(parquet_path);
     recorder.shutdown().unwrap();
     let reopened = RecordingStore::open(&path).unwrap();
     let sessions = reopened.list_sessions().unwrap();
