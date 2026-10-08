@@ -8,6 +8,8 @@
 mod duckdb;
 mod duckdb_read_sql;
 mod duckdb_sql;
+#[cfg(feature = "database")]
+mod sea;
 
 use std::sync::Arc;
 
