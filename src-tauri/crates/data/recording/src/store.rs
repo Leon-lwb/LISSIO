@@ -2,8 +2,13 @@
 //!
 //! The handle owns no database type. It keeps the path, the engine chosen at
 //! construction, and the optional read-path handle that routes reads through the
-//! writer thread's single connection; every statement goes to
+//! writer task's single connection; every statement goes to
 //! [`StoreSession`](crate::port::StoreSession).
+//!
+//! The port is async, but this handle's surface is synchronous: callers that run
+//! outside a runtime (the opening thread, tests, benchmarks) drive the engine
+//! through [`crate::block_on`], and readers attached to a writer thread never
+//! touch the engine at all. Only the writer task awaits the port directly.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -21,8 +26,8 @@ pub struct RecordingStore {
     /// The selected engine — the one place a backend enters this crate.
     engine: Arc<dyn StoreEngine>,
     /// Read-path handle — with it every read (query / export / session checks)
-    /// runs on the writer thread's **single** connection; `None` means no writer
-    /// is attached yet (construction, repair, tests that open directly) and reads
+    /// runs on the writer task's **single** connection; `None` means no writer is
+    /// attached yet (construction, repair, tests that open directly) and reads
     /// degrade to a private connection.
     reader: Option<RecordingReader>,
 }
@@ -57,7 +62,7 @@ impl RecordingStore {
     ) -> Result<(Self, Option<String>), RecordingError> {
         let path = path.as_ref().to_path_buf();
         let engine = default_engine();
-        let (session, note) = engine.open(&path)?;
+        let (session, note) = crate::block_on(engine.open(&path))?;
         // Verification happened on this session; closing it here matches the
         // previous behavior of opening and dropping a connection during
         // construction.
@@ -72,13 +77,13 @@ impl RecordingStore {
         ))
     }
 
-    /// Attach the read-path handle — provided by the writer thread's channel.
+    /// Attach the read-path handle — provided by the writer task's channel.
     pub(crate) fn with_reader(mut self, reader: RecordingReader) -> Self {
         self.reader = Some(reader);
         self
     }
 
-    /// The writer thread's own copy: no read-path handle, so a read issued on the
+    /// The writer task's own copy: no read-path handle, so a read issued on the
     /// writer thread can never route back to itself.
     pub(crate) fn without_reader(&self) -> Self {
         Self {
@@ -97,21 +102,26 @@ impl RecordingStore {
         &self.path
     }
 
-    /// A read/write session without verification or recovery.
-    pub(crate) fn connect(&self) -> Result<Box<dyn StoreSession>, RecordingError> {
-        self.engine.connect(&self.path)
+    /// The selected engine, for the synchronous fallbacks that own no writer.
+    pub(crate) fn engine(&self) -> &Arc<dyn StoreEngine> {
+        &self.engine
     }
 
-    /// A read-only session — used by reads that own no writer thread.
-    pub(crate) fn connect_read_only(&self) -> Result<Box<dyn StoreSession>, RecordingError> {
-        self.engine.connect_read_only(&self.path)
+    /// A read/write session for the writer task, which awaits the port directly.
+    pub(crate) async fn connect_async(&self) -> Result<Box<dyn StoreSession>, RecordingError> {
+        self.engine.connect(&self.path).await
     }
 
     pub(crate) fn create_session(
         &self,
         bindings: &[DisplayBinding],
     ) -> Result<SessionInfo, RecordingError> {
-        self.connect()?.create_session(bindings)
+        let engine = Arc::clone(&self.engine);
+        let path = self.path.clone();
+        crate::block_on(async move {
+            let mut session = engine.connect(&path).await?;
+            session.create_session(bindings).await
+        })
     }
 
     pub(crate) fn reopen_session(
@@ -119,14 +129,24 @@ impl RecordingStore {
         session_id: &str,
         state: SessionState,
     ) -> Result<SessionInfo, RecordingError> {
-        self.connect()?.reopen_session(session_id, state)
+        let engine = Arc::clone(&self.engine);
+        let path = self.path.clone();
+        crate::block_on(async move {
+            let mut session = engine.connect(&path).await?;
+            session.reopen_session(session_id, state).await
+        })
     }
 
     /// Startup continuation probe: the newest session's id when it holds no
     /// batches at all (see
     /// [`StoreSession::resumable_empty_session`](crate::port::StoreSession::resumable_empty_session)).
     pub(crate) fn resumable_empty_session(&self) -> Result<Option<String>, RecordingError> {
-        self.connect()?.resumable_empty_session()
+        let engine = Arc::clone(&self.engine);
+        let path = self.path.clone();
+        crate::block_on(async move {
+            let mut session = engine.connect(&path).await?;
+            session.resumable_empty_session().await
+        })
     }
 
     /// Delete one session and its children.
@@ -139,7 +159,12 @@ impl RecordingStore {
         if let Some(reader) = self.reader() {
             return reader.delete_session(session_id);
         }
-        self.connect()?.delete_session(session_id)
+        let engine = Arc::clone(&self.engine);
+        let path = self.path.clone();
+        crate::block_on(async move {
+            let mut session = engine.connect(&path).await?;
+            session.delete_session(session_id).await
+        })
     }
 
     /// Run one read-only SELECT and return rows as JSON objects.
@@ -158,6 +183,13 @@ impl RecordingStore {
         if let Some(reader) = self.reader() {
             return reader.sql(sql.to_string(), max_rows, Arc::clone(cancellation));
         }
-        self.connect()?.query_sql(sql, max_rows, cancellation)
+        let engine = Arc::clone(&self.engine);
+        let path = self.path.clone();
+        let cancellation = Arc::clone(cancellation);
+        let sql = sql.to_string();
+        crate::block_on(async move {
+            let mut session = engine.connect(&path).await?;
+            session.query_sql(&sql, max_rows, &cancellation).await
+        })
     }
 }

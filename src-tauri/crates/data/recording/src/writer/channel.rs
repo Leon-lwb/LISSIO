@@ -15,6 +15,7 @@ use std::time::{Duration, Instant};
 
 use duckdb::InterruptHandle;
 use parking_lot::Mutex;
+use tokio::sync::mpsc as async_mpsc;
 
 use super::Command;
 use crate::{
@@ -89,7 +90,7 @@ impl Deadline {
 /// **过去这里是 `send` (无界阻塞)**: writer 卡在 DuckDB 调用里时, 队列会被生产者
 /// 填满, 于是运行控制的 `set_state` 永远投不出去 — 暂停再也解不开。
 pub fn send_bounded(
-    sender: &mpsc::SyncSender<Command>,
+    sender: &async_mpsc::Sender<Command>,
     mut command: Command,
     timeout: Duration,
     deadline: Deadline,
@@ -97,14 +98,16 @@ pub fn send_bounded(
     loop {
         match sender.try_send(command) {
             Ok(()) => return Ok(()),
-            Err(mpsc::TrySendError::Full(returned)) => {
+            Err(async_mpsc::error::TrySendError::Full(returned)) => {
                 if deadline.remaining().is_none() {
                     return Err(RecordingError::Timeout(timeout));
                 }
                 command = returned;
                 std::thread::sleep(SEND_RETRY_INTERVAL);
             }
-            Err(mpsc::TrySendError::Disconnected(_)) => return Err(RecordingError::Closed),
+            Err(async_mpsc::error::TrySendError::Closed(_)) => {
+                return Err(RecordingError::Closed);
+            }
         }
     }
 }
@@ -131,7 +134,7 @@ pub fn receive_reply<T>(
 /// 修复路径、测试直接 `RecordingStore::open`) 读路径退化为独占打开。
 #[derive(Clone)]
 pub struct RecordingReader {
-    sender: mpsc::SyncSender<Command>,
+    sender: async_mpsc::Sender<Command>,
 }
 
 impl std::fmt::Debug for RecordingReader {
@@ -141,7 +144,7 @@ impl std::fmt::Debug for RecordingReader {
 }
 
 impl RecordingReader {
-    pub const fn new(sender: mpsc::SyncSender<Command>) -> Self {
+    pub const fn new(sender: async_mpsc::Sender<Command>) -> Self {
         Self { sender }
     }
 

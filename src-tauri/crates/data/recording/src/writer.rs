@@ -90,7 +90,7 @@ pub enum Command {
 pub struct Recorder {
     store: RecordingStore,
     session: SessionInfo,
-    sender: mpsc::SyncSender<Command>,
+    sender: tokio::sync::mpsc::Sender<Command>,
     health: Arc<HealthState>,
     bindings: Arc<RwLock<HashMap<String, Domain>>>,
     thread: Mutex<Option<JoinHandle<()>>>,
@@ -130,7 +130,7 @@ impl Recorder {
             .collect();
         let bindings = Arc::new(RwLock::new(binding_domains));
         let health = Arc::new(HealthState::default());
-        let (sender, receiver) = mpsc::sync_channel(limits.queue_batches);
+        let (sender, receiver) = tokio::sync::mpsc::channel(limits.queue_batches);
         // 读路径挂到写线程的通道上: 查询 / 导出 / 会话检查从此共用这一个连接。
         let store = store.with_reader(RecordingReader::new(sender.clone()));
         // 写线程只做原始连接操作, 拿到不带读句柄的副本 — 万一将来有人在写线程里
@@ -141,13 +141,19 @@ impl Recorder {
         let thread = std::thread::Builder::new()
             .name("recording-writer".into())
             .spawn(move || {
-                worker::run_writer(
+                // The writer is a task on a runtime this thread owns: engine I/O
+                // is async while the single-writer discipline stays one thread.
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("recording writer runtime");
+                runtime.block_on(worker::run_writer(
                     &writer_store,
                     &writer_session,
                     limits,
                     receiver,
                     &writer_health,
-                );
+                ));
             })?;
         Ok(Self {
             store,
@@ -187,13 +193,13 @@ impl Recorder {
         self.sender
             .try_send(Command::Append(batch))
             .map_err(|error| match error {
-                mpsc::TrySendError::Full(_) => {
+                tokio::sync::mpsc::error::TrySendError::Full(_) => {
                     // 正常背压: 磁盘一时跟不上。计数后交给调用方决定策略,
                     // 绝不在这里升级成故障。
                     self.health.dropped_batches.fetch_add(1, Ordering::Relaxed);
                     RecordingError::Backpressure
                 }
-                mpsc::TrySendError::Disconnected(_) => RecordingError::Closed,
+                tokio::sync::mpsc::error::TrySendError::Closed(_) => RecordingError::Closed,
             })?;
         self.health.accepted_batches.fetch_add(1, Ordering::Relaxed);
         self.health
@@ -312,7 +318,9 @@ impl Recorder {
             .into_iter()
             .map(|binding| (binding.id, binding.domain))
             .collect();
-        let (sender, receiver) = mpsc::sync_channel(0);
+        // Capacity one, never drained: the first command fills the queue and
+        // every later one is rejected exactly like a full production queue.
+        let (sender, receiver) = tokio::sync::mpsc::channel(1);
         // 读路径同样挂在这个卡死的通道上: 查询 / 检查不得绕过写线程自己开实例。
         let store = store.with_reader(RecordingReader::new(sender.clone()));
         let thread = std::thread::Builder::new()

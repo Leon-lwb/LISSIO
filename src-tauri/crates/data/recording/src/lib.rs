@@ -21,6 +21,20 @@ mod schema;
 mod store;
 mod writer;
 
+/// Drive one engine future to completion for callers that own no runtime.
+///
+/// Construction runs on the opening thread, and tests and benchmarks call the
+/// store directly; neither has a runtime, so the synchronous surface bridges here.
+/// The writer task awaits the port on its own runtime instead, and nothing that
+/// already runs inside a runtime may call this.
+pub(crate) fn block_on<F: std::future::Future>(future: F) -> F::Output {
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .expect("recording store blocking runtime")
+        .block_on(future)
+}
+
 pub use export::export_recording_data;
 pub use hub::{RecordingFault, RecordingHub};
 pub use model::{
