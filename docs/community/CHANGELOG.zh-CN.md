@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-08
 language: zh-CN
 authoritative: false
 translation-of: CHANGELOG.md
@@ -15,11 +15,22 @@ applies-to: Non-authoritative Chinese translation backup
 
 本项目遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 约定。
 
-## [0.8.0] - 2026-10-07
+## [0.8.0] - 2026-10-08
+
+### 新增
+
+- **新增「文本协议」快速开始模板**:演示协议引擎的协议转换 (`convert_to`) — ASCII 文本 (FireWater) 被解析并重新编码为数值 JustFloat 帧,驱动数值显示与波形;其余产帧模板也各自带上显式 `convert_to` 目标 (CAN 保持「不转换」,因为 SLCAN 帧不是数值样本)
 
 ### 变更
 
 - **发布版本改由变更文件推导**:不再手工挑选版本号 — 每处改动在 `.changes/` 下登记一个变更文件,`pnpm release:prepare` 据此算出下一个版本、生成 `CHANGELOG.md` 条目并同步全部版本文件;新增两道 PR 级门禁守住这条链路:`check:changes` 拒绝 covector 会静默丢弃的变更文件,`check:release-sync` 在版本字段、更新日志与其中文备份不一致时失败
+
+### 修复
+
+- **侧边栏调色板不再裁切中文字形**:UI 字体纵向度量紧凑时,`leading-none` 让截断标签的行框恰好 1em,而多数中文字体的 ascent+descent 大于该值,行裁剪线因此切进字形墨迹 (`右截取`/`插入`/`删除`);调色板行改为预留行框空间 (`leading-normal`),与字体度量无关
+- **快速开始模板不再生成已移除的旧波形窗口**:模板快照整体替换 `dataTabs`,但快照仍带着 0.4.x 的固定 `waveform-fixed` 标签 — 一个没有宿主 widget 的波形窗口,应用模板后就会出现且永远不显示数据 — 同时漏掉了默认落地标签 (`compile-results-fixed`) 指向的固定外壳标签;模板现在产出当前的固定外壳标签,标签存储里剩余的两处 `waveform-fixed` 兜底也改指 `compile-results-fixed`
+- **Gauge 组件缩放不再变形**:画布 CSS 盒跟随组件,但位图只在数值/量程变化时重建,旧位图于是被拉伸成椭圆 (半径也一直固定在 67.5);位图现在跟随组件盒,半圆按盒子短边缩放的单一半径绘制,刻度/线宽/字号等比缩放,并封顶 120px 避免大组件无限增长;强制宽高比只做居中留白
+- **快速开始后协议引擎卡片可见**:该卡片是设备树子节点的投影,React Flow 拿不到它的测量高度 (`nodeHasDimensions` 一直为 false) 因而保持 `visibility: hidden`;现在记住卡片的测量尺寸并回填到投影。模板组件也改为从投影卡片右侧起排而不是压在它下面,协议引擎与连线因此能在设备旁可见
 
 ## [0.7.2] - 2026-10-01 (pre-release)
 
