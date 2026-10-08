@@ -12,8 +12,22 @@ name = "recording"
 [lints]
 workspace = true
 
+[features]
+# The store keeps its engine behind a port; `database` turns the capability on and
+# each engine feature adds one driver. During the engine swap the default stays
+# empty so the DuckDB implementation keeps building; the switch step flips the
+# default to the full set.
+default = []
+database = ["dep:sea-orm", "dep:tokio", "dep:async-trait"]
+database-sqlite = ["database", "sea-orm/sqlx-sqlite"]
+database-postgres = ["database", "sea-orm/sqlx-postgres"]
+database-mysql = ["database", "sea-orm/sqlx-mysql"]
+
 [dependencies]
 duckdb = { workspace = true }
+sea-orm = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
@@ -21,7 +35,6 @@ parking_lot = { workspace = true }
 
 [dev-dependencies]
 criterion = { workspace = true }
-rusqlite = { workspace = true }
 
 [[bench]]
 name = "storage"

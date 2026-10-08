@@ -159,22 +159,28 @@ be accepted explicitly rather than inherited from the engine swap.
 
 ```text
 recording  (store contract, no engine dependency)
-  ├── recording-sqlite    feature database-sqlite    (default)
-  ├── recording-postgres  feature database-postgres  (optional)
-  └── recording-mysql     feature database-mysql     (optional)
+  ├── recording-sqlite    feature database-sqlite    (default build)
+  ├── recording-postgres  feature database-postgres  (default build)
+  └── recording-mysql     feature database-mysql     (default build)
 ```
 
 - `recording` keeps sessions, batches, recovery policy, and the writer
   discipline, and depends on a store contract instead of an engine.
-- Each engine is a heavy optional adapter behind a feature, selected by
-  `backend-host` at assembly time, which matches the existing adapter pattern in
-  [`crates.md`](crates.md).
+- Every engine adapter compiles into the default build and the user selects one at
+  runtime through the configured connection string. A reduced build can still drop
+  an engine through the same features, but the default build switches engines by
+  configuration alone.
 - The `database` feature is included by default, so the default build keeps the
   capability; the runtime switch `AppSettings.data.recordingEnabled` stays off by
   default, so a fresh install still opens no connection.
-- SeaORM 2.x with sqlx is the entity and query layer across engines. The recording
-  writer becomes an async task or blocks on a runtime; either way the bounded
-  round-trip rule must survive the transition.
+- A remote engine may be the primary recording store, which accepts the contract
+  change recorded in "Consequences for the recording contract".
+- DuckDB is removed rather than kept as a fourth engine. The DuckDB-only Parquet
+  export goes with it, and read-only user SQL keeps working in the dialect of
+  whichever engine is selected.
+- The store port becomes async and the writer thread becomes a tokio task, so
+  SeaORM and sqlx drive every engine directly. The bounded round-trip rule moves
+  to async deadlines and must survive the transition.
 
 ### Engine addressing
 
@@ -207,15 +213,16 @@ configuration shape, one code path — not at the transport layer.
   `src-tauri/crates/desktop/backend-server/src/frames.rs` for exactly this
   purpose; the database capability joins it.
 
-## Open decisions
+## Decisions and open questions
 
-| Decision | Effect |
+Decided: a remote engine may serve as the primary recording store; every engine
+adapter ships in the default build so the user switches by configuration; DuckDB
+and its Parquet export are removed; the store port and the writer become async.
+
+| Open question | Effect |
 | --- | --- |
-| Remote engines as primary recording storage | Accepts the contract change in "Consequences for the recording contract" |
-| All engines in one build versus one engine per build | Binary size and feature-matrix width against configuration-level switching |
-| Fate of read-only user SQL | Engine-dialect SQL breaks on switch; options are per-engine documentation, a restricted portable subset, or reviewing the feature |
-| Fate of Parquet export | Requires an Arrow/Parquet writer, or removal of the format |
-| Engine for the default build | Embedded SQLite keeps offline behavior; a remote default does not |
+| Read-only user SQL | It runs in the selected engine's dialect, so saved SQL does not move between engines; the per-engine documentation says which tables and dialect apply |
+| Configuration for a fresh install | Embedded SQLite is the only engine that works before a server is configured; a remote default would not |
 
 ## Verification
 

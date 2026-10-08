@@ -279,7 +279,9 @@ rustfft = "6"
 realfft = "3"
 bytemuck = { version = "1", features = ["derive"] }
 duckdb = { version = "1.5.5", features = ["bundled", "parquet"] }
-rusqlite = { version = "0.40.2", features = ["bundled"] }
+# sea-orm: async ORM over sqlx — the recording store's SQLite/PostgreSQL/MySQL
+# engines. Drivers are enabled per crate feature so a reduced build can drop one.
+sea-orm = { version = "2.0.4", default-features = false, features = ["runtime-tokio-rustls", "macros"] }
 # ---- workspace-internal crates (path = crates/<domain>/<crate>) ----
 # L0 foundation
 gpu = { version = "0.8.0", package = "lissio-gpu", path = "crates/signal/gpu" }

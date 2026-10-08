@@ -81,28 +81,6 @@ fn byte_data(bytes: usize, random: bool) -> Vec<u8> {
         .collect()
 }
 
-fn payload_blob(payload: &BatchPayload) -> Vec<u8> {
-    match payload {
-        BatchPayload::Bytes { data } => data.clone(),
-        BatchPayload::String { values } => values
-            .iter()
-            .flat_map(|value| value.as_bytes().iter().copied())
-            .collect(),
-        BatchPayload::Float { values } => values
-            .iter()
-            .flat_map(|value| value.to_le_bytes())
-            .collect(),
-        BatchPayload::Spectrum {
-            frequencies,
-            values,
-        } => frequencies
-            .iter()
-            .chain(values)
-            .flat_map(|value| value.to_le_bytes())
-            .collect(),
-    }
-}
-
 const fn mix(mut value: u64) -> u64 {
     value ^= value >> 12;
     value ^= value << 25;
@@ -228,93 +206,6 @@ fn database_path(batch_bytes: usize, random: bool) -> PathBuf {
     ))
 }
 
-fn run_sqlite_case(batch_bytes: usize, total_bytes: usize, random: bool) -> serde_json::Value {
-    let domains = [
-        Domain::Bytes,
-        Domain::String,
-        Domain::Float,
-        Domain::Spectrum,
-    ];
-    let templates: Vec<_> = domains
-        .iter()
-        .map(|domain| payload(*domain, batch_bytes, random))
-        .collect();
-    let path = std::env::temp_dir().join(format!(
-        "lissio-sqlite-bench-{}-{batch_bytes}.db",
-        if random { "random" } else { "signal" }
-    ));
-    let _ = std::fs::remove_file(&path);
-    let mut connection = rusqlite::Connection::open(&path).expect("open SQLite benchmark");
-    connection
-        .execute_batch(
-            "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA temp_store=MEMORY; \
-             CREATE TABLE batches( \
-               row_id INTEGER PRIMARY KEY, domain TEXT NOT NULL, sequence_start INTEGER NOT NULL, \
-               item_count INTEGER NOT NULL, effective_bytes INTEGER NOT NULL, payload BLOB NOT NULL);",
-        )
-        .expect("initialize SQLite benchmark");
-    let target_bytes = total_bytes.max(batch_bytes.saturating_mul(domains.len()));
-    let started = Instant::now();
-    let transaction = connection.transaction().expect("begin SQLite transaction");
-    let mut statement = transaction
-        .prepare(
-            "INSERT INTO batches(domain, sequence_start, item_count, effective_bytes, payload) \
-             VALUES (?, ?, ?, ?, ?)",
-        )
-        .expect("prepare SQLite append");
-    let mut accepted = 0_usize;
-    let mut sequence = 0_u64;
-    let mut index = 0_usize;
-    while accepted < target_bytes {
-        let template = &templates[index % templates.len()];
-        let bytes = template.effective_bytes();
-        statement
-            .execute(rusqlite::params![
-                template.domain().as_str(),
-                i64::try_from(sequence).expect("benchmark sequence fits SQLite"),
-                i64::try_from(template.item_count()).expect("item count fits SQLite"),
-                i64::try_from(bytes).expect("batch bytes fit SQLite"),
-                payload_blob(template),
-            ])
-            .expect("append SQLite batch");
-        accepted = accepted.saturating_add(bytes);
-        sequence = sequence.saturating_add(
-            u64::try_from(template.item_count()).expect("benchmark item count fits u64"),
-        );
-        index += 1;
-    }
-    drop(statement);
-    transaction.commit().expect("commit SQLite benchmark");
-    let elapsed = started.elapsed();
-    let query_started = Instant::now();
-    let total: i64 = connection
-        .query_row("SELECT sum(effective_bytes) FROM batches", [], |row| {
-            row.get(0)
-        })
-        .expect("query SQLite benchmark");
-    let query_ms = query_started.elapsed().as_secs_f64() * 1_000.0;
-    connection
-        .execute_batch("PRAGMA wal_checkpoint(TRUNCATE)")
-        .expect("checkpoint SQLite benchmark");
-    drop(connection);
-    let file_bytes = std::fs::metadata(&path).map_or(0, |metadata| metadata.len());
-    let throughput = total as f64 / elapsed.as_secs_f64() / 1e6;
-    let result = serde_json::json!({
-        "backend": "sqlite_blob",
-        "batch_bytes": batch_bytes,
-        "pattern": if random { "random" } else { "compressible" },
-        "effective_bytes": total,
-        "elapsed_s": elapsed.as_secs_f64(),
-        "throughput_MB_s": throughput,
-        "passes": {"100_MB_s": throughput >= 100.0, "250_MB_s": throughput >= 250.0, "500_MB_s": throughput >= 500.0},
-        "sql_visible_ms": query_ms,
-        "database_bytes": file_bytes,
-        "complete": usize::try_from(total).is_ok_and(|value| value >= target_bytes),
-    });
-    let _ = std::fs::remove_file(path);
-    result
-}
-
 fn main() {
     let requested = std::env::var("VOFA_STORAGE_BENCH_BYTES").map_or(64 * 1024 * 1024, |value| {
         value.parse().expect("benchmark bytes")
@@ -326,7 +217,6 @@ fn main() {
         serde_json::json!({
             "benchmark": "four_domain_recording",
             "duckdb_version": "1.5.5",
-            "sqlite_version": rusqlite::version(),
             "writer_model": "multi_producer_bounded_queue_single_database_writer",
             "total_effective_bytes_per_case": total_bytes,
             "machine": std::env::consts::ARCH,
@@ -336,7 +226,6 @@ fn main() {
     for batch_bytes in [64 * 1024, 1024 * 1024, 4 * 1024 * 1024] {
         for random in [false, true] {
             println!("{}", run_case(batch_bytes, total_bytes, random));
-            println!("{}", run_sqlite_case(batch_bytes, total_bytes, random));
         }
     }
 }
