@@ -101,8 +101,6 @@ const doc = `# Motion Tokens and Tuning Tables
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: Spring timing tokens derived from src/lib/motion
 -->
 

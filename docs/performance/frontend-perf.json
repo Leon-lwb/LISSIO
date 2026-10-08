@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "note": "perFrame 为门禁项（每帧速率）；advisory 为时序类参考量，无头环境下随 runner 负载漂移，刻意不做判定。",
+  "note": "perFrame entries are gated (per-frame rates); advisory entries are timing references that drift with runner load in a headless environment and are deliberately not judged.",
   "budgetsPerFrame": {
     "canvasBackingStoreRealloc": 0,
     "setAttribute": 90,

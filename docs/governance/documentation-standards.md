@@ -3,27 +3,25 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Repository documentation, metadata, language, and maintenance rules
 -->
 
 Every document must answer three questions: what it describes, which source is
 authoritative, and when it must be reviewed.
 
-## Language authority
+## Language
 
-- English documentation is authoritative for all non-historical project documents.
-- Chinese translation backups live below `docs/community/` and use the
-  `<name>.zh-CN.md` suffix while preserving a mirrored repository path.
-- Every Chinese backup declares `language: zh-CN`, `authoritative: false`, and
-  `translation-of`. If it differs from the English source, English controls.
+- Repository prose is written in English: documentation, tooling scripts, e2e
+  specs, and CI/build configuration text. This is a repository convention that
+  authors follow and reviewers confirm; it is not enforced by a gate.
 - Historical review records and historical release logs preserve their original
-  language and are not rewritten as translations.
-- Runtime localized help keeps its `en/` and `zh/` load paths. The English
-  runtime document is authoritative; the Chinese file is a product translation.
+  language. They are never rewritten or translated.
+- Product localization is not documentation. `src/i18n/resources/zh/` and the
+  runtime capability help under `capabilities/docs/zh/` are shipped product
+  surfaces; their English sources remain authoritative.
 - Identifiers, SPDX expressions, commands, paths, and code remain unchanged.
+  Quoted product strings inside code spans are allowed.
 
 ## Placement
 
@@ -34,36 +32,34 @@ authoritative, and when it must be reviewed.
 | `docs/governance/` | Licensing, dependencies, documentation, and review policy |
 | `docs/performance/` | Performance budgets and measurement policy |
 | `docs/reviews/` | Review checklist, indexes, and immutable historical records |
-| `docs/community/` | Non-authoritative Chinese translation backups |
 | `.github/`, `.forgejo/` | Contribution, issue, ownership, and community automation |
 
-New documents must be indexed in `docs/README.md`. Translation backups must be
-indexed in `docs/community/INDEX.zh-CN.md`.
+New documents must be indexed in `docs/README.md`.
 
 ## Naming
 
 Use lowercase kebab-case names. Historical review records use
-`YYYY-MM-DD-<scope>.md`. Chinese backups retain the source stem and add
-`.zh-CN` before `.md`.
+`YYYY-MM-DD-<scope>.md`.
 
 ## Metadata
 
-Every non-historical Markdown document contains:
+Every Markdown document contains:
 
 ```markdown
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: one sentence describing scope
 -->
 ```
 
-Translations use `language: zh-CN`, `authoritative: false`, and a
-`translation-of` repository path. Historical review records use
-`<!-- lissio-review -->` and are exempt from language metadata.
+`language` and `authoritative` are not part of the contract: repository
+documents are English and authoritative. The product localization under
+`capabilities/docs/zh/` is the one exception, and it keeps `language: zh-CN`,
+`authoritative: false`, and a `translation-of` path naming its English source.
+Historical review records use `<!-- lissio-review -->` and carry no language
+metadata.
 
 ## Structure
 

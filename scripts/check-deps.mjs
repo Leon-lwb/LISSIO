@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 /**
- * check-deps.mjs — 第三方依赖版本统一机械校验
+ * check-deps.mjs — mechanical check that third-party dependency versions are unified
  *
- * 规则 (docs/architecture/crate-layers.md「第三方依赖版本统一」节):
- *   1. 全部 workspace 成员(含根 package lissio)的依赖必须以 `X = { workspace = true }`
- *      继承根 [workspace.dependencies],禁止在成员 manifest 内联 `version` 或 `path`;
- *   2. 继承项不得重复书写 version(cargo 本身禁止,此处双保险);
- *   3. 一次性依赖也必须先登记到根 [workspace.dependencies],保证版本单一来源。
+ * Rules (docs/architecture/crate-layers.md, "Unified third-party dependency versions" section):
+ *   1. every workspace member's dependencies (including the root package lissio) must inherit
+ *      from the root [workspace.dependencies] via `X = { workspace = true }`; inlining
+ *      `version` or `path` in a member manifest is forbidden;
+ *   2. inherited entries must not repeat version (cargo forbids it anyway; this is a second safeguard);
+ *   3. one-off dependencies must also be registered in the root [workspace.dependencies] first,
+ *      keeping the version a single source of truth.
  *
- * 校验范围: src-tauri/Cargo.toml(根 package)+ crates/<层>/<crate>/Cargo.toml 全部成员。
- * 用法: pnpm check:deps
+ * Scope: src-tauri/Cargo.toml (root package) + every member crates/<layer>/<crate>/Cargo.toml.
+ * Usage: pnpm check:deps
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -19,7 +21,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const workspaceRoot = join(repoRoot, "src-tauri");
 const errors = [];
 
-// ---- 简易 TOML 行处理: 合并被 inline table 撑破的多行条目, 跳过注释/空行 ----
+// ---- Minimal TOML line handling: join multi-line entries split by inline tables, skip comments/blank lines ----
 function logicalLines(text) {
   const out = [];
   let buf = null;
@@ -31,7 +33,7 @@ function logicalLines(text) {
     } else {
       buf += " " + raw.trim();
     }
-    // 统计引号外的大括号差值, >0 表示 inline table 未闭合
+    // Count the brace delta outside quotes; >0 means an inline table is still open
     let inStr = false;
     let d = 0;
     for (let i = 0; i < buf.length; i++) {
@@ -53,7 +55,7 @@ function logicalLines(text) {
 
 const DEP_KINDS = new Set(["dependencies", "dev-dependencies", "build-dependencies"]);
 
-/** 返回 { mode: 'registry' } | { mode: 'deps' } | { mode: 'subtable', dep } | null(忽略) */
+/** Returns { mode: 'registry' } | { mode: 'deps' } | { mode: 'subtable', dep } | null (ignored) */
 function classifySection(name) {
   if (name === "workspace.dependencies") return { mode: "registry" };
   if (DEP_KINDS.has(name)) return { mode: "deps" };
@@ -65,8 +67,8 @@ function classifySection(name) {
 }
 
 /**
- * 解析单个 manifest。
- * 返回 { registry: Map<name, {internal}>, depEntries: [{ dep, kind, inherited, inlineVersion, hasPath }] }
+ * Parse a single manifest.
+ * Returns { registry: Map<name, {internal}>, depEntries: [{ dep, kind, inherited, inlineVersion, hasPath }] }
  */
 function parseManifest(text) {
   const registry = new Map();
@@ -75,7 +77,8 @@ function parseManifest(text) {
   let subtableDep = null;
 
   for (const line of logicalLines(text)) {
-    // [[bench]] / [[bin]] 等数组节: 不是依赖节, 重置上下文避免其键值被误记入前一节
+    // Array sections like [[bench]] / [[bin]]: not dependency sections, so reset the context
+    // to keep their keys out of the previous section
     if (/^\s*\[\[/.test(line)) {
       current = null;
       subtableDep = null;
@@ -106,7 +109,7 @@ function parseManifest(text) {
       continue;
     }
 
-    // 依赖子表写法: [dependencies.foo] 下的行为该依赖的属性
+    // Dependency subtable form: lines under [dependencies.foo] are attributes of that dependency
     if (subtableDep !== null) {
       let entry = depEntries.find((e) => e.dep === subtableDep);
       if (!entry) {
@@ -119,7 +122,7 @@ function parseManifest(text) {
       continue;
     }
 
-    // 点号简写: foo.workspace = true
+    // Dotted shorthand: foo.workspace = true
     const dotted = line.match(/^([A-Za-z0-9_-]+)\.workspace\s*=\s*true\s*$/);
     if (dotted) {
       depEntries.push({ dep: dotted[1], kind: "dependencies", inherited: true, inlineVersion: false, hasPath: false });
@@ -128,7 +131,7 @@ function parseManifest(text) {
     const kv = line.match(/^([A-Za-z0-9_-]+)\s*=\s*(.+)$/);
     if (kv) {
       const value = kv[2].trim();
-      // `dep = "1.2"` 裸字符串是 `{ version = "1.2" }` 的 TOML 简写
+      // A bare string `dep = "1.2"` is TOML shorthand for `{ version = "1.2" }`
       const bareVersion = /^".*"$/
         .test(value) || /^'.*'$/.test(value);
       depEntries.push({
@@ -147,22 +150,22 @@ function checkManifest(label, text) {
   const { depEntries } = parseManifest(text);
   for (const e of depEntries) {
     if (e.inherited && e.inlineVersion) {
-      errors.push(`${label}: "${e.dep}" 已走 workspace 继承, 不得再内联 version`);
+      errors.push(`${label}: "${e.dep}" already inherits from the workspace, so it must not inline version`);
       continue;
     }
     if (e.inherited) continue;
-    const what = e.inlineVersion ? "内联 version" : e.hasPath ? "内联 path" : "未声明来源";
+    const what = e.inlineVersion ? "inlined version" : e.hasPath ? "inlined path" : "no declared source";
     errors.push(
-      `${label}: "${e.dep}" ${what} — 请登记根 [workspace.dependencies] 后以 "${e.dep} = { workspace = true }" 引用`,
+      `${label}: "${e.dep}" has ${what} — register it in the root [workspace.dependencies] and reference it as "${e.dep} = { workspace = true }"`,
     );
   }
 }
 
-// ---- 根 manifest (workspace + 根 package 二合一) ----
-const rootLabel = "lissio (根)";
+// ---- Root manifest (workspace + root package combined) ----
+const rootLabel = "lissio (root)";
 checkManifest(rootLabel, readFileSync(join(workspaceRoot, "Cargo.toml"), "utf8"));
 
-// ---- 全部成员 crate ----
+// ---- All member crates ----
 const cratesDir = join(workspaceRoot, "crates");
 let memberCount = 0;
 for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
@@ -177,10 +180,10 @@ for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
 }
 
 if (errors.length > 0) {
-  console.error(`✗ 依赖版本统一校验失败 (${errors.length} 处):\n`);
+  console.error(`✗ Dependency version unification check failed (${errors.length} issues):\n`);
   for (const e of errors) console.error(`  - ${e}`);
-  console.error("\n规则见 docs/architecture/crate-layers.md「第三方依赖版本统一」");
+  console.error("\nSee the \"Unified third-party dependency versions\" section of docs/architecture/crate-layers.md");
   process.exit(1);
 }
 
-console.log(`✓ 依赖版本统一校验通过 — ${memberCount} 个成员 + 根 package, 全部依赖走 [workspace.dependencies] 继承`);
+console.log(`✓ Dependency version unification passed — ${memberCount} members + root package, all dependencies inherit from [workspace.dependencies]`);

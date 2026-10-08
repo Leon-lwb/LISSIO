@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 /**
- * check-changes.mjs — `.changes` 变更文件与配置的合法性门禁。
+ * check-changes.mjs — validity gate for `.changes` change files and configuration.
  *
- * 为什么需要它: covector 对变更文件的失效方式是**静默丢弃**。写错包名的条目不会报错,
- * 只会让这条改动无声地消失在下一次发版说明里; 写错 bump 类型或 tag 同理。本门禁把这些
- * 失败从"发布当天才发现"提前到 PR 阶段, 并且只读取文件, 不依赖 diff 基准。
+ * Why it exists: covector's failure mode for a change file is to **silently drop** it. An
+ * entry with a misspelled package name does not error; the change just vanishes silently
+ * from the next release notes, and the same goes for a wrong bump type or tag. This gate
+ * moves those failures from "discovered on release day" to the PR stage, and it only reads
+ * files, so it does not depend on a diff base.
  *
- * 校验内容:
- *   - config.json: 顶层键合法(与 covector 的 .strict() 模式一致)、包路径与 manifest 存在、
- *     manager 已定义且具备写入版本的能力;
- *   - .changes/*.md: frontmatter 可解析、包名已声明、bump 类型合法、tag 已声明、摘要非空、
- *     同一文件不重复声明同一个包;
- *   - pre.json: 结构合法、tag 非空、changes 数组里的文件确实存在。
+ * What it checks:
+ *   - config.json: top-level keys are valid (matching covector's .strict() mode), package
+ *     paths and manifests exist, and each manager is defined and able to write versions;
+ *   - .changes/*.md: frontmatter parses, the package name is declared, the bump type is
+ *     valid, the tag is declared, the summary is non-empty, and the same package is not
+ *     declared twice in one file;
+ *   - pre.json: the structure is valid, the tag is non-empty, and the files named in the
+ *     changes array actually exist.
  *
- * 用法:
+ * Usage:
  *   pnpm check:changes
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
@@ -27,8 +31,8 @@ const rel = (path) => relative(repoRoot, path).split(/[\\/]/).join('/');
 const errors = [];
 const fail = (message) => errors.push(message);
 
-// covector 的 configFileSchema 是 .strict(): 未知顶层键直接抛错。这里保持同一份清单,
-// 让配置拼写错误在 PR 阶段而不是发版当天被拦住。
+// covector's configFileSchema is .strict(): an unknown top-level key throws. This keeps the
+// same list so a config typo is caught at the PR stage instead of on release day.
 const CONFIG_KEYS = new Set([
   'changeFolder',
   'gitSiteUrl',
@@ -43,7 +47,7 @@ const BASE_BUMPS = ['major', 'minor', 'patch', 'noop'];
 const README_RE = /^readme\.md$/i;
 const KEBAB_RE = /^[a-z][a-z0-9-]*$/;
 
-/** covector 的 manager → manifest 推断规则(`@covector/files` readPkgFile)。 */
+/** covector's manager → manifest inference rule (`@covector/files` readPkgFile). */
 function manifestName(manager, packageFileName) {
   if (packageFileName) return packageFileName;
   if (/rust/.test(manager)) return 'Cargo.toml';
@@ -55,27 +59,27 @@ function readJson(path) {
   try {
     return JSON.parse(readFileSync(path, 'utf8'));
   } catch (error) {
-    fail(`${rel(path)}: 不是合法 JSON — ${error.message}`);
+    fail(`${rel(path)}: not valid JSON — ${error.message}`);
     return null;
   }
 }
 
-// ── .changes 与 config.json ────────────────────────────────────────────────
+// ── .changes and config.json ────────────────────────────────────────────────
 if (!existsSync(changesDir) || !statSync(changesDir).isDirectory()) {
-  fail('.changes/ 目录缺失; 版本策略与变更文件都放在这里');
+  fail('.changes/ directory is missing; version policy and change files live here');
 }
 
 const configPath = join(changesDir, 'config.json');
 const config = existsSync(configPath) ? readJson(configPath) : null;
 if (!config) {
-  if (!existsSync(configPath)) fail('.changes/config.json 缺失');
+  if (!existsSync(configPath)) fail('.changes/config.json is missing');
   console.error(errors.map((message) => `✗ ${message}`).join('\n'));
   process.exit(1);
 }
 
 for (const key of Object.keys(config)) {
   if (!CONFIG_KEYS.has(key)) {
-    fail(`.changes/config.json: 未知顶层键 "${key}" — covector 的配置是严格模式, 该键会让所有命令失败`);
+    fail(`.changes/config.json: unknown top-level key "${key}" — covector's config is strict, so this key makes every command fail`);
   }
 }
 
@@ -85,57 +89,57 @@ const changeTags = config.changeTags ?? {};
 const additionalBumps = config.additionalBumpTypes ?? [];
 
 if (!packages || typeof packages !== 'object' || Array.isArray(packages)) {
-  fail('.changes/config.json: packages 必须是对象');
+  fail('.changes/config.json: packages must be an object');
 } else if (Object.keys(packages).length === 0) {
-  fail('.changes/config.json: packages 不能为空');
+  fail('.changes/config.json: packages must not be empty');
 }
 
 for (const [name, entry] of Object.entries(packages ?? {})) {
   if (!entry || typeof entry !== 'object') {
-    fail(`.changes/config.json: 包 "${name}" 必须是对象`);
+    fail(`.changes/config.json: package "${name}" must be an object`);
     continue;
   }
   const dir = resolve(repoRoot, entry.path ?? '');
   if (typeof entry.path !== 'string' || !entry.path) {
-    fail(`.changes/config.json: 包 "${name}" 缺少 path`);
+    fail(`.changes/config.json: package "${name}" is missing path`);
   } else if (!existsSync(dir) || !statSync(dir).isDirectory()) {
-    fail(`.changes/config.json: 包 "${name}" 的 path 不存在 — ${entry.path}`);
+    fail(`.changes/config.json: package "${name}" path does not exist — ${entry.path}`);
   } else {
     const manifest = join(dir, manifestName(entry.manager ?? '', entry.packageFileName));
     if (!existsSync(manifest)) {
-      fail(`.changes/config.json: 包 "${name}" 找不到 manifest — ${rel(manifest)}`);
+      fail(`.changes/config.json: package "${name}" has no manifest — ${rel(manifest)}`);
     }
   }
 
   const manager = pkgManagers[entry.manager];
   if (typeof entry.manager !== 'string' || !entry.manager) {
-    fail(`.changes/config.json: 包 "${name}" 缺少 manager; 没有 manager 就不会写入版本号`);
+    fail(`.changes/config.json: package "${name}" is missing manager; without a manager, no version is written`);
   } else if (!manager) {
     fail(
-      `.changes/config.json: 包 "${name}" 的 manager "${entry.manager}" 未在 pkgManagers 中定义 — ` +
-        '版本写入会静默跳过',
+      `.changes/config.json: package "${name}" manager "${entry.manager}" is not defined in pkgManagers — ` +
+        'version writing is silently skipped',
     );
   } else if (manager.version !== true && entry.version === undefined) {
     fail(
-      `.changes/config.json: 包 "${name}" 未启用版本写入 — pkgManagers.${entry.manager}.version ` +
-        '既不是 true, 包上也没有自定义 version 命令',
+      `.changes/config.json: package "${name}" does not enable version writing — pkgManagers.${entry.manager}.version ` +
+        'is not true, and the package has no custom version command',
     );
   }
 }
 
 for (const [tag, heading] of Object.entries(changeTags)) {
-  if (!KEBAB_RE.test(tag)) fail(`.changes/config.json: changeTags 的键 "${tag}" 不是 kebab-case`);
+  if (!KEBAB_RE.test(tag)) fail(`.changes/config.json: changeTags key "${tag}" is not kebab-case`);
   if (typeof heading !== 'string' || !heading) {
-    fail(`.changes/config.json: changeTags["${tag}"] 必须是章节标题字符串`);
+    fail(`.changes/config.json: changeTags["${tag}"] must be a section heading string`);
   }
 }
 if (config.defaultChangeTag !== undefined && !(config.defaultChangeTag in changeTags)) {
   fail(
-    `.changes/config.json: defaultChangeTag "${config.defaultChangeTag}" 不在 changeTags 中`,
+    `.changes/config.json: defaultChangeTag "${config.defaultChangeTag}" is not in changeTags`,
   );
 }
 
-// ── 变更文件 ───────────────────────────────────────────────────────────────
+// ── Change files ───────────────────────────────────────────────────────────────
 const ALLOWED_BUMPS = new Set([...BASE_BUMPS, ...additionalBumps]);
 const changeFiles = existsSync(changesDir)
   ? readdirSync(changesDir)
@@ -152,11 +156,11 @@ for (const name of changeFiles) {
 
   const front = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!front) {
-    fail(`${label}: 缺少 --- 包裹的 frontmatter`);
+    fail(`${label}: missing --- delimited frontmatter`);
     continue;
   }
   const body = text.slice(front[0].length).trim();
-  if (!body) fail(`${label}: frontmatter 之后没有摘要正文`);
+  if (!body) fail(`${label}: no summary body after the frontmatter`);
 
   const seen = new Set();
   let releases = 0;
@@ -165,65 +169,65 @@ for (const name of changeFiles) {
     if (!line || line.startsWith('#')) continue;
     const match = line.match(RELEASE_LINE);
     if (!match) {
-      fail(`${label}: 无法解析 frontmatter 行 "${line}"(期望 "<包名>": <bump>[:<tag>])`);
+      fail(`${label}: cannot parse frontmatter line "${line}" (expected "<package>": <bump>[:<tag>])`);
       continue;
     }
     const pkg = match[1] ?? match[2] ?? match[3];
     const bump = match[4];
     const tag = match[5];
 
-    if (seen.has(pkg)) fail(`${label}: 同一个包 "${pkg}" 被声明了两次`);
+    if (seen.has(pkg)) fail(`${label}: package "${pkg}" is declared twice`);
     seen.add(pkg);
     releases += 1;
 
     if (!packages || !(pkg in packages)) {
       fail(
-        `${label}: 包 "${pkg}" 不在 config.json 的 packages 中 — covector 会静默丢弃这条改动`,
+        `${label}: package "${pkg}" is not in config.json packages — covector silently drops this change`,
       );
     }
     if (!ALLOWED_BUMPS.has(bump)) {
-      fail(`${label}: bump 类型 "${bump}" 非法(允许 ${[...ALLOWED_BUMPS].join(' / ')})`);
+      fail(`${label}: bump type "${bump}" is invalid (allowed: ${[...ALLOWED_BUMPS].join(' / ')})`);
     }
     if (tag && !(tag in changeTags)) {
-      fail(`${label}: tag "${tag}" 未在 config.json 的 changeTags 中声明`);
+      fail(`${label}: tag "${tag}" is not declared in config.json changeTags`);
     }
   }
-  if (releases === 0) fail(`${label}: frontmatter 里没有声明任何包`);
+  if (releases === 0) fail(`${label}: frontmatter declares no packages`);
 }
 
-// ── 预发布模式 ─────────────────────────────────────────────────────────────
+// ── Prerelease mode ─────────────────────────────────────────────────────────────
 const prePath = join(changesDir, 'pre.json');
 if (existsSync(prePath)) {
   const pre = readJson(prePath);
   if (pre) {
     if (typeof pre.tag !== 'string' || !pre.tag) {
-      fail('.changes/pre.json: tag 必须是非空字符串(例如 "beta")');
+      fail('.changes/pre.json: tag must be a non-empty string (for example "beta")');
     } else if (!/^[a-z][a-z0-9.-]*$/.test(pre.tag)) {
-      fail(`.changes/pre.json: tag "${pre.tag}" 只能是小写字母、数字、点和连字符`);
+      fail(`.changes/pre.json: tag "${pre.tag}" may contain only lowercase letters, digits, dots, and hyphens`);
     }
     if (!Array.isArray(pre.changes)) {
-      fail('.changes/pre.json: changes 必须是数组');
+      fail('.changes/pre.json: changes must be an array');
     } else {
       for (const entry of pre.changes) {
         if (typeof entry !== 'string') {
-          fail(`.changes/pre.json: changes 的元素必须是路径字符串, 收到 ${JSON.stringify(entry)}`);
+          fail(`.changes/pre.json: changes entries must be path strings, got ${JSON.stringify(entry)}`);
         } else if (!existsSync(resolve(repoRoot, entry))) {
-          fail(`.changes/pre.json: changes 指向的文件不存在 — ${entry}`);
+          fail(`.changes/pre.json: a file named by changes does not exist — ${entry}`);
         }
       }
     }
   }
 }
 
-// ── 结果 ───────────────────────────────────────────────────────────────────
+// ── Result ───────────────────────────────────────────────────────────────────
 if (errors.length > 0) {
-  console.error('变更文件门禁失败:');
+  console.error('Change file gate failed:');
   for (const message of errors) console.error(`  ✗ ${message}`);
   process.exit(1);
 }
 
-const pre = existsSync(prePath) ? ', 预发布模式开启' : '';
+const pre = existsSync(prePath) ? ', prerelease mode enabled' : '';
 console.log(
-  `✓ 变更文件门禁通过 — ${changeFiles.length} 个变更文件, ` +
-    `${Object.keys(packages ?? {}).length} 个包, ${Object.keys(changeTags).length} 个 changelog 章节${pre}`,
+  `✓ Change file gate passed — ${changeFiles.length} change files, ` +
+    `${Object.keys(packages ?? {}).length} packages, ${Object.keys(changeTags).length} changelog sections${pre}`,
 );

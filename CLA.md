@@ -4,13 +4,11 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: Contributions to Lissio
 -->
 
-Version: 2026-10-07. This English text is authoritative. Chinese translations
-are informational backups only.
+Version: 2026-10-07. This English text is authoritative and is the only version
+of this agreement.
 
 This agreement describes the terms for contributing to Lissio. It is not legal
 advice; contributors should seek independent advice when needed.

@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 #
-# check-all.sh — 一键格式化 + 全量质量门禁
+# check-all.sh — one-shot formatting + full quality gate
 #
-# 检查项来自唯一事实源 scripts/gates.mjs (不再在本文件手写清单, 避免漂移):
-#   1. 格式化 (默认开启): cargo fmt / eslint --fix / 重新生成前端合同 —— 写入修复
-#   2. 检查: 依次跑 gates.mjs 里登记的每条门禁, 失败不中断, 全部跑完再汇总
-#   3. 汇总: 通过/失败清单 + 每项复现命令 + 失败日志末尾片段与完整日志路径
+# Checks come from the single source of truth scripts/gates.mjs (no hand-written list
+# here, to avoid drift):
+#   1. formatting (on by default): cargo fmt / eslint --fix / regenerate frontend
+#      contracts — writes fixes
+#   2. checks: run every gate registered in gates.mjs in order; a failure does not stop
+#      the run, and everything is summarized at the end
+#   3. summary: pass/fail list + a reproduction command per item + the tail of the
+#      failure log and the full log path
 #
-# 用法:
-#   pnpm check:all                # 全量: full tier (含 build:web / e2e / perf / cargo deny)
-#   pnpm check:all -- --quick     # 快速: pr tier (CI 合入门禁)
-#   pnpm check:all -- --no-fix    # 只读: 跳过格式化写入, 仅检查
-#   pnpm check:all -- --list      # 只列出计划执行的检查项, 不运行
-#   pnpm check:all -- -h          # 帮助
+# Usage:
+#   pnpm check:all                # full: full tier (includes build:web / e2e / perf / cargo deny)
+#   pnpm check:all -- --quick     # quick: pr tier (CI merge gates)
+#   pnpm check:all -- --no-fix    # read-only: skip formatting writes, only check
+#   pnpm check:all -- --list      # only list the planned checks, do not run them
+#   pnpm check:all -- -h          # help
 #
-# 查询门禁清单本身: pnpm gates --list [--set pr|full]
+# Query the gate list itself: pnpm gates --list [--set pr|full]
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -36,12 +40,12 @@ while [ $# -gt 0 ]; do
     --fix)      FIX=true; shift ;;
     --list)     LIST_ONLY=true; shift ;;
     -h|--help)  usage; exit 0 ;;
-    --)         shift ;;  # pnpm run 会把参数分隔符 `--` 一并透传, 直接忽略
-    *) echo "未知参数: $1" >&2; echo; usage; exit 1 ;;
+    --)         shift ;;  # pnpm run forwards the argument separator `--` too; ignore it
+    *) echo "unknown argument: $1" >&2; echo; usage; exit 1 ;;
   esac
 done
 
-# ── 颜色 (尊重 NO_COLOR 与非 TTY) ────────────────────────────
+# ── Colors (honor NO_COLOR and non-TTY) ────────────────────────────
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
   C_RED=$'\033[31m'; C_GREEN=$'\033[32m'; C_YELLOW=$'\033[33m'
   C_BLUE=$'\033[34m'; C_DIM=$'\033[2m'; C_BOLD=$'\033[1m'; C_RESET=$'\033[0m'
@@ -53,20 +57,21 @@ LOG_DIR="$REPO_ROOT/output/check-all"
 rm -rf "$LOG_DIR"
 mkdir -p "$LOG_DIR"
 
-# ── 检查计划: "group|label|dir|command" ──────────────────────
+# ── Check plan: "group|label|dir|command" ──────────────────────
 PLAN=()
 add_plan() { PLAN+=("$1|$2|$3|$4"); }
 
 build_plan() {
   PLAN=()
-  # 格式化阶段是本地专属的"写入"步骤, 不属于 CI 门禁, 因此不进 gates.mjs。
+  # The formatting phase is a local-only "write" step, not a CI gate, so it does not go into gates.mjs.
   if [ "$FIX" = true ]; then
-    add_plan "格式化" "cargo fmt (写入)"          "tauri" "cargo fmt"
-    add_plan "格式化" "eslint --fix (写入)"       "root"  "pnpm lint:fix"
-    add_plan "格式化" "生成前端合同 (写入)"        "root"  "pnpm generate:contracts"
+    add_plan "Formatting" "cargo fmt (write)"          "tauri" "cargo fmt"
+    add_plan "Formatting" "eslint --fix (write)"       "root"  "pnpm lint:fix"
+    add_plan "Formatting" "generate frontend contracts (write)" "root" "pnpm generate:contracts"
   fi
-  # 检查项全部来自唯一事实源 scripts/gates.mjs —— 这里不再手写清单,
-  # 否则又会多出第五份会漂移的门禁列表。--quick 对应 PR tier, 全量对应 full tier。
+  # Checks all come from the single source of truth scripts/gates.mjs — no hand-written
+  # list here, or there would be a fifth gate list free to drift. --quick is the PR tier,
+  # full is the full tier.
   local tier="full"
   [ "$MODE_FULL" = false ] && tier="pr"
   local line
@@ -78,9 +83,9 @@ build_plan() {
 build_plan
 
 if [ "$LIST_ONLY" = true ]; then
-  mode=$([ "$MODE_FULL" = true ] && echo "全量" || echo "快速")
-  fixstate=$([ "$FIX" = true ] && echo "含格式化" || echo "只读")
-  echo "check:all 计划 (模式: $mode, $fixstate):"
+  mode=$([ "$MODE_FULL" = true ] && echo "full" || echo "quick")
+  fixstate=$([ "$FIX" = true ] && echo "with formatting" || echo "read-only")
+  echo "check:all plan (mode: $mode, $fixstate):"
   for entry in "${PLAN[@]}"; do
     IFS='|' read -r g l d c <<< "$entry"
     printf '  %s[%-8s]%s %-32s (%s)  $ %s\n' "$C_BLUE" "$g" "$C_RESET" "$l" "$d" "$c"
@@ -88,7 +93,7 @@ if [ "$LIST_ONLY" = true ]; then
   exit 0
 fi
 
-# ── 执行与记录 ───────────────────────────────────────────────
+# ── Execute and record ───────────────────────────────────────────────
 CHECK_LABELS=(); CHECK_GROUPS=(); CHECK_DIRS=(); CHECK_LOGS=()
 CHECK_CMDS=(); CHECK_STATUS=(); CHECK_DURATIONS=()
 
@@ -113,9 +118,9 @@ _exec_check() {
   CHECK_DURATIONS+=("$elapsed")
 
   if [ "$code" -eq 0 ]; then
-    printf '  %s✓ 通过%s (%ss)\n' "$C_GREEN" "$C_RESET" "$elapsed"
+    printf '  %s✓ passed%s (%ss)\n' "$C_GREEN" "$C_RESET" "$elapsed"
   else
-    printf '  %s✗ 失败%s (exit %s, %ss) → %s\n' "$C_RED" "$C_RESET" "$code" "$elapsed" "$log"
+    printf '  %s✗ failed%s (exit %s, %ss) → %s\n' "$C_RED" "$C_RESET" "$code" "$elapsed" "$log"
   fi
   return 0
 }
@@ -129,10 +134,11 @@ check_tauri() {
   _exec_check "$g" "$l" "$REPO_ROOT/src-tauri" "$@"
 }
 
-# 合同重新生成的安全包装: generate-contracts.mjs 会先 rmSync 输出目录再编译导出,
-# 若 Rust 编译失败会清空已提交的 src/types/generated。这里先生成到临时目录,
-# 仅在成功时才替换工作区文件; 失败则保持原目录不变 (generate-contracts.mjs 支持
-# LISSIO_CONTRACTS_OUT 覆盖输出目录)。
+# Safe wrapper around contract regeneration: generate-contracts.mjs first rmSync's the
+# output directory and then compiles the export, so a Rust compile failure would wipe the
+# committed src/types/generated. Generate into a temporary directory first and replace the
+# workspace files only on success; on failure leave the original directory untouched
+# (generate-contracts.mjs supports LISSIO_CONTRACTS_OUT to override the output directory).
 guarded_generate_contracts() {
   local out="$REPO_ROOT/src/types/generated"
   local tmp code
@@ -144,16 +150,16 @@ guarded_generate_contracts() {
     mkdir -p "$out"
     cp -R "$tmp/." "$out/"
   else
-    echo "generate:contracts 失败: src/types/generated 保持不变 (未替换)"
+    echo "generate:contracts failed: src/types/generated left unchanged (not replaced)"
   fi
   rm -rf "$tmp"
   return "$code"
 }
 
-mode=$([ "$MODE_FULL" = true ] && echo "全量" || echo "快速")
-fixstate=$([ "$FIX" = true ] && echo "开启" || echo "关闭")
+mode=$([ "$MODE_FULL" = true ] && echo "full" || echo "quick")
+fixstate=$([ "$FIX" = true ] && echo "on" || echo "off")
 echo "${C_BOLD}=== check:all ===${C_RESET}"
-echo "模式: $mode   格式化: $fixstate   日志目录: $LOG_DIR"
+echo "mode: $mode   formatting: $fixstate   log directory: $LOG_DIR"
 echo ""
 
 for entry in "${PLAN[@]}"; do
@@ -169,17 +175,17 @@ for entry in "${PLAN[@]}"; do
   fi
 done
 
-# ── 格式化改动提示 ───────────────────────────────────────────
+# ── Formatting-change notice ───────────────────────────────────────────
 if [ "$FIX" = true ]; then
   changed="$(git -C "$REPO_ROOT" status --short -- src src-tauri | wc -l | tr -d ' ')"
   if [ "$changed" -gt 0 ]; then
     echo ""
-    echo "${C_YELLOW}格式化阶段改动了 $changed 个文件 (含生成物):${C_RESET}"
+    echo "${C_YELLOW}the formatting phase changed $changed files (including generated output):${C_RESET}"
     git -C "$REPO_ROOT" status --short -- src src-tauri | head -n 40 | sed 's/^/  /'
   fi
 fi
 
-# ── 汇总 ─────────────────────────────────────────────────────
+# ── Summary ─────────────────────────────────────────────────────
 pass=0; fail=0; total_time=0
 for i in "${!CHECK_LABELS[@]}"; do
   total_time=$((total_time + CHECK_DURATIONS[i]))
@@ -187,8 +193,8 @@ for i in "${!CHECK_LABELS[@]}"; do
 done
 
 echo ""
-echo "${C_BOLD}================ check:all 汇总 ================${C_RESET}"
-printf '模式: %s%s%s   通过: %s%d%s   失败: %s%d%s   总耗时: %ss\n' \
+echo "${C_BOLD}================ check:all summary ================${C_RESET}"
+printf 'mode: %s%s%s   passed: %s%d%s   failed: %s%d%s   total time: %ss\n' \
   "$C_BLUE" "$mode" "$C_RESET" \
   "$C_GREEN" "$pass" "$C_RESET" \
   "$C_RED" "$fail" "$C_RESET" "$total_time"
@@ -203,39 +209,39 @@ for i in "${!CHECK_LABELS[@]}"; do
   fi
 done
 
-# ── 失败详情 ─────────────────────────────────────────────────
+# ── Failure details ─────────────────────────────────────────────────
 if [ "$fail" -gt 0 ]; then
   echo ""
-  echo "${C_BOLD}---------------- 失败详情 (每项末尾 40 行) ----------------${C_RESET}"
+  echo "${C_BOLD}---------------- failure details (last 40 lines of each) ----------------${C_RESET}"
   for i in "${!CHECK_LABELS[@]}"; do
     [ "${CHECK_STATUS[i]}" -eq 0 ] && continue
     echo ""
     echo "${C_RED}✗ [${CHECK_GROUPS[i]}] ${CHECK_LABELS[i]}${C_RESET}  (exit ${CHECK_STATUS[i]})"
-    echo "  复现: (cd ${CHECK_DIRS[i]} && ${CHECK_CMDS[i]})"
-    echo "  日志: ${CHECK_LOGS[i]}"
+    echo "  reproduce: (cd ${CHECK_DIRS[i]} && ${CHECK_CMDS[i]})"
+    echo "  log: ${CHECK_LOGS[i]}"
     echo "  ${C_DIM}----------------------------------------${C_RESET}"
     tail -n 40 "${CHECK_LOGS[i]}" | sed 's/^/  /'
   done
 
-  # 环境类失败的针对性提示
+  # Targeted hints for environment-related failures
   hints=()
   for i in "${!CHECK_LABELS[@]}"; do
     [ "${CHECK_STATUS[i]}" -eq 0 ] && continue
     case "${CHECK_LABELS[i]}" in
-      *"Playwright E2E"*) hints+=("E2E 需要浏览器: pnpm exec playwright install --with-deps chromium") ;;
-      *"cargo deny"*)     hints+=("cargo deny 未安装: cargo install cargo-deny --version 0.20.2") ;;
+      *"Playwright E2E"*) hints+=("E2E needs a browser: pnpm exec playwright install --with-deps chromium") ;;
+      *"cargo deny"*)     hints+=("cargo deny is not installed: cargo install cargo-deny --version 0.20.2") ;;
     esac
   done
   if [ "${#hints[@]}" -gt 0 ]; then
     echo ""
-    echo "${C_YELLOW}环境提示:${C_RESET}"
+    echo "${C_YELLOW}environment hints:${C_RESET}"
     printf '  - %s\n' "${hints[@]}"
   fi
 fi
 
 echo ""
 if [ "$fail" -gt 0 ]; then
-  echo "${C_RED}${C_BOLD}check:all 失败: $fail 项未通过${C_RESET}  (日志: $LOG_DIR)"
+  echo "${C_RED}${C_BOLD}check:all failed: $fail items did not pass${C_RESET}  (log: $LOG_DIR)"
   exit 1
 fi
-echo "${C_GREEN}${C_BOLD}check:all 全部通过 ($pass 项)${C_RESET}  (日志: $LOG_DIR)"
+echo "${C_GREEN}${C_BOLD}check:all passed ($pass items)${C_RESET}  (log: $LOG_DIR)"

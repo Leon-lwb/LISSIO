@@ -4,8 +4,6 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-08
-language: en
-authoritative: true
 applies-to: Release history for the current Lissio repository
 -->
 

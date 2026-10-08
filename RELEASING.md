@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Versioning, verification, packaging, and publication
 -->
 
@@ -36,8 +34,7 @@ tier, so the release preflight covers them automatically:
 - `pnpm check:changes` — every change file names a declared package, a valid
   bump, and a declared section tag.
 - `pnpm check:release-sync` — `package.json`, `tauri.conf.json`, `Cargo.toml`,
-  and `Cargo.lock` agree on one version, and `CHANGELOG.md` together with its
-  Chinese backup (`docs/community/CHANGELOG.zh-CN.md`) carries that version.
+  and `Cargo.lock` agree on one version, and `CHANGELOG.md` carries that version.
 
 ## Preflight
 
@@ -69,10 +66,6 @@ stripped. It then runs `pnpm set-version` to propagate the version to
 
 It refuses to run on a dirty working tree; pass `--allow-dirty` only when you
 mean it. Commit the result before building.
-
-Translate the new entry into `docs/community/CHANGELOG.zh-CN.md` in the same
-commit. The translation is not generated: `check:release-sync` fails when the
-Chinese backup is missing a version the English file has.
 
 ### Pre-releases
 

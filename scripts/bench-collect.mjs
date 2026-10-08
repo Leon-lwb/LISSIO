@@ -1,19 +1,23 @@
 #!/usr/bin/env node
-// Criterion 结果采集器：把 `target/criterion` 下的散落 JSON 归一成可提交的实验产物。
+// Criterion result collector: normalize the scattered JSON under `target/criterion` into a
+// committable experiment artifact.
 //
-// 为什么需要它：Criterion 每个基准在 `<id>/new/estimates.json` 里各写一份统计量，
-// 目录层级随 `benchmark_group` 嵌套而变化，人肉抄进论文既易错又无法复现。
-// 这里只做"读 + 归一 + 导出"，不重新运行任何基准，因此可以随时对着上一次
-// 运行结果重放，保证论文表格与仓库产物来自同一份原始数据。
+// Why it exists: Criterion writes one set of statistics per benchmark into
+// `<id>/new/estimates.json`, and the directory nesting varies with `benchmark_group`, so
+// copying them into the paper by hand is both error-prone and irreproducible. This only
+// "reads + normalizes + exports" and never re-runs a benchmark, so it can be replayed
+// against the previous run's results at any time, keeping the paper tables and the
+// repository artifacts on the same raw data.
 //
-// 用法:
-//   node scripts/bench-collect.mjs                       # 采集到默认输出目录
+// Usage:
+//   node scripts/bench-collect.mjs                       # collect into the default output directory
 //   node scripts/bench-collect.mjs --out docs/experiments/results
 //   node scripts/bench-collect.mjs --json-log target/bench-audit/<ts>/soak-math.log
 //   node scripts/bench-collect.mjs --check docs/experiments/results/criterion.json
 //
-// `--check` 把本次中位数与给定基线逐项比较，回归超过 `--tolerance`（默认 25%）
-// 即非零退出，作为可选性能门禁。
+// `--check` compares this run's medians item by item against the given baseline and exits
+// non-zero when the regression exceeds `--tolerance` (default 25%), as an optional
+// performance gate.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -39,7 +43,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     const next = () => {
       const value = argv[i + 1];
-      if (value === undefined) throw new Error(`${arg} 缺少取值`);
+      if (value === undefined) throw new Error(`${arg} is missing a value`);
       i += 1;
       return value;
     };
@@ -69,7 +73,7 @@ function parseArgs(argv) {
         options.help = true;
         break;
       default:
-        throw new Error(`未知参数: ${arg}`);
+        throw new Error(`unknown argument: ${arg}`);
     }
   }
   return options;
@@ -93,7 +97,7 @@ function walk(dir, predicate, acc = []) {
   return acc;
 }
 
-/** Criterion 的 throughput 声明，用于把耗时换算成吞吐。 */
+/** Criterion's throughput declaration, used to convert duration into throughput. */
 function readThroughput(benchmarkFile) {
   if (!existsSync(benchmarkFile)) return null;
   try {
@@ -124,7 +128,7 @@ function collectCriterion(criterionDir) {
     try {
       estimates = JSON.parse(readFileSync(estimateFile, 'utf8'));
     } catch (error) {
-      console.warn(`跳过无法解析的估计: ${estimateFile} (${error.message})`);
+      console.warn(`skipping unparsable estimate: ${estimateFile} (${error.message})`);
       continue;
     }
     const medianNs = estimates.median?.point_estimate ?? null;
@@ -153,14 +157,15 @@ function collectCriterion(criterionDir) {
 }
 
 /**
- * 非 Criterion 基准（`harness = false` 的自定义 `main`）把结果按行打成 JSON。
- * 这里逐行解析，保留每份日志的来源，避免不同场景的结果混在一起无法追溯。
+ * Non-Criterion benchmarks (a custom `main` with `harness = false`) print their results as
+ * one JSON object per line. Parse line by line here and keep each log's origin, so results
+ * from different scenarios cannot mix and become untraceable.
  */
 function collectJsonLogs(logFiles) {
   const logs = [];
   for (const logFile of logFiles) {
     if (!existsSync(logFile)) {
-      console.warn(`基准日志不存在: ${logFile}`);
+      console.warn(`benchmark log does not exist: ${logFile}`);
       continue;
     }
     const entries = [];
@@ -170,7 +175,7 @@ function collectJsonLogs(logFiles) {
       try {
         entries.push(JSON.parse(trimmed));
       } catch {
-        // 非 JSON 行（cargo 进度、criterion 输出）直接忽略。
+        // Non-JSON lines (cargo progress, criterion output) are ignored.
       }
     }
     if (entries.length === 0) continue;
@@ -243,7 +248,7 @@ function toCsv(rows) {
 
 function compareToBaseline(current, baselinePath, tolerance) {
   if (!existsSync(baselinePath)) {
-    console.warn(`基线不存在，跳过比较: ${baselinePath}`);
+    console.warn(`baseline does not exist, skipping comparison: ${baselinePath}`);
     return 0;
   }
   const baseline = JSON.parse(readFileSync(baselinePath, 'utf8'));
@@ -265,11 +270,11 @@ function compareToBaseline(current, baselinePath, tolerance) {
   for (const row of regressions) {
     const pct = (row.delta * 100).toFixed(1);
     console.error(
-      `性能回归: ${row.id} 中位数 ${(row.baseline_ns / 1000).toFixed(2)}µs -> ${(row.current_ns / 1000).toFixed(2)}µs (+${pct}%, 容差 ${(tolerance * 100).toFixed(0)}%)`,
+      `performance regression: ${row.id} median ${(row.baseline_ns / 1000).toFixed(2)}µs -> ${(row.current_ns / 1000).toFixed(2)}µs (+${pct}%, tolerance ${(tolerance * 100).toFixed(0)}%)`,
     );
   }
   if (missing.length > 0) {
-    console.warn(`基线缺失 ${missing.length} 项（不判失败）: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ' ...' : ''}`);
+    console.warn(`baseline is missing ${missing.length} entries (not treated as failure): ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? ' ...' : ''}`);
   }
   return regressions.length;
 }
@@ -277,19 +282,20 @@ function compareToBaseline(current, baselinePath, tolerance) {
 function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log('用法: node scripts/bench-collect.mjs [--criterion DIR] [--out DIR] [--json-log LOG]... [--label NAME] [--check BASELINE] [--tolerance R]');
+    console.log('usage: node scripts/bench-collect.mjs [--criterion DIR] [--out DIR] [--json-log LOG]... [--label NAME] [--check BASELINE] [--tolerance R]');
     return 0;
   }
   if (!existsSync(options.criterion)) {
-    console.error(`Criterion 输出目录不存在: ${options.criterion}\n先运行 bash scripts/bench-audit.sh quick 生成结果。`);
+    console.error(`Criterion output directory does not exist: ${options.criterion}\nRun bash scripts/bench-audit.sh quick first to generate results.`);
     return 1;
   }
 
   const benchmarks = collectCriterion(options.criterion);
   const harnessLogs = collectJsonLogs(options.jsonLogs);
   const jsonPath = join(options.out, 'criterion.json');
-  // 未显式传 --label 时沿用上一次的标签：--check 会重写产物，若标签被清空，
-  // "本次产物来自哪一次采集"这条线索就丢了。
+  // When --label is not passed explicitly, keep the previous label: --check rewrites the
+  // artifact, and clearing the label would lose the clue of which collection run this
+  // artifact came from.
   let label = options.label;
   if (label === null && existsSync(jsonPath)) {
     try {
@@ -320,9 +326,9 @@ function main() {
   }
 
   if (!options.quiet) {
-    console.log(`采集 ${benchmarks.length} 项基准 -> ${relative(repoRoot, jsonPath)}`);
+    console.log(`collected ${benchmarks.length} benchmarks -> ${relative(repoRoot, jsonPath)}`);
     console.log(`CSV -> ${relative(repoRoot, csvPath)}`);
-    if (harnessLogs.length > 0) console.log(`非 Criterion 基准日志 ${harnessLogs.length} 份 -> ${relative(repoRoot, join(options.out, 'harness.json'))}`);
+    if (harnessLogs.length > 0) console.log(`non-Criterion benchmark logs: ${harnessLogs.length} -> ${relative(repoRoot, join(options.out, 'harness.json'))}`);
   }
 
   if (options.check) {

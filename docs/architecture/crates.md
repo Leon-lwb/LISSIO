@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Rust workspace ownership, domains, layers, and dependency direction
 -->
 

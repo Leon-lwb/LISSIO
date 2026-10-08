@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// 生成 backend-cli `graph update` 所需的 workspace 文档 JSON(压力测试用图)。
+// Generates the workspace document JSON that backend-cli `graph update` needs (a stress-test graph).
 //
-// 两种字节速率设计(JustFloat 每帧 = channels*4 + 4 字节):
-//   4ch    : 通道固定 4,采样率 = 目标速率 / 20 B —— 依赖采样率校验上限 5 MHz;
-//   multich: 采样率压在 700 kHz 内,用通道数扩字节率(不依赖放宽后的上限)。
+// Two byte-rate designs (JustFloat frame = channels*4 + 4 bytes):
+//   4ch    : fixed 4 channels, sample rate = target rate / 20 B — relies on the 5 MHz sample-rate validation ceiling;
+//   multich: sample rate stays under 700 kHz, and the byte rate is scaled with the channel count (does not rely on the relaxed ceiling).
 //
-// 用法:
+// Usage:
 //   node scripts/stress/graph-doc.mjs --mode 4ch --mbps 50 --out /tmp/doc.json
-// 文档写入 --out;速率换算元数据写到 stdout(单行 JSON,供编排器存档/报告核对)。
+// The document goes to --out; the rate-conversion metadata goes to stdout (a single JSON line, for the orchestrator to archive/check in reports).
 
 import { writeFileSync } from 'node:fs';
 
-const MAX_MULTICH_RATE = 700_000; // multich 模式的设计约束:不越过原校验上限
+const MAX_MULTICH_RATE = 700_000; // design constraint of multich mode: do not cross the original validation ceiling
 const TAB_ID = 't1';
 const DEVICE_ID = 'gen';
 const PROTOCOL_ID = 'jf';
@@ -23,7 +23,7 @@ function parseArgs(argv) {
     const arg = argv[i];
     const next = () => {
       const value = argv[i + 1];
-      if (value === undefined) throw new Error(`${arg} 缺少取值`);
+      if (value === undefined) throw new Error(`${arg} is missing a value`);
       i += 1;
       return value;
     };
@@ -31,20 +31,20 @@ function parseArgs(argv) {
       case '--mode': options.mode = next(); break;
       case '--mbps': options.mbps = Number(next()); break;
       case '--out': options.out = next(); break;
-      default: throw new Error(`未知参数: ${arg}`);
+      default: throw new Error(`unknown argument: ${arg}`);
     }
   }
   if (options.mode !== '4ch' && options.mode !== 'multich') {
-    throw new Error('--mode 必须是 4ch 或 multich');
+    throw new Error('--mode must be 4ch or multich');
   }
   if (!(options.mbps > 0) || !Number.isFinite(options.mbps)) {
-    throw new Error('--mbps 必须是正数');
+    throw new Error('--mbps must be a positive number');
   }
-  if (!options.out) throw new Error('--out 缺少输出文件路径');
+  if (!options.out) throw new Error('--out is missing the output file path');
   return options;
 }
 
-// 依目标字节速率换算 (channels, sampleRate)。参考 scripts/bench-stress.sh 的场景矩阵。
+// Convert from the target byte rate to (channels, sampleRate). See the scenario matrix in scripts/bench-stress.sh.
 export function rateDesign(mode, mbps) {
   if (mode === '4ch') {
     const frameBytes = 4 * 4 + 4;
@@ -74,7 +74,7 @@ export function buildDocument({ channels }) {
       attributes: {
         testData: {
           signal: { waveform: 'sine', frequency: 1, amplitude: 1, offset: 0 },
-          sampleRate: null, // 由调用方填充
+          sampleRate: null, // filled in by the caller
           seed: 1,
           channels,
           overrides: {},

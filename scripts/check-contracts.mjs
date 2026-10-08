@@ -1,22 +1,23 @@
 #!/usr/bin/env node
-// 合同漂移检查 —— Rust wire 类型与已提交的 src/types/generated 必须一致。
+// Contract drift check — Rust wire types must match the committed src/types/generated.
 //
-// 做法: 把导出程序跑进临时目录, 与工作区文件逐字节比较; 不修改工作区。
-// 失败说明: Rust 侧改了 wire 类型但没重新 pnpm generate:contracts。
+// Approach: run the exporter into a temporary directory and compare byte for byte against
+// the workspace files; the workspace itself is never modified.
+// A failure means the Rust wire types changed without re-running pnpm generate:contracts.
 //
-// 用法: pnpm check:contracts
+// Usage: pnpm check:contracts
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
-// import.meta.dirname 是平台原生路径; new URL(...).pathname 在 Windows 上会得到
-// "/C:/..." 形式的路径, existsSync 判为不存在, 使本检查在 Windows 上必然失败
+// import.meta.dirname is a platform-native path; on Windows new URL(...).pathname yields
+// a "/C:/..." form that existsSync treats as missing, making this check always fail there
 const root = join(import.meta.dirname, '..');
 const committedDir = join(root, 'src', 'types', 'generated');
 
 if (!existsSync(committedDir)) {
-  console.error('缺少 src/types/generated —— 先运行 pnpm generate:contracts');
+  console.error('missing src/types/generated — run pnpm generate:contracts first');
   process.exit(1);
 }
 
@@ -41,14 +42,15 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1);
 }
 
-/// 比较前统一换行符 — 工作区文件的行尾由 git 检出决定 (core.autocrlf 下 Windows 为 CRLF),
-/// 而 ts-rs 恒写 LF。行尾不属于 wire 合同内容, 归一后再比; Linux/macOS 检出本来即 LF,
-/// 归一为无操作, 因此该比较保持跨平台一致。
+/// Normalize line endings before comparing — workspace end-of-line style depends on the git
+/// checkout (CRLF on Windows under core.autocrlf), while ts-rs always writes LF. Line endings
+/// are not part of the wire contract, so normalize first; Linux/macOS checkouts are already LF,
+/// making this a no-op there and keeping the comparison consistent across platforms.
 function normalizeEol(content) {
   return content.replace(/\r\n/g, '\n');
 }
 
-/** 递归收集相对路径 → 内容。 */
+/** Recursively collect relative path → content. */
 function snapshot(dir) {
   const files = new Map();
   for (const entry of readdirSync(dir, { recursive: true, withFileTypes: true })) {
@@ -65,23 +67,23 @@ const problems = [];
 
 for (const [rel, content] of committed) {
   if (!generated.has(rel)) {
-    problems.push(`多余文件 (Rust 侧已删除该类型): ${rel}`);
+    problems.push(`extra file (the type was removed on the Rust side): ${rel}`);
   } else if (generated.get(rel) !== content) {
-    problems.push(`内容漂移: ${rel}`);
+    problems.push(`content drift: ${rel}`);
   }
 }
 for (const rel of generated.keys()) {
   if (!committed.has(rel)) {
-    problems.push(`缺失文件 (Rust 侧新增了类型): ${rel}`);
+    problems.push(`missing file (a type was added on the Rust side): ${rel}`);
   }
 }
 
 rmSync(tempDir, { recursive: true, force: true });
 
 if (problems.length > 0) {
-  console.error('check:contracts 失败 —— 生成结果与提交文件不一致:');
+  console.error('check:contracts failed — generated output differs from the committed files:');
   for (const problem of problems) console.error(`  - ${problem}`);
-  console.error('运行 pnpm generate:contracts 后提交更新的 generated 目录。');
+  console.error('Run pnpm generate:contracts and commit the updated generated directory.');
   process.exit(1);
 }
-console.log(`check:contracts 通过 (${committed.size} 个合同文件)`);
+console.log(`check:contracts passed (${committed.size} contract files)`);

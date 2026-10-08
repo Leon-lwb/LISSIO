@@ -1,15 +1,16 @@
 import { defineConfig } from 'vitest/config';
 
-/// Vitest 配置 — 与 vite.config.ts 相互独立, 不影响生产构建
+/// Vitest configuration — independent of vite.config.ts and does not affect the production build
 ///
-/// - environment: jsdom — 组件测试需要 DOM
-/// - globals: true — @testing-library/react 自动 cleanup 依赖全局 afterEach
-/// - setupFiles: 注册 jest-dom 匹配器 + @tauri-apps/* 全量 mock (无需 Tauri 运行时)
+/// - environment: jsdom — component tests need a DOM
+/// - globals: true — @testing-library/react automatic cleanup relies on a global afterEach
+/// - setupFiles: registers jest-dom matchers + a full @tauri-apps/* mock (no Tauri runtime needed)
 ///
-/// resolve.conditions 必须把 browser 放在前面。jsdom 环境默认走 node 条件, 于是
-/// react-resizable-panels 会解析到它的 SSR 构建 —— 那份构建整段省略了面板组的布局
-/// 计算 (eagerValuesRef.layout 永远是空数组), collapse()/expand() 会直接断言失败。
-/// 测试必须加载应用真正使用的那份构建, 否则测的是另一套实现。
+/// resolve.conditions must list browser first. The jsdom environment defaults to the node
+/// condition, so react-resizable-panels would resolve to its SSR build — that build omits the
+/// panel group's layout calculation entirely (eagerValuesRef.layout is always an empty array),
+/// making collapse()/expand() fail its assertions outright. Tests must load the same build the
+/// app actually uses, otherwise they exercise a different implementation.
 export default defineConfig({
   resolve: {
     conditions: ['browser', 'development', 'import', 'default'],

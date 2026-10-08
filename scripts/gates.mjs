@@ -26,10 +26,9 @@
  *   - `cwd` is a key of `CWD`.
  *   - `tier` decides where a gate runs: "pr" runs on every change, "full" only
  *     in the complete/release flow.
- *   - `label` and `group` are Chinese because they are console UX for
- *     `check-all.sh`. `why` is English because it is embedded into the
- *     authoritative English documents (AGENTS.md, CONTRIBUTING.md, the PR
- *     template). Keep that split.
+ *   - `label` and `group` are English console UX for `check-all.sh`; `why` is
+ *     embedded into the authoritative English documents (AGENTS.md,
+ *     CONTRIBUTING.md, the PR template).
  */
 
 import { dirname, resolve } from 'node:path';
@@ -64,8 +63,8 @@ export const GATES = [
   // ── Architecture and contracts ─────────────────────────────
   {
     id: 'architecture-inventory',
-    label: 'crate 架构清单',
-    group: '架构',
+    label: 'Crate architecture inventory',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'architecture'],
     tier: 'pr',
@@ -78,8 +77,8 @@ export const GATES = [
   },
   {
     id: 'check-architecture',
-    label: '架构门禁 (领域/层级/适配器)',
-    group: '架构',
+    label: 'Architecture gate (domain/layer/adapter)',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:architecture'],
     tier: 'pr',
@@ -88,8 +87,8 @@ export const GATES = [
   },
   {
     id: 'check-deps',
-    label: '第三方依赖版本统一',
-    group: '架构',
+    label: 'Third-party dependency version unification',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:deps'],
     tier: 'pr',
@@ -98,8 +97,8 @@ export const GATES = [
   },
   {
     id: 'check-web-contract',
-    label: '命令出口契约',
-    group: '架构',
+    label: 'Command exit contract',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:web-contract'],
     tier: 'pr',
@@ -108,8 +107,8 @@ export const GATES = [
   },
   {
     id: 'check-contracts',
-    label: 'Rust↔TS 合同一致',
-    group: '架构',
+    label: 'Rust↔TS contract consistency',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:contracts'],
     tier: 'pr',
@@ -118,8 +117,8 @@ export const GATES = [
   },
   {
     id: 'check-model-catalog',
-    label: '模型目录',
-    group: '架构',
+    label: 'Model catalog',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:model-catalog'],
     tier: 'pr',
@@ -128,8 +127,8 @@ export const GATES = [
   },
   {
     id: 'check-tokens',
-    label: 'UI 颜色令牌',
-    group: '架构',
+    label: 'UI color tokens',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:tokens'],
     tier: 'pr',
@@ -138,8 +137,8 @@ export const GATES = [
   },
   {
     id: 'check-motion',
-    label: '动效属性 (只走绘制层)',
-    group: '架构',
+    label: 'Motion properties (paint layer only)',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:motion'],
     tier: 'pr',
@@ -148,8 +147,8 @@ export const GATES = [
   },
   {
     id: 'check-layers',
-    label: '前端分层 (实现/交互/效果/视图)',
-    group: '架构',
+    label: 'Frontend layers (implementation/interaction/effects/view)',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:layers'],
     tier: 'pr',
@@ -158,18 +157,18 @@ export const GATES = [
   },
   {
     id: 'check-docs',
-    label: '文档与许可证',
-    group: '架构',
+    label: 'Documentation and licenses',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:docs'],
     tier: 'pr',
-    why: 'LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, review-record metadata; see `docs/governance/`',
+    why: 'LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, and review-record metadata; see `docs/governance/`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
     id: 'check-ci-gates',
-    label: 'CI 门禁防漂移',
-    group: '架构',
+    label: 'CI gate drift prevention',
+    group: 'Architecture',
     cwd: 'root',
     cmd: ['pnpm', 'check:ci-gates'],
     tier: 'pr',
@@ -180,8 +179,8 @@ export const GATES = [
   // ── Frontend ───────────────────────────────────────────────
   {
     id: 'typecheck',
-    label: 'TypeScript 类型',
-    group: '前端',
+    label: 'TypeScript types',
+    group: 'Frontend',
     cwd: 'root',
     cmd: ['pnpm', 'typecheck'],
     tier: 'pr',
@@ -190,8 +189,8 @@ export const GATES = [
   },
   {
     id: 'lint-ci',
-    label: 'ESLint (零警告)',
-    group: '前端',
+    label: 'ESLint (zero warnings)',
+    group: 'Frontend',
     cwd: 'root',
     cmd: ['pnpm', 'lint:ci'],
     tier: 'pr',
@@ -200,8 +199,8 @@ export const GATES = [
   },
   {
     id: 'test-frontend',
-    label: 'Vitest 单测',
-    group: '前端',
+    label: 'Vitest unit tests',
+    group: 'Frontend',
     cwd: 'root',
     cmd: ['pnpm', 'test'],
     tier: 'pr',
@@ -212,7 +211,7 @@ export const GATES = [
   // ── Rust ───────────────────────────────────────────────────
   {
     id: 'rust-source-size',
-    label: 'Rust 生产文件 500 行上限',
+    label: 'Rust production file 500-line limit',
     group: 'Rust',
     cwd: 'root',
     cmd: ['pnpm', 'check:rust-size'],
@@ -254,8 +253,8 @@ export const GATES = [
   // ── Release: version + changelog stay in step ──────────────
   {
     id: 'check-changes',
-    label: '变更文件合法性',
-    group: '发布',
+    label: 'Change file validity',
+    group: 'Release',
     cwd: 'root',
     cmd: ['pnpm', 'check:changes'],
     tier: 'pr',
@@ -264,20 +263,20 @@ export const GATES = [
   },
   {
     id: 'check-release-sync',
-    label: '发布同步 (版本 ↔ CHANGELOG)',
-    group: '发布',
+    label: 'Release sync (version ↔ CHANGELOG)',
+    group: 'Release',
     cwd: 'root',
     cmd: ['pnpm', 'check:release-sync'],
     tier: 'pr',
-    why: '`package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` plus its Chinese backup carry that version; see `RELEASING.md`',
+    why: '`package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 
   // ── Slow items: complete flow only ─────────────────────────
   {
     id: 'build-web',
-    label: 'Web 生产构建',
-    group: '前端·慢',
+    label: 'Web production build',
+    group: 'Frontend (slow)',
     cwd: 'root',
     cmd: ['pnpm', 'build:web'],
     tier: 'full',
@@ -287,7 +286,7 @@ export const GATES = [
   {
     id: 'e2e',
     label: 'Playwright E2E',
-    group: '前端·慢',
+    group: 'Frontend (slow)',
     cwd: 'root',
     cmd: ['pnpm', 'test:e2e'],
     tier: 'full',
@@ -296,8 +295,8 @@ export const GATES = [
   },
   {
     id: 'perf-check',
-    label: '前端渲染预算',
-    group: '前端·慢',
+    label: 'Frontend render budget',
+    group: 'Frontend (slow)',
     cwd: 'root',
     cmd: ['bash', 'scripts/perf-gate.sh'],
     // Alternate invocations that mean the same gate; the drift check accepts any
@@ -310,7 +309,7 @@ export const GATES = [
   {
     id: 'cargo-deny',
     label: 'cargo deny',
-    group: 'Rust·慢',
+    group: 'Rust (slow)',
     cwd: 'src-tauri',
     cmd: ['cargo', 'deny', 'check'],
     tier: 'full',
@@ -432,14 +431,14 @@ export const DOC_PATHS = {
   'PULL_REQUEST_TEMPLATE.md': '.github/PULL_REQUEST_TEMPLATE.md',
 };
 
-/** Chinese console group → English heading used inside generated doc blocks. */
+/** Console group → heading used inside generated doc blocks. */
 const GROUP_HEADINGS = {
-  架构: 'Architecture and contracts',
-  发布: 'Release',
-  前端: 'Frontend',
+  Architecture: 'Architecture and contracts',
+  Release: 'Release',
+  Frontend: 'Frontend',
   Rust: 'Rust',
-  '前端·慢': 'Frontend (slow: complete flow only)',
-  'Rust·慢': 'Rust (slow: complete flow only)',
+  'Frontend (slow)': 'Frontend (slow: complete flow only)',
+  'Rust (slow)': 'Rust (slow: complete flow only)',
 };
 
 /** Render one gate's command as it should appear in prose. */
@@ -456,8 +455,6 @@ export function renderDocBlock(docPath) {
   for (const gate of gates) {
     if (!seenGroups.has(gate.group)) {
       if (seenGroups.size > 0) lines.push('');
-      // English heading: this text lands in authoritative English documents.
-      // `gate.group` stays Chinese because it is check-all.sh console UX.
       lines.push(`**${GROUP_HEADINGS[gate.group] ?? gate.group}**`);
       lines.push('');
       seenGroups.add(gate.group);

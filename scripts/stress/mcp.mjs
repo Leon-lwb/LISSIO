@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-// backend-cli serve 的极简 MCP 客户端 (Streamable HTTP)。
+// Minimal MCP client for backend-cli serve (Streamable HTTP).
 //
-// 压测只需要少数生命周期/观测调用, 因此每次调用独立握手 (initialize →
-// notifications/initialized → tools/call), 无会话状态, 便于 bash 编排。
-// 与 CLI 子命令同源的工具经由 serve 进程内的 control-api 执行。
+// Stress tests need only a few lifecycle/observation calls, so each call does its own
+// handshake (initialize → notifications/initialized → tools/call) with no session state,
+// which keeps bash orchestration simple. Tools shared with the CLI subcommands run through
+// the control-api inside the serve process.
 //
-// 用法:
+// Usage:
 //   node scripts/stress/mcp.mjs [--port 18765] open <node_id>
 //   node scripts/stress/mcp.mjs [--port 18765] close <node_id>
 //   node scripts/stress/mcp.mjs [--port 18765] run <start|pause|stop>
@@ -13,7 +14,7 @@
 //   node scripts/stress/mcp.mjs [--port 18765] raw <source> [max_bytes]
 //   node scripts/stress/mcp.mjs [--port 18765] call <tool> [json-arguments]
 //
-// 成功: 把工具返回的 content 文本原样写到 stdout; 失败: 原因到 stderr, 退出码 1。
+// Success: write the tool's returned content text verbatim to stdout; failure: the reason goes to stderr, exit code 1.
 
 function parseArgs(argv) {
   const options = { port: 18_765 };
@@ -22,7 +23,7 @@ function parseArgs(argv) {
     if (argv[i] === '--port') {
       i += 1;
       options.port = Number(argv[i]);
-      if (!(options.port > 0)) throw new Error('--port 必须是正整数');
+      if (!(options.port > 0)) throw new Error('--port must be a positive integer');
     } else {
       positional.push(argv[i]);
     }
@@ -46,7 +47,7 @@ async function rpc(port, body, session) {
   }
   const text = await response.text();
   const messages = [];
-  // rmcp 的 Streamable HTTP 以 SSE data: 行返回; 兼容纯 JSON 响应。
+  // rmcp's Streamable HTTP replies as SSE data: lines; tolerate plain JSON responses too.
   if (text.includes('data:')) {
     for (const line of text.split('\n')) {
       if (line.startsWith('data:')) {
@@ -72,8 +73,8 @@ async function callTool(port, tool, args) {
     },
   });
   const initReply = init.messages.find(message => message.id === 1);
-  if (!initReply) throw new Error('initialize 无响应');
-  if (initReply.error) throw new Error(`initialize 失败: ${initReply.error.message}`);
+  if (!initReply) throw new Error('no response to initialize');
+  if (initReply.error) throw new Error(`initialize failed: ${initReply.error.message}`);
   await rpc(port, { jsonrpc: '2.0', method: 'notifications/initialized' }, init.session);
   const call = await rpc(
     port,
@@ -81,10 +82,10 @@ async function callTool(port, tool, args) {
     init.session,
   );
   const reply = call.messages.find(message => message.id === 2);
-  if (!reply) throw new Error(`tools/call ${tool} 无响应`);
+  if (!reply) throw new Error(`no response to tools/call ${tool}`);
   if (reply.error) throw new Error(reply.error.message ?? JSON.stringify(reply.error));
   const payload = reply.result;
-  if (payload.isError) throw new Error(payload.content?.[0]?.text ?? `${tool} 执行失败`);
+  if (payload.isError) throw new Error(payload.content?.[0]?.text ?? `${tool} failed`);
   return (payload.content ?? []).map(part => part.text ?? '').join('');
 }
 
@@ -100,12 +101,12 @@ const tools = {
 };
 const entry = tools[command];
 if (!entry) {
-  console.error(`未知命令: ${command ?? '(缺省)'} — 可用: ${Object.keys(tools).join(' / ')}`);
+  console.error(`unknown command: ${command ?? '(none)'} — available: ${Object.keys(tools).join(' / ')}`);
   process.exit(2);
 }
 try {
   process.stdout.write(`${callTool(options.port, entry[0], entry[1()])}\n`);
 } catch (cause) {
-  console.error(`mcp ${command} 失败: ${cause.message ?? cause}`);
+  console.error(`mcp ${command} failed: ${cause.message ?? cause}`);
   process.exit(1);
 }

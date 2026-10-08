@@ -2,15 +2,17 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  // 性能计量走 playwright.perf.config.ts：它要求串行单 worker，且产物要落到
-  // 固定路径供 perf-collect 判定。这里必须排除，否则功能套件会顺手把它们也
-  // 跑一遍 —— 在并行 worker 下抢 CPU，量出来的速率是噪声，还会污染产物。
+  // Performance measurement lives in playwright.perf.config.ts: it requires a single serial
+  // worker, and its artifacts must land at fixed paths for perf-collect to judge. They must be
+  // excluded here, or the functional suite would run them too — competing for CPU under
+  // parallel workers turns the measured rate into noise and pollutes the artifacts.
   testIgnore: '**/perf/**',
   timeout: 30_000,
-  // 动画采样类断言 (e2e/sliding-pill.spec.ts) 靠 requestAnimationFrame 数静止帧:
-  // 机器有负载时帧会变稀疏, 采样可能停在插值中途, 于是容差从 0.48px 的取整差
-  // 涨到 1.7px 而误报。它在空闲机器上 8/8 通过, 只在满载时偶发。
-  // 仅在 CI 重试: 本地失败仍应立即暴露。
+  // Animation-sampling assertions (e2e/sliding-pill.spec.ts) count still frames via
+  // requestAnimationFrame: under load frames become sparse, sampling can stop mid-interpolation,
+  // so the tolerance grows from a 0.48px rounding difference to 1.7px and reports a false failure.
+  // It passes 8/8 on an idle machine and only flakes when fully loaded.
+  // Retry only in CI: local failures must still surface immediately.
   retries: process.env.CI ? 2 : 0,
   use: {
     baseURL: 'http://localhost:1420',

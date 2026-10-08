@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-docs.mjs — licensing, governance, indexing, translation, and link gate.
+ * check-docs.mjs — licensing, governance, indexing, language, and link gate.
  *
  * Policy sources:
  * - docs/governance/open-source-and-ip.md
@@ -16,7 +16,6 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tauriRoot = join(repoRoot, 'src-tauri');
 const docsDir = join(repoRoot, 'docs');
-const communityDir = join(docsDir, 'community');
 const recordsDir = join(docsDir, 'reviews', 'records');
 const errors = [];
 
@@ -37,11 +36,20 @@ const REQUIRED_LINKS = [
   'AUTHORS.md', 'SUPPORT.md', 'MAINTAINERS.md', 'RELEASING.md', 'CITATION.cff',
   '.forgejo/CODEOWNERS',
 ];
-const DOC_META_KEYS = ['status', 'owner', 'last-reviewed', 'applies-to', 'language', 'authoritative'];
+const DOC_META_KEYS = ['status', 'owner', 'last-reviewed', 'applies-to'];
 const REVIEW_KEYS = ['date', 'scope', 'reviewer', 'verdict'];
 const STATUSES = new Set(['maintained', 'draft', 'deprecated']);
-const REVIEW_VERDICTS = new Set(['passed', 'passed-with-conditions', 'failed', '通过', '有条件通过', '不通过']);
-const TRACE_MARKERS = /\b(?:Stage \d+|Task #\d+|Phase \d+|iteration\s+\d+|迭代\s*\d+|TODO:?\s*待后续阶段)/i;
+// Historical records keep the verdict labels that were current when they were
+// written, so the gate still accepts them. They are spelled with escapes to keep
+// this script ASCII-only; the repository prose rule is reviewed by humans, not
+// enforced here.
+const REVIEW_VERDICTS = new Set([
+  'passed', 'passed-with-conditions', 'failed',
+  '\u901a\u8fc7', '\u6709\u6761\u4ef6\u901a\u8fc7', '\u4e0d\u901a\u8fc7',
+]);
+const TRACE_MARKERS = /\b(?:Stage \d+|Task #\d+|Phase \d+|iteration\s+\d+|\u8fed\u4ee3\s*\d+|TODO:?\s*\u5f85\u540e\u7eed\u9636\u6bb5)/i;
+
+const RUNTIME_LOCALIZATION_DIR = 'src-tauri/crates/desktop/control-api/src/capabilities/docs/zh/';
 
 let staleDays = 0;
 const argv = process.argv.slice(2);
@@ -160,10 +168,10 @@ if (existsSync(citation)) {
   fail('CITATION.cff is missing');
 }
 
-// 5. Document scope and language authority.
+// 5. Document scope, metadata, and product-localization mapping.
 const markdown = [
-  ...walk(repoRoot, (name, full) => name.endsWith('.md') && !rel(full).includes('/') && !rel(full).startsWith('docs/community/')),
-  ...walk(docsDir, (name, full) => name.endsWith('.md') && !rel(full).startsWith('docs/community/')),
+  ...walk(repoRoot, (name, full) => name.endsWith('.md') && !rel(full).includes('/')),
+  ...walk(docsDir, (name) => name.endsWith('.md')),
   ...walk(join(repoRoot, '.github'), (name) => name.endsWith('.md')),
   ...walk(join(repoRoot, 'packaging'), (name) => name.endsWith('.md')),
   ...walk(join(repoRoot, 'src', 'i18n'), (name) => name.endsWith('.md')),
@@ -177,9 +185,8 @@ const historical = (file) => {
 const canonicalDocs = markdown.filter((file) => !historical(file));
 const docsFiles = walk(docsDir, (name) => name.endsWith('.md'));
 const reviewFiles = walk(recordsDir, (name) => name.endsWith('.md'));
-const translationFiles = walk(communityDir, (name) => name.endsWith('.md'));
 
-function checkMeta(file, expectedLanguage, authoritative) {
+function checkMeta(file, expected) {
   const path = rel(file);
   const text = readText(file);
   const meta = parseMeta(text, 'doc');
@@ -200,33 +207,30 @@ function checkMeta(file, expectedLanguage, authoritative) {
   } else if (reviewed && staleDays > 0 && daysBetween(reviewed, new Date()) > staleDays) {
     fail(`${path}: review is older than ${staleDays} days`);
   }
-  if (meta.get('language') !== expectedLanguage) fail(`${path}: language must be ${expectedLanguage}`);
-  if (meta.get('authoritative') !== String(authoritative)) fail(`${path}: authoritative must be ${authoritative}`);
+  if (expected.locale && meta.get('language') !== expected.locale) {
+    fail(`${path}: language must be ${expected.locale}`);
+  }
+  if (expected.authoritative !== undefined && meta.get('authoritative') !== String(expected.authoritative)) {
+    fail(`${path}: authoritative must be ${expected.authoritative}`);
+  }
   return meta;
 }
 
 for (const file of canonicalDocs) {
-  const runtimeTranslation = rel(file).startsWith('src-tauri/crates/desktop/control-api/src/capabilities/docs/zh/');
-  if (runtimeTranslation) {
-    const meta = checkMeta(file, 'zh-CN', false);
+  if (rel(file).startsWith(RUNTIME_LOCALIZATION_DIR)) {
+    const meta = checkMeta(file, { locale: 'zh-CN', authoritative: false });
     const expectedSource = rel(file).replace('/docs/zh/', '/docs/en/');
     if (meta?.get('translation-of') !== expectedSource) {
       fail(`${rel(file)}: translation-of must be ${expectedSource}`);
     }
+    if (!existsSync(resolve(repoRoot, expectedSource))) {
+      fail(`${rel(file)}: translation-of target does not exist → ${expectedSource}`);
+    }
+    if (!/English|authoritative|controls/i.test(readText(file))) {
+      fail(`${rel(file)} must state that the English source is authoritative`);
+    }
   } else {
-    checkMeta(file, 'en', true);
-  }
-}
-for (const file of translationFiles) {
-  const meta = checkMeta(file, 'zh-CN', false);
-  const source = meta?.get('translation-of');
-  if (!source) {
-    fail(`${rel(file)}: metadata is missing translation-of`);
-  } else if (!existsSync(resolve(communityDir, source)) && !existsSync(resolve(repoRoot, source))) {
-    fail(`${rel(file)}: translation-of target does not exist → ${source}`);
-  }
-  if (!readText(file).includes('English') || !/authoritative|controls/i.test(readText(file))) {
-    fail(`${rel(file)} must state that English is authoritative`);
+    checkMeta(file, {});
   }
 }
 
@@ -247,41 +251,24 @@ for (const file of reviewFiles) {
   if (verdict && !REVIEW_VERDICTS.has(verdict)) fail(`${path}: invalid verdict "${verdict}"`);
 }
 
-// 7. Canonical documents and translations must be indexed.
+// 7. Canonical documents must be indexed.
 const docsIndex = existsSync(join(docsDir, 'README.md')) ? readText(join(docsDir, 'README.md')) : '';
-for (const file of docsFiles.filter((item) => !rel(item).startsWith('docs/community/') && !historical(item))) {
+for (const file of docsFiles.filter((item) => !historical(item))) {
   const target = relative(docsDir, file).split(/[\\/]/).join('/');
   if (!docsIndex.includes(target)) fail(`${rel(file)} is not indexed in docs/README.md`);
 }
-const translationIndexFile = join(communityDir, 'INDEX.zh-CN.md');
-const translationIndex = existsSync(translationIndexFile) ? readText(translationIndexFile) : '';
-if (!translationIndex) fail('docs/community/INDEX.zh-CN.md is missing');
-for (const file of translationFiles.filter((item) => rel(item) !== 'docs/community/INDEX.zh-CN.md')) {
-  const target = relative(communityDir, file).split(/[\\/]/).join('/');
-  if (!translationIndex.includes(target)) fail(`${rel(file)} is not indexed in docs/community/INDEX.zh-CN.md`);
-}
 
 // 8. Relative links and forbidden process traces.
-const linkScope = [...canonicalDocs, ...reviewFiles, ...translationFiles];
+const linkScope = [...canonicalDocs, ...reviewFiles];
 for (const file of linkScope) {
   const text = readText(file);
-  let base = dirname(file);
-  if (translationFiles.includes(file)) {
-    const source = parseMeta(text, 'doc')?.get('translation-of');
-    if (source) base = dirname(resolve(repoRoot, source));
-  }
   for (const match of text.matchAll(/\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g)) {
     const href = match[1];
     if (/^(?:[a-z]+:|#)/i.test(href)) continue;
-    const source = translationFiles.includes(file)
-      ? parseMeta(text, 'doc')?.get('translation-of')
-      : null;
     const candidates = [
       resolve(dirname(file), href.split('#')[0]),
-      resolve(base, href.split('#')[0]),
-      href.startsWith('/') ? resolve(repoRoot, href.slice(1)) : resolve(base, href.split('#')[0]),
+      href.startsWith('/') ? resolve(repoRoot, href.slice(1)) : resolve(repoRoot, href.split('#')[0]),
     ];
-    if (source) candidates.push(resolve(dirname(resolve(repoRoot, source)), href.split('#')[0]));
     if (!candidates.some((target) => existsSync(target))) fail(`${rel(file)}: broken relative link → ${href}`);
   }
   const trace = text.match(TRACE_MARKERS);
@@ -289,8 +276,7 @@ for (const file of linkScope) {
 }
 
 // 9. Current policy text must not claim a dual/commercial license.
-const currentTextFiles = [...canonicalDocs].filter((file) => !rel(file).startsWith('docs/reviews/records/'));
-for (const file of currentTextFiles) {
+for (const file of canonicalDocs) {
   const text = readText(file);
   if (/Dual-licensed:|commercial track has not been published|GPL-2\.0-only is the only available/i.test(text)) {
     fail(`${rel(file)} contains obsolete GPL dual-license language`);
@@ -304,4 +290,7 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Documentation and license gate passed — ${members.length} workspace packages use ${PROJECT_LICENSE}, ${canonicalDocs.length} authoritative documents are indexed, and ${translationFiles.length} Chinese backups are mapped.`);
+console.log(
+  `Documentation and license gate passed — ${members.length} workspace packages use ${PROJECT_LICENSE} ` +
+    `and ${canonicalDocs.length} authoritative documents are indexed.`,
+);

@@ -4,8 +4,6 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: lissio.web.v2 HTTP/WebSocket protocol and Web delivery boundary
 -->
 Desktop and browser business calls enter the same `lissio-server` through

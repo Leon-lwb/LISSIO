@@ -1,24 +1,30 @@
 #!/usr/bin/env node
-// 前端分层门禁 —— "实现层 / 交互层 / 效果层 / 视图层" 的依赖方向从散文变成 CI 检查。
-// 用法: pnpm check:layers
+// Frontend layering gate — turns the dependency direction of "implementation / interaction /
+// effects / view layers" from prose into a CI check.
+// Usage: pnpm check:layers
 //
-// 为什么要有这道门禁:
+// Why this gate exists:
 //
-//   1. 前端的分层一直只靠注释和评审维持。`docs/architecture/architecture-review-2026-09.md`
-//      的"前端仍有大文件"是唯一一条前端架构债务, 全文没有分层模型; 而
-//      `pnpm check:architecture` / `check:deps` 只管 Rust, 前端结构没有任何机器约束。
-//   2. 反向依赖不会让任何既有测试变红, 也不会报错 —— 它只是让下一次改动多一层惊讶。
-//      例如 `widgets/` 去 import `displays/` 的一个状态条组件, 单看那一行完全合理,
-//      代价却要等到有人想单独复用控件层时才出现。
-//   3. 依赖方向一旦可以自由反向, "注册表 / 绑定 / 原语"就会被视图里的实现细节污染,
-//      统一范式也就无从谈起。所以方向必须是可执行的, 不是倡议。
+//   1. Frontend layering has only ever been held up by comments and review.
+//      `docs/architecture/architecture-review-2026-09.md` names "the frontend still has large
+//      files" as the only frontend architecture debt and contains no layering model at all;
+//      `pnpm check:architecture` / `check:deps` only cover Rust, so the frontend structure has
+//      no machine constraint.
+//   2. A reverse dependency turns no existing test red and raises no error — it just adds one
+//      more surprise to the next change. For example, `widgets/` importing a status-bar
+//      component from `displays/` looks entirely reasonable in that one line, and the cost only
+//      shows up when someone wants to reuse the widget layer on its own.
+//   3. Once the dependency direction may freely reverse, "registry / binding / primitive"
+//      becomes polluted by implementation details from the view, and a unified model is out of
+//      the question. So the direction must be enforceable, not a recommendation.
 //
-// 检查面: src 下所有 .ts/.tsx 的模块说明符 (静态 import / export from / 动态
-// import() / require)。解析相对路径后按目录前缀判定, 不做类型层分析 —— 门禁要能在
-// 任何一次提交里跑, 而不是只在 IDE 里成立。
+// Scope: module specifiers (static import / export from / dynamic import() / require) of every
+// .ts/.tsx under src. Relative paths are resolved and judged by directory prefix, with no
+// type-layer analysis — the gate must run on any commit, not only inside an IDE.
 //
-// 豁免: 见下方 EXEMPTIONS 登记表。豁免是公开的、逐条写明理由的, 新增一条等于承认
-// 一次有意的例外; 没有登记的一律报错。**违规的修法是改代码, 不是加豁免。**
+// Exemptions: see the EXEMPTIONS table below. Exemptions are public and state their reason one
+// by one; adding one admits a deliberate exception; anything unregistered is an error.
+// **The fix for a violation is to change the code, not to add an exemption.**
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,120 +34,125 @@ const SRC = path.join(root, 'src');
 const errors = [];
 
 /**
- * 分层规则。`files` 命中被检查的文件, `forbid` 命中禁止依赖的目标目录。
+ * Layering rules. `files` selects the checked files and `forbid` selects the target
+ * directories that must not be depended on.
  *
- * 方向只有一个: 视图 → 效果 → 交互 → 实现。每条规则都对应
- * `docs/architecture/ui-layers.md` 里的一行, 规则号一致。
+ * There is only one direction: view → effects → interaction → implementation. Each rule
+ * corresponds to a line in `docs/architecture/ui-layers.md`, with the same rule number.
  */
 const RULES = [
   {
     id: 'L1',
     files: /^src\/components\/(?:ui|brand)\//,
     forbid: /^src\/components\/(?:common|nodes|layout|onboarding|panels|acquisition|displays|widgets|ai)\//,
-    why: '基础件 (ui / brand) 不得依赖任何领域目录 — 它们要被所有层复用, 反向依赖会让基础件随业务变形',
+    why: 'Base components (ui / brand) must not depend on any domain directory — every layer reuses them, and a reverse dependency lets the base components warp with the business',
   },
   {
     id: 'L2',
     files: /^src\/components\/(?:ui|brand)\//,
     forbid: /^src\/store\//,
-    why: '基础件靠 props 变纯, 不直读 store — 直读会让"基础"与"全局状态形状"绑死, 且无法在测试里单独渲染',
+    why: 'Base components stay pure through props and do not read the store directly — reading it ties "base" to the shape of global state and makes them impossible to render alone in tests',
   },
   {
     id: 'L3',
     files: /^src\/components\/widgets\//,
     forbid: /^src\/components\/(?:panels|displays|layout|acquisition|nodes|ai)\//,
-    why: '控件是叶子内容层 — 它只能被面板注册表引用, 不得反过来引用面板 / 显示层, 否则控件无法离开完整应用外壳复用',
+    why: 'Widgets are the leaf content layer — only a panel registry may reference them, and they must not reference the panel / display layers, or a widget cannot be reused outside the full application shell',
   },
   {
     id: 'L4',
     files: /^src\/store\//,
     forbid: /^src\/components\//,
-    why: 'store 是实现层 — 一旦依赖视图, "控件 → 窗口面板 → store" 链路就会把整个显示层拖进状态模块, 直接制造循环',
+    why: 'The store is the implementation layer — once it depends on the view, the "widget → window panel → store" chain drags the whole display layer into the state module and creates a cycle outright',
   },
   {
     id: 'L5',
     files: /^src\/lib\/(?:motion|glass)\//,
     forbid: /^src\/store\//,
-    why: '效果层只依赖实现层的数据形状, 不订阅 store — 效果层要能被任何一层按参数调用, 订阅状态会让它无法在非应用环境复用',
+    why: 'The effects layer depends only on the implementation layer\'s data shapes and does not subscribe to the store — it must be callable with arguments from any layer, and subscribing to state would make it unreusable outside the application environment',
   },
   {
     id: 'L6',
     files: /^src\/lib\/(?:interaction|hooks)\//,
     forbid: /^src\/components\//,
-    why: '交互层是输入 → 意图的纯映射, 不认识组件树 — 一旦引用视图, 手势原语就无法脱离具体组件',
+    why: 'The interaction layer is a pure input → intent mapping and does not know the component tree — once it references the view, gesture primitives cannot exist apart from a concrete component',
   },
   {
     id: 'L7',
     files: /^src\/.*\.tsx?$/,
     forbid: null,
-    why: 'JS 侧只有 lib/motion 可以写 will-change / transitionProperty — 合成层晋升必须经过 promote() 的引用计数, 手写等于永久占据合成层且无人归还',
+    why: 'On the JS side only lib/motion may write will-change / transitionProperty — compositing-layer promotion must go through promote()\'s reference count, and writing it by hand occupies the layer forever with nobody to release it',
   },
   {
     id: 'L8',
     files: /^src\/lib\/(?:rpc|platform|tauri|data|buffers|models|utils|panels)\//,
     forbid: /^src\/components\//,
-    why: '实现层不得依赖视图 — 反过来把视图细节拖进实现层, 会让请求 / 缓冲 / 目录这些纯模块带上渲染依赖',
+    why: 'The implementation layer must not depend on the view — pulling view details into it would give pure modules such as requests / buffers / catalogs a rendering dependency',
   },
   {
     id: 'L9',
     files: /^src\/styles\/components\/dialog\.css$/,
     forbid: null,
-    why: '遮罩的层级只能来自调用方传入的桥接类 — 基础规则自带 z-index 会静默盖掉它',
+    why: 'Overlay stacking may come only from the bridge class passed by the caller — a z-index in the base rule silently overrides it',
   },
   {
     id: 'L10',
     files: /^src\/lib\/(?:motion|glass)\//,
     forbid: /^src\/components\//,
-    why: '效果层不得认识视图 — 它要能被任何一层按参数调用 (测试、文档生成、非应用环境), 引用组件会让"这段动画能不能单独跑"变成要读整棵组件树才能回答的问题',
+    why: 'The effects layer must not know the view — it must be callable with arguments from any layer (tests, doc generation, non-application environments), and referencing a component turns "can this animation run alone?" into a question that requires reading the whole component tree',
   },
   {
     id: 'L11',
     files: /^src\/lib\/(?:interaction|hooks)\//,
     forbid: /^src\/lib\/(?:motion|glass)\//,
-    why: '交互层只产出意图, 不认识动画 — 手势说"松手速度是多少", 效果层决定"因此滑多远、滑多久"。反过来让手势去调弹簧, 判定低动画偏好、翻译令牌这些纯动画的事就会住进输入处理里, 断言手势的测试也不得不同时准备动画环境',
+    why: 'The interaction layer only produces intent and does not know animation — the gesture says "how fast the release was", and the effects layer decides "how far and how long it therefore slides". Letting gestures drive the spring instead would move purely animation concerns (reduced-motion checks, token translation) into input handling, and tests that assert gesture behavior would have to set up an animation environment too',
   },
 ];
 
 /**
- * 有意的例外。每条必须同时回答: 是什么, 以及为什么这里的方向反转是有界的。
+ * Deliberate exceptions. Each must answer both: what it is, and why the direction reversal is
+ * bounded here.
  *
- * 这张表就是"允许反向依赖"的完整清单 —— 它应该短。变长说明该改依赖, 而不是该加豁免。
+ * This table is the complete list of "allowed reverse dependencies" — it should be short.
+ * If it grows, the dependencies should change, not the exemptions.
  *
- * `movable: true` 表示这是**放错位置**而非真正需要反向依赖: 目标目录本身是纯数据/纯
- * 函数, 只是被摆在了视图侧。搬迁即可消除, 不需要新的抽象。
+ * `movable: true` means the target is **misplaced** rather than genuinely needing a reverse
+ * dependency: the target directory is pure data / pure functions and merely sits on the view
+ * side. Moving it removes the need with no new abstraction.
  */
 const EXEMPTIONS = [
   {
     file: 'src/components/ui/ContextMenu.tsx',
     rule: 'L2',
-    reason: '全局浮层单例: 它渲染的就是 contextMenuStore 的内容, 没有 props 可传 (与 DockDragGhost 订阅 dockDrag 同构)。它是"视图直接绑一个 UI 单例"的边界, 不是通用基础件。',
+    reason: 'Global overlay singleton: it renders the contents of contextMenuStore itself and has no props to pass (isomorphic to DockDragGhost subscribing to dockDrag). It is the boundary case of "a view bound directly to a UI singleton", not a general-purpose base component.',
   },
   {
     file: 'src/lib/utils/connectionRules.ts',
     rule: 'L8',
-    reason: '节点的连接规则必须与 nodes/registry 的端口声明同源, 否则两处会各自漂移出不同的合法连接集合。',
+    reason: 'Node connection rules must share a source with the port declarations in nodes/registry; otherwise the two would drift into different sets of legal connections.',
   },
 ];
 
 /**
- * JS 侧禁止手写的合成层 / 过渡控制属性 (L7)。
+ * Compositing-layer / transition control properties forbidden to write by hand on the JS side (L7).
  *
- * 三种写法都要覆盖, 否则门禁只挡住最老实的那个:
- *   - `el.style.willChange = 'transform'`  (赋值)
- *   - `{ willChange: 'transform' }`        (对象字面量)
- *   - `el.style.setProperty('will-change', …)`  (字符串参数)
- * `transitionProperty` 的 camelCase 拼写尤其重要 —— `check:motion` 的内联正则
- * 只认 `transition` / `transition-property` 后接冒号, 曾经整个漏掉这个拼法。
+ * All three forms must be covered, or the gate only stops the most honest one:
+ *   - `el.style.willChange = 'transform'`  (assignment)
+ *   - `{ willChange: 'transform' }`        (object literal)
+ *   - `el.style.setProperty('will-change', …)`  (string argument)
+ * The camelCase spelling `transitionProperty` matters especially — the inline regex in
+ * `check:motion` only recognizes `transition` / `transition-property` followed by a colon, so
+ * it once missed this spelling entirely.
  */
 const FORBIDDEN_MOTION_WRITES = [
   { pattern: /(?<![\w-])will-?[Cc]hange['"]?\s*[:=]/g, name: 'will-change / willChange' },
   { pattern: /(?<![\w-])transition-?[Pp]roperty['"]?\s*[:=]/g, name: 'transition-property / transitionProperty' },
 ];
 
-/** 模块说明符: 静态 import / export from / 动态 import() / require()。 */
+/** Module specifiers: static import / export from / dynamic import() / require(). */
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
 
-/** 递归收集 src 下指定后缀的文件 (跳过生成物)。 */
+/** Recursively collect files under src with the given extensions (skipping generated output). */
 function collect(dir, extensions, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === 'generated') continue;
@@ -156,7 +167,7 @@ function relative(file) {
   return path.relative(root, file).split(path.sep).join('/');
 }
 
-/** 去掉块注释与整行注释, 保持行数不变。 */
+/** Strip block comments and whole-line comments while preserving line counts. */
 function stripComments(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
@@ -170,16 +181,16 @@ function lineOf(source, index) {
 }
 
 /**
- * 把相对说明符解析成 src 相对路径 (不带扩展名)。
+ * Resolve a relative specifier into an src-relative path (without extension).
  *
- * 只处理相对路径: 裸包名 (@tauri-apps/*, react, …) 的归属由
- * `check:web-contract` 负责, 这里不重复判定。
+ * Only relative paths are handled: ownership of bare package names (@tauri-apps/*, react, …)
+ * is `check:web-contract`'s job and is not judged again here.
  */
 function resolveSpecifier(fromFile, specifier) {
   if (!specifier.startsWith('.')) return null;
   const resolved = path.resolve(path.dirname(fromFile), specifier);
   let rel = path.relative(root, resolved).split(path.sep).join('/');
-  // `../lib/motion` 这种目录导入由 index.ts 兜底; 去掉扩展名后统一比较前缀。
+  // Directory imports like `../lib/motion` are covered by index.ts; strip the extension and compare prefixes uniformly.
   rel = rel.replace(/\.(?:tsx?|css|json)$/, '');
   return rel;
 }
@@ -203,15 +214,16 @@ function checkImports(file, source) {
     for (const match of source.matchAll(IMPORT_RE)) {
       const target = resolveSpecifier(file, match[1]);
       if (target === null) continue;
-      // 目录导入 (`../motion` → `src/lib/motion`) 解析结果不带尾斜杠, 而规则里的
-      // `dir/` 前缀要求它 —— barrel 写法因此整条绕过规则。两种形态都要试:
-      // `src/lib/motion` 与 `src/lib/motion/release` 必须得到同一个判定。
+      // A directory import (`../motion` → `src/lib/motion`) resolves without a trailing slash
+      // while the rule's `dir/` prefix requires one — so the barrel form bypasses the rule
+      // entirely. Try both forms: `src/lib/motion` and `src/lib/motion/release` must get the
+      // same verdict.
       if (!rule.forbid.test(target) && !rule.forbid.test(`${target}/`)) continue;
-      // 同一目标的重复 import 只报一次, 免得一份文件刷满屏。
+      // Report a repeated import of the same target only once, so one file does not flood the screen.
       const key = `${rule.id}|${target}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      report(rel, lineOf(source, match.index), `[${rule.id}] 不得依赖 ${target} — ${rule.why}`);
+      report(rel, lineOf(source, match.index), `[${rule.id}] must not depend on ${target} — ${rule.why}`);
     }
   }
 }
@@ -227,22 +239,24 @@ function checkMotionWrites(file, source) {
       report(
         rel,
         lineOf(source, match.index),
-        `[L7] 手写 ${name} — ${rule.why} (合成层晋升走 src/lib/motion 的 promote()/release())`
+        `[L7] hand-written ${name} — ${rule.why} (compositing-layer promotion goes through src/lib/motion's promote()/release())`
       );
     }
   }
 }
 
 /**
- * L9 — 遮罩基础规则不得自带 z-index。
+ * L9 — the overlay base rule must not carry its own z-index.
  *
- * `.dialog-overlay` 与 `.z-*` 桥接类都是未分层 CSS、特异性同为 (0,1,0), 于是**后出现的
- * 整体胜出**。基础规则里留一个 `z-index`, 调用方传的 `zClassName` 就被静默盖掉 ——
- * 属性确实传了、类也确实挂上了, 只有层高不对: `--z-modal-secondary` (110) 与
- * `--z-tour` (1100) 一起退化成 100, 比 `@xyflow/react` 的选中节点 (1000) 还低,
- * 引导遮罩会被节点穿透。这条失效不会让任何测试变红, 浏览器里也不会报错。
+ * `.dialog-overlay` and the `.z-*` bridge classes are both unlayered CSS with specificity
+ * (0,1,0), so **the one that appears later wins overall**. Leaving a `z-index` in the base rule
+ * silently overrides the caller's `zClassName` — the prop is indeed passed and the class is
+ * indeed applied, only the stacking height is wrong: `--z-modal-secondary` (110) and `--z-tour`
+ * (1100) both degrade to 100, below `@xyflow/react`'s selected node (1000), and the tour overlay
+ * is penetrated by the node. This failure turns no test red and raises no error in the browser.
  *
- * 所以层级只允许来自显式桥接类 (layers.css), 遮罩自己不给默认值。
+ * So stacking may come only from an explicit bridge class (layers.css); the overlay itself gives
+ * no default.
  */
 function checkOverlayZIndex() {
   const rel = 'src/styles/components/dialog.css';
@@ -254,16 +268,17 @@ function checkOverlayZIndex() {
     report(
       rel,
       lineOf(css, match.index),
-      '[L9] `.dialog-overlay` 不得声明 z-index — 它会静默盖掉调用方传入的 `zClassName` ' +
-        '(`.z-tour` 1100 / `.z-modal-secondary` 110 一起退化成 100); 层级只从 layers.css 的桥接类来'
+      '[L9] `.dialog-overlay` must not declare z-index — it silently overrides the caller\'s `zClassName` ' +
+        '(`.z-tour` 1100 / `.z-modal-secondary` 110 both degrade to 100); stacking comes only from the layers.css bridge classes'
     );
   }
 }
 
 for (const file of collect(SRC, ['.ts', '.tsx'])) {
   const rel = relative(file);
-  // 测试可以横跨分层: 夹具与断言本就需要同时看见两侧, 约束的是生产代码的方向。
-  // 与 check-ui-tokens.mjs 的 500 行上限采用同一口径。
+  // Tests may cross layers: fixtures and assertions need to see both sides at once, and what is
+  // constrained is the direction of production code. Same treatment as the 500-line limit in
+  // check-ui-tokens.mjs.
   if (rel.includes('__tests__') || /\.(?:test|spec)\.tsx?$/.test(rel)) continue;
   const source = stripComments(fs.readFileSync(file, 'utf8'));
   checkImports(file, source);
@@ -273,17 +288,17 @@ for (const file of collect(SRC, ['.ts', '.tsx'])) {
 checkOverlayZIndex();
 
 if (errors.length > 0) {
-  console.error(`前端分层门禁失败 (${errors.length} 项):\n`);
+  console.error(`frontend layering gate failed (${errors.length} items):\n`);
   for (const line of errors) console.error(`  ${line}`);
   console.error(
-    '\n依赖方向反转不会让任何既有测试变红, 只会让下一次改动多一层惊讶; 需要在这里拦住。\n' +
-      '修法是改依赖, 不是加豁免 —— 确属有界的例外请在 EXEMPTIONS 里登记理由。'
+    '\nA reverse dependency turns no existing test red, it only adds one more surprise to the next change; it has to be stopped here.\n' +
+      'The fix is to change the dependency, not to add an exemption — register the reason in EXEMPTIONS only for a genuinely bounded exception.'
   );
   process.exit(1);
 }
 
 const movable = EXEMPTIONS.filter((entry) => entry.movable).length;
 console.log(
-  `前端分层门禁通过: ${RULES.length} 条规则无违规; ` +
-    `豁免 ${EXEMPTIONS.length} 条 (其中 ${movable} 条是摆错位置、搬迁即可消除)。`
+  `frontend layering gate passed: no violation of ${RULES.length} rules; ` +
+    `${EXEMPTIONS.length} exemptions (${movable} of them misplaced and removable by moving the target).`
 );

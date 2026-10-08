@@ -4,8 +4,6 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: Localized product string organization and parity rules
 -->
 
@@ -37,6 +35,6 @@ Rules:
 - add every user-visible string to both language directories;
 - `src/i18n/resources.ts` merges files into i18next `translation` resources.
 
-Repository documentation is authoritative in English. These product
-translations remain runtime localization, while repository translation backups
-are stored in `docs/community/`.
+Repository prose is written in English. These product translations remain
+runtime localization and are not documentation; the repository keeps no
+translation backups.

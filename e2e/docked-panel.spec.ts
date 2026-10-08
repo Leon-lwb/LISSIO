@@ -4,39 +4,44 @@ const PANEL = '[data-flip-key="sidebar"]';
 
 interface DrawerSample {
   width: number;
-  /** 面板本体的 CSS 过渡时长。宽度已经不由过渡驱动, 它必须恒为 0。 */
+  /** CSS transition duration of the panel body. Width is no longer driven by a transition, so it must always be 0. */
   transitionDuration: string;
-  /** 中央面板的视觉左边界 —— 布局左边界 + 飞行中的 transform。 */
+  /** Visual left edge of the center panel — layout left edge + the in-flight transform. */
   centerLeft: number;
-  /** 中央面板内联 transform 里的 x 位移; 0 表示没有在飞行。 */
+  /** x displacement in the center panel's inline transform; 0 means it is not flying. */
   centerShift: number;
   surfaceMounted: boolean;
   opacity: number;
   origin: string;
-  /** 退场时表面沿 dock 轴的横向缩放 —— 1 = 满宽, 小于 1 = 正在朝所属边收。 */
+  /** Horizontal scale of the surface along the dock axis during exit — 1 = full width, below 1 = retracting toward its edge. */
   surfaceScale: number;
-  /** 退场时表面沿 dock 轴的位移, px; 方向朝所属边外侧。 */
+  /** Displacement of the surface along the dock axis during exit, px; the direction is outward toward its edge. */
   surfaceShift: number;
 }
 
 /**
- * 浏览器才有布局引擎。停靠面板的空间运动完全由"提交一次布局 + 兄弟面板 transform
- * 让位"构成, jsdom 里既没有 flex-grow 计算也没有合成, 所以只能在真实浏览器里断言。
+ * Only a browser has a layout engine. The docked panel's spatial motion consists entirely of
+ * "one layout commit + sibling panels yielding via transform"; jsdom has neither flex-grow
+ * computation nor compositing, so this can only be asserted in a real browser.
  *
- * 这里逐帧采样, 钉死四件事:
- *   1. 面板宽度**不经过中间值** —— 它一步到位。这正是"不再逐帧重排面板组"的证据;
- *      旧实现里宽度逐帧插值, 每一帧都让整棵面板子树重新排版。
- *   2. 让位由中央面板的 transform 承担, 且收尾后不留下内联 transform。
- *   3. 退场期间表面仍在 DOM 里且透明度处于 (0,1) —— 这是 MotionPresence 的 retention
- *      换来的东西, 也是"先播退场再收布局"得以成立的前提。
- *   4. 缩放原点锚在左侧 dock 边。
+ * Sampling frame by frame pins down four things:
+ *   1. Panel width **never takes an intermediate value** — it jumps straight to the target.
+ *      That is exactly the evidence for "no longer reflowing the panel group every frame";
+ *      the old implementation interpolated the width per frame, reflowing the whole panel
+ *      subtree on every frame.
+ *   2. Yielding is carried by the center panel's transform, and no inline transform is left
+ *      behind once it settles.
+ *   3. During exit the surface is still in the DOM with opacity in (0,1) — this is what
+ *      MotionPresence's retention buys, and the precondition for "play the exit first, then
+ *      collapse the layout".
+ *   4. The scaling origin is anchored to the left dock edge.
  */
 async function startSampling(page: Page, frames: number) {
   await page.evaluate((count) => {
     const w = window as unknown as { __drawer?: DrawerSample[] };
     w.__drawer = [];
     const shiftOf = (el: HTMLElement): number => {
-      // GSAP 首帧写 translate(), 之后的动画帧写 translate3d() —— 只认一种会漏掉整段动画。
+      // GSAP writes translate() on the first frame and translate3d() on later animation frames — matching only one form would miss the whole animation.
       const match = /translate3?d?\((-?[\d.]+)px/.exec(el.style.transform ?? '');
       return match ? Number(match[1]) : 0;
     };
@@ -44,11 +49,12 @@ async function startSampling(page: Page, frames: number) {
       const panel = document.querySelector<HTMLElement>('[data-flip-key="sidebar"]');
       const center = document.querySelector<HTMLElement>('[data-flip-key="center"]');
       const surface = panel?.querySelector<HTMLElement>('[data-motion-variant="panel"]');
-      // 表面是否存在只作为**被采样的字段**, 不能当采样条件: 退场结束的那一帧它与
-      // 布局收拢同时发生, 拿它当门槛会把整段让位动画一起过滤掉。
+      // Surface presence is only a **sampled field**, never a sampling condition: on the frame
+      // where the exit ends it coincides with the layout collapse, so using it as a gate would
+      // filter out the entire yield animation along with it.
       if (panel && center) {
         const shift = shiftOf(center);
-        // matrix(a, b, c, d, tx, ty): a = scaleX, tx = 横向位移。
+        // matrix(a, b, c, d, tx, ty): a = scaleX, tx = horizontal displacement.
         const matrix = surface ? /matrix\(([^)]+)\)/.exec(getComputedStyle(surface).transform) : null;
         const parts = matrix ? matrix[1].split(',').map(Number) : [];
         w.__drawer?.push({
@@ -73,20 +79,22 @@ const readDrawerSamples = (page: Page): Promise<DrawerSample[]> =>
   page.evaluate(() => (window as unknown as { __drawer?: DrawerSample[] }).__drawer ?? []);
 
 /**
- * 当前处于激活态的 ActivityBar 项 —— 只有点它才会收起侧边栏, 点别的项只是换视图。
+ * The currently active ActivityBar item — only clicking it collapses the sidebar; clicking
+ * any other item merely switches the view.
  *
- * 返回的是按 `data-tour` 定位的稳定 locator, 而不是靠 `bg-bg-active` 现找: 侧边栏
- * 收起后 activeView 被清空, 那一类名会整体消失, 第二次点击就找不到元素了。
+ * The returned locator is a stable one anchored by `data-tour` rather than looked up live via
+ * `bg-bg-active`: once the sidebar collapses activeView is cleared, that class name disappears
+ * entirely, and the second click would find no element.
  *
- * 用 locator 而不是 `page.evaluate`: 后者在这个仓库的 lint 档下拿不到 DOM 类型,
- * 整条表达式会退化成 `any`。
+ * Use a locator rather than `page.evaluate`: under this repository's lint settings the latter
+ * cannot get DOM types, and the whole expression degrades to `any`.
  */
 const sidebarToggle = async (page: Page): Promise<Locator> => {
   const key = await page
     .locator('.bg-bg-activity [data-tour].bg-bg-active')
     .first()
     .getAttribute('data-tour');
-  expect(key, '需要一个激活态的 ActivityBar 项才能收起侧边栏').not.toBeNull();
+  expect(key, 'an active ActivityBar item is required to collapse the sidebar').not.toBeNull();
   return page.locator(`.bg-bg-activity [data-tour="${key}"]`).first();
 };
 
@@ -106,47 +114,48 @@ test('the docked sidebar retracts toward its edge instead of vanishing', async (
   const item = await sidebarToggle(page);
 
   await startSampling(page, 60);
-  // 新手引导的遮罩层会拦截真实指针事件, 但 React 的 onClick 与抽屉走同一条路径。
+  // The onboarding tour overlay intercepts real pointer events, but React's onClick goes down the same path as the drawer.
   await item.dispatchEvent('click');
   await page.waitForTimeout(900);
   const closing = await readDrawerSamples(page);
 
   expect(closing.length).toBeGreaterThan(4);
 
-  // 面板宽度不由 CSS 过渡插值 —— 这是整条修复的核心断言。
+  // Panel width is not interpolated by a CSS transition — this is the core assertion of the whole fix.
   expect([...new Set(closing.map((s) => s.transitionDuration))]).toEqual(['0s']);
 
-  // 侧边栏默认停靠左边, 缩放原点必须锚在左边 (x = 0), 面板才会朝所属边生长。
-  // y 分量是面板实测高度, 不是 50%, 所以只断言 x。
+  // The sidebar docks left by default, so the scaling origin must be anchored on the left (x = 0) for the panel to grow toward its edge.
+  // The y component is the panel's measured height, not 50%, so only x is asserted.
   const anchored = closing.filter((s) => s.origin !== '');
   expect([...new Set(anchored.map((s) => s.origin.split(' ')[0]))]).toEqual(['0px']);
 
-  // 让位由中央面板的 transform 承担: 收起期间它带非零位移, 而不是被瞬移。
+  // Yielding is carried by the center panel's transform: while collapsing it has a non-zero displacement instead of being teleported.
   const flying = closing.filter((s) => Math.abs(s.centerShift) > 1);
-  expect(flying.length, '中央面板应带 transform 让位').toBeGreaterThan(1);
-  // 视觉位置必须真的在动 —— 位移改了, getBoundingClientRect 的 left 也要跟着走。
+  expect(flying.length, 'the center panel should yield via transform').toBeGreaterThan(1);
+  // The visual position must really move — if the displacement changes, getBoundingClientRect's left must follow.
   const visualLefts = new Set(closing.map((s) => Math.round(s.centerLeft)));
-  expect(visualLefts.size, '中央面板应逐帧经过中间位置').toBeGreaterThan(3);
+  expect(visualLefts.size, 'the center panel should pass through intermediate positions frame by frame').toBeGreaterThan(3);
 
-  // 退场期间表面还在, 且不透明度停在中间 —— 这就是 CSS animation 换不来的能力。
+  // The surface is still present during exit, with opacity stopped in between — the capability a CSS animation cannot replace.
   const fading = closing.filter((s) => s.surfaceMounted && s.opacity > 0.02 && s.opacity < 0.98);
-  expect(fading.length, '退场应播完才卸载, 而不是节点先消失').toBeGreaterThan(1);
+  expect(fading.length, 'the exit should finish playing before unmounting, not have the node disappear first').toBeGreaterThan(1);
 
-  // 退场是一次朝所属边的收拢, 不是原地淡出: 横向缩放必须真的走过中间值。
-  // 侧边栏默认停靠左边, 所以缩放小于 1 意味着它朝左边收 —— 与 transform-origin 同向。
+  // The exit is a collapse toward its edge, not a fade in place: the horizontal scale must really pass through intermediate values.
+  // The sidebar docks left by default, so a scale below 1 means it collapses toward the left — the same direction as transform-origin.
   const scales = closing.map((s) => s.surfaceScale);
-  expect(Math.min(...scales), '退场应朝所属 dock 边收缩').toBeLessThan(0.98);
-  // 下界同样要断言: 缩放从 1 走到 0.9, 而不是从 0 长起来 —— 后者会让面板在退场
-  // 开头先塌成一个点再张开, 那是补间起点读错 (live value 为 0) 的症状。
-  expect(Math.min(...scales), '退场不应把面板缩没').toBeGreaterThan(0.85);
+  expect(Math.min(...scales), 'the exit should contract toward its dock edge').toBeLessThan(0.98);
+  // The lower bound must be asserted too: the scale goes from 1 down to 0.9, not grows up from 0 — the
+  // latter would collapse the panel to a point at the start of the exit and then open it up, the symptom
+  // of reading the tween's start point wrong (live value 0).
+  expect(Math.min(...scales), 'the exit should not scale the panel out of existence').toBeGreaterThan(0.85);
 
-  // 位移与缩放同向, 都朝所属边外侧。左边停靠 → 负值。
-  expect(Math.min(...closing.map((s) => s.surfaceShift)), '退场应朝所属边外侧让位').toBeLessThan(
+  // Displacement and scale share a direction, both outward toward the owning edge. Docked left → negative.
+  expect(Math.min(...closing.map((s) => s.surfaceShift)), 'the exit should yield outward toward its edge').toBeLessThan(
     -4
   );
 
-  // 收拢到位后宽度归零, 面板不再占位, 且中央面板不留下内联 transform。
-  // 让位是按弹簧推进的, 落定时刻随机器而变 —— 轮询而不是赌一个固定等待。
+  // Once collapsed the width is zero, the panel no longer takes space, and the center panel leaves no inline transform behind.
+  // Yielding is advanced by a spring, so the settling moment varies per machine — poll instead of betting on a fixed wait.
   await expect
     .poll(async () =>
       page.evaluate((sel) => {
@@ -174,6 +183,6 @@ test('the docked sidebar reopens to the width it had before closing', async ({ p
     (sel) => document.querySelector<HTMLElement>(sel)!.getBoundingClientRect().width,
     PANEL
   );
-  // 展开走的是面板组记录的折叠前尺寸, 不是 defaultSize —— 否则用户拉过的宽度会丢。
+  // Reopening uses the pre-collapse size recorded by the panel group, not defaultSize — otherwise a width the user dragged would be lost.
   expect(Math.abs(reopened - open)).toBeLessThanOrEqual(2);
 });

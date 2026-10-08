@@ -4,8 +4,6 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: Stable adapter capabilities and frontend projection
 -->
 

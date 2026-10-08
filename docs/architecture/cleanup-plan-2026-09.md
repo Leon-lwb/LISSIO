@@ -4,8 +4,6 @@
 status: maintained
 owner: Lissio maintainers
 last-reviewed: 2026-10-07
-language: en
-authoritative: true
 applies-to: Open structural debt inherited from the September 2026 architecture review
 -->
 

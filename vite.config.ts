@@ -5,8 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 const host = process.env.TAURI_DEV_HOST;
 
-// 浏览器开发 (pnpm dev:web) 时 `/api` 的转发目标 — 即 `pnpm server` 起的独立服务端。
-// Desktop 与浏览器都走独立后端；Desktop 发布版由 sidecar supervisor 提供端点。
+// Proxy target for `/api` during browser development (pnpm dev:web) — the standalone
+// server started by `pnpm server`. Both desktop and browser use the standalone backend;
+// desktop release builds get their endpoint from the sidecar supervisor.
 const devServer = process.env.LISSIO_DEV_SERVER ?? 'http://127.0.0.1:8790';
 
 const appVersion = (
@@ -36,7 +37,8 @@ export default defineConfig(() => ({
     ],
   },
 
-  // Web 出口读不到 Tauri 的版本注入, 构建期固化 package.json 版本 (platform shim 的来源)
+  // The web exit cannot see Tauri's version injection, so bake the package.json version in
+  // at build time (the source of the platform shim)
   define: {
     'import.meta.env.VITE_APP_VERSION': JSON.stringify(appVersion),
   },
@@ -56,7 +58,8 @@ export default defineConfig(() => ({
       clientFiles: ['./index.html', './src/main.tsx'],
     },
     proxy: {
-      // 同源转发到独立服务端; `ws: true` 覆盖 /api/v1/ws 的 WebSocket 升级
+      // Forward same-origin traffic to the standalone server; `ws: true` covers the
+      // WebSocket upgrade for /api/v1/ws
       '/api': {
         target: devServer,
         changeOrigin: true,

@@ -1,20 +1,22 @@
 #!/usr/bin/env node
-// Web 出口契约对齐校验 —— 防止「前端加了命令 / 后端加了 IPC, 但 Web 出口漏接」。
+// Web exit contract alignment check — prevents "the frontend added a command / the backend
+// added an IPC, but the Web exit missed it".
 //
-// 数据源 (全部是仓库内的权威清单, 不复制第二份):
-//   1. src-tauri/src/lib.rs               Tauri 壳注册的桌面专有 IPC 命令
+// Data sources (all authoritative inventories inside the repository, no second copy):
+//   1. src-tauri/src/lib.rs               desktop-only IPC commands registered by the Tauri shell
 //   2. rpc-api/src/catalog.rs             SUPPORTED / PENDING / DESKTOP_ONLY / CHANNEL
-//   3. rpc-api/src/lib.rs                 dispatch 的 match 分支
-//   4. src/**/*.{ts,tsx}                  前端实际调用 (transport.call / invoke) 的命令名
+//   3. rpc-api/src/lib.rs                 dispatch match arms
+//   4. src/**/*.{ts,tsx}                  command names the frontend actually calls (transport.call / invoke)
 //
-// 校验内容:
-//   A. 四个清单两两不相交；DESKTOP_ONLY = 壳 IPC 命令集合
-//   B. SUPPORTED 中每条命令都有对应的 dispatch 分支
-//   C. 前端调用的每个命令名都在公共命令面内 (拼写漂移)
-//   D. 前端已在用的命令不得落在未接入集合里而不被察觉
-//      (未接入只告警, 不阻断 —— 它们由 /api/v1/capabilities 暴露给前端降级)
-//   E. 出口封装: 除 src/lib/rpc/ 外不得直接使用 Tauri IPC —— 否则前端又绑回宿主,
-//      Web 出口静默失效
+// What it checks:
+//   A. the four lists are pairwise disjoint; DESKTOP_ONLY = the shell IPC command set
+//   B. every SUPPORTED command has a corresponding dispatch arm
+//   C. every command name the frontend calls is on the public command surface (spelling drift)
+//   D. commands the frontend already uses must not sit unnoticed in the not-yet-exposed set
+//      (not-yet-exposed only warns, it does not block — they are exposed to the frontend for
+//      degradation via /api/v1/capabilities)
+//   E. exit encapsulation: Tauri IPC must not be used directly outside src/lib/rpc/ — otherwise
+//      the frontend is bound back to the host and the Web exit silently fails
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,22 +26,22 @@ const root = path.resolve(import.meta.dirname, '..');
 const errors = [];
 const warnings = [];
 
-/** 读取文本, 缺失即报错并返回空串。 */
+/** Read text; a missing file is an error and returns an empty string. */
 function read(relative) {
   const absolute = path.join(root, relative);
   if (!fs.existsSync(absolute)) {
-    errors.push(`缺少文件: ${relative}`);
+    errors.push(`missing file: ${relative}`);
     return '';
   }
   return fs.readFileSync(absolute, 'utf8');
 }
 
-/** generate_handler![...] 里注册的全部 IPC 命令名 (保序去重)。 */
+/** All IPC command names registered in generate_handler![...] (order-preserving dedup). */
 function ipcCommands() {
   const source = read('src-tauri/src/lib.rs');
   const start = source.indexOf('generate_handler![');
   if (start < 0) {
-    errors.push('src-tauri/src/lib.rs 中找不到 generate_handler! 注册表');
+    errors.push('generate_handler! registry not found in src-tauri/src/lib.rs');
     return [];
   }
   const end = source.indexOf('])', start);
@@ -48,7 +50,7 @@ function ipcCommands() {
   return [...new Set(names)];
 }
 
-/** catalog.rs 中的命令清单常量。 */
+/** Command list constants in catalog.rs. */
 function catalog() {
   const source = read('src-tauri/crates/desktop/rpc-api/src/catalog.rs');
   const lists = {};
@@ -57,7 +59,7 @@ function catalog() {
       new RegExp(`pub const ${name}: &\\[&str\\] = &\\[([\\s\\S]*?)\\];`),
     );
     if (!match) {
-      errors.push(`catalog.rs 中找不到 ${name}`);
+      errors.push(`${name} not found in catalog.rs`);
       lists[name] = [];
       continue;
     }
@@ -66,7 +68,7 @@ function catalog() {
   return lists;
 }
 
-/** dispatch 的 match 分支命令名。 */
+/** Command names of dispatch's match arms. */
 function dispatchedCommands() {
   const source = read('src-tauri/crates/desktop/rpc-api/src/lib.rs');
   const start = source.indexOf('pub async fn dispatch');
@@ -74,16 +76,17 @@ function dispatchedCommands() {
   return new Set([...block.matchAll(/^\s{8}"([a-z_0-9]+)"\s*=>/gm)].map((m) => m[1]));
 }
 
-/** 去掉注释 — 文档里引用 `invoke('cmd')` 不是真的调用。
- *  前置字符判据避免把字符串里的 `http://` 当成行注释。 */
+/** Strip comments — a documented `invoke('cmd')` reference is not a real call.
+ *  The preceding-character test avoids treating `http://` inside a string as a line comment. */
 function stripComments(source) {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/(^|[^:'"\\])\/\/[^\n]*/g, '$1');
 }
 
-/** 前端源码文件 — 排除测试; `includeBridges` 为真时连出口实现 (lib/rpc、lib/platform)
- *  一起返回, 供需要区分"哪个出口允许 import 什么"的检查使用。 */
+/** Frontend source files — tests excluded; when `includeBridges` is true the exit
+ *  implementations (lib/rpc, lib/platform) are returned too, for checks that need to tell
+ *  which exit may import what. */
 function frontendFiles({ includeBridges = false } = {}) {
   const files = [];
   const walk = (dir) => {
@@ -104,12 +107,12 @@ function frontendFiles({ includeBridges = false } = {}) {
   return files;
 }
 
-/** 该文件是否属于某个出口实现目录 (lib/rpc = IPC, lib/platform = 插件 shim)。 */
+/** Whether the file belongs to an exit implementation directory (lib/rpc = IPC, lib/platform = plugin shim). */
 function inBridge(absolute, name) {
   return absolute.includes(path.join('lib', name));
 }
 
-/** 前端静态命令名 — 出口无关的 `transport.call` 与历史 `invoke` 两种写法。 */
+/** Static frontend command names — the exit-agnostic `transport.call` and the legacy `invoke` forms. */
 function frontendInvocations() {
   const patterns = [
     /\binvoke(?:<[^>]*>)?\(\s*'([a-z_0-9]+)'/g,
@@ -125,29 +128,30 @@ function frontendInvocations() {
   return found;
 }
 
-/** 出口封装 (IPC) — src/lib/rpc/ 之外不得 import @tauri-apps/api/{core,event} 或
- *  直接调用 invoke()/listen()。 */
+/** Exit encapsulation (IPC) — outside src/lib/rpc/ it is forbidden to import
+ *  @tauri-apps/api/{core,event} or call invoke()/listen() directly. */
 function transportLeaks() {
   const leaks = [];
   for (const absolute of frontendFiles()) {
     const source = stripComments(fs.readFileSync(absolute, 'utf8'));
     const relative = path.relative(root, absolute);
     if (/from '@tauri-apps\/api\/(core|event)'/.test(source)) {
-      leaks.push(`出口泄漏 (应经 src/lib/rpc/): ${relative} 直接 import @tauri-apps/api/(core|event)`);
+      leaks.push(`exit leak (should go through src/lib/rpc/): ${relative} imports @tauri-apps/api/(core|event) directly`);
     }
     for (const match of source.matchAll(/(?<![.\w])(invoke|listen)(?:<[^>]*>)?\(/g)) {
-      leaks.push(`出口泄漏 (应经 src/lib/rpc/): ${relative} 直接调用 ${match[1]}()`);
+      leaks.push(`exit leak (should go through src/lib/rpc/): ${relative} calls ${match[1]}() directly`);
     }
   }
   return leaks;
 }
 
-/** 出口封装 (插件) — src/lib/platform/ 之外不得 import 任何 @tauri-apps/* 模块
- *  (静态或动态)。src/lib/rpc/ 只豁免它本职的 api/{core,event}; 插件调用点一律
- *  必须收进 platform shim, 否则浏览器端会静默失效。 */
+/** Exit encapsulation (plugins) — outside src/lib/platform/ it is forbidden to import any
+ *  @tauri-apps/* module (static or dynamic). src/lib/rpc/ is exempt only for its own
+ *  api/{core,event}; every plugin call site must be collected into the platform shim,
+ *  otherwise the browser side silently fails. */
 function pluginLeaks() {
   const leaks = [];
-  // 匹配 `from '@tauri-apps/x'` / `import '@tauri-apps/x'` / `import('@tauri-apps/x')`
+  // Matches `from '@tauri-apps/x'` / `import '@tauri-apps/x'` / `import('@tauri-apps/x')`
   const importPattern = /(?:from\s+|import\s*\(\s*|import\s+)'(@tauri-apps\/[^']+)'/g;
   for (const absolute of frontendFiles({ includeBridges: true })) {
     if (inBridge(absolute, 'platform')) continue;
@@ -156,7 +160,7 @@ function pluginLeaks() {
     for (const match of source.matchAll(importPattern)) {
       const module = match[1];
       if (inBridge(absolute, 'rpc') && /^@tauri-apps\/api\/(core|event)$/.test(module)) continue;
-      leaks.push(`出口泄漏 (应经 src/lib/platform/): ${relative} 直接 import ${module}`);
+      leaks.push(`exit leak (should go through src/lib/platform/): ${relative} imports ${module} directly`);
     }
   }
   return leaks;
@@ -168,73 +172,73 @@ const dispatched = dispatchedCommands();
 const frontend = frontendInvocations();
 const leaks = [...transportLeaks(), ...pluginLeaks()];
 
-// A. 清单互斥，且 Tauri 根包只注册桌面壳命令
+// A. Lists are mutually exclusive, and the Tauri root package registers only desktop shell commands
 const seen = new Map();
 for (const [name, list] of Object.entries(lists)) {
   for (const cmd of list) {
     if (seen.has(cmd)) {
-      errors.push(`${cmd} 同时出现在 ${seen.get(cmd)} 与 ${name}`);
+      errors.push(`${cmd} appears in both ${seen.get(cmd)} and ${name}`);
     } else {
       seen.set(cmd, name);
     }
   }
 }
 for (const cmd of ipc) {
-  if (!lists.DESKTOP_ONLY.includes(cmd)) errors.push(`Tauri 壳注册了非桌面命令: ${cmd}`);
+  if (!lists.DESKTOP_ONLY.includes(cmd)) errors.push(`Tauri shell registered a non-desktop command: ${cmd}`);
 }
 for (const cmd of lists.DESKTOP_ONLY) {
-  if (!ipc.has(cmd)) errors.push(`DESKTOP_ONLY 未在 Tauri 壳注册: ${cmd}`);
+  if (!ipc.has(cmd)) errors.push(`DESKTOP_ONLY not registered in the Tauri shell: ${cmd}`);
 }
 
-// B. SUPPORTED 必须有 dispatch 分支
+// B. Every SUPPORTED command must have a dispatch arm
 for (const cmd of lists.SUPPORTED) {
   if (!dispatched.has(cmd)) {
-    errors.push(`SUPPORTED 声明了 ${cmd}, 但 dispatch 中没有对应分支`);
+    errors.push(`SUPPORTED declares ${cmd}, but dispatch has no matching arm`);
   }
 }
 for (const cmd of dispatched) {
   if (!lists.SUPPORTED.includes(cmd)) {
-    errors.push(`dispatch 实现了 ${cmd}, 但未登记进 SUPPORTED`);
+    errors.push(`dispatch implements ${cmd}, but it is not registered in SUPPORTED`);
   }
 }
 
-// C. 前端调用的命令名必须在后端或桌面壳公共命令面内
+// C. Every command name the frontend calls must be on the backend or desktop shell public command surface
 for (const cmd of frontend) {
   if (!seen.has(cmd)) {
-    errors.push(`前端调用了未注册的公共命令: ${cmd}`);
+    errors.push(`frontend calls an unregistered public command: ${cmd}`);
   }
 }
 
-// D. 前端已使用但 Web 出口未接入 —— 提示性信息
+// D. Used by the frontend but not yet exposed on the Web exit — informational
 const notOnWeb = [...frontend].filter(
   (cmd) => lists.PENDING.includes(cmd) || lists.DESKTOP_ONLY.includes(cmd),
 );
 if (notOnWeb.length) {
   warnings.push(
-    `以下命令前端已在用, 但 Web 出口尚未接入 (浏览器端需降级): ${notOnWeb.sort().join(', ')}`,
+    `the frontend already uses these commands, but the Web exit does not expose them yet (browser side must degrade): ${notOnWeb.sort().join(', ')}`,
   );
 }
 
-// E. 出口封装 —— 前端只能经 src/lib/rpc/ (IPC) 与 src/lib/platform/ (插件) 触达 Tauri
+// E. Exit encapsulation — the frontend may reach Tauri only through src/lib/rpc/ (IPC) and src/lib/platform/ (plugins)
 for (const leak of leaks) {
   errors.push(leak);
 }
 
 const summary = [
-  `桌面壳 IPC ${ipc.size} 条`,
+  `desktop shell IPC ${ipc.size}`,
   `SUPPORTED ${lists.SUPPORTED.length}`,
   `PENDING ${lists.PENDING.length}`,
   `DESKTOP_ONLY ${lists.DESKTOP_ONLY.length}`,
   `CHANNEL ${lists.CHANNEL.length}`,
-  `前端调用 ${frontend.size}`,
-  `出口泄漏 ${leaks.length}`,
+  `frontend calls ${frontend.size}`,
+  `exit leaks ${leaks.length}`,
 ].join(' / ');
 
 if (warnings.length) {
   console.warn(warnings.map((message) => `⚠ ${message}`).join('\n'));
 }
 if (errors.length) {
-  console.error(`Web 出口契约校验失败 (${errors.length}):\n${errors.map((e) => `- ${e}`).join('\n')}`);
+  console.error(`Web exit contract check failed (${errors.length}):\n${errors.map((e) => `- ${e}`).join('\n')}`);
   process.exit(1);
 }
-console.log(`✓ Web 出口契约校验通过 — ${summary}`);
+console.log(`✓ Web exit contract check passed — ${summary}`);

@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Documentation-area development and review instructions
 -->
 
@@ -15,9 +13,11 @@ project documents.
 
 ## Documentation authority
 
-English is authoritative. Chinese backups live in `community/`, mirror source
-paths, and use `.zh-CN.md`. Historical review records are immutable and retain
-their original language.
+Repository prose is written in English; the translated documentation backups
+were removed. Historical review records are immutable and retain their original
+language. Product localization (`src/i18n/resources/zh/` and the runtime
+capability help under `capabilities/docs/zh/`) is a shipped surface, not
+documentation.
 
 Do not change implementation facts without checking the owning code,
 configuration, generated contracts, or tests. Every document names its
@@ -32,13 +32,11 @@ Update Rust owners, generated TypeScript, callers, and fixtures together.
 ## Documentation workflow
 
 1. Update the authoritative English document.
-2. Update or create its Chinese backup in `community/`.
-3. Register canonical documents in [`README.md`](README.md) and translations in
-   [`community/INDEX.zh-CN.md`](community/INDEX.zh-CN.md).
-4. Update `last-reviewed`.
-5. Run `pnpm check:docs`.
-6. Complete [`reviews/checklist.md`](reviews/checklist.md).
-7. Add a record under `reviews/records/` and index it in
+2. Register new documents in [`README.md`](README.md).
+3. Update `last-reviewed`.
+4. Run `pnpm check:docs`.
+5. Complete [`reviews/checklist.md`](reviews/checklist.md).
+6. Add a record under `reviews/records/` and index it in
    [`reviews/README.md`](reviews/README.md).
 
 ## Quality gates

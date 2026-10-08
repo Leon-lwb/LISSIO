@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Substantive repository documentation and governance changes
 -->
 
@@ -21,7 +19,7 @@ the intended change.
 - [ ] 1.4 Counts and inventories match regenerated dependency data.
 - [ ] 1.5 Code or configuration is named as authority for duplicated facts.
 - [ ] 1.6 External links resolve and hosting references match `git remote`.
-- [ ] 1.7 All documents and translation backups are indexed.
+- [ ] 1.7 All documents are indexed.
 - [ ] 1.8 VOFA+ and `vofa` references are limited to compatibility and attribution.
 
 ## License and intellectual property
@@ -41,7 +39,7 @@ the intended change.
 - [ ] 3.3 Metadata is complete and `last-reviewed` is current.
 - [ ] 3.4 There is one clear H1 and no heading level beyond four.
 - [ ] 3.5 Code blocks are labeled and relative links resolve.
-- [ ] 3.6 English is authoritative and Chinese backups declare their source.
+- [ ] 3.6 Documentation, tooling, and CI text are written in English.
 - [ ] 3.7 No development-process markers remain.
 
 ## Maintainability

@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: CI platform, runner setup, gate execution, and the release pipeline
 -->
 
@@ -341,8 +339,8 @@ git commit -am "chore(release): v0.8.0"
 and the `CHANGELOG.md` entry, and then calls `set-version.mjs` to propagate the
 base version to `tauri.conf.json`, the Cargo manifests, and `Cargo.lock`. Two
 PR-tier gates keep that state honest: `check:changes` validates the change files,
-and `check:release-sync` fails when the version fields, `CHANGELOG.md`, and its
-Chinese backup disagree. `RELEASING.md` covers the maintainer-facing checklist,
+and `check:release-sync` fails when the version fields and `CHANGELOG.md`
+disagree. `RELEASING.md` covers the maintainer-facing checklist,
 pre-release mode, and the manual fallbacks.
 
 ## Updater channels

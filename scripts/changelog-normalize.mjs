@@ -1,22 +1,24 @@
 #!/usr/bin/env node
 /**
- * changelog-normalize.mjs — 把 covector 生成的 CHANGELOG 条目恢复成仓库声明的格式。
+ * changelog-normalize.mjs — restore covector-generated CHANGELOG entries to the format the repository declares.
  *
- * 背景: `covector version` 会把新条目插在 `# Changelog` 之后,把 `<!-- lissio-doc -->`
- * 元数据块和 Keep a Changelog 说明挤到文件中部,标题也不带日期。本脚本把它拉回来:
+ * Background: `covector version` inserts new entries after `# Changelog`, pushing the
+ * `<!-- lissio-doc -->` metadata block and the Keep a Changelog preamble into the middle of
+ * the file, and headings carry no date. This script pulls it back:
  *
- *   1. 元数据块 + 前言段落搬回 H1 正下方;
- *   2. 最新条目补上 ` - YYYY-MM-DD`;
- *   3. 去掉条目里 `[`sha`](...)` / `([#12](...) by [@u](...))` 这类机器前缀。
+ *   1. move the metadata block + preamble paragraph back directly below the H1;
+ *   2. add ` - YYYY-MM-DD` to the newest entry;
+ *   3. strip machine prefixes such as `[`sha`](...)` / `([#12](...) by [@u](...))` from entries.
  *
- * 幂等: 已经是目标格式时不写任何文件。它由 `.changes/config.json` 的 postversion
- * 钩子调用,也可以单独运行来修正手工编辑造成的结构漂移。
+ * Idempotent: it writes no file when the format already matches. It is invoked by the
+ * `.changes/config.json` postversion hook, and can also run standalone to fix structural
+ * drift caused by hand edits.
  *
- * 用法:
+ * Usage:
  *   node scripts/changelog-normalize.mjs [--version <semver>] [--date YYYY-MM-DD] [--dry-run]
  *
- * --version 省略时读 package.json(版本真源)。postversion 钩子在版本写入之后执行,
- * 所以默认行为即正确。
+ * When --version is omitted it reads package.json (the version source of truth). The
+ * postversion hook runs after the version is written, so the default behavior is correct.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -40,16 +42,16 @@ const date = valueOf('--date') ?? new Date().toLocaleDateString('sv-SE');
 
 const original = readFileSync(changelogPath, 'utf8');
 
-// ── 拆出 H1 ────────────────────────────────────────────────────────────────
+// ── Split out the H1 ────────────────────────────────────────────────────────────────
 const h1 = original.match(/^#\s+.*$/m);
 if (!h1) {
-  console.error('CHANGELOG.md: 找不到 H1 标题');
+  console.error('CHANGELOG.md: H1 heading not found');
   process.exit(1);
 }
 const heading = h1[0];
 let body = original.slice(h1.index + heading.length);
 
-// ── 定位并摘出前置元数据 + 前言 ─────────────────────────────────────────────
+// ── Locate and extract the front matter + preamble ─────────────────────────────────────────────
 const meta = body.match(metaRe);
 let frontMatter = '';
 if (meta) {
@@ -60,7 +62,7 @@ if (meta) {
   body = body.slice(0, meta.index) + (nextSection === -1 ? '' : afterMeta.slice(nextSection));
 }
 
-// ── 归一化条目 ─────────────────────────────────────────────────────────────
+// ── Normalize entries ─────────────────────────────────────────────────────────────
 body = body.replace(/^\s+/, '');
 const split = body.slice(1).search(/^## \[/m);
 const firstEnd = split === -1 ? body.length : split + 1;
@@ -68,8 +70,9 @@ const before = body;
 let first = body.slice(0, firstEnd);
 let history = body.slice(firstEnd);
 
-// 机器前缀在所有条目里都是 covector 的产物(手写历史不含此形态), 因此全局剥离;
-// 日期只加在最新一条上, 绝不改写历史条目的发布日期。
+// Machine prefixes in every entry are covector artifacts (hand-written history has no such
+// form), so strip them globally; the date is added only to the newest entry and never
+// rewrites the release date of a historical entry.
 const stripMachinePrefix = (section) =>
   section
     .replace(/^(\s*-\s+)\[`[^`]*`\]\([^)]*\)\s*/gm, '$1')
@@ -89,7 +92,7 @@ const next = `${heading}\n\n${frontMatter}\n\n${first.trimEnd()}\n\n${history.tr
   .replace(/\n+$/, '\n');
 
 if (next === original) {
-  console.log(`CHANGELOG.md: 已是目标格式 (v${version}, ${date}),未修改。`);
+  console.log(`CHANGELOG.md: already in the target format (v${version}, ${date}), unchanged.`);
   process.exit(0);
 }
 
@@ -97,9 +100,9 @@ const changed = [];
 if (frontMatter) changed.push('  front matter hoisted to the top');
 if (before !== `${first.trimEnd()}\n\n${history.trimStart()}`) changed.push('  entries reformatted');
 if (dryRun) {
-  console.log(`[dry-run] CHANGELOG.md 将更新 (v${version}, ${date}):`);
+  console.log(`[dry-run] CHANGELOG.md would be updated (v${version}, ${date}):`);
   console.log(changed.join('\n') || '  (whitespace only)');
   process.exit(0);
 }
 writeFileSync(changelogPath, next);
-console.log(`CHANGELOG.md: 已归一化为 v${version} (${date})`);
+console.log(`CHANGELOG.md: normalized to v${version} (${date})`);

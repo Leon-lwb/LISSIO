@@ -3,15 +3,12 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Repository documentation index and language policy
 -->
 
-This is the entry point for Lissio documentation. English documents are
-authoritative. Chinese translation backups under [`community/`](community/) are
-non-authoritative; if they differ, English controls.
+This is the entry point for Lissio documentation. Repository prose is written in
+English; the translated documentation backups were removed.
 
 Historical review records preserve their original language and facts.
 
@@ -97,17 +94,11 @@ Runtime capability help is authoritative in
 The `zh/` files are product translations. The built-in AI prompt is
 [`../src-tauri/crates/desktop/ai-host/default-system-prompt.md`](../src-tauri/crates/desktop/ai-host/default-system-prompt.md).
 
-## Chinese translation backups
-
-The mapping of every backup and its authoritative English source is in
-[`community/INDEX.zh-CN.md`](community/INDEX.zh-CN.md). Backup paths mirror the
-source repository path and add `.zh-CN` to the filename.
-
 ## Gates
 
 | Command | Coverage |
 | --- | --- |
-| `pnpm check:docs` | License text and SPDX, notices, metadata, language authority, indexes, and links |
+| `pnpm check:docs` | License text and SPDX, notices, metadata, document index, links, and review records |
 | `pnpm check:architecture` | Crate layout, metadata, domain DAG, layers, and adapter isolation |
 | `pnpm check:web-contract` | Public command, dispatch, and frontend call consistency |
 | `pnpm check:contracts` | Rust wire types and generated TypeScript |

@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /**
- * publish-crates.mjs — 按依赖拓扑序把 workspace crates 发布到 crates.io
+ * publish-crates.mjs — publish workspace crates to crates.io in dependency topological order
  *
- * 顺序: cargo metadata 依赖图 (含 dev-dependencies, 保证 graph-testkit 先于
- * 依赖它的测试宿主发布)。发布前经 crates.io API 预检包名/版本占用; 上传成功后
- * 轮询索引直到新版本可见, 再发布下游 (crates.io 索引传播需要数十秒)。
+ * Order: the cargo metadata dependency graph (including dev-dependencies, so graph-testkit is
+ * published before the test hosts that depend on it). Before publishing, the crates.io API is
+ * checked for name/version availability; after a successful upload, the index is polled until the
+ * new version is visible, then downstream crates are published (crates.io index propagation takes
+ * tens of seconds).
  *
- * 用法:
- *   pnpm publish:crates                       dry-run: 预检 + 逐包 `cargo publish --dry-run`, 不上传
- *   pnpm publish:crates -- --execute          实际发布 (需要 cargo login 凭据)
- *   pnpm publish:crates -- --from lissio-kind 从拓扑序某处继续 (中断恢复)
+ * Usage:
+ *   pnpm publish:crates                       dry-run: preflight + `cargo publish --dry-run` per crate, no upload
+ *   pnpm publish:crates -- --execute          actually publish (needs cargo login credentials)
+ *   pnpm publish:crates -- --from lissio-kind resume from somewhere in the topological order (interrupt recovery)
  *   pnpm publish:crates -- --only lissio-error,lissio-kind
  *   pnpm publish:crates -- --skip lissio-app
- *   pnpm publish:crates -- --allow-dirty      允许脏工作树 (默认拒绝)
+ *   pnpm publish:crates -- --allow-dirty      allow a dirty working tree (rejected by default)
  *
- * 认证: 使用 cargo 默认凭据 (~/.cargo/credentials) 或 CARGO_REGISTRY_TOKEN 环境变量。
+ * Authentication: uses the default cargo credentials (~/.cargo/credentials) or the CARGO_REGISTRY_TOKEN environment variable.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -24,12 +26,12 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = join(repoRoot, 'src-tauri', 'Cargo.toml');
 const REGISTRY_API = 'https://crates.io/api/v1';
-// crates.io 要求 UA 里带可达的项目主页; 仓库已迁到 Codeberg。
+// crates.io requires a reachable project homepage in the UA; the repository has moved to Codeberg.
 const USER_AGENT = 'lissio-publish-script (https://codeberg.org/Horldsence/Lissio)';
 const INDEX_POLL_INTERVAL_MS = 4_000;
 const INDEX_POLL_TIMEOUT_MS = 180_000;
 const INTER_PUBLISH_PAUSE_MS = 2_000;
-// 桌面应用壳随发行版打包, 不走 crates.io; 如需占位发布用 --only lissio 覆盖。
+// The desktop app shell ships with the release and does not go to crates.io; use --only lissio to force a placeholder publish.
 const DEFAULT_SKIP = new Set(['lissio']);
 
 const args = process.argv.slice(2);
@@ -48,7 +50,7 @@ function listArg(name) {
 }
 
 function fail(message) {
-  console.error(`错误: ${message}`);
+  console.error(`error: ${message}`);
   process.exit(1);
 }
 
@@ -71,39 +73,40 @@ async function registryGet(path) {
 
 const sleep = (ms) => new Promise((resolve_) => setTimeout(resolve_, ms));
 
-// --- 装载 workspace 成员与依赖边 ---
+// --- Load workspace members and dependency edges ---
 
 const metadata = cargoJson(['--no-deps']);
 const members = new Set(metadata.workspace_members);
 const packages = metadata.packages.filter((pkg) => members.has(pkg.id));
 const memberByName = new Map(packages.map((pkg) => [pkg.name, pkg]));
 const workspaceVersion = metadata.packages.find((pkg) => pkg.name === 'lissio')?.version;
-if (!workspaceVersion) fail('无法从 cargo metadata 解析 workspace 版本');
+if (!workspaceVersion) fail('cannot resolve the workspace version from cargo metadata');
 
-// 静态保障: [workspace.dependencies] 内部条目必须带显式 version (crates.io 上
-// path 依赖会被剥离, 无 version 则下游发布时无法解析)。
+// Static safeguard: internal [workspace.dependencies] entries must carry an explicit version (on
+// crates.io path dependencies are stripped, and without a version downstream publishing cannot resolve them).
 for (const line of readFileSync(manifestPath, 'utf8').split('\n')) {
   if (/path\s*=\s*"crates\//.test(line) && !/version\s*=\s*"/.test(line) && /^\s*[^#[]/.test(line)) {
-    fail(`[workspace.dependencies] 内部条目缺少 version: ${line.trim()}`);
+    fail(`[workspace.dependencies] internal entry is missing version: ${line.trim()}`);
   }
 }
 
-// 依赖边: normal/build 决定发布顺序; dev-dependencies 只作为顺序偏好 —
-// 本仓库存在 dev-dep 环 (如 can ↔ data-model), cargo 允许, 但严格拓扑会死锁。
-// 内部 dev-dep 尚未进入索引的 crate 用 --no-verify 发布 (跳过编译验证, 见下)。
+// Dependency edges: normal/build determine the publish order; dev-dependencies are only an order
+// preference — this repository has dev-dep cycles (e.g. can ↔ data-model), which cargo allows but a
+// strict topology would deadlock on. Crates whose internal dev-deps are not yet in the index are
+// published with --no-verify (skipping compile verification, see below).
 const normalDepsOf = new Map(packages.map((pkg) => [pkg.name, []]));
 const devDepsOf = new Map(packages.map((pkg) => [pkg.name, []]));
 for (const pkg of packages) {
   for (const dependency of pkg.dependencies) {
     if (!memberByName.has(dependency.name) || dependency.name === pkg.name) continue;
-    // cargo metadata: kind 为 null (normal) / "dev" / "build" (旧版本为数组, 兼容两种形态)。
+    // cargo metadata: kind is null (normal) / "dev" / "build" (older versions use an array; both forms are handled).
     const kinds = Array.isArray(dependency.kind) ? dependency.kind : dependency.kind ? [dependency.kind] : [];
     (kinds.includes('dev') ? devDepsOf : normalDepsOf).get(pkg.name).push(dependency.name);
   }
 }
 
-// Kahn 拓扑排序 (normal/build 边, 被依赖者在前)。同级优先选择内部 dev-dep
-// 都已排定的 crate, 尽量让下游发布时 dev-dep 可解析。
+// Kahn topological sort (normal/build edges, dependencies first). Among equal candidates, prefer the
+// crate whose internal dev-deps are all already ordered, so downstream dev-deps resolve at publish time.
 const pendingDeps = new Map([...normalDepsOf].map(([name, deps]) => [name, deps.length]));
 const dependents = new Map(packages.map((pkg) => [pkg.name, []]));
 for (const [name, deps] of normalDepsOf) {
@@ -131,28 +134,28 @@ while (ready.length) {
 }
 if (order.length !== packages.length) {
   const cyclic = packages.map((pkg) => pkg.name).filter((name) => !order.includes(name));
-  fail(`依赖图存在环或不可解析: ${cyclic.join(', ')}`);
+  fail(`dependency graph has a cycle or is unresolvable: ${cyclic.join(', ')}`);
 }
 
-// --- 过滤出要发布的集合 ---
+// --- Filter down to the set to publish ---
 
 const skipped = new Set(DEFAULT_SKIP);
 for (const pkg of packages) {
-  // publish = false 在 metadata 中表现为 [] (受限注册表列表为非空数组, null 为不限制)。
+  // publish = false shows up in metadata as [] (a restricted registry list is a non-empty array; null means unrestricted).
   if (Array.isArray(pkg.publish)) {
-    console.log(`跳过 ${pkg.name}: manifest 声明 publish = false`);
+    console.log(`skipping ${pkg.name}: manifest declares publish = false`);
     skipped.add(pkg.name);
   }
 }
 for (const name of skipList) skipped.add(name);
 
 let targets = order.filter((name) => !skipped.has(name));
-// 被跳过 crate 的依赖者同样无法从 crates.io 解析, 级联剔除。
+// Dependents of a skipped crate also cannot resolve from crates.io, so drop them in a cascade.
 for (;;) {
   const blocked = targets.filter((name) => normalDepsOf.get(name).some((dep) => skipped.has(dep)));
   if (blocked.length === 0) break;
   for (const name of blocked) {
-    console.log(`跳过 ${name}: 依赖未发布的 ${normalDepsOf.get(name).filter((dep) => skipped.has(dep)).join(', ')}`);
+    console.log(`skipping ${name}: depends on unpublished ${normalDepsOf.get(name).filter((dep) => skipped.has(dep)).join(', ')}`);
     skipped.add(name);
   }
   targets = targets.filter((name) => !skipped.has(name));
@@ -163,20 +166,20 @@ if (onlyList.length) {
 }
 if (from) {
   const position = targets.indexOf(from);
-  if (position < 0) fail(`--from ${from} 不在待发布集合中 (先运行一次 dry-run 查看顺序)`);
+  if (position < 0) fail(`--from ${from} is not in the set to publish (run a dry-run first to see the order)`);
   targets = targets.slice(position);
 }
 
-// --- 预检: 干净工作树 + crates.io 名称/版本占用 ---
+// --- Preflight: clean working tree + crates.io name/version availability ---
 
 if (!allowDirty) {
   const status = spawnSync('git', ['status', '--porcelain'], { cwd: repoRoot, encoding: 'utf8' });
   if (status.stdout.trim()) {
-    fail('工作树不干净; 先提交或使用 --allow-dirty');
+    fail('working tree is dirty; commit first or use --allow-dirty');
   }
 }
 
-console.log(`\nworkspace v${workspaceVersion} — ${targets.length} 个待发布 crate (${execute ? 'EXECUTE 实际上传' : 'dry-run, 不上传'}):\n`);
+console.log(`\nworkspace v${workspaceVersion} — ${targets.length} crate(s) to publish (${execute ? 'EXECUTE, real upload' : 'dry-run, no upload'}):\n`);
 targets.forEach((name, index) => console.log(`  ${String(index + 1).padStart(3)}. ${name}`));
 console.log();
 
@@ -187,15 +190,16 @@ for (const name of targets) {
   if (existing.status === 200) {
     const versionStatus = await registryGet(`/crates/${name}/${version}`);
     if (versionStatus.status === 200) {
-      console.log(`= ${name}@${version} 已存在于 crates.io, 跳过`);
+      console.log(`= ${name}@${version} already exists on crates.io, skipping`);
       continue;
     }
   } else if (existing.status !== 404) {
-    fail(`crates.io 查询 ${name} 失败 (HTTP ${existing.status})`);
+    fail(`crates.io lookup for ${name} failed (HTTP ${existing.status})`);
   }
 
-  // dev-dep 引导: 版本化的内部 dev-dep 未进入索引时, 打包后的清单无法解析,
-  // 编译验证必然失败 — 该 crate 跳过验证发布, 待其 dev-dep 发布后由下游正常验证。
+  // dev-dep bootstrap: when a versioned internal dev-dep is not yet in the index, the packaged
+  // manifest cannot resolve, so compile verification would necessarily fail — publish this crate
+  // with verification skipped, and let downstream crates verify normally once its dev-dep is published.
   const missingDevDeps = execute
     ? (await Promise.all(devDepsOf.get(name).map(async (dep) => {
         const status = (await registryGet(`/crates/${dep}/${memberByName.get(dep).version}`)).status;
@@ -203,11 +207,12 @@ for (const name of targets) {
       }))).filter(Boolean)
     : [];
   if (missingDevDeps.length) {
-    console.log(`  警告: 内部 dev-dep 未发布 (${missingDevDeps.join(', ')}), 本次跳过编译验证 (--no-verify)`);
+    console.log(`  warning: internal dev-dep not yet published (${missingDevDeps.join(', ')}), skipping compile verification this time (--no-verify)`);
   }
-  // dry-run 用 cargo package --list: `cargo publish --dry-run` 会从 crates.io
-  // 索引解析依赖, 首次发布前必然失败; --list 校验清单/文件集且不触网解析。
-  // 完整编译验证发生在 --execute 逐包发布时 (依赖随序进入索引)。
+  // dry-run uses cargo package --list: `cargo publish --dry-run` resolves dependencies from the
+  // crates.io index and would necessarily fail before the first publish; --list validates the
+  // manifest/file set without touching the network. Full compile verification happens during
+  // --execute per-crate publishing (dependencies enter the index as the order progresses).
   const cargoArgs = execute
     ? ['publish', '--manifest-path', manifestPath, '-p', name]
     : ['package', '--no-verify', '--list', '--manifest-path', manifestPath, '-p', name];
@@ -216,25 +221,25 @@ for (const name of targets) {
   console.log(`${execute ? '→' : '·'} ${name}@${version} ...`);
   const result = spawnSync('cargo', cargoArgs, { stdio: 'inherit' });
   if (result.status !== 0) {
-    fail(`cargo publish ${name} 失败 (exit ${result.status})`);
+    fail(`cargo publish ${name} failed (exit ${result.status})`);
   }
   if (!execute) {
     published += 1;
     continue;
   }
 
-  // 等待索引传播, 否则下游 crate 的发布解析不到该依赖。
+  // Wait for index propagation, or downstream crate publishing will not resolve this dependency.
   const deadline = Date.now() + INDEX_POLL_TIMEOUT_MS;
   for (;;) {
     const check = await registryGet(`/crates/${name}/${version}`);
     if (check.status === 200) break;
-    if (Date.now() > deadline) fail(`等待 ${name}@${version} 进入 crates.io 索引超时`);
+    if (Date.now() > deadline) fail(`timed out waiting for ${name}@${version} to enter the crates.io index`);
     await sleep(INDEX_POLL_INTERVAL_MS);
   }
-  console.log(`  ${name}@${version} 已进入索引`);
+  console.log(`  ${name}@${version} is now in the index`);
   published += 1;
   await sleep(INTER_PUBLISH_PAUSE_MS);
 }
 
-console.log(`\n完成: ${published} 个 crate ${execute ? '已发布' : '通过 dry-run'}。`);
-if (!execute) console.log('这是 dry-run; 加 --execute 实际发布。');
+console.log(`\nDone: ${published} crate(s) ${execute ? 'published' : 'passed dry-run'}.`);
+if (!execute) console.log('This was a dry-run; add --execute to actually publish.');

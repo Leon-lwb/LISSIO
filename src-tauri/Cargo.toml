@@ -29,10 +29,11 @@ default = []
 debug = true
 
 [workspace]
-# 领域与依赖规则见 docs/architecture/crates.md。目录按领域分组，层级由
-# [package.metadata.lissio] 表达；允许直接依赖任意更低层，不使用转发 facade。
+# Domain and dependency rules: see docs/architecture/crates.md. Directories group by domain
+# and the layer is expressed by [package.metadata.lissio]; depending directly on any lower
+# layer is allowed, with no forwarding facade.
 members = [
-  # L0 foundation — 错误/类型/缓冲/DSP 原语/自包含基础设施，禁止依赖任何上层
+  # L0 foundation — error/type/buffer/DSP primitives/self-contained infrastructure; must not depend on any upper layer
   "crates/shared/error",
   "crates/shared/flow",
   "crates/protocol/points",
@@ -50,13 +51,13 @@ members = [
   "crates/shared/subscription",
   "crates/signal/gpu",
   "crates/desktop/events",
-  # L1 protocol — 协议解析/编码引擎
+  # L1 protocol — protocol parsing/encoding engine
   "crates/protocol/protocol",
   "crates/protocol/protocol_float",
   "crates/protocol/protocol_can_bridge",
   "crates/protocol/logic_decoder",
   "crates/protocol/schema",
-  # L1 transport — 通道收发（串口/网络/CAN 桥接/汽车诊断）
+  # L1 transport — channel send/receive (serial/network/CAN bridge/automotive diagnostics)
   "crates/transport/device-tree",
   "crates/transport/serial",
   "crates/transport/network",
@@ -68,7 +69,7 @@ members = [
   "crates/transport/automotive",
   "crates/transport/automotive_isotp",
   "crates/transport/automotive_diag",
-  # L1 node — 节点图编译器与运行时（HIR→Plane→Lower→Eval）
+  # L1 node — node-graph compiler and runtime (HIR→Plane→Lower→Eval)
   "crates/graph/kind",
   "crates/graph/hir",
   "crates/graph/plane",
@@ -78,18 +79,18 @@ members = [
   "crates/protocol/frame-decoder",
   "crates/graph/trigger",
   "crates/graph/graph-testkit",
-  # L2 pipeline — 数据平面（字节路由/数值求值/流框架/调度）
+  # L2 pipeline — data plane (byte routing/numeric evaluation/stream framework/scheduling)
   "crates/data/bus",
   "crates/data/recording",
   "crates/desktop/pipeline",
   "crates/desktop/stream",
   "crates/desktop/evaluator",
-  # L3 app — 应用核心（全局状态/图提交核心/原生菜单/更新流）
+  # L3 app — application core (global state/graph commit core/native menu/update flow)
   "crates/desktop/app",
   "crates/desktop/graph_ops",
   "crates/desktop/menu_shell",
   "crates/desktop/update_flow",
-  # L3 ai — AI/MCP 基础设施
+  # L3 ai — AI/MCP infrastructure
   "crates/ai/llm",
   "crates/ai/chat-session",
   "crates/ai/chat",
@@ -102,7 +103,7 @@ members = [
   "crates/desktop/backend-host",
   "crates/desktop/mcp-server",
   "crates/desktop/backend-cli",
-  # L4 cmd — Tauri IPC 命令薄适配层，不承载核心逻辑；禁止被任何非 cmd crate 依赖
+  # L4 cmd — thin Tauri IPC command adapter layer, holds no core logic; must not be depended on by any non-cmd crate
 ]
 
 [workspace.package]
@@ -112,85 +113,91 @@ version = "0.8.0"
 license = "Apache-2.0"
 
 [workspace.lints.clippy]
-# 最严格 clippy 配置 — 所有规则组 deny
+# Strictest clippy configuration — every rule group denied
 all = { level = "deny", priority = -1 }
 pedantic = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 
-# 合理放宽的规则 (风格偏好或无法控制的外部因素)
-# 允许模块名与类型名重复 (如 config::Config, transport::Transport)
+# Reasonably relaxed rules (style preferences or external factors beyond our control)
+# Allow module and type names to repeat (e.g. config::Config, transport::Transport)
 module_name_repetitions = "allow"
-# 不强制每个函数标 must_use (过于激进)
+# Do not require must_use on every function (too aggressive)
 must_use_candidate = "allow"
-# 不强制返回 Result/Option 的函数有文档 (本项目非 pub API 库)
+# Do not require docs on functions returning Result/Option (this project is not a public-API library)
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
-# 文档中标识符不强制加反引号
+# Do not require backticks around identifiers in docs
 doc_markdown = "allow"
-# 依赖版本冲突无法控制
+# Dependency version conflicts are beyond our control
 multiple_crate_versions = "allow"
-# 不要求 package 有完整 metadata (description/license 等)
+# Do not require complete package metadata (description/license, etc.)
 cargo_common_metadata = "allow"
-# 允许较多参数 (如配置初始化)
+# Allow many arguments (e.g. config initialization)
 too_many_arguments = "allow"
-# 允许 enum variant 名重复外层名
+# Allow enum variant names to repeat the outer name
 enum_glob_use = "allow"
-# 允许使用 std::print (调试用)
+# Allow std::print (for debugging)
 print_stdout = "allow"
 print_stderr = "allow"
-# 允许大整数/浮点字面量不带下划线 (如波特率 115200)
+# Allow large integer/float literals without underscores (e.g. baud rate 115200)
 unreadable_literal = "allow"
-# 允许 match 同一变量
+# Allow match on the same variable
 single_match_else = "allow"
-# 允许 if-then-else 链 (比 match 更清晰时)
+# Allow if-then-else chains (when clearer than match)
 match_same_arms = "allow"
-# 允许手动 clamp
+# Allow manual clamp
 
 manual_clamp = "allow"
-# 允许结构体字段顺序不优化
+# Allow unoptimized struct field order
 struct_field_names = "allow"
-# 允许较长的文档
+# Allow longer documentation
 doc_link_code = "allow"
-# 允许 &Vec 参数 (与现有 API 兼容)
+# Allow &Vec parameters (compatible with the existing API)
 ptr_arg = "allow"
-# 允许返回引用
+# Allow returning references
 needless_pass_by_value = "allow"
-# 允许使用 format! 字符串
+# Allow format! strings
 useless_format = "allow"
-# 允许默认 trait 实现不显式
+# Allow new() without an explicit Default implementation
 new_without_default = "allow"
-# 允许较多方法 (impl 块)
+# Allow many methods (impl blocks)
 too_many_lines = "allow"
-# MutexGuard 临界区按锁序整段持有是数据平面的刻意并发语义, 按逐次使用拆小作用域
-# 反而扩大竞态窗口 (clippy nursery 启发式)
+# Holding a MutexGuard critical section in full, following lock order, is the data plane's
+# deliberate concurrency semantics; shrinking the scope per use would instead widen the race
+# window (clippy nursery heuristic)
 significant_drop_tightening = "allow"
-# Tauri 命令保持 async 以在 tokio 运行时执行 (sync 命令会跑在主线程, 持锁路径
-# 会阻塞 UI); 大量命令无 await 点属正常形态
+# Tauri commands stay async so they run on the tokio runtime (sync commands run on the main
+# thread, where lock-holding paths would block the UI); many commands having no await point is normal
 unused_async = "allow"
-# 同上: Tauri 命令/AppState 方法保持 async 签名, 无 await 点属正常形态
-# (新版 clippy 将 impl 块内该形态拆分为独立 lint)
+# Same as above: Tauri commands/AppState methods keep an async signature with no await point as normal
+# (newer clippy splits that shape inside impl blocks into a separate lint)
 unused_async_trait_impl = "allow"
-# 测试断言 `assert!(x.is_empty())` 语义清晰且不要求集合实现 PartialEq,
-# 改写为 assert_eq 需逐类型适配且对自定义集合不可行
+# The test assertion `assert!(x.is_empty())` is semantically clear and does not require the
+# collection to implement PartialEq; rewriting it as assert_eq needs per-type adaptation and is
+# infeasible for custom collections
 assert_is_empty = "allow"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-# schemars: 能力节点工具入参的 JSON Schema 单一来源 (与 rmcp 内嵌版本同大版本),
-# MCP 工具路由与内置 AI 工具规格由同一 schema 派生
+# schemars: single source for the JSON Schema of capability-node tool inputs (same major
+# version as the one embedded in rmcp); MCP tool routing and built-in AI tool specs derive
+# from the same schema
 schemars = "1"
-# ts-rs: 由 Rust wire 类型生成 TypeScript 声明 (显式导出程序, 不走测试自动写盘)。
-# 仅用于构建期合同导出; 保留 serde-compat 的不兼容属性告警作为漂移检查的一部分。
+# ts-rs: generates TypeScript declarations from Rust wire types (an explicit export program,
+# not test-time automatic file writes). Build-time contract export only; the incompatible
+# serde-compat attribute warnings are kept as part of drift detection.
 ts-rs = { version = "12.0.1", default-features = false, features = ["serde-compat", "serde-json-impl"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
-# genai: 多 LLM provider 聚合客户端 (OpenAI/Anthropic/Gemini/DeepSeek/通义/Kimi/GLM/
-# Ollama 等 26+ 原生协议), 内部复用 reqwest+rustls, 流式与工具调用完备 —
-# 避免 AI 对话层手写各家 provider 协议 (AI 功能统一规划在后端的基础设施)
+# genai: multi-LLM-provider aggregation client (26+ native protocols: OpenAI/Anthropic/Gemini/
+# DeepSeek/Tongyi/Kimi/GLM/Ollama and more), reusing reqwest+rustls internally with complete
+# streaming and tool calling — avoids hand-writing each provider protocol in the AI chat layer
+# (AI features are planned uniformly in the backend infrastructure)
 genai = "0.6"
-# rmcp: Model Context Protocol 官方 Rust SDK — MCP client (stdio/streamable-http)
-# 与 server (streamable-http) 双向能力, MCP 协议不在本仓库自研
+# rmcp: the official Model Context Protocol Rust SDK — bidirectional MCP client
+# (stdio/streamable-http) and server (streamable-http) capability; the MCP protocol is not
+# implemented in this repository
 rmcp = { version = "3.1", default-features = false, features = [
   "macros",
   "server",
@@ -200,16 +207,17 @@ rmcp = { version = "3.1", default-features = false, features = [
   "transport-streamable-http-client-reqwest",
   "reqwest",
 ] }
-# axum: 本地 MCP server 的 HTTP 宿主 (rmcp streamable-http server 传输为 tower service,
-# 需要 HTTP 框架挂载), 仅监听 127.0.0.1
-# keyring: 系统凭据库 (macOS Keychain / Windows Credential Manager / libsecret) —
-# AI provider 的 API key 存钥匙串而非明文 settings.json; 自研加密落盘仍可被提取,
-# 系统凭据库才是正确方案
+# axum: HTTP host for the local MCP server (the rmcp streamable-http server transport is a
+# tower service and needs an HTTP framework to mount it), listening on 127.0.0.1 only
+# keyring: system credential store (macOS Keychain / Windows Credential Manager / libsecret) —
+# AI provider API keys live in the keychain rather than plaintext settings.json; home-grown
+# encrypted files on disk can still be extracted, so the system credential store is the correct
+# approach
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
 security-framework = "3"
-# axum: Web 出口 (backend-server) 的 HTTP-RPC + WebSocket 宿主, 以及 MCP server
+# axum: HTTP-RPC + WebSocket host for the web exit (backend-server), as well as the MCP server
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "tokio", "ws"] }
-# tower-http: Web 出口的 CORS 白名单 / 请求体上限 / 静态站点托管
+# tower-http: CORS allowlist / request body limit / static site hosting for the web exit
 tower-http = { version = "0.6", default-features = false, features = ["cors", "limit", "fs", "trace"] }
 futures = "0.3"
 async-trait = "0.1"
@@ -218,10 +226,10 @@ base64 = "0.22"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "io-std", "sync", "time", "fs", "signal"] }
 tokio-modbus = { version = "0.17", default-features = false, features = ["tcp", "rtu"] }
 tokio-serial = { version = "5.4.4", default-features = false }
-# tokio-s7: 西门子 S7comm 异步客户端 (ISO-on-TCP), PLC 采集的第二条点位源 (Apache-2.0)
+# tokio-s7: Siemens S7comm async client (ISO-on-TCP), the second point source for PLC acquisition (Apache-2.0)
 tokio-s7 = "0.1.7"
 log = "0.4"
-# clap: backend-cli 子命令解析 (derive); env_logger: 无界面宿主的 stderr 日志
+# clap: backend-cli subcommand parsing (derive); env_logger: stderr logging for headless hosts
 clap = { version = "4", features = ["derive"] }
 env_logger = "0.11"
 libc = "0.2"
@@ -232,16 +240,20 @@ rustc-hash = "2"
 criterion = { version = "0.7", features = ["html_reports"] }
 parking_lot = "0.12"
 petgraph = { version = "0.8", default-features = false, features = ["stable_graph"] }
-# wgpu: 跨平台 GPU compute (macOS=Metal / Windows=DX12+Vulkan / Linux=Vulkan) —
-# 波形包络降采样 (gpu_core); pollster 供阻塞线程上同步初始化/映射
+# wgpu: cross-platform GPU compute (macOS=Metal / Windows=DX12+Vulkan / Linux=Vulkan) —
+# waveform envelope downsampling (gpu_core); pollster provides synchronous init/mapping on
+# blocking threads
 wgpu = "30"
 pollster = "1"
-# scirs2-core: SciRS2 科学计算核心 — 数值平面 Math 单元的 SIMD 批量求值
-# (SimdUnifiedOps, wide 后端, AVX2/NEON 运行时分发); std 必须显式开启
-# (0.6.5 打包缺陷: 关闭 default 后大量模块未按 no_std 门控)
+# scirs2-core: SciRS2 scientific computing core — SIMD batch evaluation for the numeric
+# plane's Math unit (SimdUnifiedOps, wide backend, AVX2/NEON runtime dispatch); std must be
+# enabled explicitly (0.6.5 packaging flaw: with default features off, many modules are not
+# gated for no_std)
 scirs2-core = { version = "0.6.5", default-features = false, features = ["std", "simd"] }
-# Tauri 桌面框架与官方插件 — 版本唯一登记点, 成员一律 `workspace = true` 继承;
-# tauri features 取根与成员的历史并集 (features 在依赖图上做并集, 与原各处分散声明等价)
+# Tauri desktop framework and official plugins — the single version registration point; members
+# always inherit via `workspace = true`; tauri features take the historical union of the root and
+# members (features are unioned across the dependency graph, equivalent to the former scattered
+# declarations)
 tauri = { version = "2", features = ["devtools", "macos-private-api"] }
 tauri-build = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
@@ -254,13 +266,13 @@ tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 window-vibrancy = "0.6"
 getrandom = "0.3"
-# 硬件/平台访问
+# Hardware/platform access
 serialport = "4"
 core-foundation = "0.10"
 io-kit-sys = "0.4"
 nusb = "0.2"
 windows-sys = { version = "0.52", features = ["Win32_Foundation", "Win32_Devices_DeviceAndDriverInstallation", "Win32_System_Registry", "Win32_System_Time"] }
-# sysinfo: 跨平台进程 CPU/内存采样 (性能监视器 L4 adapter, 仅启用 system)
+# sysinfo: cross-platform process CPU/memory sampling (performance monitor L4 adapter, system feature only)
 sysinfo = { version = "0.39.6", default-features = false, features = ["system"] }
 # FFT (dsp_fft)
 rustfft = "6"
@@ -268,7 +280,7 @@ realfft = "3"
 bytemuck = { version = "1", features = ["derive"] }
 duckdb = { version = "1.5.5", features = ["bundled", "parquet"] }
 rusqlite = { version = "0.40.2", features = ["bundled"] }
-# ---- workspace 内部 crate (路径 = crates/<domain>/<crate>) ----
+# ---- workspace-internal crates (path = crates/<domain>/<crate>) ----
 # L0 foundation
 gpu = { version = "0.8.0", package = "lissio-gpu", path = "crates/signal/gpu" }
 waveform = { version = "0.8.0", package = "lissio-waveform", path = "crates/signal/waveform" }
@@ -338,7 +350,7 @@ rpc-api = { version = "0.8.0", package = "lissio-rpc-api", path = "crates/deskto
 performance = { version = "0.8.0", package = "lissio-performance", path = "crates/desktop/performance" }
 backend-server = { version = "0.8.0", package = "lissio-backend-server", path = "crates/desktop/backend-server" }
 backend-host = { version = "0.8.0", package = "lissio-backend-host", path = "crates/desktop/backend-host" }
-# backend-cli 是叶子 bin (无消费方), 仅经 [workspace].members 纳入构建
+# backend-cli is a leaf bin (no consumers), included in the build only via [workspace].members
 # L4 cmd
 libautomotive = "0.1"
 
@@ -376,7 +388,7 @@ schema_types = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 
-# tauri-plugin-updater 仅桌面端支持, target 门控声明 (不在上方通用段重复登记)
+# tauri-plugin-updater is desktop-only, declared under a target gate (not repeated in the general section above)
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = { workspace = true }
 

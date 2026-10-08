@@ -3,9 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Issue, pull request, documentation, and release contributions
 -->
 
@@ -56,7 +54,7 @@ verifies that this file, `AGENTS.md`, the pull-request template, and the
 - `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
 - `pnpm check:motion` — every `transition`/`@keyframes` property stays on the paint layer; layout animations run in C++ and are invisible to the browser probe, so only a static check can catch them
 - `pnpm check:layers` — frontend implementation/interaction/effects/view layers must not cross their boundaries
-- `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, review-record metadata; see `docs/governance/`
+- `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, and review-record metadata; see `docs/governance/`
 - `pnpm check:ci-gates` — documentation and `.forgejo` workflows match this file; keeps the gate list from being re-written by hand
 
 **Frontend**
@@ -75,7 +73,7 @@ verifies that this file, `AGENTS.md`, the pull-request template, and the
 **Release**
 
 - `pnpm check:changes` — every change file declares a known package, a valid bump, and a declared tag, so covector cannot drop a release note silently; see `.changes/README.md`
-- `pnpm check:release-sync` — `package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` plus its Chinese backup carry that version; see `RELEASING.md`
+- `pnpm check:release-sync` — `package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
 
 **Frontend (slow: complete flow only)**
 
@@ -103,16 +101,14 @@ instead of silently overwriting them. The full surface in one command is
   generated from those files, so do not edit `CHANGELOG.md` by hand.
 - Update the authoritative English documentation when behavior, contracts,
   licensing, packaging, or commands change.
-- Update Chinese backups through `docs/community/`; English controls if they
-  disagree.
 - Include screenshots or recordings for visual changes when practical.
 - Do not commit `dist/`, `target/`, secrets, or local application state.
 
 ## Documentation
 
 Documentation changes follow `docs/governance/documentation-standards.md` and
-the review process in `docs/governance/document-review.md`. The authoritative
-documentation is English. Chinese files are non-authoritative translations.
+the review process in `docs/governance/document-review.md`. Repository prose is
+written in English; the translated documentation backups were removed.
 
 ## Artificial intelligence
 

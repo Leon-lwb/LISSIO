@@ -18,9 +18,10 @@ const scaleXOf = (transform: string): number | null => {
 };
 
 /**
- * 浏览器才有布局引擎: jsdom 无论怎么断言都证明不了"过渡期间没有每帧布局"。
- * 这里逐帧采样计算样式, 钉死三件事 —— 位移属性恒为 0、只过渡 transform、
- * 缩放从旧宽度比连续插值回 1。
+ * Only a browser has a layout engine: no assertion in jsdom can prove "no per-frame layout
+ * during the transition". Here we sample computed styles frame by frame and pin down three
+ * things — the offset properties are always 0, only transform is transitioned, and the scale
+ * interpolates continuously from the old width ratio back to 1.
  */
 test('the tab indicator travels by transform alone', async ({ page }) => {
   await page.goto('/?server=http://127.0.0.1:8790&token=e2e-token');
@@ -28,7 +29,7 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
   await expect(tabBar).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(500);
 
-  // 挑一个当前未被药丸覆盖的 Tab, 保证这次切换一定产生位移。
+  // Pick a Tab not currently covered by the pill so this switch is guaranteed to produce displacement.
   interface PillTarget {
     index: number;
     x: number;
@@ -46,12 +47,14 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
     const rect = tabs[index].getBoundingClientRect();
     return { index, x: rect.x, width: rect.width, fromWidth: pillWidth };
   }, TAB_BAR);
-  expect(target, '需要一个未激活的 Tab 才能观察到位移').not.toBeNull();
+  expect(target, 'an inactive Tab is required to observe displacement').not.toBeNull();
 
-  // 采样到真正静止为止, 而不是采固定帧数: 多个 worker 并行抢 CPU 时帧率会掉,
-  // 固定帧数可能在点击真正生效前就耗尽, 于是"落点"读到的其实是飞行中途的值 ——
-  // 这正是这套用例偶发失败的来源。静止判定用 transform 字符串: 它逐帧精确,
-  // 不经过取整, 且必须在看到过位移之后才成立 (点击前药丸本来就是静止的)。
+  // Sample until truly settled instead of a fixed frame count: the frame rate drops when several
+  // workers compete for CPU, and a fixed count can run out before the click really takes effect, so
+  // the "landing" reading is actually a mid-flight value — exactly the source of this suite's
+  // intermittent failures. Settlement is decided by the transform string: it is exact per frame,
+  // never rounded, and only counts once displacement has been observed (the pill is stationary
+  // before the click anyway).
   await page.evaluate((selector) => {
     const w = window as unknown as { __pillSamples?: PillSample[]; __pillSettled?: boolean };
     w.__pillSamples = [];
@@ -76,7 +79,7 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
           transform: cs.transform,
         });
         firstTransform ??= cs.transform;
-        // 必须"先看到位移, 再数静止": 点击前药丸本来就是静止的, 不能从那一刻起算
+        // Displacement must be seen first, then stillness counted: the pill is stationary before the click, so it must not count from that moment.
         const moving = cs.transform !== firstTransform;
         stable = moving && cs.transform === lastTransform ? stable + 1 : 0;
         lastTransform = cs.transform;
@@ -87,8 +90,8 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
     requestAnimationFrame(tick);
   }, TAB_BAR);
 
-  // 直接派发 click: 新手引导的遮罩层会拦截真实指针事件, 但 React 的 onClick
-  // 与药丸的 FLIP 走的是同一条路径。
+  // Dispatch click directly: the onboarding tour overlay intercepts real pointer events, but React's
+  // onClick goes down the same path as the pill's FLIP.
   await tabBar.locator('[data-tab-key]').nth(target.index).dispatchEvent('click');
   await page.waitForFunction(
     () => (window as unknown as { __pillSettled?: boolean }).__pillSettled === true,
@@ -101,11 +104,12 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
   );
   expect(samples.length).toBeGreaterThan(4);
 
-  // 落点与目标必须在同一时刻、用同一把尺子量。药丸的位移是纯 transform, 所以
-  // `offsetLeft` 恒为 0 —— 能比的只有渲染矩形。宽度上有一个**已知且正确**的取整差:
-  // 药丸几何取自 tab 的 `offsetWidth` (整数 120), 而 tab 的渲染宽度是小数
-  // (119.515625), 差值 0.48px 是子像素舍入, 不是错位。容差按此设定, 仍能拦住真正的
-  // 错位 (此前 8px 的中途落点就会被拒)。
+  // The landing point and the target must be measured at the same moment with the same ruler. The
+  // pill moves purely by transform, so `offsetLeft` is always 0 — only rendered rects can be
+  // compared. In width there is a **known and correct** rounding difference: the pill geometry comes
+  // from the tab's `offsetWidth` (the integer 120) while the tab's rendered width is fractional
+  // (119.515625), so the 0.48px gap is subpixel rounding, not misalignment. The tolerance is set
+  // accordingly and still rejects real misalignment (an 8px mid-flight landing was rejected before).
   const landing = await page.evaluate(
     ({ selector, index }: { selector: string; index: number }) => {
       const bar = document.querySelector(selector)!;
@@ -120,31 +124,31 @@ test('the tab indicator travels by transform alone', async ({ page }) => {
     },
     { selector: TAB_BAR, index: target?.index ?? 0 }
   );
-  expect(landing.tab, '刚点过的 tab 应当还在').not.toBeNull();
+  expect(landing.tab, 'the tab just clicked should still be present').not.toBeNull();
   const tab = landing.tab!;
 
-  // 位置必须像素级吻合: 它由 transform 精确给出, 没有取整余地。
+  // The position must match at pixel level: transform gives it exactly, with no room for rounding.
   expect(Math.abs(landing.pill.x - tab.x)).toBeLessThanOrEqual(1);
-  // 宽度允许子像素取整差, 但不得超出 1px 量级。
+  // Width may differ by subpixel rounding, but must not exceed the 1px order of magnitude.
   expect(Math.abs(landing.pill.width - tab.width)).toBeLessThanOrEqual(1);
 
-  // 位移属性始终留在容器原点, 一旦交回内联样式就会被过渡, 容器每帧重排一次。
+  // The offset properties always stay at the container origin; once handed back to inline styles they would be transitioned, reflowing the container every frame.
   expect([...new Set(samples.map((s) => s.left))]).toEqual(['0px']);
   expect([...new Set(samples.map((s) => s.top))]).toEqual(['0px']);
   expect([...new Set(samples.map((s) => s.transitionProperty))]).toEqual(['transform']);
   expect([...new Set(samples.map((s) => s.origin))]).toEqual(['0px 0px']);
 
-  // 它确实滑过去了, 不是原地瞬移。
+  // It really slid across, rather than teleporting in place.
   const travel = Math.max(...samples.map((s) => s.x)) - Math.min(...samples.map((s) => s.x));
   expect(travel).toBeGreaterThan(20);
 
-  // 落点就是目标 Tab。
+  // The landing point is the target Tab.
   const settled = samples[samples.length - 1];
   expect(Math.abs(settled.x - target.x)).toBeLessThanOrEqual(1);
   expect(Math.abs(settled.width - target.width)).toBeLessThanOrEqual(1);
 
-  // 宽度真的变了时, 必须看到缩放从旧宽度比插值回 1 —— 这才是尺寸形变,
-  // 而不是尺寸瞬变配一个位移过渡。
+  // When the width really changed, the scale must be seen interpolating from the old width ratio back
+  // to 1 — that is size deformation, not an instantaneous size change paired with an offset transition.
   if (Math.abs(target.width - target.fromWidth) > 1) {
     const scales = samples.map((s) => scaleXOf(s.transform)).filter((v): v is number => v != null);
     expect(Math.max(...scales)).toBeGreaterThan(1.001);

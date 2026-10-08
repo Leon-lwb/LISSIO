@@ -307,7 +307,7 @@ for (const gate of GATES.filter((candidate) => candidate.informational)) {
 // `check-all.sh` does not read the `GATES` array; it runs `gates.mjs --plan` and
 // executes the rows that come back. So the *plan* is what CI runs, and it had no
 // check at all. Two edits left every other check green while CI printed
-// "check:all 全部通过" having run nothing:
+// "check:all passed" having run nothing:
 //
 //   - replacing every `cmd:` with `['true']` (the registry still has 21 gates,
 //     the tiers and docs are untouched, and the plan happily emits `...|true`);
@@ -886,7 +886,7 @@ if (existsSync(updateRs)) {
 // so a release published under an unprefixed tag is invisible to the bump logic
 // and can produce a next version lower than the one already shipped. Six such
 // tags exist from before this rule; they are immutable, but new ones must not
-// be created. See docs/ci.md「Tag naming」.
+// be created. See docs/ci.md "Tag naming".
 const publishScript = join(repoRoot, 'scripts/publish-release.mjs');
 if (existsSync(publishScript)) {
   const publishText = read(publishScript);

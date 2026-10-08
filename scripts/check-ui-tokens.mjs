@@ -3,27 +3,32 @@
 //
 // Prevents raw visual colors, oversized frontend source files, and monolithic component styles. Usage: pnpm check:tokens.
 //
-// 规则 (作用于 src/**/*.{ts,tsx,css}, 跳过 src/types/generated):
-//   1. opacity 档位 — class 串只允许:
-//        opacity-0 / opacity-100            显隐动画 (textTone.ts 头注白名单)
-//        opacity-{faint,subtle,disabled,muted,secondary}   档位工具类 (--opacity-* 桥接)
-//      其余 opacity-NN / opacity-[...] 一律报错。
-//   2. 调色板色阶 — {text,bg,border,ring,fill,stroke,divide}-<色相>-<NN> 报错:
-//      色阶值来自 tailwind 默认调色板, 不随主题联动。裸色相 (text-green / bg-blue)
-//      经 @theme token (--color-green …) 解析, 允许。
-//   3. text-white 报错 — 白色文字一律 text-text-inverse / text-text-bright (随主题);
-//      text-black / bg-white / bg-black 是固定中性色 (经 --color-black/white), 允许。
-//   4. CSS 组件规则内 opacity: 必须引用 var(--alpha-*) 档位; @keyframes 动画插值
-//      (0/1/0.85 之类) 与显隐语义不属 token 层, 放行。
-//   5. 磨砂表面 — TS/TSX 不写 backdrop-* 工具类; CSS 只能通过 --frost-* token 组合 blur/saturate。
-//   6. 同步校验 — 四处单一来源必须对齐:
-//        theme.css --alpha-*        ↔ textTone.ts TEXT_TONE_ALPHA (名与值)
-//        theme.css --alpha-*        ↔ theme.css --opacity-* 桥接 (每个档位可成工具类)
-//        textTone.ts 类名           ↔ theme.css 对应 --color-text-* token / state-* utility
-//        theme.ts 语义别名          ↔ theme.css 对应 token 存在 (否则运行时注入悬空)
+// Rules (apply to src/**/*.{ts,tsx,css}, skipping src/types/generated):
+//   1. opacity tiers — a class string may only use:
+//        opacity-0 / opacity-100            show/hide animation (whitelisted in the textTone.ts header comment)
+//        opacity-{faint,subtle,disabled,muted,secondary}   tier utility classes (--opacity-* bridge)
+//      Any other opacity-NN / opacity-[...] is an error.
+//   2. palette shades — {text,bg,border,ring,fill,stroke,divide}-<hue>-<NN> is an error:
+//      the shade value comes from the Tailwind default palette and does not follow the theme. A
+//      bare hue (text-green / bg-blue) resolves through an @theme token (--color-green …) and is
+//      allowed.
+//   3. text-white is an error — white text always uses text-text-inverse / text-text-bright
+//      (theme-aware); text-black / bg-white / bg-black are fixed neutrals (through
+//      --color-black/white) and are allowed.
+//   4. opacity: inside a CSS component rule must reference a var(--alpha-*) tier; @keyframes
+//      animation interpolation (0/1/0.85 and the like) and show/hide semantics are not the token
+//      layer and pass.
+//   5. frosted surfaces — TS/TSX must not write backdrop-* utility classes; CSS may combine
+//      blur/saturate only through --frost-* tokens.
+//   6. synchronization — four single sources must agree:
+//        theme.css --alpha-*        ↔ textTone.ts TEXT_TONE_ALPHA (names and values)
+//        theme.css --alpha-*        ↔ theme.css --opacity-* bridge (each tier usable as a utility)
+//        textTone.ts class names    ↔ matching --color-text-* token / state-* utility in theme.css
+//        theme.ts semantic aliases  ↔ matching token exists in theme.css (otherwise runtime injection dangles)
 //
-// 明确不在本层 (面/边框/阴影层, 另行推进): box-shadow 的 rgba、画布 ctx.fillStyle、
-// 终端 ANSI 色。详见 docs/architecture/ui-color-tokens.md 的分层说明。
+// Explicitly out of this layer (surface/border/shadow layer, handled separately): rgba in
+// box-shadow, canvas ctx.fillStyle, terminal ANSI colors. See the layering notes in
+// docs/architecture/ui-color-tokens.md.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,7 +36,7 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const errors = [];
 
-/// tailwind 默认调色板色相 (裸色相经 @theme token, 允许; 带色阶禁止)
+/// Tailwind default palette hues (a bare hue goes through an @theme token and is allowed; a shade is forbidden)
 const HUES =
   'red|amber|yellow|green|emerald|lime|blue|sky|cyan|orange|zinc|slate|gray|stone|indigo|violet|purple|pink|rose|teal|fuchsia';
 const PALETTE_SHADE = new RegExp(`\\b(?:text|bg|border|ring|fill|stroke|divide)-(?:${HUES})-\\d`);
@@ -40,19 +45,20 @@ const ARBITRARY_OPACITY = /(?<![-\w])opacity-\[/;
 const TEXT_WHITE = /(?<![\w-])text-white(?![\w-])/;
 const RAW_FROST = /\bbackdrop-(?:blur(?:-|\[)|filter\s*:)/;
 const LEGACY_FROST_TOKEN = /--(?:widget-acrylic|blur-acrylic|saturate-acrylic|shadow-modal)-?/;
-// 折射档 (data-glass-tier='liquid'): 一个共享的选择器, 以及"必须显式夺回
-// pointer-events"的覆盖规则。两者都被规则 #5/#6 复用。
+// Refraction tier (data-glass-tier='liquid'): one shared selector, and the override rule that
+// "pointer-events must be explicitly reclaimed". Both are reused by rules #5/#6.
 const LIQUID_SELECTOR = /\[data-glass-tier=['"]liquid['"]\]/;
 const LIQUID_POINTER_EVENTS =
   /\[data-glass-tier=['"]liquid['"]\][^{}]*\{[^{}]*pointer-events:\s*auto\s*!important/;
 const RAW_CSS_COLOR = /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/;
 const FRONTEND_LIMIT = 500;
 
-// 动画令牌检查
+// Animation token check
 const TAILWIND_ANIMATION = /\b(animate-spin|animate-pulse|animate-bounce|animate-ping)\b/;
-// 精确路径, 不能用 endsWith 后缀匹配: `reduced-motion.css` 会以 `motion.css` 结尾,
-// 于是"禁止硬编码时长"这条规则会静默地放它过去 —— 而它恰好是唯一一个**必须**
-// 硬编码时长的文件 (把动画压到 1ms 就是它的职责)。
+// Exact paths; do not use an endsWith suffix match: `reduced-motion.css` ends with
+// `motion.css`, so the "no hard-coded durations" rule would silently let it through — and it
+// happens to be the one file that **must** hard-code durations (compressing animation to 1ms is
+// its job).
 const DURATION_WHITELIST = [
   'src/styles/theme.css',
   'src/styles/component-tokens.css',
@@ -60,7 +66,7 @@ const DURATION_WHITELIST = [
   'src/styles/components/reduced-motion.css',
 ];
 
-/** 递归收集 src 下指定后缀的文件。extensions 省略时收集 ts/tsx/css 全部。 */
+/** Recursively collect files under src with the given extensions. When extensions is omitted, collect all of ts/tsx/css. */
 function collect(dir, extensions, out = []) {
   const exts = extensions ?? ['.ts', '.tsx', '.css'];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -72,25 +78,27 @@ function collect(dir, extensions, out = []) {
   return out;
 }
 
-/** 去掉整行注释 (// / /// / //! / * / /*) — 文档注释里的反例不应触发规则 */
+/** Strip whole-line comments (// / /// / //! / * / /*) — counterexamples in doc comments must not trigger rules */
 function stripCommentLines(line) {
   const t = line.trimStart();
   return t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') ? '' : line;
 }
 
-/** 去掉 CSS 注释块 — 换成等长空白而非直接删除, 使偏移量与行号保持与原文一致 */
+/** Strip CSS comment blocks — replace them with equal-length whitespace rather than deleting them, so offsets and line numbers match the original */
 function stripCssComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '));
 }
 
 /**
- * 去掉 @keyframes 块 (动画插值不属 token 层), 保留行号。
+ * Strip @keyframes blocks (animation interpolation is not the token layer) while preserving
+ * line numbers.
  *
- * 只挖掉 @keyframes 的块体: 关键帧里的 `opacity: 0.5` 是插值, 不该按档位令牌要求。
- * 之前的实现按"遇到任何 `{` 就进入跳过态"来工作, 于是把**所有**规则的声明体都
- * 吃掉了 —— 结果后面那两条规则 (裸 `opacity:` 与 `backdrop-filter:` 必须走
- * `--frost-*`) 在整个仓库里从未命中过任何一条规则。这里改成显式匹配
- * `@keyframes <name> {`, 再用花括号配平找到块尾。
+ * Only the body of @keyframes is removed: `opacity: 0.5` inside a keyframe is interpolation and
+ * must not be held to the tier-token requirement. A previous implementation entered a skip state
+ * on any `{`, which ate the declaration body of **every** rule — so the two rules that follow
+ * (bare `opacity:` and `backdrop-filter:` must go through `--frost-*`) never matched a single
+ * rule anywhere in the repository. This matches `@keyframes <name> {` explicitly and then
+ * balances braces to find the end of the block.
  */
 function stripKeyframes(css) {
   const pattern = /@keyframes\s+[\w-]+\s*\{/g;
@@ -106,7 +114,7 @@ function stripKeyframes(css) {
       else if (css[cursor] === '}') depth -= 1;
       cursor += 1;
     }
-    // 换成等长空白 (保留换行), 使偏移量与行号与原文一致。
+    // Replace with equal-length whitespace (keeping newlines) so offsets and line numbers match the original.
     const block = css.slice(match.index, cursor);
     out += block.replace(/[^\n]/g, ' ');
     last = cursor;
@@ -123,7 +131,7 @@ for (const file of collect(path.join(root, 'src'))) {
   const raw = fs.readFileSync(file, 'utf8');
   const lines = raw.split('\n');
 
-  // 动画令牌检查 (在循环外，基于整个文件内容)
+  // Animation token check (outside the loop, over the whole file content)
   const normalizedRel = rel.split(path.sep).join('/');
   const isDurationWhitelist = DURATION_WHITELIST.includes(normalizedRel);
   if (!isDurationWhitelist && isCss) {
@@ -132,15 +140,15 @@ for (const file of collect(path.join(root, 'src'))) {
     while ((dm = durationRe.exec(raw)) !== null) {
       if (dm[1] === '0') continue;
       const line = raw.slice(0, dm.index).split('\n').length;
-      errors.push(`${rel}:${line}  硬编码时长 ${dm[0]} — 使用 var(--motion-duration-*) 或 var(--duration-*) 令牌`);
+      errors.push(`${rel}:${line}  hard-coded duration ${dm[0]} — use a var(--motion-duration-*) or var(--duration-*) token`);
     }
   }
   if (TAILWIND_ANIMATION.test(raw)) {
     const line = raw.split('\n').findIndex((l) => TAILWIND_ANIMATION.test(l)) + 1;
-    errors.push(`${rel}:${line}  Tailwind 内置动画 — 使用 motion-spin / motion-pulse 替代`);
+    errors.push(`${rel}:${line}  built-in Tailwind animation — use motion-spin / motion-pulse instead`);
   }
   if (isCss && !rel.endsWith('styles/theme.css')) {
-    // 移除 var(--ease-*) 引用和 linear-gradient 后再检查裸缓动函数
+    // Remove var(--ease-*) references and linear-gradient before checking for bare easing functions
     const cssWithoutEaseVars = raw
       .replace(/var\(--ease-[a-z-]+\)/g, '')
       .replace(/linear-gradient\(/g, '');
@@ -148,7 +156,7 @@ for (const file of collect(path.join(root, 'src'))) {
     let em;
     while ((em = easeRe.exec(cssWithoutEaseVars)) !== null) {
       const line = cssWithoutEaseVars.slice(0, em.index).split('\n').length;
-      errors.push(`${rel}:${line}  裸缓动函数 — 使用 var(--ease-*) 令牌`);
+      errors.push(`${rel}:${line}  bare easing function — use a var(--ease-*) token`);
     }
   }
 
@@ -159,26 +167,26 @@ for (const file of collect(path.join(root, 'src'))) {
 
     if (!isCss) {
       if (RAW_OPACITY.test(code)) {
-        errors.push(`${at}  裸 opacity-NN — 用档位类 opacity-faint/subtle/disabled/muted/secondary 或 disabled:opacity-disabled (显隐动画仅 0/100)`);
+        errors.push(`${at}  bare opacity-NN — use the tier classes opacity-faint/subtle/disabled/muted/secondary or disabled:opacity-disabled (show/hide animation may only use 0/100)`);
       }
       if (ARBITRARY_OPACITY.test(code)) {
-        errors.push(`${at}  任意值 opacity-[…] — 透明度只允许走 --alpha-* 档位`);
+        errors.push(`${at}  arbitrary opacity-[…] — opacity may only go through --alpha-* tiers`);
       }
       if (PALETTE_SHADE.test(code)) {
-        errors.push(`${at}  调色板色阶 (hue-NN) 不随主题联动 — 文字用 text-text-* 语义角色, 徽标用 state-*, 底/边框用 token+透明度修饰 (bg-warning/10)`);
+        errors.push(`${at}  palette shade (hue-NN) does not follow the theme — use text-text-* semantic roles for text, state-* for badges, and token+opacity modifiers for backgrounds/borders (bg-warning/10)`);
       }
       if (TEXT_WHITE.test(code)) {
-        errors.push(`${at}  text-white 不随主题联动 — 用 text-text-inverse / text-text-bright`);
+        errors.push(`${at}  text-white does not follow the theme — use text-text-inverse / text-text-bright`);
       }
       if (RAW_FROST.test(code)) {
-        errors.push(`${at}  裸 backdrop-* — 磨砂统一使用 float-card / frost-surface 与 --frost-* token`);
+        errors.push(`${at}  bare backdrop-* — frosted surfaces uniformly use float-card / frost-surface and --frost-* tokens`);
       }
     }
   });
 
   const isTest = rel.includes('__tests__') || /\.(test|spec)\.(ts|tsx)$/.test(rel);
   if (!isTest && lines.length > FRONTEND_LIMIT) {
-    errors.push(`${rel}:${lines.length}  前端生产文件超过 ${FRONTEND_LIMIT} 行 — 按职责拆分并保持公开 API 稳定`);
+    errors.push(`${rel}:${lines.length}  frontend production file exceeds ${FRONTEND_LIMIT} lines — split it by responsibility and keep the public API stable`);
   }
   if (
     isCss &&
@@ -186,7 +194,7 @@ for (const file of collect(path.join(root, 'src'))) {
     !rel.endsWith('styles/component-tokens.css') &&
     RAW_CSS_COLOR.test(raw.replace(/\/\*[\s\S]*?\*\//g, ''))
   ) {
-    errors.push(`${rel}  裸 CSS 颜色 — 颜色只能定义在 theme.css / component-tokens.css，组件规则使用 var(--*)`);
+    errors.push(`${rel}  bare CSS color — colors may only be defined in theme.css / component-tokens.css; component rules use var(--*)`);
   }
 
   if (isCss && !rel.endsWith('styles/theme.css')) {
@@ -195,23 +203,23 @@ for (const file of collect(path.join(root, 'src'))) {
     let m;
     while ((m = re.exec(css)) !== null) {
       const value = m[2];
-      if (value === '0' || value === '1') continue; // 显隐语义放行
+      if (value === '0' || value === '1') continue; // show/hide semantics pass
       const line = css.slice(0, m.index).split('\n').length;
-      errors.push(`${rel}:${line}  裸 opacity: ${value} — 用 var(--alpha-*) 档位 (@keyframes 动画插值除外)`);
+      errors.push(`${rel}:${line}  bare opacity: ${value} — use a var(--alpha-*) tier (except @keyframes animation interpolation)`);
     }
     for (const m of css.matchAll(/(?:^|[;{\s])-?backdrop-filter:\s*([^;]+);/g)) {
       const value = m[1].trim();
       if (value === 'none') continue;
       if (!value.includes('blur(var(--frost-blur') || !value.includes('saturate(var(--frost-saturate')) {
         const line = css.slice(0, m.index).split('\n').length;
-        errors.push(`${rel}:${line}  backdrop-filter 未统一走 --frost-blur/--frost-saturate token`);
+        errors.push(`${rel}:${line}  backdrop-filter does not uniformly go through --frost-blur/--frost-saturate tokens`);
       }
     }
   }
 
 }
 
-// ---------- 同步校验: 四处单一来源 ----------
+// ---------- Synchronization: four single sources ----------
 
 const themeCss = fs.readFileSync(path.join(root, 'src/styles/theme.css'), 'utf8');
 const textTone = fs.readFileSync(path.join(root, 'src/lib/ui/textTone.ts'), 'utf8');
@@ -233,20 +241,20 @@ for (const token of [
   '--frost-shadow',
 ]) {
   if (!themeCss.includes(`${token}:`)) {
-    errors.push(`同步: theme.css 缺少磨砂 token ${token}`);
+    errors.push(`sync: theme.css is missing frosted token ${token}`);
   }
 }
 if (LEGACY_FROST_TOKEN.test(themeCss)) {
-  errors.push('同步: theme.css 仍有旧磨砂 token — 统一使用 --frost-*');
+  errors.push('sync: theme.css still has legacy frosted tokens — use --frost-* uniformly');
 }
 
-/// theme.css 的 --alpha-* 档位 (名 -> 百分比数值)
+/// theme.css --alpha-* tiers (name -> percentage value)
 const alphaTiers = {};
 for (const m of themeCss.matchAll(/^\s*--alpha-([a-z]+):\s*([0-9.]+)%;/gm)) {
   alphaTiers[m[1]] = Number(m[2]);
 }
 
-/// textTone.ts TEXT_TONE_ALPHA 白名单 (名 -> 小数)
+/// textTone.ts TEXT_TONE_ALPHA whitelist (name -> decimal)
 const toneBlock = textTone.match(/TEXT_TONE_ALPHA[^=]*=\s*\{([\s\S]*?)\};/);
 const toneAlphas = {};
 if (toneBlock) {
@@ -256,56 +264,58 @@ if (toneBlock) {
 }
 
 const tierNames = Object.keys(alphaTiers);
-if (tierNames.length === 0) errors.push('theme.css 未解析到任何 --alpha-* 档位 (格式变了?)');
+if (tierNames.length === 0) errors.push('theme.css: no --alpha-* tiers parsed (did the format change?)');
 for (const name of tierNames) {
   if (!(name in toneAlphas)) {
-    errors.push(`同步: theme.css --alpha-${name} 在 textTone.ts TEXT_TONE_ALPHA 中缺失`);
+    errors.push(`sync: theme.css --alpha-${name} is missing from textTone.ts TEXT_TONE_ALPHA`);
   } else if (toneAlphas[name] !== alphaTiers[name]) {
-    errors.push(`同步: --alpha-${name} 值不一致 — theme.css ${alphaTiers[name]}% vs TEXT_TONE_ALPHA ${toneAlphas[name]}%`);
+    errors.push(`sync: --alpha-${name} value mismatch — theme.css ${alphaTiers[name]}% vs TEXT_TONE_ALPHA ${toneAlphas[name]}%`);
   }
 }
 for (const name of Object.keys(toneAlphas)) {
   if (!(name in alphaTiers)) {
-    errors.push(`同步: TEXT_TONE_ALPHA.${name} 在 theme.css 缺少 --alpha-${name} 定义`);
+    errors.push(`sync: TEXT_TONE_ALPHA.${name} has no --alpha-${name} definition in theme.css`);
   }
 }
 
-/// 每个档位必须有 --opacity-* 桥接 (否则该档位无法作为工具类使用)
+/// Every tier must have an --opacity-* bridge (otherwise the tier cannot be used as a utility class)
 const bridged = new Set([...themeCss.matchAll(/--opacity-([a-z]+):\s*var\(--alpha-/g)].map((m) => m[1]));
 for (const name of tierNames) {
-  if (!bridged.has(name)) errors.push(`同步: --alpha-${name} 缺少 --opacity-${name} 桥接 (theme.css @theme)`);
+  if (!bridged.has(name)) errors.push(`sync: --alpha-${name} is missing the --opacity-${name} bridge (theme.css @theme)`);
 }
 
-/// textTone.ts 类名 -> theme.css token / utility
-/// 类名 `text-text-X` = 工具类前缀 `text-` + 色名 `text-X` → token 是 `--color-text-X`
+/// textTone.ts class name -> theme.css token / utility
+/// The class `text-text-X` = utility prefix `text-` + color name `text-X` → the token is `--color-text-X`
 for (const m of textTone.matchAll(/'(text-text-[a-z-]+)'/g)) {
   const varName = `--color-${m[1].replace(/^text-/, '')}`;
   if (!themeCss.includes(`${varName}:`)) {
-    errors.push(`同步: textTone.ts 类名 ${m[1]} 在 theme.css 缺少 ${varName} token`);
+    errors.push(`sync: textTone.ts class ${m[1]} is missing the ${varName} token in theme.css`);
   }
 }
 for (const m of textTone.matchAll(/'(state-[a-z]+)'/g)) {
   if (!themeCss.includes(`@utility ${m[1]}`)) {
-    errors.push(`同步: textTone.ts 类名 ${m[1]} 在 theme.css 缺少 @utility ${m[1]} 注册 (变体写法会静默失效)`);
+    errors.push(`sync: textTone.ts class ${m[1]} is missing the @utility ${m[1]} registration in theme.css (variant forms would silently fail)`);
   }
 }
 
-/// theme.ts 语义别名 -> theme.css token 存在
+/// theme.ts semantic alias -> the theme.css token exists
 const aliasBlock = themeTs.match(/SEMANTIC_TOKEN_ALIASES[^=]*=\s*\{([\s\S]*?)\n\};/);
 if (!aliasBlock) {
-  errors.push('同步: theme.ts 未解析到 SEMANTIC_TOKEN_ALIASES');
+  errors.push('sync: could not parse SEMANTIC_TOKEN_ALIASES from theme.ts');
 } else {
   for (const m of aliasBlock[1].matchAll(/'(--[a-z-]+)':/g)) {
     if (!themeCss.includes(`${m[1]}:`)) {
-      errors.push(`同步: theme.ts 别名 ${m[1]} 在 theme.css 缺少定义 (运行时注入会悬空)`);
+      errors.push(`sync: theme.ts alias ${m[1]} has no definition in theme.css (runtime injection would dangle)`);
     }
   }
 }
 
-// ---------- 磨砂浮层 ----------
-// 浮层的底色规则是给全部角色共用的实色, 磨砂则由 data-floating-glass 单独声明。
-// 一旦某个类只出现在实色规则里而漏在玻璃规则之外, 它在两个开关都打开时仍渲染成
-// 实色 —— 没有报错、没有告警, 只是看起来"没有亚克力"。这类缺陷只能靠结构校验拦。
+// ---------- Frosted overlays ----------
+// The overlay's base-color rule is a solid color shared by all roles, while frosting is declared
+// separately by data-floating-glass. Once a class appears only in the solid rule and is left out
+// of the glass rule, it still renders as a solid color when both switches are on — no error, no
+// warning, it just looks like "there is no acrylic". This class of defect can only be caught by a
+// structural check.
 const surfaceCss = fs
   .readFileSync(path.join(root, 'src/styles/components/dialog-surface.css'), 'utf8')
   .replace(/\/\*[\s\S]*?\*\//g, '');
@@ -326,76 +336,84 @@ const surfaceCss = fs
   const baseAt = surfaceCss.indexOf('.dialog-surface');
   const glassAt = surfaceCss.indexOf("[data-floating-glass='true']");
   if (baseAt < 0 || glassAt < 0) {
-    errors.push('磨砂: dialog-surface.css 未解析到浮层实色规则或玻璃规则');
+    errors.push('frost: could not parse the overlay solid rule or glass rule from dialog-surface.css');
   } else {
     const base = rolesBeforeBrace(baseAt);
     const glass = rolesBeforeBrace(glassAt);
     for (const role of base) {
       if (!glass.includes(role)) {
         errors.push(
-          `磨砂: .${role} 在浮层实色规则中却没有玻璃规则对应项 — 开关打开时仍渲染为实色`
+          `frost: .${role} is in the overlay solid rule but has no matching glass rule — it still renders solid when the switch is on`
         );
       }
     }
   }
 }
 
-// ---------- 磨砂浮层: 内容区归属与基色 token ----------
-// 浮层内容区的通透必须由 data-floating-glass 决定。若它继续依赖 data-acrylic,
-// 关掉窗口亚克力后就会出现"外框是玻璃、主体不透明"的错配。
-// 另外内容区不得自带 backdrop-filter: 浮层主体已经过滤过, 子层再过滤会二次模糊。
+// ---------- Frosted overlays: content-area ownership and base-color token ----------
+// The transparency of the overlay's content area must be decided by data-floating-glass. If it
+// keeps depending on data-acrylic, turning off window acrylic produces the mismatch of "glass
+// frame, opaque body".
+// Also, the content area must not carry its own backdrop-filter: the overlay body already
+// filters, and a child layer filtering again double-blurs.
 if (surfaceCss.includes('.frost-content')) {
   const contentBlock = surfaceCss.slice(surfaceCss.indexOf('.frost-content'));
   const contentRule = contentBlock.slice(0, contentBlock.indexOf('}') + 1);
   if (/backdrop-filter/.test(contentRule)) {
-    errors.push('磨砂: .frost-content 不应自带 backdrop-filter — 浮层主体已过滤, 叠加会二次模糊');
+    errors.push('frost: .frost-content must not carry its own backdrop-filter — the overlay body already filters, and stacking double-blurs');
   }
   if (/\[data-acrylic='true'\][^{]*\.frost-content/.test(surfaceCss)) {
     errors.push(
-      "磨砂: .frost-content 不应挂在 [data-acrylic='true'] 下 — 浮层通透由 data-floating-glass 决定"
+      "frost: .frost-content must not hang under [data-acrylic='true'] — overlay transparency is decided by data-floating-glass"
     );
   }
-  // 基色必须走独立 token, 否则会被窗口亚克力的半透明化二次叠加。
+  // The base color must go through its own token, or window acrylic's translucency is applied on top a second time.
   if (!/background-color:[^;]*var\(--color-float-content\)/.test(surfaceCss)) {
-    errors.push('磨砂: .frost-content 的基色必须用 var(--color-float-content)');
+    errors.push('frost: .frost-content base color must use var(--color-float-content)');
   }
 }
 
-// --color-float-content 必须由 applyAppearance 从主题原色注入
+// --color-float-content must be injected by applyAppearance from the theme's base colors
 {
   const applyTheme = fs.readFileSync(path.join(root, 'src/settings/applyTheme.ts'), 'utf8');
   if (!/setProperty\(\s*'--color-float-content'\s*,\s*activeTheme\.tokens\.bgEditor\s*\)/.test(applyTheme)) {
-    errors.push('同步: applyAppearance 未从主题原色注入 --color-float-content');
+    errors.push('sync: applyAppearance does not inject --color-float-content from the theme base colors');
   }
 }
 
-// ---------- 磨砂的结构性预算 ----------
+// ---------- Structural budget for frosting ----------
 //
-// 替代已删除的 `gaussian-budget` 场景。那个场景拿"亚克力开/关的帧间隔 p95 之差"当
-// 预算, 实测差值 2.27e-13 ms —— 不是"模糊便宜"的证据, 而是测量饱和: 无头 BeginFrame
-// 锁 60Hz, 两侧都被量化到同一根 16.7ms 栅格上。更根本的是 backdrop-filter 在合成器
-// 里做, 而浏览器探针打的是主线程原型。详见 docs/performance/frontend-render-budget.md。
+// Replaces the deleted `gaussian-budget` scenario. That scenario used the "difference in frame
+// interval p95 with acrylic on/off" as its budget, and the measured difference was 2.27e-13 ms —
+// not evidence that "blur is cheap" but measurement saturation: a headless BeginFrame is locked
+// to 60Hz and both sides are quantized onto the same 16.7ms grid. More fundamentally,
+// backdrop-filter is done in the compositor while the browser probe measures the main-thread
+// prototype. See docs/performance/frontend-render-budget.md.
 //
-// 所以改为拦那些**能从源码确定推出**的浪费。这几条都不需要跑浏览器, 也不会随 runner
-// 负载漂移; 它们防的是"白付钱", 不是"帧率低"。
+// So instead we catch waste that is **deterministically derivable from the source**. None of
+// these need a browser, and they do not drift with runner load; they guard against "paying for
+// nothing", not "low frame rate".
 
 /**
- * 磨砂表面的登记册。`alpha` 是底色不透明度百分比, `blur` 是模糊半径 px。
+ * Registry of frosted surfaces. `alpha` is the base-color opacity percentage and `blur` is the
+ * blur radius in px.
  *
- * 这不是审美清单, 是价格清单: 模糊的成本正比于半径乘以面积, 并且**只在背后失效的
- * 那一帧**付。所以半径与透明度必须成对登记 —— 底色越不透明, 模糊越看不见, 于是那一笔
- * 钱越是白付。
+ * This is not an aesthetics list, it is a price list: the cost of blur is proportional to radius
+ * times area, and it is paid **only on the frame where the backdrop is invalidated**. So radius
+ * and opacity must be registered together — the more opaque the base color, the less the blur is
+ * visible, and the more that money is wasted.
  */
 const FROST_SURFACES = [
-  // 类名, 说明
-  ['widget-card-acrylic', '节点卡片与画布类控件'],
-  ['dock-card-acrylic', '停靠卡片外壳'],
-  ['frost-surface', 'AI 输入区等面板内表面'],
-  ['frost-acrylic', '吐司与状态栏'],
+  // class name, description
+  ['widget-card-acrylic', 'node cards and canvas-style widgets'],
+  ['dock-card-acrylic', 'dock card shell'],
+  ['frost-surface', 'inner surfaces of panels such as the AI input area'],
+  ['frost-acrylic', 'toasts and the status bar'],
 ];
 
-// 底色不透明度高到模糊基本看不见的档位。alpha 90% 时 18px 模糊的结果与实色相差
-// 无几, 却是全价付费 —— 这类表面要么降到能看见模糊的水平, 要么去掉模糊。
+// The base-color opacity above which the blur is essentially invisible. At alpha 90% an 18px blur
+// is nearly indistinguishable from a solid color yet is paid for in full — such surfaces should
+// either drop to a level where the blur is visible or drop the blur.
 const OPAQUE_ENOUGH = 85;
 
 {
@@ -409,82 +427,87 @@ const OPAQUE_ENOUGH = 85;
     .map((f) => fs.readFileSync(f, 'utf8'))
     .join('\n');
 
-  // 1) 每个磨砂表面都必须有 alpha 档位, 否则底色透明度与模糊半径各走各的。
+  // 1) Every frosted surface must have an alpha tier, or base-color opacity and blur radius go their separate ways.
   for (const [cls] of FROST_SURFACES) {
     if (!new RegExp(`\\.${cls}\\b`).test(allCss + allCode)) continue;
     if (!/--frost-alpha-[a-z-]+/.test(theme)) {
-      errors.push(`磨砂: .${cls} 存在但 theme.css 没有任何 --frost-alpha-* 档位`);
+      errors.push(`frost: .${cls} exists but theme.css has no --frost-alpha-* tier`);
     }
   }
 
-  // 2) --frost-alpha-surface 是 .frost-surface 的底色档, 它不得高到让模糊白付。
-  //    底色越不透明, 模糊越看不见, 于是那一笔钱越是全价付出去却换不到东西。
+  // 2) --frost-alpha-surface is the base-color tier of .frost-surface and must not be so high
+  //    that the blur is paid for nothing. The more opaque the base color, the less the blur is
+  //    visible, so that money is paid in full and buys nothing.
   const surfaceAlpha = /--frost-alpha-surface:\s*([\d.]+)%/.exec(theme);
   if (!surfaceAlpha) {
-    errors.push('磨砂: theme.css 缺 --frost-alpha-surface — .frost-surface 的底色档失去单一来源');
+    errors.push('frost: theme.css is missing --frost-alpha-surface — the .frost-surface base-color tier loses its single source');
   } else if (Number(surfaceAlpha[1]) >= OPAQUE_ENOUGH) {
     errors.push(
-      `磨砂: --frost-alpha-surface=${surfaceAlpha[1]}% ≥ ${OPAQUE_ENOUGH}% — 底色这么不透明时 ` +
-        `backdrop-filter 基本看不见, 却是全价付费; 降到能看见模糊的水平, 或去掉该处的模糊`
+      `frost: --frost-alpha-surface=${surfaceAlpha[1]}% ≥ ${OPAQUE_ENOUGH}% — with a base color this opaque ` +
+        `backdrop-filter is essentially invisible yet is paid for in full; lower it to a level where the blur is visible, or remove the blur there`
     );
   }
 
-  // 3) 所有 --frost-alpha-* 档位都必须被至少一处用到。删掉一个档位却留着定义, 会让
-  //    下一个人以为它还在生效。
+  // 3) Every --frost-alpha-* tier must be used in at least one place. Deleting a tier but leaving
+  //    its definition makes the next person believe it is still in effect.
   for (const m of theme.matchAll(/--frost-alpha-([a-z-]+):/g)) {
     const token = `--frost-alpha-${m[1]}`;
     const used = allCss.includes(`var(${token})`) || allCode.includes(token);
-    if (!used) errors.push(`磨砂: theme.css 定义了 ${token} 却无人引用 — 死 token 会伪装成仍在生效的档位`);
+    if (!used) errors.push(`frost: theme.css defines ${token} but nothing references it — a dead token masquerades as a tier still in effect`);
   }
 
-  // 4) 嵌套的 backdrop-filter 不是性能问题, 是**静默失效**: 元素一旦带模糊就成为
-  //    自己的 Backdrop Root, 落在它内部的模糊只能采到这一层, 于是"磨砂没了"且没有
-  //    任何报错。这条一旦漏网, 后面所有关于磨砂成本的讨论都失去前提。
+  // 4) Nested backdrop-filter is not a performance problem, it is **silent failure**: an element
+  //    with a blur becomes its own Backdrop Root, so a blur inside it can only sample that layer,
+  //    and "the frosting is gone" with no error at all. Once this slips through, every later
+  //    discussion of frosting cost loses its premise.
   //
-  //    判定只能建立在**同一个选择器**上 —— 同时被两个带模糊的类选中。这覆盖了
-  //    `A.b { backdrop-filter }` 与 `.a.b { backdrop-filter }` 两种写法, 且不需要
-  //    猜 DOM 结构。
+  //    The test can only be based on the **same selector** — selected by two blurred classes at
+  //    once. That covers both `A.b { backdrop-filter }` and `.a.b { backdrop-filter }` without
+  //    guessing the DOM structure.
   const styleFiles = collect(path.join(root, 'src/styles'), ['.css']);
   for (const file of styleFiles) {
     const source = fs.readFileSync(file, 'utf8');
     const blurred = new Set();
     for (const m of source.matchAll(/([^{}]+)\{([^{}]*backdrop-filter[^{}]*)\}/g)) {
       const selector = m[1];
-      // 后代/子代组合 (含空格 或 >) 是"嵌套"而非"同一个元素", 不算在这里。
+      // A descendant/child combinator (containing a space or >) is "nested", not "the same element", and does not count here.
       if (/[ >]/.test(selector.trim())) continue;
       for (const cls of selector.matchAll(/\.([a-z0-9-]+)/g)) blurred.add(cls[1]);
     }
-    // 逐个规则看: 若它的选择器同时命中两个带模糊的类, 就是在同一个元素上叠了两层。
+    // Check rule by rule: if its selector matches two blurred classes at once, two layers are stacked on the same element.
     for (const m of source.matchAll(/([^{}]+)\{([^{}]*backdrop-filter[^{}]*)\}/g)) {
       const classes = [...m[1].matchAll(/\.([a-z0-9-]+)/g)].map((c) => c[1]);
       if (classes.length < 2) continue;
       const alsoBlurred = classes.filter((c) => blurred.has(c));
       if (alsoBlurred.length < 2) continue;
       errors.push(
-        `磨砂: ${path.relative(root, file)} 的 \`${m[1].trim().slice(0, 70)}\` 同时叠了 ` +
-          `${alsoBlurred.length} 层 backdrop-filter (${alsoBlurred.map((c) => '.' + c).join(' ')}) — ` +
-          `WebKit 下只渲染最外层, 表现为磨砂静默消失`
+        `frost: \`${m[1].trim().slice(0, 70)}\` in ${path.relative(root, file)} stacks ` +
+          `${alsoBlurred.length} backdrop-filter layers (${alsoBlurred.map((c) => '.' + c).join(' ')}) — ` +
+          `WebKit renders only the outermost, so the frosting silently disappears`
       );
     }
 
-    // 5) 折射档 (data-glass-tier='liquid') 不得**新增** backdrop-filter。
+    // 5) The refraction tier (data-glass-tier='liquid') must not **add** backdrop-filter.
     //
-    //    这条与第 4 条同源, 但方向相反: 那里防的是"模糊叠了两层", 这里防的是
-    //    "折射表面还留着模糊"。liquidGL 的折射画布只能采到元素所在的 Backdrop
-    //    Root 之内的背景; 元素只要还带 backdrop-filter, 它就是自己的 Backdrop
-    //    Root, 折射于是折到已经模糊过的一层上 —— 弯折在视觉上凭空消失, 且没有
-    //    任何报错或告警。
+    //    This shares a source with rule 4 but points the other way: that one guards against
+    //    "blur stacked twice", this one against "the refractive surface still keeps a blur".
+    //    liquidGL's refraction canvas can only sample the backdrop inside the element's Backdrop
+    //    Root; as long as the element still has a backdrop-filter it is its own Backdrop Root, so
+    //    the refraction bends onto an already-blurred layer — the bend visually vanishes with no
+    //    error or warning at all.
     //
-    //    判据是"带 liquid 选择器的规则里, backdrop-filter 只允许 none", 而不是
-    //    "每条 liquid 规则都必须写 backdrop-filter: none": 后者过宽, 会把
-    //    pointer-events 这类与模糊无关的规则也判违规。而把 none 放在哪条规则里
-    //    是有讲究的 —— 必须与角色类名同条 (特异性 (0,2,0)) 才能压过
-    //    `[data-floating-glass='true'] .dialog-surface`, 这条约束属于本文件上面
-    //    那段"实色规则 / 玻璃规则角色对齐"检查的职责范围。
+    //    The test is "in a rule with a liquid selector, backdrop-filter may only be none", not
+    //    "every liquid rule must write backdrop-filter: none": the latter is too broad and would
+    //    flag rules unrelated to blur, such as pointer-events. And which rule the none goes in
+    //    matters — it must be in the same rule as the role class (specificity (0,2,0)) to beat
+    //    `[data-floating-glass='true'] .dialog-surface`; that constraint belongs to the "solid
+    //    rule / glass rule role alignment" check earlier in this file.
     //
-    //    扫描前必须先去注释: 规则正则的选择器部分是 `[^{}]+`, 它会一路吞掉上一条
-    //    规则后面跟着的注释块, 于是"注释里提到 liquid"被当成"规则声明了 liquid"。
-    //    注释内容换成等长空白而非直接删除 —— 偏移量与行号要保持与原文一致。
+    //    Comments must be stripped before scanning: the selector part of the rule regex is
+    //    `[^{}]+`, which swallows the comment block following the previous rule, so "the comment
+    //    mentions liquid" is taken as "the rule declares liquid". Comment content is replaced with
+    //    equal-length whitespace rather than deleted — offsets and line numbers must match the
+    //    original.
     const code = stripCssComments(source);
     for (const m of code.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       if (!LIQUID_SELECTOR.test(m[1])) continue;
@@ -492,45 +515,48 @@ const OPAQUE_ENOUGH = 85;
         if (bf[1].trim() !== 'none') {
           const line = code.slice(0, m.index).split('\n').length;
           errors.push(
-            `磨砂: ${path.relative(root, file)}:${line} 的 \`${m[1].trim().slice(0, 70)}\` 对折射档 ` +
-              `新增了模糊 (${bf[1].trim().slice(0, 40)}) — 该元素仍是自己的 Backdrop Root, 折射会静默失效`
+            `frost: \`${m[1].trim().slice(0, 70)}\` at ${path.relative(root, file)}:${line} adds blur ` +
+              `to the refraction tier (${bf[1].trim().slice(0, 40)}) — the element is still its own Backdrop Root and the refraction silently fails`
           );
         }
       }
     }
   }
 
-  // 6) 折射档必须显式夺回 pointer-events。
+  // 6) The refraction tier must explicitly reclaim pointer-events.
   //
-  //    liquidGL 的 _activate() 把目标设成 pointer-events: none, 假定交互由它
-  //    的"内容层"承担; 而那层是把元素画进 canvas 的像素镜像, 接不到指针事件。
-  //    于是折射档下表面一律点不动 —— 设置界面直接失去交互。
+  //    liquidGL's _activate() sets the target to pointer-events: none, assuming interaction is
+  //    handled by its "content layer"; that layer is a pixel mirror of the element drawn into a
+  //    canvas and cannot receive pointer events. So every surface under the refraction tier is
+  //    unclickable — the settings UI simply loses interaction.
   //
-  //    这条只能由 CSS `!important` 兜住: _activate() 可能延后到 GPU 后端就绪
-  //    才执行, 也就是它会在装配完成**之后**再把内联样式设成 none, 于是"装完
-  //    立刻清一次"是不确定的 (同一份代码实测两次运行一次可点一次不可点)。
-  //    作者样式的 !important 优先于普通内联样式, 与库的时机无关。
+  //    Only a CSS `!important` can cover this: _activate() may run as late as the GPU backend
+  //    becoming ready, meaning it sets the inline style to none **after** assembly completes, so
+  //    "clear it once right after mounting" is nondeterministic (the same code was measured
+  //    clickable on one of two runs). Author styles' !important beats a normal inline style
+  //    regardless of the library's timing.
   //
-  //    这是全局约束: 规则只可能在声明了 liquid 的表面样式里写一次, 所以对
-  //    src/styles 全部 CSS 的并集判断一次。逐文件判断会要求每个 CSS 文件都
-  //    自带这条规则, 属于作用域错误 (除 dialog-surface.css 外的文件全部误报)。
+  //    This is a global constraint: the rule can only be written once among the surface styles
+  //    that declare liquid, so judge the union of all CSS under src/styles once. Per-file judgment
+  //    would require every CSS file to carry the rule, which is a scoping error (every file except
+  //    dialog-surface.css would be a false positive).
   const allStylesCode = styleFiles
     .map((file) => stripCssComments(fs.readFileSync(file, 'utf8')))
     .join('\n');
   if (!LIQUID_POINTER_EVENTS.test(allStylesCode)) {
     errors.push(
-      "磨砂: 折射档缺少 `pointer-events: auto !important` 覆盖 — liquidGL 会把目标设成 " +
-        "pointer-events: none (它的内容层是像素镜像, 接不到事件), 表面将完全无法交互",
+      "frost: the refraction tier lacks the `pointer-events: auto !important` override — liquidGL sets the target to " +
+        "pointer-events: none (its content layer is a pixel mirror and receives no events), leaving the surface completely non-interactive",
     );
   }
 }
 
-// ---------- 输出 ----------
+// ---------- Output ----------
 
 if (errors.length > 0) {
-  console.error(`check:tokens 失败 — ${errors.length} 处违规:\n`);
+  console.error(`check:tokens failed — ${errors.length} violations:\n`);
   for (const e of errors) console.error(`  ${e}`);
-  console.error('\n规范: docs/architecture/ui-color-tokens.md | 档位单一来源: src/styles/theme.css');
+  console.error('\nSpec: docs/architecture/ui-color-tokens.md | single source for tiers: src/styles/theme.css');
   process.exit(1);
 }
-console.log(`check:tokens 通过 — ${tierNames.length} 个透明度档位 (${tierNames.join('/')})、语义 token 与前端结构规则同步。`);
+console.log(`check:tokens passed — ${tierNames.length} opacity tiers (${tierNames.join('/')}), semantic tokens, and frontend structure rules are in sync.`);

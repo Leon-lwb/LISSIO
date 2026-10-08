@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// 由 Rust wire 类型生成前端 TypeScript 合同 (ts-rs 显式导出程序)。
+// Generates the frontend TypeScript contracts from the Rust wire types (ts-rs explicit export program).
 //
-// 权威来源: src-tauri/crates/desktop/rpc-api/examples/export_contracts.rs
-// 输出目录: src/types/generated/ (每个 Rust 类型一个 .ts 文件)
+// Authoritative source: src-tauri/crates/desktop/rpc-api/examples/export_contracts.rs
+// Output directory: src/types/generated/ (one .ts file per Rust type)
 //
-// 环境变量:
-//   LISSIO_CONTRACTS_OUT  覆盖输出目录 (check:contracts 用临时目录做无副作用比较)
+// Environment variables:
+//   LISSIO_CONTRACTS_OUT  overrides the output directory (check:contracts uses a temp directory for a side-effect-free comparison)
 //
-// 用法: pnpm generate:contracts
+// Usage: pnpm generate:contracts
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, rmSync, mkdirSync } from 'node:fs';
@@ -17,7 +17,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const outDir = process.env.LISSIO_CONTRACTS_OUT
   ?? path.join(root, 'src', 'types', 'generated');
 
-// 重新生成必须是干净的: 残留旧文件会让 check:contracts 的漂移检测漏报已删除的类型
+// Regeneration must be clean: leftover old files would make check:contracts' drift detection miss deleted types
 if (existsSync(outDir)) {
   rmSync(outDir, { recursive: true, force: true });
 }

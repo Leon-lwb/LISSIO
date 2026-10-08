@@ -3,17 +3,12 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
-language: en
-authoritative: true
+last-reviewed: 2026-10-08
 applies-to: Product overview, setup, development, and distribution
 -->
 
-All repository documentation is authoritative in English. Chinese files under
-`docs/community/` are informational translations; if they differ, English
-controls.
-
-[English (authoritative)](./README.md) | [Simplified Chinese translation](./docs/community/README.zh-CN.md)
+All repository documentation is English. Historical review records and product
+localization resources are the only non-English surfaces.
 
 A next-generation serial assistant fully rebuilt with Rust + Tauri — built for embedded debugging, waveform visualization, node-based dataflow orchestration, CAN/automotive diagnostics, and logic analysis.
 

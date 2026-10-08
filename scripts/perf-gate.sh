@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# 前端渲染预算门禁：先在真实浏览器里计量，再与基线比较。
+# Frontend render budget gate: measure in a real browser first, then compare against the baseline.
 #
-# 为什么是两步而不是一条命令：`pnpm test:perf` 只负责落盘原始数据，
-# `pnpm perf:check` 只负责判定。分开之后，"这次红灯到底是代码变了还是
-# 机器热了"可以靠重放同一份原始数据复查——重新跑一遍浏览器是做不到的。
-# 这与 bench-audit.sh / bench-collect.mjs 的分工一致。
+# Why two steps instead of one command: `pnpm test:perf` only writes the raw data to disk,
+# `pnpm perf:check` only judges. Once split, "was this red light the code changing or the
+# machine running hot" can be re-checked by replaying the same raw data — re-running the
+# browser cannot do that. This matches the bench-audit.sh / bench-collect.mjs split.
 #
-# 为什么单独一个脚本：check-all.sh 的检查计划是"一条计划 = 一个命令"，
-# 而门禁天然是两段。硬塞成 `bash -c` 会让日志里的复现命令变成一坨转义。
+# Why a separate script: check-all.sh's check plan is "one plan = one command", but this gate
+# is inherently two stages. Cramming it into `bash -c` would turn the reproduce command in
+# the log into a pile of escapes.
 #
-# 用法:
-#   bash scripts/perf-gate.sh            # 计量 + 判定
-#   bash scripts/perf-gate.sh --baseline # 计量 + 覆盖基线 (确认改动是有意的)
+# Usage:
+#   bash scripts/perf-gate.sh            # measure + judge
+#   bash scripts/perf-gate.sh --baseline # measure + overwrite baseline (confirm the change is intentional)
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,13 +23,13 @@ if [ "${1:-}" = "--baseline" ]; then
   BASELINE=true
 fi
 
-# playwright 的 webServer 会拉起前后端；这里显式提示一次，免得长时间无输出
-# 让人以为卡死。
-echo "前端渲染预算：启动浏览器计量（串行，首次可能较慢）…"
+# playwright's webServer starts the frontend and backend; print an explicit hint once here,
+# so a long stretch with no output does not look like a hang.
+echo "Frontend render budget: starting browser measurement (serial; the first run may be slow)…"
 pnpm test:perf
 
 if [ "$BASELINE" = true ]; then
-  echo "前端渲染预算：用本次结果覆盖基线…"
+  echo "Frontend render budget: overwriting the baseline with this run's results…"
   pnpm perf:baseline
   exit 0
 fi

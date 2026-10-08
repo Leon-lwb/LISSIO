@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-//! check:model-catalog — 模型目录一致性守卫 (前端可见面)。
+//! check:model-catalog — model catalog consistency guard (frontend-visible surface).
 //!
-//! 后端 `kind::widgets::ensure_valid` 已在启动时校验注册 ID/变体唯一、
-//! 端口与 lowering 对应; 本脚本补充校验前端消费面与导出 fixture:
-//!   1. golden fixtures 可解析、NodeDocument kind 合法、模型 id/变体唯一;
-//!   2. 目录契约版本在 Rust 源与前端 store 常量之间一致;
-//!   3. 测试目录 fixture 的 widget kind 集合与 UI registry (rendererKey 域)
-//!      完全一致 — 新增后端变体/kind 时任何一侧遗漏都会在此暴露。
+//! The backend `kind::widgets::ensure_valid` already validates registration ID/variant
+//! uniqueness and port/lowering correspondence at startup; this script additionally
+//! validates the frontend consumption surface and the exported fixtures:
+//!   1. golden fixtures parse, NodeDocument kinds are valid, model id/variants unique;
+//!   2. the catalog contract version agrees between the Rust source and the frontend store constant;
+//!   3. the test-catalog fixture's widget kind set exactly matches the UI registry (rendererKey
+//!      domain) — adding a backend variant/kind and missing it on either side shows up here.
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -21,7 +22,7 @@ const ok = (message) => console.log(`✓ ${message}`);
 
 const fixtureDir = join(root, 'src', 'test', 'fixtures');
 const fixtures = readdirSync(fixtureDir).filter((name) => name.endsWith('.json'));
-if (fixtures.length === 0) fail('src/test/fixtures 下没有导出 fixture');
+if (fixtures.length === 0) fail('no exported fixtures under src/test/fixtures');
 const VALID_KINDS = new Set(['device', 'protocol', 'pointSelector', 'widget']);
 const seenDocIds = new Map();
 for (const name of fixtures) {
@@ -29,20 +30,20 @@ for (const name of fixtures) {
   try {
     parsed = JSON.parse(readFileSync(join(fixtureDir, name), 'utf8'));
   } catch (error) {
-    fail(`${name} 不是合法 JSON: ${error.message}`);
+    fail(`${name} is not valid JSON: ${error.message}`);
     continue;
   }
   if (name.startsWith('node_document_')) {
-    if (!VALID_KINDS.has(parsed.kind)) fail(`${name}: 未知文档 kind ${parsed.kind}`);
-    if (typeof parsed.id !== 'string' || parsed.id === '') fail(`${name}: 文档 id 无效`);
+    if (!VALID_KINDS.has(parsed.kind)) fail(`${name}: unknown document kind ${parsed.kind}`);
+    if (typeof parsed.id !== 'string' || parsed.id === '') fail(`${name}: invalid document id`);
     if (seenDocIds.has(parsed.id) && seenDocIds.get(parsed.id) !== name) {
-      fail(`${name}: 文档 id ${parsed.id} 与 ${seenDocIds.get(parsed.id)} 重复`);
+      fail(`${name}: document id ${parsed.id} duplicates ${seenDocIds.get(parsed.id)}`);
     }
     seenDocIds.set(parsed.id, name);
     if (parsed.config?.node) {
       const ids = new Set();
       const visit = (node) => {
-        if (ids.has(node.id)) fail(`${name}: 设备树节点 id 重复 ${node.id}`);
+        if (ids.has(node.id)) fail(`${name}: duplicate device-tree node id ${node.id}`);
         ids.add(node.id);
         for (const child of node.children ?? []) visit(child);
       };
@@ -50,9 +51,9 @@ for (const name of fixtures) {
     }
   }
 }
-ok(`golden fixtures 解析通过 (${fixtures.length} 个文件)`);
+ok(`golden fixtures parsed (${fixtures.length} files)`);
 
-// ---- 2. 目录契约版本一致性 (Rust ↔ 前端 store 常量) ----
+// ---- 2. Catalog contract version agreement (Rust ↔ frontend store constant) ----
 
 const modelDescriptorRs = readFileSync(
   join(root, 'src-tauri', 'crates', 'shared', 'data-model', 'src', 'model_descriptor.rs'), 'utf8');
@@ -60,18 +61,18 @@ const rustVersion = /MODEL_CATALOG_CONTRACT_VERSION(?:[^;=]*?)?=[ \t]*(\d+)/.exe
 const storeTs = readFileSync(join(root, 'src', 'store', 'modelCatalogStore.ts'), 'utf8');
 const tsVersion = /MODEL_CATALOG_CONTRACT_VERSION\s*=\s*(\d+)/.exec(storeTs)?.[1];
 if (!rustVersion || !tsVersion) {
-  fail(`契约版本解析失败 (rust=${rustVersion}, ts=${tsVersion})`);
+  fail(`failed to parse the contract version (rust=${rustVersion}, ts=${tsVersion})`);
 } else if (rustVersion !== tsVersion) {
-  fail(`目录契约版本不一致: rust=${rustVersion}, ts=${tsVersion}`);
+  fail(`catalog contract version mismatch: rust=${rustVersion}, ts=${tsVersion}`);
 } else {
-  ok(`目录契约版本一致 (v${rustVersion})`);
+  ok(`catalog contract version matches (v${rustVersion})`);
 }
 
-// ---- 3. 测试目录 fixture ↔ UI registry kind 集合 ----
+// ---- 3. Test-catalog fixture ↔ UI registry kind set ----
 
 const registryTs = readFileSync(join(root, 'src', 'components', 'widgets', 'registry.ts'), 'utf8');
 const registryKinds = [...registryTs.matchAll(/^(?:\s){2}([A-Za-z0-9]+): \w+Def,$/gm)].map((m) => m[1]);
-if (registryKinds.length === 0) fail('未能从 widgets/registry.ts 解析出控件 kind 表');
+if (registryKinds.length === 0) fail('could not parse the widget kind table from widgets/registry.ts');
 
 const catalogTs = readFileSync(join(root, 'src', 'test', 'modelCatalog.ts'), 'utf8');
 const listStart = catalogTs.indexOf('WIDGET_TEST_KINDS = [');
@@ -80,21 +81,21 @@ const kindsFromList = listStart >= 0 && listEnd > listStart
   ? [...catalogTs.slice(listStart, listEnd).matchAll(/'([A-Za-z0-9]+)'/g)].map((m) => m[1])
   : [];
 if (kindsFromList.length === 0) {
-  fail('未能从 test/modelCatalog.ts 解析出 WIDGET_TEST_KINDS');
+  fail('could not parse WIDGET_TEST_KINDS from test/modelCatalog.ts');
 } else {
   const registry = new Set(registryKinds);
   const fixture = new Set(kindsFromList);
   const missingInFixture = registryKinds.filter((k) => !fixture.has(k));
   const extraInFixture = kindsFromList.filter((k) => !registry.has(k));
-  if (missingInFixture.length) fail(`测试目录缺少 UI registry 已有的 kind: ${missingInFixture.join(', ')}`);
-  if (extraInFixture.length) fail(`测试目录有 UI registry 未实现的 kind: ${extraInFixture.join(', ')}`);
+  if (missingInFixture.length) fail(`test catalog is missing kinds present in the UI registry: ${missingInFixture.join(', ')}`);
+  if (extraInFixture.length) fail(`test catalog has kinds the UI registry does not implement: ${extraInFixture.join(', ')}`);
   if (!missingInFixture.length && !extraInFixture.length) {
-    ok(`widget kind 覆盖一致 (${registryKinds.length} 类)`);
+    ok(`widget kind coverage matches (${registryKinds.length} kinds)`);
   }
 }
 
 if (failed) {
-  console.error('\ncheck:model-catalog 失败');
+  console.error('\ncheck:model-catalog failed');
   process.exit(1);
 }
-console.log('\ncheck:model-catalog 通过');
+console.log('\ncheck:model-catalog passed');
