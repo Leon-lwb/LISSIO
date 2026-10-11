@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  workers: 1,
   // Performance measurement lives in playwright.perf.config.ts: it requires a single serial
   // worker, and its artifacts must land at fixed paths for perf-collect to judge. They must be
   // excluded here, or the functional suite would run them too — competing for CPU under

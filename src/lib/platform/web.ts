@@ -8,8 +8,8 @@
 //!   句柄 (`browser-file:<n>`) 指代;
 //! - 退出无等价能力 (仅告警), 重启退化为刷新页面。
 
-import { resolveWebEndpoint } from '../rpc';
-import type { FileFilter, Platform, PlatformStore } from './types';
+import { createBackendStore } from './backendStore';
+import type { FileFilter, Platform } from './types';
 
 /// 句柄前缀 — 与桌面真实文件路径区分, 读文件时据此查注册表。
 const FILE_HANDLE_PREFIX = 'browser-file:';
@@ -115,51 +115,6 @@ function pickBrowserFiles(options: {
   });
 }
 
-/// 服务端设置存储 — `GET/PUT {base}/api/v1/settings`, 整篇 JSON 文档。
-///
-/// `set` 把 key 合并进最后已知文档后整体 PUT (服务端是整篇覆盖语义), 并缓存
-/// 合并结果; 请求失败抛带状态码的 Error (调用方 catch 后落到默认设置)。
-/// 只用到 `settings.json` / key `app`, 但保持通用 key/value 形状。
-function createWebStore(): PlatformStore {
-  let document: Record<string, unknown> | null = null;
-
-  async function readDocument(): Promise<Record<string, unknown>> {
-    const { base, token } = resolveWebEndpoint();
-    const response = await fetch(`${base}/api/v1/settings`, { headers: authHeaders(token) });
-    if (!response.ok) throw new Error(`设置读取失败: HTTP ${response.status}`);
-    const body = (await response.json()) as unknown;
-    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
-      throw new Error('设置响应不是 JSON 对象');
-    }
-    document = body as Record<string, unknown>;
-    return document;
-  }
-
-  return {
-    get: async <T,>(key: string): Promise<T | null> => {
-      const doc = document ?? (await readDocument());
-      return (doc[key] as T | undefined) ?? null;
-    },
-    set: async (key: string, value: unknown): Promise<void> => {
-      const doc = document ?? (await readDocument());
-      const next = { ...doc, [key]: value };
-      const { base, token } = resolveWebEndpoint();
-      const response = await fetch(`${base}/api/v1/settings`, {
-        method: 'PUT',
-        headers: { ...authHeaders(token), 'content-type': 'application/json' },
-        body: JSON.stringify(next),
-      });
-      if (!response.ok) throw new Error(`设置保存失败: HTTP ${response.status}`);
-      document = next;
-    },
-  };
-}
-
-/// 令牌非空时带上 Bearer — Web 出口探活/能力清单同款鉴权。
-function authHeaders(token: string): Record<string, string> {
-  return token === '' ? {} : { Authorization: `Bearer ${token}` };
-}
-
 export const webPlatform: Platform = {
   getAppVersion: () => Promise.resolve(import.meta.env.VITE_APP_VERSION ?? 'web'),
   getAppName: () => Promise.resolve('Lissio'),
@@ -201,5 +156,5 @@ export const webPlatform: Platform = {
     return new Uint8Array(await file.arrayBuffer());
   },
 
-  createStore: () => createWebStore(),
+  createStore: createBackendStore,
 };

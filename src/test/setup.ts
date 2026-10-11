@@ -4,14 +4,14 @@
 //! 被导入与测试, 而不触发真实 Tauri API (这些 API 在非 Tauri 环境会抛错).
 //!
 //! 用法: 测试中通过 `import { tauriMock } from '../../test/setup'` 访问共享状态,
-//! 例如 seedFile() 预置 plugin-store 数据、断言 invoke 调用.
+//! 例如 seedFile() 预置 后端设置数据、断言 invoke 调用.
 
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
 /// 共享、可重置的 mock 状态 — 通过 vi.hoisted 保证在 vi.mock 工厂中可用
 const tauriMock = vi.hoisted(() => {
-  /** plugin-store 的底层存储: file -> (key -> value) */
+  /** Backend settings document: file -> (key -> value). */
   const fileStore = new Map<string, Map<string, unknown>>();
 
   /// 目录契约版本 — 必须与 MODEL_CATALOG_CONTRACT_VERSION 一致 (v2: 目录下发 panels)。
@@ -21,6 +21,17 @@ const tauriMock = vi.hoisted(() => {
 
   return {
     fileStore,
+    settingsGet: vi.fn((file: string, key: string): Promise<unknown> =>
+      Promise.resolve(fileStore.get(file)?.get(key) ?? null)),
+    settingsSet: vi.fn((file: string, key: string, value: unknown): Promise<void> => {
+      let entry = fileStore.get(file);
+      if (!entry) {
+        entry = new Map();
+        fileStore.set(file, entry);
+      }
+      entry.set(key, structuredClone(value));
+      return Promise.resolve();
+    }),
     catalogContractVersion,
 
     /** 预置某个 store 文件/键的数据 (供 load 路径测试) */
@@ -151,36 +162,13 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: tauriMock.listen,
 }));
 
-vi.mock('@tauri-apps/plugin-store', () => {
-  class FakeLazyStore {
-    private readonly file: string;
-
-    constructor(file: string) {
-      this.file = file;
-    }
-
-    get<T>(key: string): Promise<T | null> {
-      const entry = tauriMock.fileStore.get(this.file);
-      return Promise.resolve((entry?.get(key) as T | undefined) ?? null);
-    }
-
-    set(key: string, value: unknown): Promise<void> {
-      let entry = tauriMock.fileStore.get(this.file);
-      if (!entry) {
-        entry = new Map();
-        tauriMock.fileStore.set(this.file, entry);
-      }
-      entry.set(key, value);
-      return Promise.resolve();
-    }
-
-    save(): Promise<void> { return Promise.resolve(); }
-
-    load(): Promise<void> { return Promise.resolve(); }
-  }
-
-  return { LazyStore: FakeLazyStore, Store: FakeLazyStore };
-});
+vi.mock('../lib/platform/backendStore', () => ({
+  createBackendStore: (file: string) => ({
+    get: <T,>(key: string): Promise<T | null> =>
+      tauriMock.settingsGet(file, key) as Promise<T | null>,
+    set: (key: string, value: unknown): Promise<void> => tauriMock.settingsSet(file, key, value),
+  }),
+}));
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({
   open: tauriMock.dialogOpen,

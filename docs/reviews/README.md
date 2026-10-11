@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-11
 applies-to: Historical records under docs/reviews/records
 -->
 
@@ -55,6 +55,7 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-07 | Change-file release flow and release gates | passed with conditions | [records/2026-10-07-change-file-release-flow-and-gates.md](records/2026-10-07-change-file-release-flow-and-gates.md) |
 | 2026-10-08 | Database backend investigation and plan | passed with conditions | [records/2026-10-08-database-backend-investigation.md](records/2026-10-08-database-backend-investigation.md) |
 | 2026-10-08 | English-only documentation policy | passed with conditions | [records/2026-10-08-english-only-documentation.md](records/2026-10-08-english-only-documentation.md) |
+| 2026-10-11 | Onboarding and shared settings persistence | passed with conditions | [records/2026-10-11-onboarding-settings-persistence.md](records/2026-10-11-onboarding-settings-persistence.md) |
 
 ## Retention
 

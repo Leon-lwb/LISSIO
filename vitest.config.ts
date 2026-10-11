@@ -16,6 +16,8 @@ export default defineConfig({
     conditions: ['browser', 'development', 'import', 'default'],
   },
   test: {
+    // jsdom workers retain large component graphs; avoid CPU-count concurrency.
+    maxWorkers: 1,
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],

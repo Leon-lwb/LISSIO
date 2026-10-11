@@ -1,4 +1,4 @@
-//! dialogs 阶段 — 启动弹窗编排: 录制恢复提示 / 首次引导 / 版本指南 / 自动更新。
+//! dialogs 阶段 — 启动弹窗编排: 录制恢复提示 / 首次引导 / 自动更新。
 //!
 //! 串行规则由 `resolveStartupFlow` 统一裁决 (见 `phases.ts`):
 //! 首次引导 → 钥匙串授权提醒 → 自动更新; 本 hook 只负责**触发时机**, 弹窗本体
@@ -10,7 +10,6 @@
 //! 用户选择相悖。
 
 import { useEffect, useRef } from 'react';
-import { platform } from '../platform';
 import { api } from '../tauri/tauri';
 import { notify } from '../tauri/notifications';
 import { translate } from '../../i18n';
@@ -18,10 +17,10 @@ import { useAppStore } from '../../store/appStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useOnboardingStore } from '../../store/onboardingStore';
 import { useUpdateStore } from '../../store/updateStore';
-import { resolveStartupFlow, shouldShowGuideAfterUpdate } from './phases';
+import { resolveStartupFlow } from './phases';
 
 export function useStartupDialogs(): void {
-  const settingsLoaded = useSettingsStore((s) => s.loaded);
+  const settingsLoaded = useSettingsStore((s) => s.loaded && s.loadError === null);
   const lang = useAppStore((s) => s.lang);
   const showOnboarding = useSettingsStore((s) => s.settings.general.showOnboarding);
   const autoCheckUpdate = useSettingsStore((s) => s.settings.general.autoCheckUpdate);
@@ -30,7 +29,6 @@ export function useStartupDialogs(): void {
   const isOnboardingOpen = useOnboardingStore((s) => s.isWizardOpen);
 
   const recordingRecoveryChecked = useRef(false);
-  const versionGuideChecked = useRef(false);
   const autoUpdateStarted = useRef(false);
   const onboardingOpened = useRef(false);
 
@@ -45,6 +43,8 @@ export function useStartupDialogs(): void {
 
   // 首次引导 — 设置加载完成后按 showOnboarding 自动弹出 (每会话一次)
   useEffect(() => {
+    const settings = useSettingsStore.getState();
+    if (!settings.loaded || settings.loadError !== null) return;
     if (!settingsLoaded || !showOnboarding || hasOpenedOnboarding || onboardingOpened.current) {
       return;
     }
@@ -52,35 +52,11 @@ export function useStartupDialogs(): void {
     useOnboardingStore.getState().openWizard();
   }, [settingsLoaded, showOnboarding, hasOpenedOnboarding]);
 
-  // 版本更新检测 (每会话一次) — 版本变化则弹出一次操作指南, 并立即持久化新
-  // 版本号 (中途关闭向导也不会重复弹; getAppVersion 失败 = 非 Tauri 环境, 跳过)
-  useEffect(() => {
-    if (!settingsLoaded || versionGuideChecked.current) return;
-    versionGuideChecked.current = true;
-    void (async () => {
-      let current: string;
-      try {
-        current = await platform.getAppVersion();
-      } catch {
-        return;
-      }
-      const settings = useSettingsStore.getState();
-      const lastSeen = settings.settings.general.lastSeenVersion;
-      if (
-        shouldShowGuideAfterUpdate(lastSeen, current) &&
-        !useOnboardingStore.getState().hasOpenedThisSession
-      ) {
-        useOnboardingStore.getState().openWizard();
-      }
-      if (lastSeen !== current) {
-        settings.update('general', 'lastSeenVersion', current);
-      }
-    })();
-  }, [settingsLoaded]);
-
   // 自动检查更新 — 仅一次; 启动弹窗串行闸门放行后才开始; auto 失败不打断用户
   useEffect(() => {
     if (!startupFlow.canCheckForUpdates || autoUpdateStarted.current) return;
+    const settings = useSettingsStore.getState();
+    if (!settings.loaded || settings.loadError !== null || useOnboardingStore.getState().isWizardOpen) return;
     autoUpdateStarted.current = true;
     void useUpdateStore.getState().check('auto');
   }, [startupFlow.canCheckForUpdates]);
@@ -90,6 +66,8 @@ export function useStartupDialogs(): void {
   // 很可能根本没打开那个面板, 于是以为历史凭空消失、录制一直不可用。
   useEffect(() => {
     if (!settingsLoaded || recordingRecoveryChecked.current) return;
+    const settings = useSettingsStore.getState();
+    if (!settings.loaded || settings.loadError !== null) return;
     recordingRecoveryChecked.current = true;
     void api
       .getRecordingHealth()

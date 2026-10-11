@@ -1,16 +1,12 @@
-//! 平台服务 shim — 桌面 (Tauri webview) 实现。
-//!
-//! 全部是既有插件的薄委托, 语义与拆分前的直接调用逐字一致 —— 这样 `dist/`
-//! 在 Tauri 宿主里行为零变化, 风险集中在 Web 实现。真正的 Tauri IPC (命令 /
-//! 事件 / 订阅) 仍走 `src/lib/rpc/`, 不在这里。
+//! Platform file, dialog, and process services. Settings always use the connected backend.
 
 import { getName, getVersion } from '@tauri-apps/api/app';
 import { ask as dialogAsk, confirm as dialogConfirm, open, save } from '@tauri-apps/plugin-dialog';
 import { readFile, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import { openUrl as openerOpenUrl } from '@tauri-apps/plugin-opener';
 import { exit, relaunch } from '@tauri-apps/plugin-process';
-import { LazyStore } from '@tauri-apps/plugin-store';
-import type { Platform, PlatformStore } from './types';
+import { createBackendStore } from './backendStore';
+import type { Platform } from './types';
 
 export const tauriPlatform: Platform = {
   getAppVersion: () => getVersion(),
@@ -48,14 +44,5 @@ export const tauriPlatform: Platform = {
   writeTextFile: (path, contents) => writeTextFile(path, contents),
   readBinaryFile: (path) => readFile(path),
 
-  createStore: (fileName): PlatformStore => {
-    const store = new LazyStore(fileName);
-    return {
-      // LazyStore 未命中返回 undefined, 统一成 null 与 Web 实现对齐
-      get: async <T,>(key: string): Promise<T | null> => (await store.get<T>(key)) ?? null,
-      set: async (key: string, value: unknown): Promise<void> => {
-        await store.set(key, value);
-      },
-    };
-  },
+  createStore: createBackendStore,
 };

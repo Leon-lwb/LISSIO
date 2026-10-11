@@ -349,3 +349,7 @@ menuCloseWindow: Close Window
 menuQuit: Quit
 menuDocs: Documentation
 menuGithub: Open on GitHub
+
+settingsLoadFailed: Could not load settings. Automatic onboarding and saving are paused.
+settingsSaveFailed: Could not save settings. Your changes have not been saved.
+settingsRetry: Retry

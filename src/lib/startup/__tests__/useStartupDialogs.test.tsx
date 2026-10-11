@@ -26,6 +26,7 @@ beforeEach(() => {
   useSettingsStore.setState({
     settings: structuredClone(DEFAULT_SETTINGS),
     loaded: false,
+    loadError: null,
     keychainPermissionPromptOpen: false,
   });
   useOnboardingStore.setState({ isWizardOpen: false, hasOpenedThisSession: false });
@@ -67,6 +68,18 @@ describe('useStartupDialogs', () => {
 
   it('设置加载后: showOnboarding 关闭则不弹引导', async () => {
     useSettingsStore.setState({ loaded: true, settings: { ...useSettingsStore.getState().settings, general: { ...DEFAULT_SETTINGS.general, showOnboarding: false } } });
+    await act(async () => {
+      renderHook(() => useStartupDialogs());
+      await Promise.resolve();
+    });
+    expect(useOnboardingStore.getState().isWizardOpen).toBe(false);
+  });
+
+  it('version changes cannot override the disabled onboarding preference', async () => {
+    useSettingsStore.setState({ loaded: true, settings: {
+      ...useSettingsStore.getState().settings,
+      general: { ...DEFAULT_SETTINGS.general, showOnboarding: false, lastSeenVersion: '0.1.0' },
+    } });
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();

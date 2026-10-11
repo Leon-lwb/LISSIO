@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-11
 applies-to: Dependency policy, current snapshot, special obligations, and review workflow
 -->
 
@@ -24,13 +24,13 @@ frontend inventory is generated with pnpm and reviewed when dependencies change.
 
 ## Rust snapshot
 
-The current graph contains 778 external crates. Frequent SPDX expressions are:
+The current graph contains 772 external crates. Frequent SPDX expressions are:
 
 | Expression | Packages |
 | --- | ---: |
-| `MIT OR Apache-2.0` | 364 |
-| `MIT` | 167 |
-| `Apache-2.0 OR MIT` | 67 |
+| `MIT OR Apache-2.0` | 363 |
+| `MIT` | 163 |
+| `Apache-2.0 OR MIT` | 66 |
 | `MIT/Apache-2.0` | 34 |
 | `Apache-2.0` | 26 |
 | `Zlib OR Apache-2.0 OR MIT` | 23 |
@@ -54,20 +54,26 @@ copyleft handling.
 
 ## Frontend snapshot
 
-Production contains 392 packages; the complete graph contains 791 packages.
+Production contains 391 packages; the complete graph contains 820 packages.
 
 | Expression | Production | Including development |
 | --- | ---: | ---: |
-| MIT | 326 | 655 |
-| ISC | 38 | 54 |
-| Apache-2.0 | 7 | 29 |
+| MIT | 325 | 673 |
+| ISC | 38 | 58 |
+| Apache-2.0 | 7 | 36 |
 | BSD-3-Clause | 8 | 14 |
 | BSD-2-Clause | 1 | 10 |
-| `MIT OR Apache-2.0` | 5 | 5 |
+| `MIT OR Apache-2.0` | 4 | 4 |
 | `Apache-2.0 OR MIT` | 1 | 3 |
 | `(MPL-2.0 OR Apache-2.0)` | 1 | 1 |
 | MPL-2.0 | 0 | 3 |
 | CC0-1.0 | 1 | 2 |
+| MIT-0 | 0 | 2 |
+| Python-2.0 | 0 | 1 |
+| BlueOak-1.0.0 | 0 | 6 |
+| CC-BY-4.0 | 0 | 1 |
+| ODC-By-1.0 | 0 | 1 |
+| Unknown (manually reviewed `khroma`) | 1 | 1 |
 | Unlicense | 1 | 1 |
 | OFL-1.1 | 1 | 1 |
 | GSAP standard no-charge terms | 2 | 2 |
@@ -87,6 +93,9 @@ Production contains 392 packages; the complete graph contains 791 packages.
 
 Font license files must accompany every distribution that includes fonts. The
 application attribution source is `src/lib/fontAttributions.ts`.
+
+The Tauri store plugin is not a dependency; settings persistence uses the
+existing backend HTTP client. No new third-party dependency is required.
 
 ## Dependency review
 

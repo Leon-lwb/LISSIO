@@ -59,6 +59,12 @@ export function HelpCenterModal() {
 
         <div className="px-3 py-2 flex justify-end dialog-chrome border-t border-border">
           <button
+            className="px-3 py-1.5 mr-2 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm transition-colors hover:bg-bg-button-hover"
+            onClick={() => useOnboardingStore.getState().openWizard()}
+          >
+            {translate('tourReplay', lang)}
+          </button>
+          <button
             className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded cursor-pointer text-sm text-center transition-colors hover:bg-bg-button-hover"
             onClick={close}
           >

@@ -262,7 +262,6 @@ tauri-plugin-log = "2"
 tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
-tauri-plugin-store = "2"
 tauri-plugin-updater = "2"
 window-vibrancy = "0.6"
 getrandom = "0.3"
@@ -371,7 +370,6 @@ tauri-plugin-log = { workspace = true }
 tauri-plugin-dialog = { workspace = true }
 tauri-plugin-fs = { workspace = true }
 tauri-plugin-notification = { workspace = true }
-tauri-plugin-store = { workspace = true }
 tauri-plugin-process = { workspace = true }
 getrandom = { workspace = true }
 window-vibrancy = { workspace = true }

@@ -59,7 +59,7 @@ function App() {
   const closeAbout = useSettingsStore((s) => s.closeAbout);
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
 
-  const settingsLoaded = useSettingsStore((s) => s.loaded);
+  const settingsLoaded = useSettingsStore((s) => s.loaded && s.loadError === null);
   const showOnboarding = useSettingsStore((s) => s.settings.general.showOnboarding);
   const autoCheckUpdate = useSettingsStore((s) => s.settings.general.autoCheckUpdate);
   const keychainPermissionPromptOpen = useSettingsStore(

@@ -1,24 +1,23 @@
-//! 设置持久化 — 与桌面 `plugin-store` 的 `settings.json` 同一文件与同一形状。
+//! Shared Desktop/Web settings persistence, exposed by `/api/v1/settings`.
+//! The current document shape is `{ "app": { ... } }`.
 //!
-//! 浏览器端没有 Tauri store, 设置改由服务端持久化 (P3, 见
-//! `docs/architecture/web-exit.md` §5.5)。文件形状保持 `{ "app": { ... } }` —
-//! 桌面 `LazyStore('settings.json').set('app', …)` 写的就是这个形状, 因此
-//! **持久化格式对前端不变**, 桌面与 Web 出口读写同一份设置, 换出口也不需要迁移。
-//!
-//! 写入用"临时文件 + rename"落盘: 桌面壳可能同时打开同一份文件, 就地截断写会
-//! 让并发读到的内容变成半截 JSON。
+//! 写入用"临时文件 + rename"落盘: 就地截断写会让并发读到的内容变成半截 JSON。
 //!
 //! 本模块同时是**无界面出口回放用户设置**的唯一入口: 装配期读一次
 //! [`SettingsStore::recording_enabled`], 桌面 / server / CLI 三出口行为一致。
 
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use serde_json::{Map, Value};
 
-/// 设置文件名 (与桌面 `LazyStore('settings.json')` 一致)。
+// SettingsStore values are short-lived; serialize replacement across all instances.
+static WRITE_LOCK: Mutex<()> = Mutex::new(());
+
+/// Shared settings filename.
 pub const SETTINGS_FILE_NAME: &str = "settings.json";
 
-/// 设置文档顶层键 (与桌面 `LazyStore` 的 `'app'` 键一致)。
+/// Settings document root key.
 pub const SETTINGS_KEY: &str = "app";
 
 /// 录制数据库总开关的默认值 — 开启必须是用户显式选择。
@@ -46,8 +45,8 @@ impl SettingsStore {
 
     /// 读取整个文档。
     ///
-    /// 文件不存在、为空或不是 JSON 对象时返回空对象 — 前端据此回落默认设置
-    /// (与桌面 `LazyStore.get` 返回 `undefined` 的语义一致), 而不是报错卡住启动。
+    /// Only a missing file returns an empty document. Corrupt or unreadable files
+    /// are errors, so clients cannot mistake them for a fresh installation.
     ///
     /// # Errors
     /// 文件存在但读取失败 (权限 / IO) 时返回原因。
@@ -61,11 +60,12 @@ impl SettingsStore {
                 return Err(format!("读取 {} 失败: {error}", self.path.display()));
             }
         };
-        match serde_json::from_str::<Value>(&text) {
-            Ok(Value::Object(document)) => Ok(document),
-            // 损坏 / 非对象: 按"没有设置"处理, 不用坏数据挡住启动
-            Ok(_) | Err(_) => Ok(Map::new()),
-        }
+        let value = serde_json::from_str::<Value>(&text)
+            .map_err(|error| format!("解析 {} 失败: {error}", self.path.display()))?;
+        let Value::Object(document) = value else {
+            return Err(format!("设置文件 {} 必须是 JSON 对象", self.path.display()));
+        };
+        Ok(document)
     }
 
     /// 录制数据库总开关 — 读 `app.data.recordingEnabled`, 缺失或类型不对时回落
@@ -91,6 +91,9 @@ impl SettingsStore {
     /// # Errors
     /// 目录不可创建或写入失败时返回原因。
     pub fn write(&self, document: &Map<String, Value>) -> Result<(), String> {
+        let _guard = WRITE_LOCK
+            .lock()
+            .map_err(|error| format!("设置写入锁不可用: {error}"))?;
         if let Some(parent) = self.path.parent()
             && !parent.as_os_str().is_empty()
         {
@@ -100,8 +103,16 @@ impl SettingsStore {
         let text = serde_json::to_string_pretty(document)
             .map_err(|error| format!("序列化设置失败: {error}"))?;
         let tmp = self.path.with_extension("json.tmp");
-        std::fs::write(&tmp, text)
-            .map_err(|error| format!("写入 {} 失败: {error}", tmp.display()))?;
+        let write_result = (|| {
+            use std::io::Write;
+            let mut file = std::fs::File::create(&tmp)?;
+            file.write_all(text.as_bytes())?;
+            file.sync_all()
+        })();
+        if let Err(error) = write_result {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(format!("写入 {} 失败: {error}", tmp.display()));
+        }
         std::fs::rename(&tmp, &self.path).map_err(|error| {
             // 失败时清掉临时文件, 不留垃圾
             let _ = std::fs::remove_file(&tmp);
@@ -131,9 +142,9 @@ mod tests {
         assert_eq!(store.path(), dir.join(SETTINGS_FILE_NAME));
     }
 
-    /// 写入后读回同一形状 — `{ "app": … }`, 与桌面 plugin-store 兼容。
+    /// Acknowledged writes preserve the current `{ "app": … }` document shape.
     #[test]
-    fn round_trip_preserves_plugin_store_shape() {
+    fn round_trip_preserves_settings_document_shape() {
         let dir = temp_dir("roundtrip");
         let store = SettingsStore::new(&dir);
         let mut document = Map::new();
@@ -155,17 +166,29 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// 损坏内容按"无设置"处理 — 不让坏文件挡住启动。
+    /// Invalid existing files must never masquerade as a fresh installation.
     #[test]
-    fn corrupt_file_reads_as_empty_document() {
+    fn corrupt_file_returns_an_error_and_preserves_the_file() {
         let dir = temp_dir("corrupt");
         std::fs::create_dir_all(&dir).expect("目录应可创建");
         let store = SettingsStore::new(&dir);
-        std::fs::write(store.path(), b"{ not json").expect("写入应成功");
-        assert!(store.read().expect("损坏文件不应报错").is_empty());
-        // 非对象 JSON 同样按空处理
-        std::fs::write(store.path(), b"[1,2,3]").expect("写入应成功");
-        assert!(store.read().expect("数组不应报错").is_empty());
+        for content in ["{ not json", "[1,2,3]", "null", ""] {
+            std::fs::write(store.path(), content).expect("写入应成功");
+            assert!(
+                store.read().is_err(),
+                "Invalid settings must fail: {content}"
+            );
+            assert_eq!(std::fs::read_to_string(store.path()).unwrap(), content);
+        }
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn unreadable_file_returns_an_error() {
+        let dir = temp_dir("unreadable");
+        let store = SettingsStore::new(&dir);
+        std::fs::create_dir_all(store.path()).unwrap();
+        assert!(store.read().is_err(), "A directory is not a settings file");
         let _ = std::fs::remove_dir_all(&dir);
     }
 

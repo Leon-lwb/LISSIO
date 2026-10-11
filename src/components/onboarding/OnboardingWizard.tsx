@@ -338,7 +338,7 @@ export function OnboardingWizard() {
     // 可见)。这里若也压一层, 它会画在镂空**下面**把洞填死。
     <DialogOverlay
       open={isOpen}
-      onDismiss={close}
+      onDismiss={() => { void close(); }}
       className="pointer-events-none dialog-overlay--bare"
       zClassName="z-tour"
     >
@@ -370,10 +370,10 @@ export function OnboardingWizard() {
         onSkipGate={gotoNext}
         onPrev={gotoPrev}
         onNext={() => {
-          if (isLast) complete();
+          if (isLast) void complete();
           else gotoNext();
         }}
-        onClose={close}
+        onClose={() => { void close(); }}
       />
     </DialogOverlay>
   );

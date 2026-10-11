@@ -18,8 +18,8 @@ interface OnboardingStore {
   waveformInteractHintShown: boolean;
 
   openWizard: () => void;
-  closeWizard: () => void;
-  completeWizard: () => void;
+  closeWizard: () => Promise<void>;
+  completeWizard: () => Promise<void>;
 
   openHelp: () => void;
   closeHelp: () => void;
@@ -38,13 +38,13 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   closeHintShown: false,
   waveformInteractHintShown: false,
 
-  openWizard: () => set({ isWizardOpen: true, hasOpenedThisSession: true }),
-  closeWizard: () => set({ isWizardOpen: false }),
-  completeWizard: () => {
-    // 关闭引导并持久化“不再自动显示”
+  openWizard: () => set({ isWizardOpen: true, isHelpOpen: false, hasOpenedThisSession: true }),
+  closeWizard: async () => {
     set({ isWizardOpen: false });
     useSettingsStore.getState().update('general', 'showOnboarding', false);
+    await useSettingsStore.getState().save();
   },
+  completeWizard: () => get().closeWizard(),
 
   openHelp: () => set({ isHelpOpen: true }),
   closeHelp: () => set({ isHelpOpen: false }),

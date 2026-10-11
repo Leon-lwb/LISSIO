@@ -1,7 +1,7 @@
 //! 应用设置 schema 与默认值
 //!
 //! 与 settingsStore.ts 中的 AppSettings 接口对应
-//! 通过 tauri-plugin-store 持久化到 app config dir 的 settings.json
+//! Desktop/Web persist through the backend configuration directory settings.json.
 
 import type { Lang } from '../i18n';
 import type { CssStyleTheme, ThemeDefinition } from './theme';
@@ -21,7 +21,7 @@ export interface AppSettings {
     updateChannel: 'stable' | 'beta' | null;
     /** 用户选择跳过的更新版本号 (内部字段, 不进设置 UI) */
     skippedUpdateVersion: string | null;
-    /** 上次运行的应用版本号 (内部字段, 不进设置 UI; 用于版本更新后自动弹出一次操作指南) */
+    /** Version metadata; never used to override the onboarding preference. */
     lastSeenVersion: string | null;
     /** 用户选择不再显示启动时钥匙串授权提醒 (内部字段, 不进设置 UI) */
     suppressKeychainPermissionReminder: boolean;

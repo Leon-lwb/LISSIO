@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-11
 applies-to: lissio.web.v2 HTTP/WebSocket protocol and Web delivery boundary
 -->
 Desktop and browser business calls enter the same `lissio-server` through
@@ -91,6 +91,24 @@ WWB1, VNDP, and VENV therefore require no host-specific recoding.
 | `--cors-origin` | `LISSIO_CORS_ORIGINS` | empty, same-origin |
 | `--mcp-port`, `--no-mcp` | `LISSIO_MCP_PORT` | `8765`, MCP enabled |
 | — | `LISSIO_CONFIG_DIR` | shared host resolution |
+
+## Settings and onboarding
+
+`src/lib/platform/backendStore.ts` is the Desktop/Web settings client. It uses
+only the authenticated endpoint installed by `configureBackend`, reads fresh
+settings, and serializes writes across client instances. Requests queued for an
+old connection cannot write to a replacement backend. `backend-host::SettingsStore`
+owns `config_dir/settings.json`, with the current `{ "app": { ... } }` shape.
+Only a missing file is a fresh installation; invalid JSON and read failures are
+reported. A successful PUT acknowledges a flushed temporary file and atomic
+replacement.
+
+`src/store/settingsStore.ts` distinguishes initialization completion from a
+successful read. Failed reads pause automatic onboarding and settings writes,
+with a retry notification. Save failures retain the in-memory choice and offer
+retry. Closing or completing onboarding saves `showOnboarding: false`
+immediately; version changes do not reopen it. Help Center can replay it, and
+any open tour keeps keychain reminders and automatic updates queued.
 
 ## Authentication
 

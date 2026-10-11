@@ -31,14 +31,17 @@ describe('settingsStore', () => {
       isAboutOpen: false,
       activeCategory: 'general',
       searchQuery: '',
-      loaded: false,
+      loaded: true,
+      loadError: null,
+      saveError: null,
+      saving: false,
       keychainPermissionPromptOpen: false,
       keychainPermissionRetrying: false,
       keychainPermissionRetryError: null,
     });
   });
 
-  it('loads persisted settings from the LazyStore and merges them over defaults', async () => {
+  it('loads persisted settings from the backend and merges them over defaults', async () => {
     tauriMock.seedFile(STORE_FILE, STORE_KEY, { general: { language: 'en' } });
 
     await useSettingsStore.getState().load();
@@ -353,7 +356,10 @@ describe('settingsStore API key 钥匙串集成', () => {
     vi.clearAllMocks();
     useSettingsStore.setState({
       settings: DEFAULT_SETTINGS,
-      loaded: false,
+      loaded: true,
+      loadError: null,
+      saveError: null,
+      saving: false,
       keychainPermissionPromptOpen: false,
       keychainPermissionRetrying: false,
       keychainPermissionRetryError: null,

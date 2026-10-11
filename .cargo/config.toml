@@ -1,0 +1,6 @@
+# Keep local validation within a bounded memory budget. CLI/env can override.
+[build]
+jobs = 2
+
+[env]
+RUST_TEST_THREADS = { value = "1", force = false }

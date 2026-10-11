@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   resolveStartupFlow,
-  shouldShowGuideAfterUpdate,
   type StartupFlowState,
 } from '../phases';
 
@@ -46,25 +45,21 @@ describe('resolveStartupFlow', () => {
     });
   });
 
+  it('keeps all later dialogs queued while a manually replayed guide is open', () => {
+    expect(resolveStartupFlow({
+      ...READY, isOnboardingOpen: true, hasOpenedOnboarding: true,
+      keychainPermissionPromptOpen: true,
+    })).toEqual({
+      onboardingSettled: false, showKeychainPermissionPrompt: false, canCheckForUpdates: false,
+    });
+    expect(resolveStartupFlow({ ...READY, isOnboardingOpen: true }).canCheckForUpdates).toBe(false);
+  });
+
   it('allows auto update only after earlier startup dialogs settle', () => {
     expect(resolveStartupFlow(READY)).toEqual({
       onboardingSettled: true,
       showKeychainPermissionPrompt: false,
       canCheckForUpdates: true,
     });
-  });
-});
-
-describe('shouldShowGuideAfterUpdate', () => {
-  it('does not show the guide when no version was recorded (first run)', () => {
-    expect(shouldShowGuideAfterUpdate(null, '1.2.0')).toBe(false);
-  });
-
-  it('does not show the guide when the version is unchanged', () => {
-    expect(shouldShowGuideAfterUpdate('1.2.0', '1.2.0')).toBe(false);
-  });
-
-  it('shows the guide once after the version changes', () => {
-    expect(shouldShowGuideAfterUpdate('1.1.0', '1.2.0')).toBe(true);
   });
 });

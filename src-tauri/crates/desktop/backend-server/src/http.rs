@@ -157,10 +157,7 @@ fn download_file_name(path: &std::path::Path) -> String {
     }
 }
 
-/// 读取设置文档 — 与桌面 `plugin-store` 的 `settings.json` 同一文件与形状。
-///
-/// 浏览器端没有 Tauri store, 设置改由服务端持久化 (P3)。文件形状保持
-/// `{ "app": … }`, 因此持久化格式对前端不变, 桌面与 Web 出口读写同一份设置。
+/// Read the shared Desktop/Web settings document from the assembled backend.
 async fn get_settings(State(state): State<Arc<ServerState>>) -> Response {
     match settings_store(&state).read() {
         Ok(document) => Json(Value::Object(document)).into_response(),
@@ -168,7 +165,7 @@ async fn get_settings(State(state): State<Arc<ServerState>>) -> Response {
     }
 }
 
-/// 整表覆盖设置文档 (与桌面 `LazyStore.set('app', …)` 等价)。
+/// Persist the complete settings document before acknowledging the write.
 async fn put_settings(State(state): State<Arc<ServerState>>, body: Bytes) -> Response {
     let parsed: Value = match serde_json::from_slice(&body) {
         Ok(parsed) => parsed,
@@ -180,7 +177,7 @@ async fn put_settings(State(state): State<Arc<ServerState>>, body: Bytes) -> Res
         return error_response(
             StatusCode::BAD_REQUEST,
             "InvalidBody",
-            "设置文档必须是 JSON 对象 (与 plugin-store 同一形状)",
+            "设置文档必须是 JSON 对象",
         );
     };
     match settings_store(&state).write(&document) {

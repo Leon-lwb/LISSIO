@@ -349,3 +349,7 @@ menuCloseWindow: 关闭窗口
 menuQuit: 退出
 menuDocs: 文档
 menuGithub: 在 GitHub 上打开
+
+settingsLoadFailed: 无法读取设置，已暂停自动引导和设置保存
+settingsSaveFailed: 设置保存失败，当前修改尚未保存
+settingsRetry: 重试

@@ -17,6 +17,7 @@ const SHELL_COMMANDS = new Set([
 const SHELL_EVENTS = new Set(['menu-event']);
 
 let active: HttpTransport | null = null;
+let activeEndpoint: Readonly<WebEndpoint> | null = null;
 
 export function hasTauriRuntime(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -37,13 +38,21 @@ function current(): HttpTransport {
 
 export function configureBackend(endpoint: WebEndpoint): HttpTransport {
   active?.close();
-  active = createHttpTransport(endpoint);
+  activeEndpoint = Object.freeze({ ...endpoint });
+  active = createHttpTransport(activeEndpoint);
   return active;
+}
+
+/** The authenticated connection, including a new identity after every reconnect. */
+export function getBackendEndpoint(): Readonly<WebEndpoint> {
+  if (!activeEndpoint) throw unavailable();
+  return activeEndpoint;
 }
 
 export function disconnectBackend(): void {
   active?.close();
   active = null;
+  activeEndpoint = null;
 }
 
 function readLocal(key: string): string | null {

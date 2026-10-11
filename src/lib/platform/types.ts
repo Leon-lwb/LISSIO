@@ -14,8 +14,7 @@ export interface FileFilter {
   name: string;
 }
 
-/// 键值对存储 — 对应 Tauri `plugin-store` 的 LazyStore (文件 + 顶层 key)。
-/// 桌面落 `settings.json`, Web 落服务端 `/api/v1/settings` 的整篇文档。
+/// Desktop/Web share the backend settings document. A resolved write is persisted.
 export interface PlatformStore {
   get<T>(key: string): Promise<T | null>;
   set(key: string, value: unknown): Promise<void>;
@@ -56,6 +55,6 @@ export interface Platform {
   readTextFile(path: string): Promise<string>;
   writeTextFile(path: string, contents: string): Promise<void>;
   readBinaryFile(path: string): Promise<Uint8Array>;
-  // @tauri-apps/plugin-store (settings.json / key 'app')
+  // Connected backend settings (settings.json / key 'app')
   createStore(fileName: string): PlatformStore;
 }

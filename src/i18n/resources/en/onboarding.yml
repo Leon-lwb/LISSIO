@@ -11,10 +11,11 @@ logicHintAction: Open Protocol Engine
 tourStep: Step
 tourNext: Next
 tourPrev: Previous
-tourSkip: Skip
+tourSkip: End tour
+tourReplay: Replay tour
 tourFinish: Finish
 tourWelcomeTitle: Welcome to Lissio
-tourWelcomeContent: The core workflow in three minutes. The spotlight marks each topic; steps with a <strong>checkbox are hands-on</strong>. Exit anytime via ×.
+tourWelcomeContent: The core workflow in three minutes. The spotlight marks each topic; steps with a <strong>checkbox are hands-on</strong>. Exit anytime via × to stop automatic reminders; replay the tour from Help Center.
 tourQuickStartTitle: Quick Start · Templates
 tourQuickStartContent: The <strong>rocket icon</strong> in the activity bar opens this panel — 8 templates generate a canvas plus wiring in one click, landing on <strong>Compile Results</strong> for review.
 tourPaletteTitle: Widget Categories · Assets

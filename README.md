@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-11
 applies-to: Product overview, setup, development, and distribution
 -->
 
@@ -134,7 +134,7 @@ The UI features a **dock-style window layout**: control canvases and data views 
 - VSCode-style layout: activity bar, sidebar, resizable panels, status bar, multiple tabs.
 - Native menu bar (macOS / Windows / Linux) and global shortcuts (`Ctrl+,` for settings; menu items for new / close tab and toggle sidebar).
 - **i18n** — Chinese / English UI copy managed via YAML.
-- **Settings modal** — general / appearance / editor / data / serial / notifications, persisted via `tauri-plugin-store`.
+- **Settings modal** — general / appearance / editor / data / serial / notifications, persisted by the connected backend.
 - **Full-app config export / import** — back up settings, protocol, transport, widgets, node graph, data tabs and view preferences to a single JSON file via system file dialogs, for easy migration.
 - Custom theme editor, onboarding wizard, help center, and contextual hints.
 - Transparent window with acrylic / vibrancy effect (macOS).
@@ -194,7 +194,7 @@ The default layout looks like this (all panels can be freely rearranged):
 - **Settings**: `Ctrl+,` / `Cmd+,` or the gear icon in the activity bar; full-app config export / import is available (backup to a single JSON file).
 - **Undo & time travel**: `Ctrl+Z` to undo, `Ctrl+Y` to redo; clicking any entry in the Operation History panel jumps back to that moment (see Core Features).
 - **Refresh ports**: the refresh button in the status bar or the context menu.
-- **Help & onboarding**: the help icon at the bottom of the activity bar opens the Help Center anytime; a guided tour appears on first launch (can be disabled in Settings).
+- **Help & onboarding**: the help icon at the bottom of the activity bar opens the Help Center anytime; a guided tour appears on first launch. Closing or finishing it disables automatic reminders; Help Center can replay it anytime. Settings read/write errors offer a retry action.
 
 ## Tech Stack
 
@@ -220,7 +220,7 @@ The default layout looks like this (all panels can be freely rearranged):
 - [parking_lot](https://github.com/Amanieu/parking_lot) — synchronization
 - [window-vibrancy](https://github.com/tauri-apps/window-vibrancy) — acrylic / mica effects
 - [libautomotive](https://crates.io/crates/libautomotive) — UDS / OBD-II / J1939 diagnostics
-- Tauri plugins: `tauri-plugin-log`, `tauri-plugin-notification`, `tauri-plugin-store`, `tauri-plugin-opener`
+- Tauri plugins: `tauri-plugin-log`, `tauri-plugin-notification`, `tauri-plugin-opener`
 
 ### Backend Workspace Architecture
 
