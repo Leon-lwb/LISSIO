@@ -8,7 +8,8 @@ import { useRecordingDatabaseStore } from '../../../store/recordingDatabaseStore
 import { api, type RecordingExportFormat } from '../../../lib/tauri/tauri';
 import { translate } from '../../../i18n';
 import { RecordingDisabledNotice } from './RecordingDisabledNotice';
-import { formatBytes, formatDurationUs, formatTimestampUs, payloadPreview } from './recordingFormat';
+import { formatDurationUs, formatTimestampUs, payloadPreview } from './recordingFormat';
+import { formatBytes } from '../../../lib/utils/format';
 import { HorizontalScrollArea } from '../../ui/HorizontalScrollArea';
 
 const exportFormats: { value: RecordingExportFormat; label: string; extension: string }[] = [

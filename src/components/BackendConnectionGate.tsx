@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { writeTextToClipboard } from '../lib/utils/clipboard';
 import { useModelCatalogStore } from '../store/modelCatalogStore';
 import { invalidateDescriptions } from '../lib/models/describeStore';
 import { revealMainWindow } from '../lib/startup/reveal';
@@ -193,12 +194,8 @@ export function BackendConnectionGate({ children }: { children: ReactNode }) {
   };
 
   const copyConnection = async () => {
-    try {
-      await navigator.clipboard.writeText(`server=${base}\ntoken=${token}`);
-      setCopyStatus('连接信息已复制');
-    } catch {
-      setCopyStatus('无法访问剪贴板，请手动复制');
-    }
+    const copied = await writeTextToClipboard(`server=${base}\ntoken=${token}`);
+    setCopyStatus(copied ? '连接信息已复制' : '无法访问剪贴板，请手动复制');
   };
 
   return (

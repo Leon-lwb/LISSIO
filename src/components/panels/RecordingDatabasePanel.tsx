@@ -7,7 +7,8 @@ import { useRecordingDatabaseStore } from '../../store/recordingDatabaseStore';
 import { translate } from '../../i18n';
 import type { RunState } from '../../types';
 import { RecordingDisabledNotice } from '../displays/recording/RecordingDisabledNotice';
-import { formatBytes, formatDurationUs, formatTimestampUs } from '../displays/recording/recordingFormat';
+import { formatDurationUs, formatTimestampUs } from '../displays/recording/recordingFormat';
+import { formatBytes } from '../../lib/utils/format';
 import { useRecordingDatabaseActions } from './useRecordingDatabaseActions';
 
 /// 与 RunControls 一致的运行状态配色 + 标签

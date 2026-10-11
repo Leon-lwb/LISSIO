@@ -15,7 +15,8 @@ import { toDisplayMeasurements } from '../../../lib/utils/measureDisplay';
 import { StepKnob } from './StepKnob';
 import { CompactChannelRow } from './CompactChannelRow';
 import { CurveRenderControls } from './CurveRenderControls';
-import { MeasureItem, formatFreq, formatPeriod } from './MeasureItem';
+import { MeasureItem } from './MeasureItem';
+import { formatFreq, formatPeriod } from '../../../lib/utils/format';
 import { AnimatedSwitch } from '../../ui/AnimatedSwitch';
 import { CHANNEL_TAB_COLORS, type RenderStepSelect } from '../common/scopeShared';
 
@@ -206,7 +207,7 @@ export function AllTabContent({
               <MeasureItem label="Avg" value={selectedMeasurements.vavg} unit={config.yUnit} />
               <MeasureItem label="RMS" value={selectedMeasurements.vrms} unit={config.yUnit} />
               {selectedMeasurements.freq != null && (
-                <MeasureItem label="Freq" value={selectedMeasurements.freq} unit="Hz" formatter={formatFreq} />
+                <MeasureItem label="Freq" value={selectedMeasurements.freq} unit="" formatter={formatFreq} />
               )}
               {selectedMeasurements.period != null && (
                 <MeasureItem label="Period" value={selectedMeasurements.period} unit="s" formatter={formatPeriod} />

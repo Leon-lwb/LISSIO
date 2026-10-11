@@ -1,12 +1,5 @@
 import type { RecordingHistoryRow } from '../../../store/recordingDatabaseStore';
 
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MiB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GiB`;
-}
-
 export function formatDurationUs(durationUs: number | null): string {
   if (durationUs === null) return '--';
   if (durationUs < 1_000) return `${durationUs} us`;

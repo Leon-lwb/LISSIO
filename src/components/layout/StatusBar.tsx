@@ -13,6 +13,7 @@ import CompileStatusIndicator from './CompileStatusIndicator';
 import { RunControls } from './RunControls';
 import { useLayoutStore } from '../../store/layoutStore';
 import { usePerformanceStore } from '../../store/performanceStore';
+import { formatBytes } from '../../lib/utils/format';
 import { openDataPanelAndReveal } from '../../lib/utils/revealDataTab';
 
 /// AI 对话面板开关 — 状态栏右侧常驻入口 (面板可见性持久化, 会话在后端不丢失)
@@ -177,12 +178,6 @@ export const StatusBar = memo(function StatusBar() {
     JustFloat: translate('justfloat', lang),
     FireWater: translate('firewater', lang),
     RawData: translate('rawdata', lang),
-  };
-
-  const formatBytes = (n: number) => {
-    if (n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / 1024 / 1024).toFixed(2)} MB`;
   };
 
   const dotColorClass = {

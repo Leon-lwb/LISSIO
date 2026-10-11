@@ -16,9 +16,11 @@ function formatTs(us: number): string {
 }
 
 /// 格式化 I2C 事件为字符串与颜色
+/// Rust `I2cEvent::Start`/`Stop` 是无载荷 unit variant, serde 序列化为字符串
+/// (`"Start"`/`"Stop"`), 不能对字符串使用 `in` 运算符。
 function formatI2cEvent(event: I2cEvent): { text: string; color: string } {
-  if ('Start' in event) return { text: 'START', color: '#89d185' };
-  if ('Stop' in event) return { text: 'STOP', color: '#ff8c69' };
+  if (event === 'Start') return { text: 'START', color: '#89d185' };
+  if (event === 'Stop') return { text: 'STOP', color: '#ff8c69' };
   if ('Address' in event) {
     const a = event.Address;
     return {

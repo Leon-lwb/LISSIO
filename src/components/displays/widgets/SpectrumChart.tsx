@@ -2,6 +2,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import type { WidgetConfig, SpectrumOutput } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
 import { translate } from '../../../i18n';
+import { formatFreq } from '../../../lib/utils/format';
 import { getThemeColor } from '../waveform/wavechartFormatters';
 import { selectWidgets } from '../../../store/appStoreHelpers';
 
@@ -354,11 +355,6 @@ export const SpectrumChart = memo(function SpectrumChart({ widget }: SpectrumCha
 });
 
 /// 格式化频率 (Hz / kHz)
-function formatFreq(hz: number): string {
-  if (hz >= 1000) return (hz / 1000).toFixed(1) + 'k';
-  if (hz >= 1) return hz.toFixed(0);
-  return hz.toFixed(2);
-}
 
 /// 格式化频谱值 (根据输出模式)
 function formatValue(v: number, output: SpectrumOutput): string {

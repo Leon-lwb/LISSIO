@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import { Check, Copy } from 'lucide-react';
 import { platform } from '../../lib/platform';
+import { writeTextToClipboard } from '../../lib/utils/clipboard';
 import { splitStreamingMarkdown } from '../../lib/ai/streamMarkdown';
 import { useAppStore } from '../../store/appStore';
 import { translate } from '../../i18n';
@@ -24,12 +25,9 @@ function CodeBlock({ lang, raw, children }: { lang: string; raw: string; childre
   const lang2 = useAppStore((s) => s.lang);
   const [copied, setCopied] = useState(false);
   const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(raw);
+    if (await writeTextToClipboard(raw)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* 剪贴板不可用时静默 */
     }
   };
   return (

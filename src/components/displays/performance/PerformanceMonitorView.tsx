@@ -4,21 +4,8 @@ import { useAppStore } from '../../../store/appStore';
 import { usePerformanceStore } from '../../../store/performanceStore';
 import { samplePerformanceOnce } from '../../../lib/performance/telemetry';
 import { translate } from '../../../i18n';
+import { formatBytesOrDash } from '../../../lib/utils/format';
 import type { FrontendPerformanceSnapshot } from '../../../types';
-
-function formatBytes(bytes: number | null): string {
-  if (bytes == null) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  const units = ['KB', 'MB', 'GB', 'TB'];
-  let value = bytes / 1024;
-  let unit = units[0] ?? 'KB';
-  for (const candidate of units.slice(1)) {
-    if (value < 1024) break;
-    value /= 1024;
-    unit = candidate;
-  }
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${unit}`;
-}
 
 function formatCount(value: number): string {
   return new Intl.NumberFormat().format(Math.round(value));
@@ -191,8 +178,8 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
                 />
                 <MetricCard
                   label={translate('performanceHeap', lang)}
-                  value={formatBytes(frontend?.jsHeapUsedBytes ?? null)}
-                  detail={`${translate('performanceLimit', lang)}: ${formatBytes(frontend?.jsHeapLimitBytes ?? null)}`}
+                  value={formatBytesOrDash(frontend?.jsHeapUsedBytes ?? null)}
+                  detail={`${translate('performanceLimit', lang)}: ${formatBytesOrDash(frontend?.jsHeapLimitBytes ?? null)}`}
                   values={frontSeries('jsHeapUsedBytes')}
                 />
                 <MetricCard
@@ -223,7 +210,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
                 />
                 <MetricCard
                   label={translate('performanceMemory', lang)}
-                  value={formatBytes(backend?.process.memoryBytes ?? null)}
+                  value={formatBytesOrDash(backend?.process.memoryBytes ?? null)}
                   detail={`${translate('performanceUptime', lang)}: ${Math.floor((backend?.process.uptimeMs ?? 0) / 60_000)} min`}
                   values={backMemory}
                 />
@@ -250,7 +237,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
                   <MemoryStick size={13} /> {translate('performancePipeline', lang)}
                 </div>
                 <SummaryRow label={translate('performanceCompleted', lang)} value={formatCount(backend?.pipeline.completedFrames ?? 0)} />
-                <SummaryRow label={translate('performanceQueue', lang)} value={`${formatCount(backend?.pipeline.queuedFrames ?? 0)} / ${formatBytes(backend?.pipeline.queuedBytes ?? null)}`} />
+                <SummaryRow label={translate('performanceQueue', lang)} value={`${formatCount(backend?.pipeline.queuedFrames ?? 0)} / ${formatBytesOrDash(backend?.pipeline.queuedBytes ?? null)}`} />
                 <SummaryRow label={translate('performanceEvalWait', lang)} value={`${(backend?.pipeline.evalServiceMaxMs ?? 0).toFixed(1)} ms`} />
                 <SummaryRow label={translate('performanceIngressDropped', lang)} value={formatCount(backend?.pipeline.ingressDropped ?? 0)} />
               </div>
@@ -262,7 +249,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
                 <SummaryRow label={translate('performanceRpcCalls', lang)} value={formatCount(backend?.rpc.calls ?? 0)} />
                 <SummaryRow label={translate('performanceRpcErrors', lang)} value={formatCount(backend?.rpc.errors ?? 0)} />
                 <SummaryRow label={translate('performanceWsConnections', lang)} value={formatCount(backend?.websocket.activeConnections ?? 0)} />
-                <SummaryRow label={translate('performanceWsDropped', lang)} value={`${formatCount(backend?.websocket.droppedFrames ?? 0)} / ${formatBytes(backend?.websocket.droppedBytes ?? null)}`} />
+                <SummaryRow label={translate('performanceWsDropped', lang)} value={`${formatCount(backend?.websocket.droppedFrames ?? 0)} / ${formatBytesOrDash(backend?.websocket.droppedBytes ?? null)}`} />
               </div>
 
               <div className="overflow-hidden rounded-md border border-border-subtle">
@@ -271,7 +258,7 @@ export const PerformanceMonitorView = memo(function PerformanceMonitorView() {
                 </div>
                 <SummaryRow label={translate('performanceSampleCount', lang)} value={formatCount(frontendHistory.length)} />
                 <SummaryRow label={translate('performanceMonitorRpc', lang)} value={`${(frontend?.monitorRpcLatencyMs ?? 0).toFixed(1)} ms`} />
-                <SummaryRow label={translate('performanceHeap', lang)} value={formatBytes(frontend?.jsHeapUsedBytes ?? null)} />
+                <SummaryRow label={translate('performanceHeap', lang)} value={formatBytesOrDash(frontend?.jsHeapUsedBytes ?? null)} />
                 <SummaryRow label={translate('performanceLastSample', lang)} value={frontend ? new Date(frontend.sampledAtMs).toLocaleTimeString() : '—'} />
               </div>
             </section>

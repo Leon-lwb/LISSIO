@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { formatAiKindError } from '../../lib/ai/aiErrors';
 import { translate } from '../../i18n';
+import { writeTextToClipboard } from '../../lib/utils/clipboard';
 import { AiTurnTimeline } from './AiTurnTimeline';
 import type { AiViewItem } from '../../types';
 
@@ -32,12 +33,9 @@ export const AssistantBubble = memo(function AssistantBubble({
     : null;
 
   const onCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(item.text);
+    if (await writeTextToClipboard(item.text)) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
-    } catch {
-      /* 剪贴板不可用时静默 */
     }
   };
 
