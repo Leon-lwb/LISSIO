@@ -11,6 +11,39 @@ All notable Lissio changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and releases use
 semantic versioning.
 
+## [0.9.0] - 2026-10-11
+
+### Removed
+
+- Repository prose is written in English. Removed the Chinese translation backups
+    under `docs/community/`, dropped `language` and `authoritative` from the
+    documentation metadata contract, translated the Chinese prose out of `scripts/`,
+    `e2e/`, and the build/CI configuration, and `check:release-sync` no longer
+    requires a Chinese CHANGELOG backup. Historical review records and product
+    localization (`src/i18n/resources/zh/`, runtime capability help `docs/zh/`) are
+    unchanged, and the English requirement is a reviewer-confirmed convention rather
+    than a gate rule.
+- Removed the Parquet export format for recorded data. Parquet was reachable only
+    through the DuckDB engine's `COPY … (FORMAT PARQUET)`, and DuckDB is being
+    replaced, so the export dialog now offers CSV and JSON only. A request that still
+    asks for `format: "parquet"` is rejected as an invalid export request.
+
+### Fixed
+
+- Fixed the I2C START/STOP event rendering, which threw a `TypeError` because the
+    hand-written wire type declared `{ Start: null }` while Rust serializes those
+    unit variants as the strings `"Start"`/`"Stop"`; the frontend now consumes the
+    generated logic types. Frequency and byte values render consistently across the
+    spectrum chart, measurement grid, FFT readout, recording views, performance
+    monitor, and status bar instead of the three frequency and two byte formats that
+    had drifted apart, and clipboard copies fall back to `execCommand` outside a
+    secure context.
+- Fixed onboarding reopening after dismissal or version changes. Ending or completing the tour persists the disabled preference; Help still supports manual replay. Desktop and Web settings now use the connected backend, serialize acknowledged writes, and offer retries for read or save failures without overwriting unread configuration. Open onboarding also keeps later startup dialogs queued.
+    
+    Bound default validation concurrency to one Vitest worker, one Playwright worker, two Cargo build jobs, and one Rust test thread to reduce peak memory use.
+    
+    Keep the performance-monitor entry disabled until workspace restoration finishes so an early click cannot be overwritten by the restored tab list.
+
 ## [0.8.0] - 2026-10-08
 
 ### Added
