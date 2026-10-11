@@ -13,6 +13,7 @@ name = "protocol"
 workspace = true
 
 [dependencies]
+schema_types = { workspace = true }
 serde = { workspace = true }
 data_model = { workspace = true }
 can = { workspace = true }

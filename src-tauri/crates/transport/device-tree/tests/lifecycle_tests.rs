@@ -1,8 +1,7 @@
 mod support;
 
-use device_tree::{
-    Capability, CapabilityMask, ChildPolicy, DeviceTree, DriverRegistry, NodeRole, NodeState,
-};
+use data_model::device_tree::{ChildPolicy, NodeRole, NodeState};
+use device_tree::{Capability, CapabilityMask, DeviceTree, DriverRegistry};
 use std::sync::Arc;
 use support::{TestDriver, document, node};
 

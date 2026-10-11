@@ -16,13 +16,14 @@ workspace = true
 async-trait = { workspace = true }
 ts-rs = { workspace = true }
 kind = { workspace = true }
+graph = { workspace = true }
 schema_types = { workspace = true }
 device_tree = { workspace = true }
 points = { workspace = true }
 # L2 严格相邻 — 数据平面 / 数据总线 / 流框架 / 调度 / 运行时门面
 # (GraphEvalState + StreamGroupState + 4 个 snapshot 类型定义在 pipeline;
 #  AdaptiveRate 由 stream 提供; sync_spectrum_analyzers / sync_ifft_buffers 由
-#  evaluator 提供; L1 类型统一经 runtime 门面转发)
+#  evaluator 提供; 节点/图/协议 L1 类型直接从 owner crate 引用)
 pipeline = { workspace = true }
 acquisition = { workspace = true }
 bus = { workspace = true }

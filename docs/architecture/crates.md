@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-11
 applies-to: Rust workspace ownership, domains, layers, and dependency direction
 -->
 
@@ -29,6 +29,77 @@ across multiple layers are preferred to forwarding facades. L0-L3 must not
 depend on Tauri or adapter SDKs; adapter-backed capabilities (serial
 discovery, GPU envelope, event/stream push) are defined as ports in lower
 layers and their L4 implementations are injected by the composition root.
+
+## Domain stacking and layer ownership
+
+`domain` and `layer` record two different facts and are orthogonal: `domain`
+groups crates by the capability they serve, `layer` ranks who may depend on
+whom. A domain may therefore span several layers, while a crate always belongs
+to exactly one. The layer in `[package.metadata.lissio]` is authoritative;
+directory order and comments are navigation only. `pnpm architecture` prints
+the matrix below from that metadata, and `pnpm check:architecture` enforces it.
+
+| Domain | Layers present |
+|---|---|
+| shared | L0: `error`, `flow`, `data-model`, `subscription` |
+| vehicle | L0: `can`, `diagnostic` |
+| protocol | L0: `points`; L1: `logic`, `schema-types`, `protocol`, `protocol-float`, `protocol-can-bridge`, `logic-decoder`, `schema`, `frame-decoder`; L2: `acquisition` |
+| signal | L1: `raw-data`, `waveform`, `filter`, `spectrum`, `measurement`; L4: `gpu` |
+| graph | L1: `kind`, `hir`, `plane`, `lower`, `eval`, `buffer-graph`, `trigger`, `graph-testkit`, `graph` |
+| transport | L2: `device-tree`, `transport`, `automotive-diag`; L4: `serial`, `network`, `can-transport`, `modbus-adapter`, `s7-adapter`, `automotive`, `automotive-isotp` |
+| data | L1: `bus`; L2: `recording` |
+| ai | L4: `llm`, `chat-session`, `chat`, `mcp-client` |
+| desktop | L1: `events`; L2: `pipeline`, `stream`, `evaluator`; L3: `app`, `graph-ops`, `control-api`; L4: `ai-host`, `rpc-api`, `performance`, `backend-host`, `mcp-server`; L5: `backend-server`, `backend-cli`, `menu-shell`, `update-flow` |
+
+A domain that spans layers is expected, not a defect: capability families such
+as `transport` and `signal` pair a deterministic core with the L4 adapters
+that implement its ports. Do not split a domain into layer subdirectories — a
+crate path is exactly `crates/<domain>/<crate>` — and do not split a
+multi-layer domain into one domain per layer; that encodes the same fact twice
+and moves paths without changing a single dependency edge.
+
+Decide a crate's layer from what it does, not from where it sits:
+
+- defines only stable types or contracts: L0
+- is a pure deterministic transform over values or bytes: L1
+- owns state, a background loop, storage, or a lifecycle port: L2
+- orchestrates product use cases over the layers below: L3
+- touches an external SDK, OS facility, hardware bus, or remote service: L4
+- composes and injects the ports of a whole product: L5
+
+Each crate states its single reason to change in `responsibility`. The
+placeholder `Focused crate responsibility` is rejected, because a crate whose
+abstraction is unstated cannot be placed or reviewed.
+
+## Test layout
+
+Tests are not written inline in production modules, and a module never grows a
+directory just to hold its tests. `pnpm check:architecture` fails on any
+`#[cfg(test)] mod x { ... }` that survives in a production file and on any
+directory under a crate `src/` that contains only test files.
+
+- Unit tests that need private access stay beside their module and add no
+  directory:
+  - a module with no child directory (`src/<module>.rs`) keeps its tests in the
+    flat sibling `src/<module>_tests.rs`, declared as
+    `#[cfg(test)] #[path = "<module>_tests.rs"] mod tests;`. The `#[path]`
+    attribute preserves the `use super::*` chain, so private items stay
+    reachable without widening their visibility;
+  - a module that already owns a directory (`src/<module>/mod.rs`, or
+    `src/<module>.rs` whose submodules live under `src/<module>/`) keeps its
+    tests in `src/<module>/tests.rs`, declared as the plain
+    `#[cfg(test)] mod tests;`.
+- Additional descriptively named suites follow the same rule with the suite
+  name: `src/<module>_<name>.rs`, or `src/<module>/<name>.rs` when that
+  directory already exists. A crate root may keep one module file,
+  `src/tests.rs`, and group its child suites under `src/tests/`.
+- `tests/` and `benches/` directories are the only test-only directories that
+  stand without further justification: integration tests that only need the
+  public API live in the crate-level `tests/` directory, with shared helpers
+  under `tests/support/`.
+- Test files are exempt from the 500-line production limit
+  (`scripts/check-crate-size.mjs`), so a `_tests.rs` file may hold the whole
+  unit-test surface of its module.
 
 ## Software exits
 

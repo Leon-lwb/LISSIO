@@ -58,15 +58,7 @@ pub use workspace::{
 // ---- 源图数据模型 (权威定义在 L2 runtime, 此处转发保持既有公共路径) ----
 pub use pipeline::{SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord};
 
-// ---- L1 类型统一转发 (来自 L2 runtime 门面) ----
-pub use pipeline::{
-    AcquisitionRuntime, BytePlan, CommandFrameDto, CompiledGraph, DecoderBlockDef, EdgeClass,
-    FieldType, FrameParser, HirNode, InputFormat, MathOp, NodeDef, NodeKind, NodeOrigin,
-    PortDomain, ProtocolEngine, SourceFramesMap, SourceTextsMap, TriggerMatchResult,
-    TriggerMatcher, TriggerRuleDef, TypedGraph, ValuesMap, command_frame, compute_frame_bytes,
-    create_engine, detect_format, frame_checksum, frame_field, parse_ascii, parse_hex, port_domain,
-    protocol_source_port_names,
-};
+pub use pipeline::create_engine;
 pub use pipeline::{
     resolve_widget_inputs, send_scheduler_ticker, spectrum_ticker, text_output_ticker,
     textout_sender_ticker,

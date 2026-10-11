@@ -57,6 +57,8 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-08 | English-only documentation policy | passed with conditions | [records/2026-10-08-english-only-documentation.md](records/2026-10-08-english-only-documentation.md) |
 | 2026-10-11 | Onboarding and shared settings persistence | passed with conditions | [records/2026-10-11-onboarding-settings-persistence.md](records/2026-10-11-onboarding-settings-persistence.md) |
 | 2026-10-11 | Workspace quality recovery | passed | [records/2026-10-11-workspace-quality-recovery.md](records/2026-10-11-workspace-quality-recovery.md) |
+| 2026-10-11 | Rust flat test layout | passed with conditions | [records/2026-10-11-rust-flat-test-layout.md](records/2026-10-11-rust-flat-test-layout.md) |
+| 2026-10-11 | Abstraction unification batches | passed with conditions | [records/2026-10-11-unification-batches.md](records/2026-10-11-unification-batches.md) |
 
 ## Retention
 

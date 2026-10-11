@@ -21,4 +21,4 @@ serde_json = { workspace = true }
 [package.metadata.lissio]
 domain = "signal"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "数字滤波器内核 — FIR 与 IIR biquad 形式、4 种预设及 biquad 系数函数, 无 FFT 依赖"

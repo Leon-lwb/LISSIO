@@ -33,6 +33,11 @@ pub mod graph_eval;
 pub mod graph_eval_parallel;
 pub mod run_control;
 pub mod runtime;
+pub use runtime::{
+    SourceGraphs, SourceNodeHint, TabSourceGraph, WidgetRecord, create_engine,
+    resolve_widget_inputs, send_scheduler_ticker, spectrum_ticker, text_output_ticker,
+    textout_sender_ticker,
+};
 
 pub use data_plane::byte_router::RouteSummary;
 pub use data_plane::{
@@ -58,5 +63,4 @@ pub use feed_parallel::{
 };
 pub use graph_eval::{EvalBreakdown, evaluate_snapshot_now, process_source_batch};
 pub use run_control::{StreamGroups, apply_run_action};
-pub use runtime::*;
 pub mod point_projection;

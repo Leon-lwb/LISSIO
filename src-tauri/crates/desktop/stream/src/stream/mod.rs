@@ -11,7 +11,8 @@
 //!   `bounded_drain_size(backlog, min_batch, MAX_DRAIN)` 批量。
 //! - **顺序**: 增量流前端按 seq 严格重组; 快照流 (波形) 按 "最新 seq 胜出"。
 
-use crate::dispatcher::{AdaptiveRate, StreamSink, adaptive_stream_loop};
+use crate::dispatcher::{AdaptiveRate, adaptive_stream_loop};
+use crate::sink::{StreamPayload, StreamSink};
 use can::{CanBuffer, CanCursor, CanFrameBatch};
 
 use error::{AppError as Error, ConfigError, Result};
@@ -107,7 +108,7 @@ pub async fn sharded_stream_loop<S: StreamSource>(
             let mut batch = src.drain(bounded_drain_size(backlog, min_batch, S::MAX_DRAIN))?;
             // seq 在源锁内分配, 保证全局单调且与 drain 顺序一致
             S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-            serde_json::to_value(&batch).ok()
+            serde_json::to_string(&batch).ok().map(StreamPayload::Json)
         },
         cancel_rx,
     )
@@ -163,7 +164,9 @@ pub async fn sharded_stream_loop_map<S, E, F>(
             }
             let mut batch = src.drain(bounded_drain_size(backlog, min_batch, S::MAX_DRAIN))?;
             S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-            serde_json::to_value(map(batch)).ok()
+            serde_json::to_string(&map(batch))
+                .ok()
+                .map(StreamPayload::Json)
         },
         cancel_rx,
     )

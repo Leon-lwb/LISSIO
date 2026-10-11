@@ -107,90 +107,33 @@ fn unorder_bytes(point: &ModbusPoint, bytes: Vec<u8>) -> Vec<u16> {
 }
 
 fn apply_scale(value: PointValue, scale: f64, offset: f64) -> Result<PointValue, CodecError> {
-    if scale == 1.0 && offset == 0.0 {
-        return Ok(value);
-    }
-    let numeric = match value {
-        PointValue::I64(value) => value as f64,
-        PointValue::U64(value) => value as f64,
-        PointValue::F64(value) => value,
-        other => return Ok(other),
-    };
-    let value = numeric.mul_add(scale, offset);
-    if value.is_finite() {
-        Ok(PointValue::F64(value))
-    } else {
-        Err(CodecError::NonFinite)
-    }
+    points::scale::apply_scale(value, scale, offset).map_err(map_scale_error)
 }
 
 fn unscale(value: &PointValue, scale: f64, offset: f64) -> Result<PointValue, CodecError> {
-    if scale == 0.0 || !scale.is_finite() || !offset.is_finite() {
-        return Err(CodecError::NonFinite);
-    }
-    if scale == 1.0 && offset == 0.0 {
-        return Ok(value.clone());
-    }
-    let result = (as_f64(value.clone(), ModbusDataType::F64)? - offset) / scale;
-    if result.is_finite() {
-        Ok(PointValue::F64(result))
-    } else {
-        Err(CodecError::NonFinite)
-    }
+    points::scale::unscale(value, scale, offset).map_err(map_scale_error)
 }
 
 fn as_u64(value: PointValue, kind: ModbusDataType) -> Result<u64, CodecError> {
-    match value {
-        PointValue::U64(value) => Ok(value),
-        PointValue::F64(value) if value.fract() == 0.0 && value >= 0.0 => Ok(value as u64),
-        _ => Err(CodecError::TypeMismatch(kind)),
-    }
+    points::scale::as_u64(value).map_err(|_| CodecError::TypeMismatch(kind))
 }
+
 fn as_i64(value: PointValue, kind: ModbusDataType) -> Result<i64, CodecError> {
-    match value {
-        PointValue::I64(value) => Ok(value),
-        PointValue::F64(value) if value.fract() == 0.0 => Ok(value as i64),
-        _ => Err(CodecError::TypeMismatch(kind)),
-    }
+    points::scale::as_i64(value).map_err(|_| CodecError::TypeMismatch(kind))
 }
+
 fn as_f64(value: PointValue, kind: ModbusDataType) -> Result<f64, CodecError> {
-    match value {
-        PointValue::I64(value) => Ok(value as f64),
-        PointValue::U64(value) => Ok(value as f64),
-        PointValue::F64(value) => Ok(value),
-        _ => Err(CodecError::TypeMismatch(kind)),
+    points::scale::as_f64(value).map_err(|_| CodecError::TypeMismatch(kind))
+}
+
+/// 缩放失败 → codec 错误 (类型不匹配沿用原始实现的 F64 标记)
+const fn map_scale_error(error: points::scale::ScaleError) -> CodecError {
+    match error {
+        points::scale::ScaleError::NonFinite => CodecError::NonFinite,
+        points::scale::ScaleError::TypeMismatch => CodecError::TypeMismatch(ModbusDataType::F64),
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ModbusArea;
-    use points::PointId;
-
-    fn point(byte_order: ByteOrder, word_order: WordOrder) -> ModbusPoint {
-        ModbusPoint {
-            id: PointId("p".into()),
-            area: ModbusArea::HoldingRegisters,
-            address: 0,
-            data_type: ModbusDataType::U32,
-            byte_order,
-            word_order,
-            scale: 1.0,
-            offset: 0.0,
-            poll_period_ms: 100,
-        }
-    }
-
-    #[test]
-    fn byte_and_word_order_are_explicit_and_reversible() {
-        let expected = PointValue::U64(0x1122_3344);
-        for byte in [ByteOrder::Big, ByteOrder::Little] {
-            for word in [WordOrder::Big, WordOrder::Little] {
-                let point = point(byte, word);
-                let registers = encode_registers(&point, &expected).unwrap();
-                assert_eq!(decode_registers(&point, &registers).unwrap(), expected);
-            }
-        }
-    }
-}
+#[path = "codec_tests.rs"]
+mod tests;

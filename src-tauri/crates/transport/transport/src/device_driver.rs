@@ -9,10 +9,11 @@ use async_trait::async_trait;
 use data_model::ConfigurationSchema;
 use data_model::TransportConfig;
 use data_model::device_tree::NodeId;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeRole};
 use device_tree::{
-    CapabilityMask, ChildPolicy, ConfigError, DriverId, NodeContext, NodeDriver, NodeRole,
-    NodeRuntime, OpenError, ParentContract, SourceRuntimeBuilder, SourceValidationState,
-    ValidatedNodeConfig, source_capability_mask, source_child_policy, source_payload,
+    CapabilityMask, ConfigError, NodeContext, NodeDriver, NodeRuntime, OpenError, ParentContract,
+    SourceRuntimeBuilder, SourceValidationState, ValidatedNodeConfig, source_capability_mask,
+    source_child_policy, source_payload,
 };
 use points::PointDescriptor;
 use serde_json::Value;

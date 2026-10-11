@@ -3,10 +3,11 @@ use super::TestFactory;
 use acquisition::{ExecutionGate, PortDescriptor, SourceFactory, SourceSupervisor};
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodeRole};
 use device_tree::{
-    CapabilityMask, ChildPolicy, ConfigError, DriverId, NodeContext, NodeDriver, NodeId, NodeRole,
-    NodeRuntime, OpenError, ParentContract, SourceRuntimeBuilder, SourceValidationState,
-    ValidatedNodeConfig, source_capability_mask, source_child_policy, source_payload,
+    CapabilityMask, ConfigError, NodeContext, NodeDriver, NodeRuntime, OpenError, ParentContract,
+    SourceRuntimeBuilder, SourceValidationState, ValidatedNodeConfig, source_capability_mask,
+    source_child_policy, source_payload,
 };
 use serde_json::Value;
 use std::sync::Arc;

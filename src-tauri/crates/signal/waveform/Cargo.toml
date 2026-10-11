@@ -28,4 +28,4 @@ harness = false
 [package.metadata.lissio]
 domain = "signal"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "多通道时间序列缓冲 — 多通道 f32 + 时间戳 + 派生通道与窗口查询 API"

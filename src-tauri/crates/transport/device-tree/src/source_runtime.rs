@@ -6,13 +6,13 @@ use crate::capability::{
 };
 use crate::driver::{NodeRuntime, NodeStateEvent};
 use crate::error::{CloseError, PortError};
-use crate::model::{DriverId, NodeId, NodePath, NodeState};
 use acquisition::{
     AddressSpaceDescriptor, PortDescriptor, ReadCapability, SourceFactory, SourceSession,
     SourceState, SubscribeCapability, SupervisorHandle, WriteCapability,
 };
 use async_trait::async_trait;
 use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeId, NodePath, NodeState};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;

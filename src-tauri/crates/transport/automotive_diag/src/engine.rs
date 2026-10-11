@@ -43,7 +43,7 @@ impl DiagnosticEngine {
     /// Send one UDS payload over ISO-TP and return the raw response payload.
     pub async fn request(&self, data: Vec<u8>) -> Result<Vec<u8>, PortError> {
         let parent = self.parent.as_ref().ok_or_else(|| PortError {
-            node_id: device_tree::NodeId::new("diagnostic").expect("constant node id"),
+            node_id: data_model::device_tree::NodeId::new("diagnostic").expect("constant node id"),
             operation: "request",
             detail: "诊断引擎未连接 ISO-TP 端口".into(),
         })?;
@@ -58,9 +58,9 @@ impl DiagnosticEngine {
             .await
     }
 
-    fn node_id(&self) -> device_tree::NodeId {
+    fn node_id(&self) -> data_model::device_tree::NodeId {
         self.parent.as_ref().map_or_else(
-            || device_tree::NodeId::new("diagnostic").expect("constant node id"),
+            || data_model::device_tree::NodeId::new("diagnostic").expect("constant node id"),
             |parent| parent.node_id().clone(),
         )
     }

@@ -1,7 +1,6 @@
 //! 设备树采集条目和 typed 数据面桥接辅助实现。
 
 use crate::NodeRuntime;
-use crate::model::{NodeId, NodeState};
 use crate::registry::DriverRegistry;
 use crate::runtime::DeviceTreeRuntime;
 use acquisition::{
@@ -10,6 +9,7 @@ use acquisition::{
 };
 use data_model::ConnectionState;
 use data_model::device_tree::{NodeDecl, NodeSnapshot};
+use data_model::device_tree::{NodeId, NodeState};
 use error::Result;
 use points::{PointDescriptor, PointEnvelope};
 use std::collections::BTreeMap;

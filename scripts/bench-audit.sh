@@ -58,7 +58,6 @@ audit_benches=(
   'lissio-recording storage'
   'lissio-app waveform_wire'
   'lissio-gpu envelope_bench'
-  'lissio-buffer-graph node_graph_bench'
   'lissio-graph compile_bench'
   'lissio-eval eval_run_bench'
   'lissio-trigger trigger_bench'

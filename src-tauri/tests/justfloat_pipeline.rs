@@ -14,9 +14,9 @@ use app::AppState;
 use app::DecoderFeedCache;
 use app::TopicKey;
 use app::byte_router;
-use app::{MathOp, NodeDef, NodeKind};
 use buffer_graph::Edge;
 use graph_ops::apply_tab_graph;
+use kind::{MathOp, NodeDef, NodeKind};
 use schema_types::ProtocolConfig;
 
 fn device_node(id: &str) -> NodeDef {

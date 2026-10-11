@@ -308,7 +308,7 @@ impl SimulationProviderCapability for SourceRuntime {
         Ok(Arc::new(Self::new(
             context.node_id().clone(),
             context.node_path().clone(),
-            crate::model::DriverId::new(data_model::device_tree::SIMULATION_DRIVER_ID),
+            data_model::device_tree::DriverId::new(data_model::device_tree::SIMULATION_DRIVER_ID),
             self.inner.factory.clone(),
             self.inner.payload.clone(),
             session.into(),

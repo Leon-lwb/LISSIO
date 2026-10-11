@@ -3,13 +3,13 @@
 use crate::capability::ParentContract;
 use crate::driver::{NodeContext, NodeDriver, NodeRuntime, ValidatedNodeConfig};
 use crate::error::{ConfigError, OpenError};
-use crate::model::{ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeRole};
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
 use data_model::device::SimulationConfig;
 use data_model::device_tree::{
     Capability, CapabilityMask, ConfigError as NodeConfigError, SIMULATION_DRIVER_ID,
 };
+use data_model::device_tree::{ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeRole};
 use serde_json::{Value, json};
 
 /// 将仿真配置打开为独立虚拟子节点。
@@ -113,8 +113,8 @@ impl NodeDriver for SimulationDriver {
         config: &Value,
         parent: Option<&ParentContract>,
     ) -> Result<ValidatedNodeConfig, ConfigError> {
-        let node_id =
-            crate::model::NodeId::new(SIMULATION_DRIVER_ID).expect("constant simulation node id");
+        let node_id = data_model::device_tree::NodeId::new(SIMULATION_DRIVER_ID)
+            .expect("constant simulation node id");
         if parent.is_none() {
             return Err(ConfigError::InvalidDriverConfig {
                 node_id,
@@ -165,7 +165,7 @@ impl NodeDriver for SimulationDriver {
 
 fn decode_config<T: serde::de::DeserializeOwned>(value: &Value) -> Result<T, NodeConfigError> {
     serde_json::from_value(value.clone()).map_err(|error| NodeConfigError::InvalidDriverConfig {
-        node_id: crate::model::NodeId::new(SIMULATION_DRIVER_ID)
+        node_id: data_model::device_tree::NodeId::new(SIMULATION_DRIVER_ID)
             .expect("constant simulation node id"),
         detail: error.to_string(),
     })

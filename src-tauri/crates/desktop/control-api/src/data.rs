@@ -7,10 +7,10 @@ use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::sync::atomic::Ordering;
 
-use pipeline::CommandFrameDto;
-use pipeline::command_frame::ComputedFrameDto;
 use pipeline::data_plane::{byte_router, frame_dispatch};
 use pipeline::decoder_feed::DecoderFeedCache;
+use schema::command_frame::CommandFrameDto;
+use schema::command_frame::ComputedFrameDto;
 use serde::{Deserialize, Serialize};
 use waveform::WaveformSeriesSelection;
 
@@ -313,7 +313,7 @@ pub fn compute_command_frame_bytes(
     frame: &CommandFrameDto,
     inputs: &HashMap<String, f64>,
 ) -> ComputedFrameDto {
-    pipeline::compute_frame_bytes(frame, inputs)
+    schema::command_frame::compute_frame_bytes(frame, inputs)
 }
 
 fn no_targets(error: &'static str) -> CommandSendOutcome {
@@ -399,47 +399,5 @@ pub async fn send_command_frame(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{snapshot_fits_memory_budget, snapshot_memory_bytes};
-    use crate::toolbox::Toolbox;
-    use app::WaveformSnapshot;
-    use std::collections::HashMap;
-    use std::sync::Arc;
-    use waveform::DataBuffer;
-
-    #[test]
-    fn snapshot_memory_limit_accounts_for_all_live_snapshots() {
-        let snapshot = |source: &str, estimated_bytes| WaveformSnapshot {
-            source: source.into(),
-            buffer: Arc::new(DataBuffer::new(1, 1)),
-            estimated_bytes,
-        };
-        let snapshots = HashMap::from([
-            ("one".into(), snapshot("source", 400)),
-            ("two".into(), snapshot("source", 500)),
-        ]);
-
-        assert_eq!(snapshot_memory_bytes(&snapshots), 900);
-        assert!(snapshot_fits_memory_budget(900, 100, 1_000));
-        assert!(!snapshot_fits_memory_budget(900, 101, 1_000));
-        assert!(!snapshot_fits_memory_budget(usize::MAX, 1, usize::MAX));
-    }
-
-    #[test]
-    fn snapshot_release_and_budget_use_shared_registry() {
-        let state = app::AppState::new();
-        let tb = Toolbox::from_state(&state);
-        assert!(tb.waveform_snapshots.lock().is_empty());
-        tb.waveform_snapshots.lock().insert(
-            "waveform-1".into(),
-            WaveformSnapshot {
-                source: "s".into(),
-                buffer: Arc::new(DataBuffer::new(1, 1)),
-                estimated_bytes: 10,
-            },
-        );
-        super::release_waveform_snapshot(&tb, "waveform-1");
-        assert!(tb.waveform_snapshots.lock().is_empty());
-        assert!(state.waveform_snapshots.lock().is_empty(), "共享同一注册表");
-    }
-}
+#[path = "data_tests.rs"]
+mod tests;

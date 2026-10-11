@@ -17,8 +17,8 @@ pub struct JustFloatEngine {
     buf: Vec<u8>,
 }
 
-/// JustFloat 帧尾: 0x00 0x00 0x80 0x7f (LE +Inf)
-const TAIL: [u8; 4] = [0x00, 0x00, 0x80, 0x7f];
+/// JustFloat 帧尾 — 常量归 `schema_types::preset`
+const TAIL: [u8; 4] = schema_types::preset::JUSTFLOAT_TAIL;
 
 impl JustFloatEngine {
     pub fn new(channels: Option<usize>) -> Self {
@@ -89,10 +89,7 @@ impl ProtocolEngine for JustFloatEngine {
             self.buf.drain(..start);
         }
         // 防止缓冲区无限增长
-        if self.buf.len() > 8192 {
-            let drop = self.buf.len() - 4096;
-            self.buf.drain(..drop);
-        }
+        protocol::buffer::truncate_buffer(&mut self.buf);
 
         FeedOutput::from_frames(frames)
     }

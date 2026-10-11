@@ -231,8 +231,8 @@ struct StubDriver {
 
 #[async_trait::async_trait]
 impl device_tree::NodeDriver for StubDriver {
-    fn id(&self) -> device_tree::DriverId {
-        device_tree::DriverId::new(self.id)
+    fn id(&self) -> data_model::device_tree::DriverId {
+        data_model::device_tree::DriverId::new(self.id)
     }
     fn role(&self) -> data_model::device_tree::NodeRole {
         data_model::device_tree::NodeRole::Endpoint

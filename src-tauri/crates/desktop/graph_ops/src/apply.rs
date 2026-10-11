@@ -9,11 +9,11 @@ use buffer_graph::Edge;
 use error::Result;
 use error::{AppError as Error, ConfigError};
 use events::{BackendEventSink, emit_graph_derived, emit_payload};
-use pipeline::BytePlan;
+use graph::BytePlan;
+use kind::{NodeDef, NodeKind};
 use pipeline::DataPlaneState;
 use pipeline::data_plane::frame_dispatch;
 use pipeline::decoder_feed::sync_decoders_now;
-use pipeline::{NodeDef, NodeKind};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -29,9 +29,9 @@ use crate::{
 /// 节点 id 在工作区内唯一；任一页签提交后重建共享运行平面。
 /// 孤儿节点 (图删除后残留) 的运行时资源由 `DataPlaneState::reconcile` 清理。
 fn rebuild_byte_plan(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, graph::CompiledGraph>>>,
     candidate: &std::collections::HashMap<String, NodeDef>,
-    new_tab: Option<(&str, &pipeline::CompiledGraph)>,
+    new_tab: Option<(&str, &graph::CompiledGraph)>,
 ) -> Result<BytePlan> {
     let mut byte_edges: Vec<Edge> = Vec::new();
     {
@@ -47,7 +47,7 @@ fn rebuild_byte_plan(
         byte_edges.extend(g.byte_edges());
     }
     // 合并后的运行时节点索引先建 HIR (边分类应与各页签编译期一致), 再投影字节平面
-    let typed = pipeline::TypedGraph::build(candidate.values().cloned(), byte_edges)
+    let typed = graph::TypedGraph::build(candidate.values().cloned(), byte_edges)
         .map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))?;
     BytePlan::build(&typed).map_err(|e| Error::Config(ConfigError::BytePlanCompile(Box::new(e))))
 }
@@ -109,7 +109,7 @@ pub async fn apply_tab_graph(
 #[allow(clippy::implicit_hasher)]
 #[allow(clippy::too_many_arguments)]
 pub async fn apply_tab_graph_parts(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, graph::CompiledGraph>>>,
     graphs_version: &Arc<std::sync::atomic::AtomicU64>,
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
@@ -174,26 +174,26 @@ pub async fn apply_tab_graph_parts(
 
     // 2. 本 tab 数值图编译 — 失败时构造 `CompileReport` 并 emit `graph:compile` 事件,
     //    真实编译错误原样返回 (占位假错误会吞掉域不匹配等可用原因)
-    let compiled =
-        match pipeline::CompiledGraph::compile(tab_id.clone(), compile_nodes, compile_edges) {
-            Ok(g) => g,
-            Err(e) => {
-                let report = error::CompileReport::new(e.clone());
-                if let Some(sink) = sink {
-                    emit_payload(
-                        sink,
-                        crate::GRAPH_COMPILE_EVENT,
-                        &GraphCompileEvent {
-                            tab_id: tab_id.clone(),
-                            state: CompileState::Error,
-                            queued_seq: 0,
-                            report: Some(report),
-                        },
-                    );
-                }
-                return Err(Error::Config(ConfigError::GraphCompile(Box::new(e))));
+    let compiled = match graph::CompiledGraph::compile(tab_id.clone(), compile_nodes, compile_edges)
+    {
+        Ok(g) => g,
+        Err(e) => {
+            let report = error::CompileReport::new(e.clone());
+            if let Some(sink) = sink {
+                emit_payload(
+                    sink,
+                    crate::GRAPH_COMPILE_EVENT,
+                    &GraphCompileEvent {
+                        tab_id: tab_id.clone(),
+                        state: CompileState::Error,
+                        queued_seq: 0,
+                        report: Some(report),
+                    },
+                );
             }
-        };
+            return Err(Error::Config(ConfigError::GraphCompile(Box::new(e))));
+        }
+    };
 
     // 3. 候选运行时节点索引: 移除该 tab 旧节点 → 插入新节点
     // ProtocolSource 是页签数值平面的帧源引用，不参与字节平面，不进运行时索引
@@ -201,7 +201,7 @@ pub async fn apply_tab_graph_parts(
     let mut candidate = data_plane.global_nodes.lock().clone();
     candidate.retain(|_, n| n.tab_id != tab_id);
     for n in &nodes {
-        if matches!(n.kind, pipeline::NodeKind::ProtocolSource { .. }) {
+        if matches!(n.kind, kind::NodeKind::ProtocolSource { .. }) {
             continue;
         }
         candidate.insert(n.id.clone(), n.clone());
@@ -367,12 +367,12 @@ fn recording_domain(source: &NodeDef, handle: &str) -> Option<recording::Domain>
     if matches!(source.kind, NodeKind::Protocol { .. }) && handle == "str" {
         return Some(recording::Domain::String);
     }
-    Some(match pipeline::port_domain(&source.kind, handle, true) {
-        pipeline::PortDomain::Points => return None,
-        pipeline::PortDomain::Bytes => recording::Domain::Bytes,
-        pipeline::PortDomain::String => recording::Domain::String,
-        pipeline::PortDomain::Spectrum => recording::Domain::Spectrum,
-        pipeline::PortDomain::F32 => recording::Domain::Float,
+    kind::port_domain(&source.kind, handle, true).and_then(|domain| match domain {
+        kind::PortDomain::Points => None,
+        kind::PortDomain::Bytes => Some(recording::Domain::Bytes),
+        kind::PortDomain::String => Some(recording::Domain::String),
+        kind::PortDomain::Spectrum => Some(recording::Domain::Spectrum),
+        kind::PortDomain::F32 => Some(recording::Domain::Float),
     })
 }
 

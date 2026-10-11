@@ -3,12 +3,12 @@
 //! 两个端口都是既有契约的宿主侧实现 (桌面由 `TauriEventSink` /
 //! `TauriChannelSink` 实现), 业务侧零改动:
 //! - [`events::BackendEventSink`] → [`BroadcastEventSink`] (全局事件扇出到所有连接)
-//! - [`app::display::StreamSink`] → [`WsStreamSink`] (每条订阅一个, id 由服务端分配)
+//! - [`stream::sink::StreamSink`] → [`WsStreamSink`] (每条订阅一个, id 由服务端分配)
 
-use app::display::{StreamPayload, StreamSink};
 use events::{BackendEventSink, NotifyLevel};
 use serde_json::Value;
 use std::sync::Arc;
+use stream::sink::{StreamPayload, StreamSink};
 use tokio::sync::broadcast;
 
 use crate::frames::ServerMessage;
@@ -138,15 +138,5 @@ impl StreamSink for WsStreamSink {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn closed_outbox_terminates_stream_subscription() {
-        let outbox = Arc::new(ConnectionOutbox::new());
-        let sink = WsStreamSink::new(7, outbox.clone());
-        assert!(sink.send(StreamPayload::Json("first".into())));
-        outbox.close();
-        assert!(!sink.send(StreamPayload::Json("second".into())));
-    }
-}
+#[path = "sink_tests.rs"]
+mod tests;

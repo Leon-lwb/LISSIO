@@ -7,7 +7,7 @@ use crate::AppState;
 
 use super::{display_rate, send_json};
 use crate::display::DisplayEvent;
-use crate::display::stream_sink::StreamSink;
+use stream::sink::StreamSink;
 use waveform::DerivedSeriesSelector;
 
 pub(super) fn spawn_measurement_stream(

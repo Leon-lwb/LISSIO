@@ -71,8 +71,8 @@ impl ProtocolEngine for FireWaterEngine {
         if start > 0 {
             self.buf.drain(..start);
         }
-        // 防止缓冲区无限增长 (无换行的超长行)
-        if self.buf.len() > 8192 {
+        // 防止缓冲区无限增长 (无换行的超长行整段丢弃, 保留半行会产生假帧)
+        if self.buf.len() > protocol::buffer::MAX_BUFFER {
             self.buf.clear();
         }
 
@@ -83,12 +83,11 @@ impl ProtocolEngine for FireWaterEngine {
         // 单通道编码: 仅发送该通道值 (其他通道不发送, 避免误用)
         // 注: FireWater 协议中, 单通道编码无标准做法, 这里采用与 encode_channels
         // 一致的行为 — 仅发一个值
-        format!("{value:.6}\n").into_bytes()
+        protocol::text::encode_ascii_value(value)
     }
 
     fn encode_channels(&mut self, values: &[f32]) -> Vec<u8> {
-        let s: Vec<String> = values.iter().map(|v| format!("{v:.6}")).collect();
-        format!("{}\n", s.join(",")).into_bytes()
+        protocol::text::encode_ascii_values(values)
     }
 
     fn encode_frame(&mut self, frame: &DataFrame) -> Vec<u8> {

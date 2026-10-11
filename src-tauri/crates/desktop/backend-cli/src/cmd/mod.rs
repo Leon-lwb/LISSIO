@@ -65,7 +65,7 @@ pub async fn execute(cli: Cli) -> Result<(), String> {
 
 /// 命令分发 — 每个域委托对应子模块 (全部走 control-api 共享实现)。
 async fn dispatch(host: &Host, command: Command) -> Result<Value, String> {
-    let tb: &Toolbox = &host.toolbox;
+    let tb: &Toolbox = &host.state;
     match command {
         Command::Devices => Ok(transfer::devices(tb).await),
         Command::Ports => transfer::ports(tb),

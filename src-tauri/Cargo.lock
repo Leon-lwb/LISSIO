@@ -3573,6 +3573,7 @@ dependencies = [
  "lissio-flow",
  "lissio-points",
  "lissio-schema-types",
+ "log",
  "parking_lot",
  "serde",
  "serde_json",
@@ -3622,6 +3623,7 @@ dependencies = [
  "lissio-evaluator",
  "lissio-events",
  "lissio-filter",
+ "lissio-graph",
  "lissio-kind",
  "lissio-logic",
  "lissio-measurement",
@@ -3722,6 +3724,8 @@ dependencies = [
  "lissio-pipeline",
  "lissio-points",
  "lissio-rpc-api",
+ "lissio-schema",
+ "lissio-schema-types",
  "lissio-waveform",
  "log",
  "serde_json",
@@ -3777,6 +3781,7 @@ dependencies = [
  "lissio-mcp-server",
  "lissio-performance",
  "lissio-rpc-api",
+ "lissio-stream",
  "log",
  "parking_lot",
  "serde",
@@ -3789,7 +3794,6 @@ dependencies = [
 name = "lissio-buffer-graph"
 version = "0.8.0"
 dependencies = [
- "criterion",
  "lissio-data-model",
  "serde",
  "serde_json",
@@ -3799,6 +3803,7 @@ dependencies = [
 name = "lissio-bus"
 version = "0.8.0"
 dependencies = [
+ "lissio-data-model",
  "log",
  "parking_lot",
  "serde",
@@ -3828,6 +3833,7 @@ dependencies = [
  "log",
  "nusb",
  "serde_json",
+ "serialport",
  "thiserror 1.0.69",
  "tokio",
 ]
@@ -3852,6 +3858,7 @@ dependencies = [
 name = "lissio-chat-session"
 version = "0.8.0"
 dependencies = [
+ "lissio-data-model",
  "lissio-error",
  "lissio-llm",
  "log",
@@ -3871,14 +3878,18 @@ dependencies = [
  "lissio-data-model",
  "lissio-error",
  "lissio-events",
+ "lissio-frame-decoder",
+ "lissio-graph",
  "lissio-graph-ops",
  "lissio-graph-testkit",
  "lissio-kind",
  "lissio-logic",
  "lissio-pipeline",
  "lissio-points",
+ "lissio-protocol",
  "lissio-raw-data",
  "lissio-recording",
+ "lissio-schema",
  "lissio-schema-types",
  "lissio-waveform",
  "parking_lot",
@@ -4065,6 +4076,7 @@ dependencies = [
  "lissio-evaluator",
  "lissio-events",
  "lissio-flow",
+ "lissio-graph",
  "lissio-graph-testkit",
  "lissio-kind",
  "lissio-pipeline",
@@ -4332,6 +4344,7 @@ dependencies = [
  "lissio-can",
  "lissio-data-model",
  "lissio-logic",
+ "lissio-schema-types",
  "serde",
 ]
 
@@ -4350,6 +4363,7 @@ version = "0.8.0"
 dependencies = [
  "lissio-data-model",
  "lissio-protocol",
+ "lissio-schema-types",
 ]
 
 [[package]]
@@ -4368,6 +4382,7 @@ dependencies = [
  "async-trait",
  "criterion",
  "duckdb",
+ "lissio-data-model",
  "parking_lot",
  "sea-orm",
  "serde",
@@ -4404,7 +4419,9 @@ dependencies = [
  "lissio-performance",
  "lissio-pipeline",
  "lissio-points",
+ "lissio-protocol",
  "lissio-raw-data",
+ "lissio-schema",
  "lissio-schema-types",
  "lissio-spectrum",
  "lissio-trigger",

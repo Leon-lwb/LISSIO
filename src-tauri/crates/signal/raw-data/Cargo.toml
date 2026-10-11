@@ -21,4 +21,4 @@ serde_json = { workspace = true }
 [package.metadata.lissio]
 domain = "signal"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "原始字节收集器 — 固定容量环形游标缓冲 + 方向/搜索过滤与线上传输结构"

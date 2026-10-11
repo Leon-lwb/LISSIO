@@ -10,7 +10,7 @@ use waveform::DataBuffer;
 
 use super::binary::{ENVELOPE_WINDOW_CAP, encode_envelope};
 use super::display_rate;
-use crate::display::stream_sink::{StreamPayload, StreamSink};
+use stream::sink::{StreamPayload, StreamSink};
 
 pub(super) fn spawn_envelope_stream(
     state: &AppState,

@@ -33,7 +33,7 @@ struct SendCommandFrameParams {
 }
 
 /// 命令帧 JSON → `CommandFrameDto`。
-fn frame_dto(value: &Value) -> Result<pipeline::CommandFrameDto, ToolError> {
+fn frame_dto(value: &Value) -> Result<schema::command_frame::CommandFrameDto, ToolError> {
     serde_json::from_value(value.clone())
         .map_err(|e| ToolError::InvalidParams(format!("frame: {e}")))
 }
@@ -73,17 +73,5 @@ pub fn node() -> CapabilityNode {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// 节点声明 2 个工具。
-    #[test]
-    fn node_declares_tools() {
-        let n = node();
-        let names: Vec<_> = n.tools.iter().map(|t| t.name).collect();
-        assert_eq!(
-            names,
-            vec!["compute_command_frame_bytes", "send_command_frame"]
-        );
-    }
-}
+#[path = "command_tests.rs"]
+mod tests;

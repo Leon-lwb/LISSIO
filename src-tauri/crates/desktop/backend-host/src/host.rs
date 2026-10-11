@@ -17,10 +17,8 @@ use events::EventSinkHandle;
 
 /// 已装配的后端宿主 — 一次性子命令、常驻服务与进程内测试共用。
 pub struct BackendHost {
-    /// 应用全局状态。
-    pub state: AppState,
-    /// 控制能力切片 (与 `state` 共享同一批 `Arc` 句柄)。
-    pub toolbox: Toolbox,
+    /// 应用全局状态 (所有出口共享同一份句柄)。
+    pub state: Toolbox,
     /// AI/MCP host，共享相同的 Toolbox、事件端口与配置目录。
     pub ai: Arc<ai_host::AiHost>,
     /// 出口事件端口 (stderr / Tauri / WebSocket 广播)。
@@ -49,7 +47,7 @@ pub async fn assemble(
 ) -> Result<BackendHost, String> {
     let config_dir = crate::resolve_config_dir(config_dir);
     let (runtime, drivers) = crate::build_acquisition_runtime();
-    let state = AppState::with_acquisition(runtime);
+    let state = std::sync::Arc::new(AppState::with_acquisition(runtime));
     state.install_model_catalog(std::sync::Arc::new(crate::build_model_catalog(&drivers)));
     state.install_drivers(drivers.clone());
     crate::install_point_observer(&state);
@@ -76,16 +74,14 @@ pub async fn assemble(
             tokio::spawn(future);
         },
     );
-    let toolbox = Toolbox::from_state(&state);
     let performance = performance::PerformanceMonitor::new();
     let ai = Arc::new(ai_host::AiHost::new(
         config_dir.clone(),
-        toolbox.clone(),
+        std::sync::Arc::clone(&state),
         sink.clone(),
     ));
     Ok(BackendHost {
         state,
-        toolbox,
         ai,
         sink,
         performance,

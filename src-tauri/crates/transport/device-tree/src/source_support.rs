@@ -6,13 +6,13 @@
 use crate::capability::CapabilityMask;
 use crate::driver::{NodeContext, NodeRuntime};
 use crate::error::OpenError;
-use crate::model::{DriverId, NodeRole};
 use crate::source_runtime::SourceRuntime;
 use acquisition::{
     AddressSpaceDescriptor, CapabilitySet, ExecutionGate, PortDescriptor, SourceFactory,
     SourceSupervisor, ValidatedConfig,
 };
 use data_model::device::DriverPayload;
+use data_model::device_tree::{DriverId, NodeRole};
 use flow::SourceId;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -198,8 +198,8 @@ pub const fn source_capability_mask(capabilities: CapabilitySet) -> CapabilityMa
 }
 
 /// Standard optional simulation child policy for source-backed drivers.
-pub fn source_child_policy(role: NodeRole) -> crate::model::ChildPolicy {
-    use crate::model::{ChildLimit, ChildPolicy};
+pub fn source_child_policy(role: NodeRole) -> data_model::device_tree::ChildPolicy {
+    use data_model::device_tree::{ChildLimit, ChildPolicy};
     use std::collections::BTreeMap;
     let mut allowed = BTreeMap::new();
     allowed.insert(NodeRole::Virtual, ChildLimit::optional_one());

@@ -22,23 +22,23 @@ pub fn health(host: &BackendHost) -> Result<Value, RpcError> {
 
 /// 全部录制会话。
 pub async fn list_sessions(host: &BackendHost) -> Result<Value, RpcError> {
-    text(recording::list_sessions(&host.toolbox).await)
+    text(recording::list_sessions(&host.state).await)
 }
 
 /// 全部会话摘要 (绑定/批次数/时间范围)。
 pub async fn list_session_summaries(host: &BackendHost) -> Result<Value, RpcError> {
-    text(recording::list_session_summaries(&host.toolbox).await)
+    text(recording::list_session_summaries(&host.state).await)
 }
 
 /// 指定会话的通道绑定。
 pub async fn list_bindings(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let session_id: String = required(args, cmd, "session_id")?;
-    text(recording::list_bindings(&host.toolbox, &session_id).await)
+    text(recording::list_bindings(&host.state, &session_id).await)
 }
 
 /// 数据库文件信息 (路径/大小/会话数/批次数)。
 pub async fn database_info(host: &BackendHost) -> Result<Value, RpcError> {
-    text(recording::database_info(&host.toolbox).await)
+    text(recording::database_info(&host.state).await)
 }
 
 /// 分页查询历史采样。
@@ -53,7 +53,7 @@ pub async fn query_history(host: &BackendHost, cmd: &str, args: &Value) -> Resul
     let include_payload: Option<bool> = optional(args, cmd, "include_payload")?;
     text(
         recording::history_page(
-            &host.toolbox,
+            &host.state,
             recording::HistoryQuery {
                 session_id,
                 binding_id,
@@ -73,18 +73,18 @@ pub async fn query_sql(host: &BackendHost, cmd: &str, args: &Value) -> Result<Va
     let query_id: String = required(args, cmd, "query_id")?;
     let sql: String = required(args, cmd, "sql")?;
     let max_rows: Option<usize> = optional(args, cmd, "max_rows")?;
-    text(recording::query_sql(&host.toolbox, &query_id, &sql, max_rows.unwrap_or(10_000)).await)
+    text(recording::query_sql(&host.state, &query_id, &sql, max_rows.unwrap_or(10_000)).await)
 }
 
 /// 取消进行中的 SQL 查询。
 pub fn cancel_query(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let query_id: String = required(args, cmd, "query_id")?;
-    encode(&recording::cancel_query(&host.toolbox, &query_id))
+    encode(&recording::cancel_query(&host.state, &query_id))
 }
 
 /// 强制刷盘。
 pub async fn flush(host: &BackendHost) -> Result<Value, RpcError> {
-    text(recording::flush(&host.toolbox).await)
+    text(recording::flush(&host.state).await)
 }
 
 /// 删除录制会话。
@@ -94,7 +94,7 @@ pub async fn delete_session(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let session_id: String = required(args, cmd, "session_id")?;
-    text(recording::delete_session(&host.toolbox, &session_id).await)
+    text(recording::delete_session(&host.state, &session_id).await)
 }
 
 /// 按清理策略删除会话。
@@ -104,18 +104,18 @@ pub async fn cleanup_sessions(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let policy: recording::RecordingCleanupPolicy = required(args, cmd, "policy")?;
-    text(recording::cleanup_sessions(&host.toolbox, policy).await)
+    text(recording::cleanup_sessions(&host.state, policy).await)
 }
 
 /// 导出录制数据到文件 (路径为服务端路径; Web 出口经下载端点交付)。
 pub async fn export_data(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let request: recording::RecordingExportRequest = required(args, cmd, "request")?;
-    text(recording::export_data(&host.toolbox, request).await)
+    text(recording::export_data(&host.state, request).await)
 }
 
 /// 暂停态新建录制会话并切换写入目标。
 pub async fn create_session(host: &BackendHost) -> Result<Value, RpcError> {
-    text(recording::create_session(&host.toolbox).await)
+    text(recording::create_session(&host.state).await)
 }
 
 /// 暂停态切换写入目标到指定已停止会话。
@@ -125,7 +125,7 @@ pub async fn switch_session(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let session_id: String = required(args, cmd, "session_id")?;
-    text(recording::switch_session(&host.toolbox, &session_id).await)
+    text(recording::switch_session(&host.state, &session_id).await)
 }
 
 /// 应用录制存储设置 (数据库目录 + 空会话续写开关 + 录制总开关)。
@@ -161,10 +161,10 @@ pub async fn apply_settings(
             "recording storage location can only change while the run is paused or stopped",
         ));
     }
-    let initial = control_api::recording::session_state_for_run(&host.toolbox);
+    let initial = control_api::recording::session_state_for_run(&host.state);
     // 暂停期间管道继续喂数据 — 换 recorder 前独占数据链边界 (有界: 见
     // `control_api::recording::swap_with_boundary`)。
-    control_api::recording::swap_with_boundary(&host.toolbox, move || -> Result<(), String> {
+    control_api::recording::swap_with_boundary(&host.state, move || -> Result<(), String> {
         // 先关: 关闭态下 apply_settings 只登记坐标, 不会打开任何文件。
         if enabled == Some(false) {
             recording_hub.disable().map_err(|error| error.to_string())?;

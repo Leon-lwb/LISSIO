@@ -3,7 +3,6 @@
 #[path = "production_support.rs"]
 mod support;
 
-use crate::model::{NodeDecl, NodeId, NodeSnapshot};
 use crate::registry::DriverRegistry;
 use crate::runtime::DeviceTree;
 use acquisition::{
@@ -14,6 +13,7 @@ use acquisition::{
 use async_trait::async_trait;
 use data_model::device::DriverPayload;
 use data_model::device_tree::DriverId;
+use data_model::device_tree::{NodeDecl, NodeId, NodeSnapshot};
 use data_model::{ConnectionState, TestDataConfig, TransportConfig, TransportStats};
 use error::Result;
 use flow::{BytesChunk, FlowEnvelope, Framing, SourceId};
@@ -93,7 +93,7 @@ impl DeviceTreeAcquisition {
     ) -> AcquisitionResult<NodeSnapshot> {
         let root_id = declaration.id.clone();
         let effective = effective_node_id(&declaration);
-        let document = crate::model::DeviceTreeDocument::new(declaration.clone());
+        let document = data_model::device_tree::DeviceTreeDocument::new(declaration.clone());
         let tree = self.tree.open(document).await.map_err(open_error)?;
         if let Some(child) = declaration.children.iter().find(|child| {
             child.enabled && child.driver.as_str() == data_model::device_tree::SIMULATION_DRIVER_ID

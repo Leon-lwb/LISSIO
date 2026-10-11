@@ -17,6 +17,7 @@ name = "backend-cli"
 path = "src/main.rs"
 
 [dependencies]
+schema_types = { workspace = true }
 app = { workspace = true }
 backend-host = { workspace = true }
 backend-server = { workspace = true }
@@ -25,6 +26,7 @@ rpc-api = { workspace = true }
 events = { workspace = true }
 mcp-server = { workspace = true }
 pipeline = { workspace = true }
+schema = { workspace = true }
 points = { workspace = true }
 waveform = { workspace = true }
 clap = { workspace = true }

@@ -3,8 +3,8 @@
 //! 每个节点只属于一个创建页签；删除页签会清理其节点和运行态，其他页签不受影响。
 
 use app::AppState;
-use app::{NodeDef, NodeKind};
 use graph_ops::{apply_remove_tab_graph, apply_tab_graph};
+use kind::{NodeDef, NodeKind};
 use schema_types::ProtocolConfig;
 use std::collections::HashMap;
 

@@ -13,6 +13,7 @@ name = "chat_session"
 workspace = true
 
 [dependencies]
+data_model = { workspace = true }
 llm = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

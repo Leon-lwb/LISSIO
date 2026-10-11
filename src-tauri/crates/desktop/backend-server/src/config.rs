@@ -195,61 +195,12 @@ fn write_token_file(path: &Path, token: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// 生成访问令牌 — 由操作系统熵源播种的哈希输出拼装。
-///
-/// `RandomState` 每个实例使用独立的随机密钥 (来自操作系统), 因此这里反复取样
-/// 可得到不可预测的 64 位十六进制串。它不是密码学级 CSPRNG: 需要长期暴露到
-/// 局域网时, 应通过 `LISSIO_TOKEN` 显式提供强令牌。
+/// 生成访问令牌 — 与导出下载 token 共用 `backend_host::random_hex`
+/// (64 位十六进制; 非密码学级 CSPRNG, 长期暴露时用 `LISSIO_TOKEN` 提供强令牌)。
 fn generate_token() -> String {
-    use std::collections::hash_map::RandomState;
-    use std::fmt::Write as _;
-    use std::hash::{BuildHasher, Hasher};
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let mut token = String::with_capacity(64);
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos());
-    for round in 0_u128..4 {
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u128(nanos);
-        hasher.write_u128(round);
-        hasher.write_u32(std::process::id());
-        // 写入 String 不会失败 (fmt::Write for String 恒为 Ok)
-        let _ = write!(token, "{:016x}", hasher.finish());
-    }
-    token
+    backend_host::random_hex(4)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ServerConfig, generate_token};
-    use std::net::{IpAddr, Ipv4Addr};
-
-    #[test]
-    fn token_is_long_and_distinct() {
-        let first = generate_token();
-        let second = generate_token();
-        assert_eq!(first.len(), 64);
-        assert_ne!(first, second, "每次生成的令牌必须不同");
-    }
-
-    #[test]
-    fn explicit_token_wins_and_loopback_is_default() {
-        let config = ServerConfig::resolve(
-            None,
-            Some(0),
-            Some("  explicit-token  ".to_string()),
-            None,
-            None,
-            Vec::new(),
-            None,
-            false,
-            None,
-        )
-        .expect("配置解析应成功");
-        assert_eq!(config.token, "explicit-token");
-        assert_eq!(config.bind, IpAddr::V4(Ipv4Addr::LOCALHOST));
-        assert!(config.is_loopback());
-    }
-}
+#[path = "config_tests.rs"]
+mod tests;

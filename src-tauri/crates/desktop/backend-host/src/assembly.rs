@@ -92,7 +92,7 @@ pub fn build_acquisition_runtime() -> (
                 label,
                 config,
                 backend,
-                device_tree::NodeRole::Bus,
+                data_model::device_tree::NodeRole::Bus,
                 execution.clone(),
             )))
             .expect("fresh device-tree registry accepts byte drivers");
@@ -112,7 +112,7 @@ pub fn build_acquisition_runtime() -> (
             "Test Data",
             TransportConfig::TestData(data_model::TestDataConfig::default()),
             Arc::new(TestDataBackend),
-            device_tree::NodeRole::Virtual,
+            data_model::device_tree::NodeRole::Virtual,
             execution.clone(),
         )))
         .expect("fresh device-tree registry accepts test data");

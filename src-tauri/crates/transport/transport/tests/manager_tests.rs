@@ -1,12 +1,13 @@
 //! One registry owns real and simulated byte sessions.
 use acquisition::{AcquisitionRunState, AcquisitionRuntime, TransportBackend, TransportConnection};
 use async_trait::async_trait;
+use data_model::device_tree::NodeRole;
 use data_model::device_tree::{NodeDecl, NodeId, SIMULATION_DRIVER_ID};
 use data_model::{
     SerialConfig, TransportConfig,
     device::{SimulationConfig, TestWaveform},
 };
-use device_tree::{DeviceTreeAcquisition, DriverRegistry, NodeRole};
+use device_tree::{DeviceTreeAcquisition, DriverRegistry};
 use flow::Direction;
 use schema_types::TestDataLink;
 use std::{

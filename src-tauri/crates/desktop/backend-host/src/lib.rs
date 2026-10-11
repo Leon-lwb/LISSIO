@@ -14,6 +14,7 @@ mod config;
 mod host;
 mod lifecycle;
 mod settings;
+mod token;
 
 pub use artifacts::{ARTIFACT_TTL, ArtifactStaging, sanitize_file_name};
 pub use assembly::{
@@ -24,3 +25,4 @@ pub use config::{APP_IDENTIFIER, CONFIG_DIR_ENV, platform_config_dir, resolve_co
 pub use host::{BackendHost, assemble, teardown};
 pub use lifecycle::{restore_workspace, shutdown};
 pub use settings::{RECORDING_ENABLED_DEFAULT, SETTINGS_FILE_NAME, SETTINGS_KEY, SettingsStore};
+pub use token::random_hex;

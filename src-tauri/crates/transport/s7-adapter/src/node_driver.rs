@@ -7,11 +7,11 @@ use acquisition::{
 };
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodeRole};
 use device_tree::{
-    Capability, CapabilityMask, ChildPolicy, ConfigError, DriverId, NodeContext, NodeDriver,
-    NodeId, NodeRole, NodeRuntime, OpenError, ParentContract, SourceRuntimeBuilder,
-    SourceValidationState, ValidatedNodeConfig, source_capability_mask, source_child_policy,
-    source_payload,
+    Capability, CapabilityMask, ConfigError, NodeContext, NodeDriver, NodeRuntime, OpenError,
+    ParentContract, SourceRuntimeBuilder, SourceValidationState, ValidatedNodeConfig,
+    source_capability_mask, source_child_policy, source_payload,
 };
 use points::PointDescriptor;
 use serde_json::Value;

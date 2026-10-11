@@ -122,63 +122,11 @@ pub fn sanitize_file_name(raw: &str) -> String {
     }
 }
 
-/// 下载 token — 由操作系统熵源播种的哈希输出拼装 (与 Web 出口服务令牌同法)。
+/// 下载 token — 与 Web 出口服务令牌同一生成器 (32 位十六进制)。
 fn generate_token() -> String {
-    use std::collections::hash_map::RandomState;
-    use std::fmt::Write as _;
-    use std::hash::{BuildHasher, Hasher};
-    use std::time::{SystemTime, UNIX_EPOCH};
-
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos());
-    let mut token = String::with_capacity(32);
-    for round in 0_u128..2 {
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u128(nanos);
-        hasher.write_u128(round);
-        hasher.write_u32(std::process::id());
-        // 写入 String 不会失败 (fmt::Write for String 恒为 Ok)
-        let _ = write!(token, "{:016x}", hasher.finish());
-    }
-    token
+    crate::random_hex(2)
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ArtifactStaging, sanitize_file_name};
-
-    #[test]
-    fn sanitize_strips_paths_and_traversal() {
-        assert_eq!(sanitize_file_name("/tmp/waveform.csv"), "waveform.csv");
-        assert_eq!(sanitize_file_name("C:\\Users\\x\\a.csv"), "a.csv");
-        assert_eq!(sanitize_file_name("../../etc/passwd"), "passwd");
-        assert_eq!(sanitize_file_name(".."), "export.csv");
-        assert_eq!(sanitize_file_name(""), "export.csv");
-        // 危险字符被替换, 分隔符不可能残留
-        assert_eq!(sanitize_file_name("a b;c.csv"), "a_b_c.csv");
-    }
-
-    #[test]
-    fn allocate_and_resolve_round_trip() {
-        let dir = std::env::temp_dir().join(format!("lissio-artifacts-{}", std::process::id()));
-        let staging = ArtifactStaging::new(dir.clone()).expect("暂存区应可创建");
-        let (token, path) = staging
-            .allocate("/home/someone/waveform.csv")
-            .expect("登记应成功");
-        assert_eq!(path.parent(), Some(dir.as_path()), "产物必须落在受管目录内");
-        assert!(path.to_string_lossy().ends_with("waveform.csv"));
-        assert_eq!(staging.resolve(&token), Some(path));
-        // 未知 token 不解析
-        assert!(staging.resolve("not-a-token").is_none());
-        let _ = std::fs::remove_dir_all(&dir);
-    }
-
-    #[test]
-    fn tokens_are_long_and_distinct() {
-        let first = super::generate_token();
-        let second = super::generate_token();
-        assert_eq!(first.len(), 32);
-        assert_ne!(first, second);
-    }
-}
+#[path = "artifacts_tests.rs"]
+mod tests;

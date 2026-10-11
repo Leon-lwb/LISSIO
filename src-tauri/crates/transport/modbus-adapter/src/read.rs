@@ -1,12 +1,12 @@
 use crate::client::{
     OperationError, Runtime, ensure_connected, mark_degraded, mark_online, normalize,
 };
-use crate::{ModbusArea, ModbusPoint, ReconnectConfig, decode_registers, plan_reads};
+use crate::{ModbusArea, ModbusPoint, decode_registers, plan_reads};
+use acquisition::config::reconnect_delay;
 use acquisition::{AcquisitionError, AcquisitionResult};
 use flow::{Direction, FlowEnvelope};
 use points::{
-    DeliveryClass, NativeStatus, PointBatch, PointId, PointQuality, PointSample, PointValue,
-    ReadResult, quality_flags,
+    DeliveryClass, PointBatch, PointId, PointQuality, PointSample, PointValue, ReadResult,
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -93,7 +93,7 @@ pub async fn read_points(
             connection_epoch: runtime.connection_epoch.load(Ordering::Acquire),
             first_sequence: sequence,
             last_sequence: sequence,
-            observed_time_unix_ns: crate::client::now_unix_ns(),
+            observed_time_unix_ns: data_model::now_ns(),
             direction: Direction::Receive,
             gap_before: None,
             payload: PointBatch {
@@ -178,18 +178,6 @@ async fn read_plan(
     }
 }
 
-pub fn reconnect_delay(config: &ReconnectConfig, attempt: u32) -> Duration {
-    let factor = 1_u64
-        .checked_shl(attempt.saturating_sub(1))
-        .unwrap_or(u64::MAX);
-    Duration::from_millis(
-        config
-            .initial_delay_ms
-            .saturating_mul(factor)
-            .min(config.max_delay_ms),
-    )
-}
-
 fn sample(
     runtime: &Runtime,
     point: &ModbusPoint,
@@ -205,22 +193,10 @@ fn sample(
         quality,
         source_time_unix_ns: None,
         server_time_unix_ns: None,
-        received_time_unix_ns: crate::client::now_unix_ns(),
+        received_time_unix_ns: data_model::now_ns(),
     }
 }
 
 pub fn error_quality(error: OperationError) -> PointQuality {
-    let flags = if error.disconnect {
-        quality_flags::COMM_FAILURE
-    } else {
-        0
-    };
-    PointQuality::bad(
-        flags,
-        NativeStatus {
-            domain: "modbus".into(),
-            code: error.code,
-            detail: Some(error.detail),
-        },
-    )
+    acquisition::operation::error_quality(error, "modbus")
 }

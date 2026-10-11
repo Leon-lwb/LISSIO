@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use app::AppState;
 use buffer_graph::Edge;
 use kind::document::{NodeBusiness, NodeDocument, NodeLayout};
-use pipeline::{NodeDef, NodeKind};
+use kind::{NodeDef, NodeKind};
 use serde_json::json;
 
 use crate::{
@@ -120,7 +120,7 @@ fn math_node(id: &str, tab_id: &str) -> NodeDef {
         id.into(),
         tab_id.into(),
         NodeKind::Math {
-            op: pipeline::MathOp::Add,
+            op: kind::MathOp::Add,
             input_count: 1,
         },
     )

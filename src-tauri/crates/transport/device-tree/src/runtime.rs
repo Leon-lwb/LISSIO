@@ -3,10 +3,10 @@
 use crate::capability::ParentContract;
 use crate::driver::{NodeContext, NodeDriver, NodeRuntime, NodeStateEvent};
 use crate::error::{CloseError, ContractError, OpenError};
-use crate::model::{
+use crate::registry::DriverRegistry;
+use data_model::device_tree::{
     DeviceTreeDocument, NodeDecl, NodeId, NodeIssue, NodePath, NodeRole, NodeSnapshot, NodeState,
 };
-use crate::registry::DriverRegistry;
 use error::Error as _;
 use std::collections::BTreeSet;
 use std::sync::Arc;

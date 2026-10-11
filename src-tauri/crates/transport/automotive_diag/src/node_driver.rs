@@ -6,10 +6,10 @@ use acquisition::{
 };
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use device_tree::{
-    CapabilityMask, ChildPolicy, ConfigError, DriverId, ISOTP_REQUEST_PORT_ID, InvokeCapability,
-    NodeContext, NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime, NodeState, OpenError,
-    ParentContract, RuntimeCapabilities, ValidatedNodeConfig,
+    CapabilityMask, ConfigError, ISOTP_REQUEST_PORT_ID, InvokeCapability, NodeContext, NodeDriver,
+    NodeRuntime, OpenError, ParentContract, RuntimeCapabilities, ValidatedNodeConfig,
 };
 use diagnostic::UdsConfig;
 use flow::PayloadKind;

@@ -11,20 +11,18 @@ mod support;
 
 fn host() -> BackendHost {
     let (runtime, drivers) = backend_host::build_acquisition_runtime();
-    let state = app::AppState::with_acquisition(runtime);
+    let state = Arc::new(app::AppState::with_acquisition(runtime));
     state.install_model_catalog(Arc::new(backend_host::build_model_catalog(&drivers)));
     state.install_drivers(drivers);
-    let toolbox = control_api::Toolbox::from_state(&state);
     let sink: events::EventSinkHandle = Arc::new(NullEventSink);
     let config_dir = std::env::temp_dir().join("lissio-simulation-ingest-rpc-test");
     let ai = Arc::new(ai_host::AiHost::new(
         config_dir.clone(),
-        toolbox.clone(),
+        Arc::clone(&state),
         sink.clone(),
     ));
     BackendHost {
         state,
-        toolbox,
         ai,
         sink,
         performance: performance::PerformanceMonitor::new(),

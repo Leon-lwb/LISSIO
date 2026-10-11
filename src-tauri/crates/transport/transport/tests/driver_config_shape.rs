@@ -12,8 +12,9 @@
 
 use acquisition::{AcquisitionRunState, ExecutionGate, TransportBackend, TransportConnection};
 use async_trait::async_trait;
+use data_model::device_tree::NodeRole;
 use data_model::{SerialConfig, TransportConfig};
-use device_tree::{NodeDriver, NodeRole};
+use device_tree::NodeDriver;
 use schema_types::TestDataLink;
 use serde_json::Value;
 use std::sync::Arc;

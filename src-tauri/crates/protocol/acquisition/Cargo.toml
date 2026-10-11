@@ -13,6 +13,7 @@ name = "acquisition"
 workspace = true
 
 [dependencies]
+log = { workspace = true }
 ts-rs = { workspace = true }
 error = { workspace = true }
 schema_types = { workspace = true }

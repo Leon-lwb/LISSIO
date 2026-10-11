@@ -11,10 +11,8 @@ use acquisition::{
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
 use data_model::device::{DriverId, DriverPayload, SimulationConfig};
-use device_tree::{
-    CapabilityMask, DeviceTree, DriverRegistry, NodeContext, NodeDecl, NodeDriver, NodeId,
-    NodePath, NodeRole, NodeState,
-};
+use data_model::device_tree::{NodeDecl, NodeId, NodePath, NodeRole, NodeState};
+use device_tree::{CapabilityMask, DeviceTree, DriverRegistry, NodeContext, NodeDriver};
 use flow::{Direction, FlowEnvelope, SourceId};
 use points::{
     AccessLevel, DeliveryClass, NativeAddress, PointBatch, PointDataType, PointDescriptor,
@@ -206,7 +204,7 @@ async fn driver_registry_projects_capabilities_schema_ports_points_and_discovery
     registry
         .register(Arc::new(SessionDriver::new(factory, NodeRole::Endpoint)))
         .expect("register fixture source");
-    let driver_id = device_tree::DriverId::new("fixture");
+    let driver_id = data_model::device_tree::DriverId::new("fixture");
     let projection = registry
         .capability_projection(&driver_id, &json!({"value": 7}), None)
         .expect("driver projection");
@@ -363,7 +361,7 @@ async fn simulation_child_is_a_typed_virtual_subtree_with_idempotent_close() {
             "source::simulation",
             "simulation",
             data_model::device_tree::SIMULATION_DRIVER_ID,
-            device_tree::DEVICE_TREE_SCHEMA_VERSION,
+            data_model::device_tree::DEVICE_TREE_SCHEMA_VERSION,
             serde_json::to_value(SimulationConfig::default()).expect("simulation config"),
         )
         .expect("simulation node"),
@@ -373,7 +371,7 @@ async fn simulation_child_is_a_typed_virtual_subtree_with_idempotent_close() {
     root.children.push(source);
 
     let tree = DeviceTree::new(registry)
-        .open(device_tree::DeviceTreeDocument::new(root))
+        .open(data_model::device_tree::DeviceTreeDocument::new(root))
         .await
         .expect("open simulated subtree");
     let snapshots = tree.snapshots();

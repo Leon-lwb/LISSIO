@@ -1,6 +1,6 @@
 [package]
 name = "lissio-buffer-graph"
-description = "节点图数据路由 — Edge / NodeGraph / RoutedData 三层结构"
+description = "节点连接边 — Edge (source/target 节点与端口句柄对)"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -18,12 +18,8 @@ data_model = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
-criterion = { workspace = true }
 
-[[bench]]
-name = "node_graph_bench"
-harness = false
 [package.metadata.lissio]
 domain = "graph"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "节点连接边 — Edge: 解析后的 source/target 节点与端口句柄对, 供 hir 图构建共用"

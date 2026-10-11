@@ -4,40 +4,12 @@
 //! 由 [`evaluator::sync_spectrum_analyzers`] /
 //! [`evaluator::sync_ifft_buffers`] 提供。
 
+use super::AdaptiveRate;
 use crate::GraphEvalState;
 use crate::StreamGroupState;
 use spectrum::SpectrumResult;
 use std::collections::HashMap;
 use std::time::Duration;
-#[derive(Debug, Clone)]
-struct AdaptiveRate {
-    min: Duration,
-    max: Duration,
-    current: Duration,
-}
-
-impl AdaptiveRate {
-    fn new(min: Duration, max: Duration) -> Self {
-        Self {
-            min,
-            max: max.max(min),
-            current: min,
-        }
-    }
-
-    const fn current(&self) -> Duration {
-        self.current
-    }
-
-    fn on_send(&mut self) {
-        self.current = (self.current / 2).max(self.min);
-    }
-
-    fn on_idle(&mut self) {
-        self.current = (self.current + self.current / 2).min(self.max);
-    }
-}
-
 /// 合并自定义文本输出与后端图求值字符串输出 — 同 (widget, port) 键以后端求值为准
 ///
 /// custom_text_outputs: 前端 submit_custom_text_output 写入 (Trigger/Custom JS 节点)
@@ -182,7 +154,7 @@ pub fn resolve_widget_inputs(
 /// 后台自动发送调度循环 — Rust 侧唯一发送触发器 (取代前端 React 定时器)。
 ///
 /// 每 tick: 门控 (仅运行态) → 逐任务用与预览/手动发送同一内核
-/// (`schema::compute_frame_bytes`) 编码 → [`pipeline::SendSchedule`]
+/// (`schema::command_frame::compute_frame_bytes`) 编码 → [`pipeline::SendSchedule`]
 /// 去重/合并/跳周期 → 持 boundary 读锁经字节路由下发 (与手动发送同一条路) →
 /// 簿记回写。票据在发送前校验 — 运行状态切换后旧 epoch 的待发任务直接作废。
 pub async fn send_scheduler_ticker(
@@ -218,7 +190,7 @@ pub async fn send_scheduler_ticker(
         if plane.eval.send.lock().is_empty() {
             continue;
         }
-        let now_ms = data_model::now_us() / 1_000;
+        let now_ms = data_model::now_ms();
 
         // 阶段 1 (同步锁内): 快照输出值 → 同一内核编码 → 调度判定, 求出到期载荷
         let mut due: Vec<(String, String, Vec<u8>)> = Vec::new(); // (task_key, widget_id, bytes)
@@ -399,4 +371,5 @@ pub async fn textout_sender_ticker(
 }
 
 #[cfg(test)]
+#[path = "tickers_tests.rs"]
 mod tests;

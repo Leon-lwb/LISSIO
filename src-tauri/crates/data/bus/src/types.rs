@@ -62,12 +62,19 @@ pub struct RuntimeLimits {
 }
 
 impl Default for RuntimeLimits {
+    /// 默认限额与 `PipelineConfig::default()` 的对应字段同一事实
     fn default() -> Self {
+        Self::from(&data_model::PipelineConfig::default())
+    }
+}
+
+impl From<&data_model::PipelineConfig> for RuntimeLimits {
+    fn from(config: &data_model::PipelineConfig) -> Self {
         Self {
-            max_workers: 8,
-            memory_budget_mb: 256,
-            preview_fps_limit: 60,
-            preview_bandwidth_mb_per_sec: 8,
+            max_workers: config.max_workers,
+            memory_budget_mb: config.memory_budget_mb,
+            preview_fps_limit: config.preview_fps_limit,
+            preview_bandwidth_mb_per_sec: config.preview_bandwidth_mb_per_sec,
         }
     }
 }

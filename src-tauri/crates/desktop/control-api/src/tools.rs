@@ -279,7 +279,7 @@ pub async fn send_can_frame(
                 .find_map(|r| {
                     matches!(
                         nodes.get(&r.target).map(|n| &n.kind),
-                        Some(pipeline::NodeKind::Protocol { .. })
+                        Some(kind::NodeKind::Protocol { .. })
                     )
                     .then(|| r.target.clone())
                 })
@@ -398,7 +398,7 @@ pub fn get_raw_data(tb: &Toolbox, source: &str, max_bytes: u32) -> Value {
 /// 列出可用串口 (名称/类型/USB 信息) — 经注入的 [`crate::toolbox::Toolbox`]
 /// 串口发现端口 (L4 实现由宿主装配注入)。
 pub fn list_serial_ports(tb: &Toolbox) -> Result<Value, String> {
-    let ports = tb.serial_discovery.list_ports()?;
+    let ports = tb.serial_discovery().list_ports()?;
     serde_json::to_value(&ports).map_err(|e| e.to_string())
 }
 
@@ -441,22 +441,5 @@ pub fn next_call_id() -> String {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    /// hex 编码: 空格分隔大写, 空输入为空串。
-    #[test]
-    fn hex_encode_formats_bytes() {
-        assert_eq!(hex_encode(&[]), "");
-        assert_eq!(hex_encode(&[0x00, 0xAA, 0xFF]), "00 AA FF");
-    }
-
-    /// 调用 id 唯一且带 fe- 前缀。
-    #[test]
-    fn call_ids_are_unique() {
-        let a = next_call_id();
-        let b = next_call_id();
-        assert_ne!(a, b);
-        assert!(a.starts_with("fe-") && b.starts_with("fe-"));
-    }
-}
+#[path = "tools_tests.rs"]
+mod tests;

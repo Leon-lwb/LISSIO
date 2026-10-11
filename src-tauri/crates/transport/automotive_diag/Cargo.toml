@@ -27,7 +27,7 @@ serde_json = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 2
-responsibility = "Focused crate responsibility"
+responsibility = "UDS/OBD-II/J1939 诊断端点适配 — 诊断引擎与诊断节点驱动 (端口/调用契约)"
 
 [dev-dependencies]
 automotive = { workspace = true }

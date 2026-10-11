@@ -1,10 +1,12 @@
 use acquisition::{CapabilitySet, PortDescriptor};
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{
+    ChildPolicy, DriverId, NodeDecl, NodeId, NodePath, NodeRole, NodeState,
+};
 use device_tree::{
-    CapabilityMask, ChildPolicy, CloseError, ConfigError, DriverId, NodeContext, NodeDecl,
-    NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime, NodeState, OpenError, ParentContract,
-    RuntimeCapabilities, ValidatedNodeConfig,
+    CapabilityMask, CloseError, ConfigError, NodeContext, NodeDriver, NodeRuntime, OpenError,
+    ParentContract, RuntimeCapabilities, ValidatedNodeConfig,
 };
 use flow::PayloadKind;
 use serde_json::{Value, json};
@@ -277,8 +279,8 @@ pub fn node(id: &str, name: &str, driver: &str) -> NodeDecl {
 }
 
 #[allow(dead_code)]
-pub const fn document(root: NodeDecl) -> device_tree::DeviceTreeDocument {
-    device_tree::DeviceTreeDocument::new(root)
+pub const fn document(root: NodeDecl) -> data_model::device_tree::DeviceTreeDocument {
+    data_model::device_tree::DeviceTreeDocument::new(root)
 }
 
 #[allow(dead_code)]

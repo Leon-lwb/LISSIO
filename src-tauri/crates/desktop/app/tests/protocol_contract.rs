@@ -43,7 +43,7 @@ fn event_serialization_matches_typescript_discriminant() {
     let mut snapshot = GraphOutputSnapshot {
         tick: 7,
         graphs_version: 3,
-        values: pipeline::ValuesMap::default(),
+        values: graph::ValuesMap::default(),
     };
     snapshot
         .values

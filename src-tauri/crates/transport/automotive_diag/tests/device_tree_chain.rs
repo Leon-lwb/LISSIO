@@ -5,9 +5,10 @@ use acquisition::{
     TransportConnection,
 };
 use async_trait::async_trait;
+use data_model::device_tree::NodeRole;
 use data_model::device_tree::{DeviceTreeDocument, NodeDecl, NodeId, NodeState};
 use data_model::{SlcanConfig, TransportConfig};
-use device_tree::{DeviceTree, DeviceTreeRuntime, DriverRegistry, NodeRole};
+use device_tree::{DeviceTree, DeviceTreeRuntime, DriverRegistry};
 use error::{AppError as Error, Result};
 use schema_types::TestDataLink;
 use serde_json::{Value, json};

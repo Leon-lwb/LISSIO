@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decoder_block::DecoderBlockDef;
-use crate::hex::parse_hex;
+use crate::hex::parse_hex_lossy;
 use crate::protocol_config::ProtocolConfig;
 
 /// schema 预设 — 所有现有协议 kind 都是 schema 的预设
@@ -122,7 +122,7 @@ pub fn encode_by_blocks(encode: &[EncodeBlockDef], ports: &[String], values: &[f
     for b in encode {
         match b {
             EncodeBlockDef::ConstHex { hex } => {
-                out.extend_from_slice(&parse_hex(hex));
+                out.extend_from_slice(&parse_hex_lossy(hex));
             }
             EncodeBlockDef::VarRef {
                 port_name,

@@ -191,5 +191,22 @@ pub fn now_us() -> u64 {
     use std::time::{SystemTime, UNIX_EPOCH};
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map_or(0, |d| d.as_micros() as u64)
+        .map_or(0, |d| u64::try_from(d.as_micros()).unwrap_or(u64::MAX))
+}
+
+/// Unix epoch 毫秒 — 全工作区唯一实现 (时间源不可用时回退 0)
+pub fn now_ms() -> u64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| u64::try_from(d.as_millis()).unwrap_or(u64::MAX))
+}
+
+/// Unix epoch 纳秒 — 饱和到 `i64::MAX`, 供采集质量时间戳使用
+pub fn now_ns() -> i64 {
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let nanos = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0, |d| d.as_nanos());
+    i64::try_from(nanos).unwrap_or(i64::MAX)
 }

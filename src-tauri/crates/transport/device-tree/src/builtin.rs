@@ -5,12 +5,12 @@ use crate::driver::{
     DriverContractFixture, NodeContext, NodeDriver, NodeRuntime, ParentFixture, ValidatedNodeConfig,
 };
 use crate::error::{CloseError, ConfigError, ContractError, OpenError};
-use crate::model::{
-    ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeId, NodePath, NodeRole, NodeState,
-};
 use acquisition::PortDescriptor;
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{
+    ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DriverId, NodeId, NodePath, NodeRole, NodeState,
+};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

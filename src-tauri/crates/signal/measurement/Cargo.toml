@@ -19,4 +19,4 @@ spectrum = { workspace = true }
 [package.metadata.lissio]
 domain = "signal"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "波形测量与自动设置纯数学内核 — Vpp/RMS/占空比统计、周期检测、1-2-5 自动档建议"

@@ -12,12 +12,9 @@
 #![recursion_limit = "256"]
 
 pub use device::{GpuContext, GpuDeviceInfo};
-pub use envelope::{Envelope, envelope_minmax, envelope_minmax_cpu};
+pub use envelope::envelope_minmax;
 pub use error::{GpuError, GpuResult};
 pub use pool::{GpuBuffer, ReadbackStaging};
-
-/// wgpu 再导出 — 上层 crate 经此取用, 工作区内 wgpu 版本单一收口
-pub use wgpu;
 
 mod device;
 mod engine;

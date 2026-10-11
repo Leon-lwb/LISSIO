@@ -3,15 +3,13 @@
 //! 覆盖:
 //! - `TransportConfig` tagged enum 7 变体 serde round-trip
 //! - 7 种 backend 子 config 的 Default / 字段透传 / serde
-//! - `WidgetConfig` 9 种 widget + `WidgetBinding` 3 模式 + `ImageFormat`
+//! - `WidgetBinding` 3 种绑定模式 serde round-trip
 //! - `PipelineConfig` Default / `#[serde(default)]` 字段省略 / serde round-trip
 
 use can::CanBitrate;
 use data_model::config::{
-    ButtonConfig, CandleConfig, CheckboxConfig, ChoiceOption, ImageConfig, ImageFormat, KnobConfig,
-    LabelConfig, PieChartConfig, PipelineConfig, RadioConfig, SerialConfig, SlcanConfig,
-    SliderConfig, TcpClientConfig, TcpServerConfig, TestDataConfig, TestSignal, TransportConfig,
-    UdpConfig, WaveformConfig, WidgetBinding, WidgetConfig,
+    CandleConfig, PipelineConfig, SerialConfig, SlcanConfig, TcpClientConfig, TcpServerConfig,
+    TestDataConfig, TestSignal, TransportConfig, UdpConfig, WidgetBinding,
 };
 use data_model::{FlowControl, Parity, StopBits};
 
@@ -246,243 +244,27 @@ fn slcan_and_candle_configs_fill_missing_fields() {
 }
 
 // ============================================================
-// WidgetConfig 9 种控件 + ImageFormat + WidgetBinding
+// WidgetBinding — 3 种绑定模式
 // ============================================================
 
 #[test]
-fn knob_widget_roundtrip_with_auto_binding() {
-    let w = WidgetConfig::Knob(KnobConfig {
-        id: "k1".into(),
-        label: "Volume".into(),
-        min: 0.0,
-        max: 100.0,
-        step: 1.0,
-        value: 50.0,
-        binding: WidgetBinding::Auto {
+fn widget_binding_roundtrip_covers_all_modes() {
+    let cases = [
+        WidgetBinding::None,
+        WidgetBinding::Auto {
             transport_id: "transport-1".into(),
             protocol_id: "protocol-1".into(),
             channel: 3,
         },
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    assert!(json.contains("\"kind\":\"Knob\""));
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Knob(k) => {
-            assert_eq!(k.id, "k1");
-            assert_f32(k.value, 50.0);
-            assert!(matches!(k.binding, WidgetBinding::Auto { channel: 3, .. }));
-        }
-        _ => panic!("expected Knob variant"),
-    }
-}
-
-#[test]
-fn button_widget_with_manual_template_binding() {
-    let w = WidgetConfig::Button(ButtonConfig {
-        id: "b1".into(),
-        label: "Send".into(),
-        press_value: 1.0,
-        release_value: 0.0,
-        binding: WidgetBinding::Manual {
+        WidgetBinding::Manual {
             transport_id: "transport-1".into(),
-            template: "AT+CMD={value}\r\n".into(),
+            template: "SET {value}".into(),
         },
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    assert!(json.contains("\"mode\":\"Manual\""));
-    assert!(json.contains("{value}"));
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Button(b) => {
-            assert_f32(b.press_value, 1.0);
-            assert_f32(b.release_value, 0.0);
-        }
-        _ => panic!("expected Button variant"),
-    }
-}
-
-#[test]
-fn radio_widget_options_roundtrip() {
-    let w = WidgetConfig::Radio(RadioConfig {
-        id: "r1".into(),
-        label: "Mode".into(),
-        options: vec![
-            ChoiceOption {
-                id: "low".into(),
-                label: "Low".into(),
-                value: 1.0,
-            },
-            ChoiceOption {
-                id: "mid".into(),
-                label: "Mid".into(),
-                value: 2.0,
-            },
-            ChoiceOption {
-                id: "high".into(),
-                label: "High".into(),
-                value: 3.0,
-            },
-        ],
-        selected_id: "mid".into(),
-        binding: WidgetBinding::None,
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Radio(r) => {
-            assert_eq!(r.options.len(), 3);
-            assert_eq!(r.options[2].label, "High");
-            assert_eq!(r.selected_id, "mid");
-            assert!(matches!(r.binding, WidgetBinding::None));
-        }
-        _ => panic!("expected Radio variant"),
-    }
-}
-
-#[test]
-fn checkbox_and_slider_widget_roundtrip() {
-    let cb = WidgetConfig::Checkbox(CheckboxConfig {
-        id: "c1".into(),
-        label: "Enable".into(),
-        options: vec![ChoiceOption {
-            id: "enable".into(),
-            label: "Enable".into(),
-            value: 1.0,
-        }],
-        selected_ids: vec!["enable".into()],
-        empty_value: None,
-        binding: WidgetBinding::Auto {
-            transport_id: "transport-1".into(),
-            protocol_id: "protocol-1".into(),
-            channel: 0,
-        },
-    });
-    let json = serde_json::to_string(&cb).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Checkbox(c) => {
-            assert_eq!(c.selected_ids, vec!["enable"]);
-            assert_f32(c.options[0].value, 1.0);
-        }
-        _ => panic!("expected Checkbox variant"),
-    }
-
-    let sl = WidgetConfig::Slider(SliderConfig {
-        id: "s1".into(),
-        label: "Speed".into(),
-        min: 0.0,
-        max: 200.0,
-        step: 0.5,
-        value: 100.0,
-        binding: WidgetBinding::None,
-    });
-    let json = serde_json::to_string(&sl).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Slider(s) => {
-            assert_f32(s.max, 200.0);
-            assert_f32(s.step, 0.5);
-        }
-        _ => panic!("expected Slider variant"),
-    }
-}
-
-#[test]
-fn label_widget_with_optional_channel() {
-    let w = WidgetConfig::Label(LabelConfig {
-        id: "l1".into(),
-        label: "Greeting".into(),
-        text: "Hello".into(),
-        channel: Some(7),
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Label(l) => {
-            assert_eq!(l.text, "Hello");
-            assert_eq!(l.channel, Some(7));
-        }
-        _ => panic!("expected Label variant"),
-    }
-
-    // None 通道应正常 round-trip
-    let w = WidgetConfig::Label(LabelConfig {
-        id: "l2".into(),
-        label: "Static label".into(),
-        text: "Static".into(),
-        channel: None,
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    assert!(json.contains("\"channel\":null"));
-}
-
-#[test]
-fn waveform_widget_visible_channels_vec_roundtrip() {
-    let w = WidgetConfig::Waveform(WaveformConfig {
-        id: "wf1".into(),
-        label: "Scope".into(),
-        channels: 4,
-        max_points: 1024,
-        visible_channels: vec![true, false, true, false],
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Waveform(w) => {
-            assert_eq!(w.channels, 4);
-            assert_eq!(w.max_points, 1024);
-            assert_eq!(w.visible_channels, vec![true, false, true, false]);
-        }
-        _ => panic!("expected Waveform variant"),
-    }
-}
-
-#[test]
-fn pie_chart_widget_segments_and_channels() {
-    let w = WidgetConfig::PieChart(PieChartConfig {
-        id: "p1".into(),
-        label: "Share".into(),
-        segments: vec!["A".into(), "B".into(), "C".into()],
-        channels: vec![0, 1, 2],
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::PieChart(p) => {
-            assert_eq!(p.segments.len(), 3);
-            assert_eq!(p.channels, vec![0, 1, 2]);
-        }
-        _ => panic!("expected PieChart variant"),
-    }
-}
-
-#[test]
-fn image_widget_format_uses_lowercase_serde() {
-    for fmt in [ImageFormat::Rgb888, ImageFormat::Rgb565, ImageFormat::Gray8] {
-        let json = serde_json::to_string(&fmt).unwrap();
-        // rename_all = "lowercase"
-        assert!(json.contains("rgb888") || json.contains("rgb565") || json.contains("gray8"));
-        let restored: ImageFormat = serde_json::from_str(&json).unwrap();
-        assert_eq!(restored, fmt);
-    }
-
-    let w = WidgetConfig::Image(ImageConfig {
-        id: "img1".into(),
-        label: "Preview".into(),
-        width: 320,
-        height: 240,
-        format: ImageFormat::Rgb565,
-    });
-    let json = serde_json::to_string(&w).unwrap();
-    let restored: WidgetConfig = serde_json::from_str(&json).unwrap();
-    match restored {
-        WidgetConfig::Image(i) => {
-            assert_eq!(i.width, 320);
-            assert_eq!(i.height, 240);
-            assert_eq!(i.format, ImageFormat::Rgb565);
-        }
-        _ => panic!("expected Image variant"),
+    ];
+    for case in cases {
+        let json = serde_json::to_string(&case).unwrap();
+        let restored: WidgetBinding = serde_json::from_str(&json).unwrap();
+        assert_eq!(serde_json::to_string(&restored).unwrap(), json);
     }
 }
 

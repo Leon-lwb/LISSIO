@@ -14,11 +14,15 @@ workspace = true
 
 [dependencies]
 kind = { workspace = true }
+protocol = { workspace = true }
+frame-decoder = { workspace = true }
+graph = { workspace = true }
 acquisition = { workspace = true }
 points = { workspace = true }
 # graph_hir 测试构造 Protocol 节点需要 ProtocolConfig
 schema_types = { workspace = true }
 pipeline = { workspace = true }
+schema = { workspace = true }
 app = { workspace = true }
 graph_ops = { workspace = true }
 buffer_graph = { workspace = true }

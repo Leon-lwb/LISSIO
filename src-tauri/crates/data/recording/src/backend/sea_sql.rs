@@ -12,6 +12,7 @@
 //! a checksum is an arbitrary 64-bit value and `i64::try_from` would panic on
 //! half of all batches.
 
+use data_model::now_us;
 use sea_orm::{
     ConnectionTrait, DatabaseConnection, DbBackend, DbErr, QueryResult, Statement, Value,
 };
@@ -68,14 +69,6 @@ pub fn get_string(row: &QueryResult, index: usize) -> Result<String, RecordingEr
 }
 
 /// Milliseconds-free monotonic wall clock in microseconds since the Unix epoch.
-pub fn now_us() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |duration| {
-            u64::try_from(duration.as_micros()).unwrap_or(u64::MAX)
-        })
-}
-
 pub fn parse_domain(value: &str) -> crate::Domain {
     match value {
         "bytes" => crate::Domain::Bytes,

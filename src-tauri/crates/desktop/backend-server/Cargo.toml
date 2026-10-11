@@ -17,6 +17,7 @@ name = "lissio-server"
 path = "src/main.rs"
 
 [dependencies]
+stream = { workspace = true }
 ai-host = { workspace = true }
 app = { workspace = true }
 backend-host = { workspace = true }

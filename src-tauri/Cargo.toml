@@ -33,68 +33,74 @@ debug = true
 # and the layer is expressed by [package.metadata.lissio]; depending directly on any lower
 # layer is allowed, with no forwarding facade.
 members = [
-  # L0 foundation — error/type/buffer/DSP primitives/self-contained infrastructure; must not depend on any upper layer
+  # Members are grouped by domain for navigation only. The authoritative domain and
+  # dependency layer of every crate live in its [package.metadata.lissio]; run
+  # `pnpm architecture` for the generated domain x layer matrix, and see
+  # docs/architecture/crates.md for the domain DAG and layer rules.
+  # shared
   "crates/shared/error",
   "crates/shared/flow",
-  "crates/protocol/points",
-  "crates/vehicle/can",
   "crates/shared/data-model",
-  "crates/protocol/logic",
-  "crates/vehicle/diagnostic",
-  "crates/protocol/schema_types",
-  "crates/signal/raw-data",
-  "crates/graph/buffer_graph",
-  "crates/signal/waveform",
-  "crates/signal/filter",
-  "crates/signal/spectrum",
-  "crates/signal/measurement",
   "crates/shared/subscription",
-  "crates/signal/gpu",
-  "crates/desktop/events",
-  # L1 protocol — protocol parsing/encoding engine
+  # vehicle
+  "crates/vehicle/can",
+  "crates/vehicle/diagnostic",
+  # protocol
+  "crates/protocol/points",
+  "crates/protocol/logic",
+  "crates/protocol/schema_types",
   "crates/protocol/protocol",
   "crates/protocol/protocol_float",
   "crates/protocol/protocol_can_bridge",
   "crates/protocol/logic_decoder",
   "crates/protocol/schema",
-  # L1 transport — channel send/receive (serial/network/CAN bridge/automotive diagnostics)
-  "crates/transport/device-tree",
-  "crates/transport/serial",
-  "crates/transport/network",
-  "crates/transport/can-transport",
-  "crates/transport/transport",
   "crates/protocol/acquisition",
-  "crates/transport/modbus-adapter",
-  "crates/transport/s7-adapter",
-  "crates/transport/automotive",
-  "crates/transport/automotive_isotp",
-  "crates/transport/automotive_diag",
-  # L1 node — node-graph compiler and runtime (HIR→Plane→Lower→Eval)
+  "crates/protocol/frame-decoder",
+  # signal
+  "crates/signal/raw-data",
+  "crates/signal/waveform",
+  "crates/signal/filter",
+  "crates/signal/spectrum",
+  "crates/signal/measurement",
+  "crates/signal/gpu",
+  # graph
+  "crates/graph/buffer_graph",
   "crates/graph/kind",
   "crates/graph/hir",
   "crates/graph/plane",
   "crates/graph/lower",
   "crates/graph/eval",
   "crates/graph/graph",
-  "crates/protocol/frame-decoder",
   "crates/graph/trigger",
   "crates/graph/graph-testkit",
-  # L2 pipeline — data plane (byte routing/numeric evaluation/stream framework/scheduling)
+  # transport
+  "crates/transport/device-tree",
+  "crates/transport/serial",
+  "crates/transport/network",
+  "crates/transport/can-transport",
+  "crates/transport/transport",
+  "crates/transport/modbus-adapter",
+  "crates/transport/s7-adapter",
+  "crates/transport/automotive",
+  "crates/transport/automotive_isotp",
+  "crates/transport/automotive_diag",
+  # data
   "crates/data/bus",
   "crates/data/recording",
-  "crates/desktop/pipeline",
-  "crates/desktop/stream",
-  "crates/desktop/evaluator",
-  # L3 app — application core (global state/graph commit core/native menu/update flow)
-  "crates/desktop/app",
-  "crates/desktop/graph_ops",
-  "crates/desktop/menu_shell",
-  "crates/desktop/update_flow",
-  # L3 ai — AI/MCP infrastructure
+  # ai
   "crates/ai/llm",
   "crates/ai/chat-session",
   "crates/ai/chat",
   "crates/ai/mcp-client",
+  # desktop
+  "crates/desktop/events",
+  "crates/desktop/pipeline",
+  "crates/desktop/stream",
+  "crates/desktop/evaluator",
+  "crates/desktop/app",
+  "crates/desktop/graph_ops",
+  "crates/desktop/menu_shell",
+  "crates/desktop/update_flow",
   "crates/desktop/ai-host",
   "crates/desktop/control-api",
   "crates/desktop/rpc-api",
@@ -103,7 +109,6 @@ members = [
   "crates/desktop/backend-host",
   "crates/desktop/mcp-server",
   "crates/desktop/backend-cli",
-  # L4 cmd — thin Tauri IPC command adapter layer, holds no core logic; must not be depended on by any non-cmd crate
 ]
 
 [workspace.package]

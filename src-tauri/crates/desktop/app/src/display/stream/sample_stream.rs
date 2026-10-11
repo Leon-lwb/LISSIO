@@ -7,7 +7,7 @@ use crate::AppState;
 use bus::{SampleBatch, TopicKey};
 
 use super::binary::encode_samples;
-use crate::display::stream_sink::{StreamPayload, StreamSink};
+use stream::sink::{StreamPayload, StreamSink};
 
 pub(super) async fn spawn_sample_stream(
     state: &AppState,

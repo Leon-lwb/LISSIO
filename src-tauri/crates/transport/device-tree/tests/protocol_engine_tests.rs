@@ -1,9 +1,10 @@
 use acquisition::PortDescriptor;
 use async_trait::async_trait;
+use data_model::device_tree::{DriverId, NodeId, NodePath, NodeRole, NodeState};
 use device_tree::{
-    ByteSourceCapability, Capability, CapabilityMask, CloseError, ConfigError, DriverId,
-    DriverRegistry, FrameSubscription, NodeContext, NodeDriver, NodeId, NodePath, NodeRole,
-    NodeRuntime, NodeState, ParentContract, ProtocolEngineDriver, RuntimeCapabilities,
+    ByteSourceCapability, Capability, CapabilityMask, CloseError, ConfigError, DriverRegistry,
+    FrameSubscription, NodeContext, NodeDriver, NodeRuntime, ParentContract, ProtocolEngineDriver,
+    RuntimeCapabilities,
 };
 use flow::{BytesChunk, Direction, FlowEnvelope, FlowGap, Framing, LostUnit, SourceId};
 use schema_types::ProtocolNodeConfig;

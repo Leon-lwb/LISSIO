@@ -10,7 +10,7 @@ use crate::args::{RpcError, domain, text};
 
 /// 列出系统可用串口 (含平台元数据补全)。
 pub fn list_ports(host: &BackendHost) -> Result<Value, RpcError> {
-    text(host.toolbox.serial_discovery.list_ports())
+    text(host.state.serial_discovery().list_ports())
 }
 
 /// 列出全部 CandleLight 设备。

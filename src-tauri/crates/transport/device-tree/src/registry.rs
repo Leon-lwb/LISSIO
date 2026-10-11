@@ -6,11 +6,11 @@ use crate::driver::{
     DriverContractFixture, NodeContext, NodeDriver, ParentFixture, ValidatedNodeConfig,
 };
 use crate::error::{ConfigError, ContractError};
-use crate::model::{
-    DEVICE_TREE_SCHEMA_VERSION, DeviceTreeDocument, DriverId, NodeDecl, NodeId, NodePath, NodeRole,
-};
 use acquisition::{AdapterCapability, DiscoveredEndpoint, PortDescriptor};
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{
+    DEVICE_TREE_SCHEMA_VERSION, DeviceTreeDocument, DriverId, NodeDecl, NodeId, NodePath, NodeRole,
+};
 use parking_lot::RwLock;
 use points::PointDescriptor;
 use serde::{Deserialize, Serialize};
@@ -27,7 +27,7 @@ pub struct DriverProjection {
     pub config_schema: ConfigurationSchema,
     pub ports: Vec<PortDescriptor>,
     #[serde(default)]
-    pub child_policy: crate::model::ChildPolicy,
+    pub child_policy: data_model::device_tree::ChildPolicy,
 }
 
 /// 只读驱动目录。注册表内部加锁，不向外暴露可变锁。

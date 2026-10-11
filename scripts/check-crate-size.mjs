@@ -8,6 +8,7 @@
  * Exemption scope (matching the job that only lived in `lint.yml` and never ran):
  *   - paths containing a `tests` directory
  *   - `*_tests.rs`
+ *   - a flat `tests.rs` unit-test module file
  *   - paths containing a `benches` directory
  * That is, only production source is constrained; tests and benchmarks do not count.
  *
@@ -34,7 +35,8 @@ const SKIP_DIRS = new Set(['target', 'node_modules']);
 function isExempt(relPath) {
   const parts = relPath.split('/');
   if (parts.includes('tests') || parts.includes('benches')) return true;
-  return parts.at(-1).endsWith('_tests.rs');
+  const name = parts.at(-1);
+  return name.endsWith('_tests.rs') || name === 'tests.rs';
 }
 
 function walk(dir, out = []) {

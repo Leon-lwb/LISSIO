@@ -14,7 +14,7 @@ use crate::args::{RpcError, encode, ok, required, text};
 /// 清空数据缓冲区 (source = 数据源 Protocol 节点 id)。
 pub fn clear_buffer(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
-    data::clear_buffer(&host.toolbox, &source);
+    data::clear_buffer(&host.state, &source);
     ok()
 }
 
@@ -22,14 +22,14 @@ pub fn clear_buffer(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value
 pub fn set_buffer_channels(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
     let count: usize = required(args, cmd, "count")?;
-    data::set_buffer_channels(&host.toolbox, &source, count);
+    data::set_buffer_channels(&host.state, &source, count);
     ok()
 }
 
 /// 获取缓冲区当前 (通道数, 点数)。
 pub fn get_buffer_info(host: &BackendHost, cmd: &str, args: &Value) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
-    encode(&data::get_buffer_size(&host.toolbox, &source))
+    encode(&data::get_buffer_size(&host.state, &source))
 }
 
 /// 设置波形缓冲区最大点数。
@@ -40,7 +40,7 @@ pub fn set_waveform_buffer_capacity(
 ) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
     let max_points: usize = required(args, cmd, "max_points")?;
-    data::set_waveform_buffer_capacity(&host.toolbox, &source, max_points);
+    data::set_waveform_buffer_capacity(&host.state, &source, max_points);
     ok()
 }
 
@@ -52,7 +52,7 @@ pub fn set_rawdata_buffer_capacity(
 ) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
     let capacity: usize = required(args, cmd, "capacity")?;
-    data::set_rawdata_buffer_capacity(&host.toolbox, &source, capacity);
+    data::set_rawdata_buffer_capacity(&host.state, &source, capacity);
     ok()
 }
 
@@ -63,7 +63,7 @@ pub fn set_can_buffer_capacity(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let capacity: usize = required(args, cmd, "capacity")?;
-    data::set_can_buffer_capacity(&host.toolbox, capacity);
+    data::set_can_buffer_capacity(&host.state, capacity);
     ok()
 }
 
@@ -74,7 +74,7 @@ pub fn set_logic_buffer_capacity(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let capacity: usize = required(args, cmd, "capacity")?;
-    data::set_logic_buffer_capacity(&host.toolbox, capacity);
+    data::set_logic_buffer_capacity(&host.state, capacity);
     ok()
 }
 
@@ -107,7 +107,7 @@ pub async fn create_waveform_snapshot(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let source: String = required(args, cmd, "source")?;
-    text(data::create_waveform_snapshot(&host.toolbox, &source).await)
+    text(data::create_waveform_snapshot(&host.state, &source).await)
 }
 
 /// 从停止快照按新时基重新生成 LTTB 视觉采样。
@@ -123,7 +123,7 @@ pub async fn query_waveform_snapshot(
     let selection: WaveformSeriesSelection = required(args, cmd, "selection")?;
     text(
         data::query_waveform_snapshot(
-            &host.toolbox,
+            &host.state,
             &snapshot_id,
             start_ms,
             end_ms,
@@ -141,7 +141,7 @@ pub fn release_waveform_snapshot(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let snapshot_id: String = required(args, cmd, "snapshot_id")?;
-    data::release_waveform_snapshot(&host.toolbox, &snapshot_id);
+    data::release_waveform_snapshot(&host.state, &snapshot_id);
     ok()
 }
 
@@ -160,7 +160,7 @@ pub async fn get_waveform_raw_range(
     let selection: WaveformSeriesSelection = required(args, cmd, "selection")?;
     text(
         data::get_waveform_raw_range(
-            &host.toolbox,
+            &host.state,
             &source,
             snapshot_id,
             start_timestamp_us,
@@ -174,7 +174,7 @@ pub async fn get_waveform_raw_range(
 
 /// 命令发送帧字节打包 — 后端单一权威 (预览专用入口)。
 pub fn compute_command_frame_bytes(cmd: &str, args: &Value) -> Result<Value, RpcError> {
-    let frame: pipeline::CommandFrameDto = required(args, cmd, "frame")?;
+    let frame: schema::command_frame::CommandFrameDto = required(args, cmd, "frame")?;
     let inputs: std::collections::HashMap<String, f64> = required(args, cmd, "inputs")?;
     encode(&data::compute_command_frame_bytes(&frame, &inputs))
 }
@@ -186,7 +186,7 @@ pub async fn send_command_frame(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let widget_id: String = required(args, cmd, "widget_id")?;
-    let frame: pipeline::CommandFrameDto = required(args, cmd, "frame")?;
+    let frame: schema::command_frame::CommandFrameDto = required(args, cmd, "frame")?;
     let inputs: std::collections::HashMap<String, f64> = required(args, cmd, "inputs")?;
-    text(data::send_command_frame(&host.toolbox, &widget_id, &frame, &inputs).await)
+    text(data::send_command_frame(&host.state, &widget_id, &frame, &inputs).await)
 }

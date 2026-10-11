@@ -44,7 +44,7 @@ pub async fn run_control(host: &Host, action: &CliRunAction) -> Result<Value, St
         CliRunAction::Pause => pipeline::RunAction::Pause,
         CliRunAction::Stop => pipeline::RunAction::Stop,
     };
-    control::run_workspace(&host.toolbox, host.sink.as_ref(), run_action).await
+    control::run_workspace(&host.state, host.sink.as_ref(), run_action).await
 }
 
 /// 常驻服务 — Web 出口 (+ 可选 MCP), 直至退出信号后收尾。
@@ -81,7 +81,7 @@ pub async fn serve(options: ServeOptions) -> Result<(), String> {
     let port = mcp_server::resolve_port(options.mcp_port);
     let handle = mcp_server::start(
         std::sync::Arc::new(control_api::capabilities::CapabilityRegistry::builtin()),
-        host.toolbox.clone(),
+        host.state.clone(),
         host.sink.clone(),
         port,
     )

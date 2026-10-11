@@ -81,10 +81,7 @@ impl ProtocolEngine for SchemaEngine {
             self.buf.drain(..base);
         }
         // 防止缓冲区无限增长 (与 JustFloatEngine 一致)
-        if self.buf.len() > 8192 {
-            let drop = self.buf.len() - 4096;
-            self.buf.drain(..drop);
-        }
+        protocol::buffer::truncate_buffer(&mut self.buf);
 
         FeedOutput::from_frames(frames)
     }

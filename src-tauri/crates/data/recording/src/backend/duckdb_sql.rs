@@ -3,6 +3,7 @@
 //! The store contract in [`crate::port`] never sees a `Connection`; this module
 //! and its parent are the only places that do.
 
+use data_model::now_us;
 use std::path::Path;
 
 use duckdb::{AccessMode, Config, Connection, params};
@@ -376,14 +377,6 @@ pub(super) fn parse_state(value: &str) -> SessionState {
 }
 
 /// Milliseconds-free monotonic wall clock in microseconds since the Unix epoch.
-pub(super) fn now_us() -> u64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |duration| {
-            u64::try_from(duration.as_micros()).unwrap_or(u64::MAX)
-        })
-}
-
 /// Codec failures have no DuckDB error variant of their own; the port reports
 /// them through the database error so the message survives unchanged.
 pub(super) fn to_duckdb_error(error: impl std::fmt::Display) -> duckdb::Error {

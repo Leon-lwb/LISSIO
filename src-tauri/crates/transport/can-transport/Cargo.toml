@@ -13,6 +13,7 @@ name = "can_transport"
 workspace = true
 
 [dependencies]
+serialport = { workspace = true }
 serde_json = { workspace = true }
 acquisition = { workspace = true }
 data_model = { workspace = true }

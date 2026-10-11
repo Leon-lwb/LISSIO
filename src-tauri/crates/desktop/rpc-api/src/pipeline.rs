@@ -4,12 +4,13 @@
 //! [`data_model::PipelineConfig::sanitized`], 运行切换在
 //! `app::apply_workspace_run`, 本模块只做参数解包与事件广播。
 
-use app::{CommandFrameDto, RunAction, SendMode, SendStatus, SendTask, apply_workspace_run};
+use app::{RunAction, SendMode, SendStatus, SendTask, apply_workspace_run};
 use backend_host::BackendHost;
 use data_model::PipelineConfig;
 use error::AppError as Error;
 use error::ConfigError;
 use events::emit_workspace_run;
+use schema::command_frame::CommandFrameDto;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -33,12 +34,11 @@ pub fn set_pipeline_config(host: &BackendHost, cmd: &str, args: &Value) -> Resul
     let config: PipelineConfig = required(args, cmd, "config")?;
     let cfg = config.sanitized();
     let state = &host.state;
-    state.data_plane.eval.bus.set_limits(app::RuntimeLimits {
-        max_workers: cfg.max_workers,
-        memory_budget_mb: cfg.memory_budget_mb,
-        preview_fps_limit: cfg.preview_fps_limit,
-        preview_bandwidth_mb_per_sec: cfg.preview_bandwidth_mb_per_sec,
-    });
+    state
+        .data_plane
+        .eval
+        .bus
+        .set_limits(app::RuntimeLimits::from(&cfg));
     log::info!("流水线参数已更新 (clamp 后): {cfg:?}");
     *state.pipeline_config.write() = cfg;
     ok()

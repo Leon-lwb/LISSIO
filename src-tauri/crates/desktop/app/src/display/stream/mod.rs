@@ -17,8 +17,8 @@ use stream::{
 
 use super::protocol::{DisplayEvent, DisplayRequest, RawDataOrigin, SubscriptionInfo};
 use super::snapshot::spawn_snapshot;
-use super::stream_sink::{StreamPayload, StreamSink};
 use super::target;
+use stream::sink::{StreamPayload, StreamSink};
 
 mod binary;
 mod envelope_stream;
@@ -95,36 +95,31 @@ fn spawn_stream<S, F>(
     F: Fn(S::Batch) -> StreamPayload + Send + 'static,
 {
     let channel_id = on_event.id();
-    let mut cancel = subscription::register_cancel(&state.subscriptions, channel_id);
+    let cancel = subscription::register_cancel(&state.subscriptions, channel_id);
     let subscriptions = state.subscriptions.clone();
-    let mut rate = display_rate(
+    let rate = display_rate(
         interval,
         state.data_plane.eval.bus.limits().preview_fps_limit,
     );
     tokio::spawn(async move {
         let seq = AtomicU64::new(0);
-        loop {
-            tokio::select! {
-                _ = &mut cancel => break,
-                () = tokio::time::sleep(rate.current()) => {
-                    let backlog = source.backlog();
-                    // 显示点数预算由调用方传入；即使未来某个源给出超过自身硬上限的
-                    // 预算，也不能让 usize::clamp(min > max) 使订阅任务 panic。
-                    let drain_size = stream::bounded_drain_size(
-                        backlog,
-                        min_batch,
-                        S::MAX_DRAIN,
-                    );
-                    let Some(mut batch) = source.drain(drain_size) else {
-                        rate.on_idle();
-                        continue;
-                    };
-                    S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
-                    if !on_event.send(encode(batch)) { break; }
-                    rate.on_send();
-                }
-            }
-        }
+        // 分片/自适应推送循环由 L2 `stream` 提供, 这里只提供取批与编码闭包
+        stream::adaptive_stream_loop(
+            name,
+            on_event,
+            rate,
+            move || {
+                let backlog = source.backlog();
+                // 显示点数预算由调用方传入；即使未来某个源给出超过自身硬上限的
+                // 预算，也不能让 usize::clamp(min > max) 使订阅任务 panic。
+                let drain_size = stream::bounded_drain_size(backlog, min_batch, S::MAX_DRAIN);
+                let mut batch = source.drain(drain_size)?;
+                S::set_seq(&mut batch, seq.fetch_add(1, Ordering::Relaxed));
+                Some(encode(batch))
+            },
+            cancel,
+        )
+        .await;
         subscription::remove_subscription(&subscriptions, channel_id);
         log::debug!("{name}订阅已结束: {channel_id}");
     });

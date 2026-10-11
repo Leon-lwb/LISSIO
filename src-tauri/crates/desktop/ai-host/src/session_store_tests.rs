@@ -34,7 +34,7 @@ async fn corrupt_sessions_file_is_quarantined_on_start() {
 
     let host = AiHost::new(
         dir.clone(),
-        Toolbox::from_state(&app::AppState::new()),
+        Arc::new(app::AppState::new()),
         Arc::new(events::NullEventSink),
     );
 

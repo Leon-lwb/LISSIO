@@ -9,7 +9,8 @@
 use std::hint::black_box;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
-use gpu::{GpuContext, envelope_minmax, envelope_minmax_cpu};
+use gpu::{GpuContext, envelope_minmax};
+use waveform::envelope_minmax_cpu;
 
 /// 确定性伪随机波形 (正弦 + LCG 噪声, 含少量 NaN)
 fn waveform(n: usize) -> Vec<f32> {

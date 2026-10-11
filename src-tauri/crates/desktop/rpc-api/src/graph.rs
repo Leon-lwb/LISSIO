@@ -18,8 +18,8 @@ use serde_json::Value;
 use crate::args::{RpcError, domain, encode, ok, optional, required};
 
 /// 状态句柄的公共前缀 — 缩短每条命令的状态借用。
-const fn state(host: &BackendHost) -> &AppState {
-    &host.state
+fn state(host: &BackendHost) -> &AppState {
+    host.state.as_ref()
 }
 
 /// 整体替换指定 tab 的节点图 (两层编译: 本 tab 数值图 + 全局字节平面)。

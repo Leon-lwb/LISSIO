@@ -2,7 +2,7 @@
 
 use control_api::Toolbox;
 use control_api::tools;
-use pipeline::command_frame::ComputedFrameDto;
+use schema::command_frame::ComputedFrameDto;
 use serde_json::Value;
 
 use super::ok;
@@ -43,7 +43,7 @@ pub async fn send(tb: &Toolbox, action: &super::SendAction) -> Result<Value, Str
 /// 字节注入 — 需要事件端口 (派生事件推给 stderr)。
 pub async fn inject(host: &Host, source_node_id: &str, data: &str) -> Result<Value, String> {
     let bytes = parse_hex(data)?;
-    tools::inject_bytes(&host.toolbox, host.sink.as_ref(), source_node_id, &bytes).await
+    tools::inject_bytes(&host.state, host.sink.as_ref(), source_node_id, &bytes).await
 }
 
 /// 设置控件输入值。
@@ -80,13 +80,13 @@ fn load_frame(
     input: &[String],
 ) -> Result<
     (
-        pipeline::CommandFrameDto,
+        schema::command_frame::CommandFrameDto,
         std::collections::HashMap<String, f64>,
     ),
     String,
 > {
     let value = read_json_file(frame_file)?;
-    let frame: pipeline::CommandFrameDto = serde_json::from_value(value)
+    let frame: schema::command_frame::CommandFrameDto = serde_json::from_value(value)
         .map_err(|error| format!("命令帧定义与 CommandFrameDto 不符: {error}"))?;
     let inputs = parse_inputs(input)?;
     Ok((frame, inputs))

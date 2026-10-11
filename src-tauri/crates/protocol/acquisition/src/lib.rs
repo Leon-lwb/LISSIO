@@ -2,6 +2,7 @@
 
 pub mod backend;
 mod capabilities;
+pub mod config;
 pub mod handle;
 mod point_simulation;
 pub mod simulation;
@@ -11,7 +12,11 @@ pub use backend::{
 };
 pub use handle::LiveNodeHandle;
 mod lanes;
+pub mod operation;
+pub mod plan;
 mod plane;
+pub mod pump;
+pub mod session;
 mod stores;
 mod supervisor;
 mod unconfigured;
@@ -21,8 +26,13 @@ pub use capabilities::{
     DiscoveredEndpoint, DisplaySemantics, EndpointDescriptor, EndpointDirection, PortDescriptor,
     PortDirection, ProtocolKind, RuntimeState, RuntimeStatus, TransportKind,
 };
+pub use config::{ReconnectConfig, reconnect_delay};
 pub use lanes::{CommandLane, EventLane, EventLaneReceiver, LaneError, StateLane, StateLaneStats};
+pub use operation::OperationError;
+pub use plan::{PlanError, PlannedPoint, ReadWindow, WindowPoint, plan_windows};
 pub use plane::{AcquisitionBackend, AcquisitionRuntime};
+pub use pump::{ByteCancel, ByteDataSender, BytePump, ByteWriteSender, spawn_byte_pump};
+pub use session::{ConnectionSlot, SessionState};
 pub use stores::{CommandLedger, CommandStatus, EventLog, PointStore};
 pub use supervisor::{SourceState, SourceSupervisor, SupervisorHandle};
 pub use unconfigured::UnconfiguredAcquisitionBackend;

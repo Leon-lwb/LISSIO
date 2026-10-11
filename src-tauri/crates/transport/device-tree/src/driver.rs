@@ -7,13 +7,13 @@ use crate::capability::{
     IsoTpRequestCapability, SimulationProviderCapability,
 };
 use crate::error::{CloseError, ConfigError, OpenError};
-use crate::model::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use acquisition::{
     AdapterCapability, DiscoveredEndpoint, PortDescriptor, ReadCapability, SessionCapabilities,
     SourceSession, SubscribeCapability, WriteCapability,
 };
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use points::PointDescriptor;
 use serde_json::Value;
 use std::any::Any;

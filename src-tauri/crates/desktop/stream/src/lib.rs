@@ -10,9 +10,11 @@
 //!   `adaptive_stream_loop` 单订阅者推送循环); 也供 ticker 循环使用
 
 pub mod dispatcher;
+pub mod sink;
 pub mod stream;
 
-pub use dispatcher::{AdaptiveRate, StreamSink, adaptive_stream_loop};
+pub use dispatcher::{AdaptiveRate, adaptive_stream_loop};
+pub use sink::{StreamPayload, StreamSink};
 pub use stream::{
     CanStreamSource, DecodedStreamSource, GroupMembership, LogicStreamSource, MAX_STREAM_SHARDS,
     RawDataSource, StreamSource, WaveformSource, WaveformViewSpec, bounded_drain_size,

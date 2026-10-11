@@ -2,9 +2,10 @@ use acquisition::{
     AcquisitionBackend, AcquisitionRunState, ExecutionGate, TransportBackend, TransportConnection,
 };
 use async_trait::async_trait;
+use data_model::device_tree::NodeRole;
 use data_model::device_tree::{NodeDecl, NodeId, NodeState, SIMULATION_DRIVER_ID};
 use data_model::{TestDataConfig, TransportConfig};
-use device_tree::{DeviceTreeAcquisition, DriverRegistry, NodeRole};
+use device_tree::{DeviceTreeAcquisition, DriverRegistry};
 use flow::Direction;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

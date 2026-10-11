@@ -8,7 +8,6 @@ mod builtin;
 mod capability;
 mod driver;
 mod error;
-mod model;
 mod production;
 mod protocol_engine;
 mod registry;
@@ -29,10 +28,6 @@ pub use driver::{
     ValidatedNodeConfig, runtime_capability_mask,
 };
 pub use error::{CloseError, ConfigError, ContractError, OpenError, PortError};
-pub use model::{
-    ChildLimit, ChildPolicy, DEVICE_TREE_SCHEMA_VERSION, DeviceTreeDocument, DriverId, NodeDecl,
-    NodeId, NodePath, NodeRole, NodeState,
-};
 pub use production::DeviceTreeAcquisition;
 pub use protocol_engine::{PROTOCOL_ENGINE_DRIVER_ID, ProtocolEngineDriver};
 pub use registry::{DriverProjection, DriverRegistry};

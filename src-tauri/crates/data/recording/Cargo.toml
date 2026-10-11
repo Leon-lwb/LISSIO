@@ -24,6 +24,7 @@ database-postgres = ["database", "sea-orm/sqlx-postgres"]
 database-mysql = ["database", "sea-orm/sqlx-mysql"]
 
 [dependencies]
+data_model = { workspace = true }
 duckdb = { workspace = true }
 sea-orm = { workspace = true, optional = true }
 # tokio and async-trait are unconditional: the port is async and the writer is a

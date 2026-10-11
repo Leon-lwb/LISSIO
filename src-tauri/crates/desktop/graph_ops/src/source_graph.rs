@@ -13,7 +13,7 @@ use app::{SourceGraphs, SourceNodeHint, TabSourceGraph, WorkspaceState};
 use buffer_graph::Edge;
 use error::ConfigError;
 use error::{AppError as Error, Result};
-use pipeline::NodeKind;
+use kind::NodeKind;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -110,7 +110,7 @@ fn locate_tab(
 
 /// 解析源端口 handle: 显式指定 > 端口提示 > 按 NodeKind 兜底 (Protocol out)
 fn resolve_source_handle(
-    node: &pipeline::NodeDef,
+    node: &kind::NodeDef,
     hint: Option<&SourceNodeHint>,
     given: Option<String>,
 ) -> Result<String> {
@@ -131,7 +131,7 @@ fn resolve_source_handle(
 
 /// 解析目标端口 handle: 显式指定 > 端口提示 > 按 NodeKind 兜底 (Protocol in)
 fn resolve_target_handle(
-    node: &pipeline::NodeDef,
+    node: &kind::NodeDef,
     hint: Option<&SourceNodeHint>,
     given: Option<String>,
 ) -> Result<String> {
@@ -156,7 +156,7 @@ fn resolve_target_handle(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::implicit_hasher)]
 pub async fn apply_connect_edge(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, graph::CompiledGraph>>>,
     graphs_version: &Arc<std::sync::atomic::AtomicU64>,
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,
@@ -226,7 +226,7 @@ pub async fn apply_connect_edge(
 /// 删边拓扑 op — 优先按 edge_id 精确查找, 否则按 source/target 组合 (可只给一端) 命中首条
 #[allow(clippy::implicit_hasher)]
 pub async fn apply_disconnect_edge(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, graph::CompiledGraph>>>,
     graphs_version: &Arc<std::sync::atomic::AtomicU64>,
     data_plane: &DataPlaneState,
     source_graphs: &SourceGraphs,

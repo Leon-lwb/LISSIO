@@ -381,12 +381,7 @@ pub(super) async fn read_task(
             queue_age,
             service_time,
             data.len(),
-            RuntimeLimits {
-                max_workers: cfg.max_workers,
-                memory_budget_mb: cfg.memory_budget_mb,
-                preview_fps_limit: cfg.preview_fps_limit,
-                preview_bandwidth_mb_per_sec: cfg.preview_bandwidth_mb_per_sec,
-            },
+            RuntimeLimits::from(&cfg),
         );
         plane.metrics.feed_ns.fetch_add(
             u64::try_from(t_feed.elapsed().as_nanos()).unwrap_or(u64::MAX),

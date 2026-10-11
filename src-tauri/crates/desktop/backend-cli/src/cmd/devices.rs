@@ -8,7 +8,7 @@ use crate::Host;
 
 /// 端点与点位命令分发。
 pub async fn endpoint(host: &Host, action: &EndpointAction) -> Result<Value, String> {
-    let tb = &host.toolbox;
+    let tb = &host.state;
     match action {
         EndpointAction::List => Ok(control::list_endpoints(tb)),
         EndpointAction::Open { node_id } => control::open_endpoint(tb, &host.sink, node_id).await,

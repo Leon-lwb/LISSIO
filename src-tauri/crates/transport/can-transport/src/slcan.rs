@@ -42,7 +42,7 @@ struct SlcanLifecycle {
 }
 
 impl SerialLifecycle for SlcanLifecycle {
-    fn on_open(&self, port: &mut dyn serial::serialport::SerialPort) -> Result<()> {
+    fn on_open(&self, port: &mut dyn serialport::SerialPort) -> Result<()> {
         let bitrate = format!("{}\r", self.bitrate_command);
         port.write_all(bitrate.as_bytes())
             .map_err(TransportError::SlcanBitrate)?;
@@ -53,7 +53,7 @@ impl SerialLifecycle for SlcanLifecycle {
         Ok(())
     }
 
-    fn on_close(&self, port: &mut dyn serial::serialport::SerialPort) {
+    fn on_close(&self, port: &mut dyn serialport::SerialPort) {
         let _ = port.write_all(b"C\r");
     }
 }

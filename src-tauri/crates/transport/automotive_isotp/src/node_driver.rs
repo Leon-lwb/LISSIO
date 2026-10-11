@@ -5,11 +5,11 @@ use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use can::CanFrame;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use device_tree::{
-    CAN_FRAMES_PORT_ID, Capability, CapabilityMask, ChildPolicy, ConfigError, DriverId,
-    ISOTP_REQUEST_PORT_ID, IsoTpRequestCapability, NodeContext, NodeDriver, NodeId, NodePath,
-    NodeRole, NodeRuntime, NodeState, OpenError, ParentContract, PortError, RuntimeCapabilities,
-    ValidatedNodeConfig,
+    CAN_FRAMES_PORT_ID, Capability, CapabilityMask, ConfigError, ISOTP_REQUEST_PORT_ID,
+    IsoTpRequestCapability, NodeContext, NodeDriver, NodeRuntime, OpenError, ParentContract,
+    PortError, RuntimeCapabilities, ValidatedNodeConfig,
 };
 use diagnostic::{IsoTpAddressMode, IsoTpConfig};
 use error::Result as DataResult;

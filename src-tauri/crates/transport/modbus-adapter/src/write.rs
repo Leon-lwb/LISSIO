@@ -12,7 +12,7 @@ pub async fn write_request(
     runtime: &Arc<Runtime>,
     request: WriteRequest,
 ) -> AcquisitionResult<WriteResult> {
-    if request.deadline_unix_ns <= crate::client::now_unix_ns() {
+    if request.deadline_unix_ns <= data_model::now_ns() {
         return Err(AcquisitionError::Timeout);
     }
     let mut results = Vec::with_capacity(request.items.len());

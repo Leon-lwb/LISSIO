@@ -1,8 +1,9 @@
 mod support;
 
-use device_tree::{
-    ChildLimit, ChildPolicy, ConfigError, DeviceTreeDocument, NodeDecl, NodeId, NodePath, NodeRole,
+use data_model::device_tree::{
+    ChildLimit, ChildPolicy, DeviceTreeDocument, NodeDecl, NodeId, NodePath, NodeRole,
 };
+use device_tree::ConfigError;
 use serde_json::json;
 use support::{document, node};
 

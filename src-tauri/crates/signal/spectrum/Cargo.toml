@@ -21,4 +21,4 @@ realfft = { workspace = true }
 [package.metadata.lissio]
 domain = "signal"
 layer = 1
-responsibility = "Focused crate responsibility"
+responsibility = "实数 FFT 频谱分析与振幅谱 IFFT 合成 — 滑动窗口 + Magnitude/Power/PSD/Decibel 输出"

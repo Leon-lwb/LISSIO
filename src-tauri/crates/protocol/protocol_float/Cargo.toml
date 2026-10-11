@@ -13,6 +13,7 @@ name = "protocol_float"
 workspace = true
 
 [dependencies]
+schema_types = { workspace = true }
 data_model = { workspace = true }
 protocol = { workspace = true }
 [package.metadata.lissio]

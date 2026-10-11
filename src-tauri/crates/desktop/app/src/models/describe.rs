@@ -496,4 +496,5 @@ fn effective_channels_for(widget_kind: &str, params: &Value) -> Option<usize> {
 }
 
 #[cfg(test)]
+#[path = "describe_tests.rs"]
 mod tests;

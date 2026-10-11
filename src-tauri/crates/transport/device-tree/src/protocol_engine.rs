@@ -4,13 +4,14 @@
 //! 因而这里不会宣称已经提供解析后的点位、数值通道或转换后字节。
 
 use crate::{
-    ByteSourceCapability, Capability, CapabilityMask, ChildPolicy, CloseError, ConfigError,
-    DriverId, FrameSubscription, NodeContext, NodeDriver, NodeId, NodePath, NodeRole, NodeRuntime,
-    NodeState, OpenError, ParentContract, RuntimeCapabilities, ValidatedNodeConfig,
+    ByteSourceCapability, Capability, CapabilityMask, CloseError, ConfigError, FrameSubscription,
+    NodeContext, NodeDriver, NodeRuntime, OpenError, ParentContract, RuntimeCapabilities,
+    ValidatedNodeConfig,
 };
 use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use flow::{BytesChunk, FlowEnvelope, PayloadKind};
 use schema_types::ProtocolNodeConfig;
 use serde_json::{Value, json};

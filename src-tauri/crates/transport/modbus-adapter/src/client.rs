@@ -1,5 +1,5 @@
 use crate::descriptor::{capability_set, point_descriptor};
-use crate::read::{read_points, reconnect_delay};
+use crate::read::read_points;
 use crate::{
     ModbusConfig, ModbusPoint, ModbusRtuConfig, ReconnectConfig, SerialDataBits, SerialFlowControl,
     SerialParity, SerialStopBits,
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::sync::{Mutex, watch};
 use tokio_modbus::Slave;
 use tokio_modbus::client::Context;
@@ -65,6 +65,27 @@ pub struct Runtime {
     pub(crate) execution: acquisition::ExecutionGate,
     pub(crate) state: parking_lot::RwLock<acquisition::SourceState>,
     pub(crate) closed: watch::Sender<bool>,
+}
+
+impl acquisition::session::SessionState for Runtime {
+    fn state(&self) -> &parking_lot::RwLock<acquisition::SourceState> {
+        &self.state
+    }
+    fn closed(&self) -> &watch::Sender<bool> {
+        &self.closed
+    }
+    fn connection_epoch(&self) -> &AtomicU64 {
+        &self.connection_epoch
+    }
+    fn sequence(&self) -> &AtomicU64 {
+        &self.sequence
+    }
+}
+
+impl acquisition::session::ConnectionSlot<Context> for Runtime {
+    fn connection(&self) -> &Mutex<Option<Context>> {
+        &self.context
+    }
 }
 
 pub struct ModbusSession {
@@ -134,28 +155,17 @@ impl SourceSession for ModbusSession {
     }
 
     async fn stopped(&self) -> AcquisitionResult<()> {
-        let mut closed = self.runtime.closed.subscribe();
-        while !*closed.borrow() {
-            closed
-                .changed()
-                .await
-                .map_err(|_| AcquisitionError::Closed)?;
-        }
-        Ok(())
+        acquisition::session::wait_closed(&*self.runtime).await
     }
 
     async fn close(&self) -> AcquisitionResult<()> {
-        *self.runtime.state.write() = acquisition::SourceState::Closing;
-        let _ = self.runtime.closed.send(true);
-        // 先释放 context 锁再 await 断连, 避免 tokio MutexGuard 跨 await 点存活
-        let context = self.runtime.context.lock().await.take();
-        if let Some(mut context) = context {
+        // 先释放 context 锁再 await 断连 (状态机内部保证)
+        acquisition::session::close_with(&*self.runtime, |mut context| async move {
             tokio_modbus::client::Client::disconnect(&mut context)
                 .await
-                .map_err(|error| AcquisitionError::Driver(error.to_string()))?;
-        }
-        *self.runtime.state.write() = acquisition::SourceState::Closed;
-        Ok(())
+                .map_err(|error| AcquisitionError::Driver(error.to_string()))
+        })
+        .await
     }
 }
 
@@ -268,22 +278,7 @@ impl WriteCapability for ModbusSession {
     }
 }
 
-#[derive(Clone)]
-pub struct OperationError {
-    pub(crate) code: String,
-    pub(crate) detail: String,
-    pub(crate) disconnect: bool,
-}
-
-impl OperationError {
-    pub(crate) fn new(code: &str, detail: &str, disconnect: bool) -> Self {
-        Self {
-            code: code.into(),
-            detail: detail.into(),
-            disconnect,
-        }
-    }
-}
+pub use acquisition::operation::OperationError;
 
 pub fn normalize<T>(
     result: Result<tokio_modbus::Result<T>, tokio::time::error::Elapsed>,
@@ -305,58 +300,22 @@ pub fn normalize<T>(
 }
 
 pub async fn ensure_connected(runtime: &Arc<Runtime>) -> AcquisitionResult<()> {
-    if *runtime.closed.borrow() {
-        return Err(AcquisitionError::Closed);
-    }
-    if runtime.context.lock().await.is_some() {
-        return Ok(());
-    }
-    let mut attempt = 0_u32;
-    loop {
-        *runtime.state.write() = acquisition::SourceState::Connecting;
-        let mut closed = runtime.closed.subscribe();
-        let connected = tokio::select! {
-            _ = closed.changed() => return Err(AcquisitionError::Closed),
-            result = connect_context(&runtime.config) => result,
-        };
-        match connected {
-            Ok(context) => {
-                *runtime.context.lock().await = Some(context);
-                runtime.sequence.store(0, Ordering::Release);
-                let epoch = runtime.connection_epoch.fetch_add(1, Ordering::AcqRel) + 1;
-                *runtime.state.write() = acquisition::SourceState::Online {
-                    connection_epoch: epoch,
-                };
-                return Ok(());
-            }
-            Err(error) if attempt >= runtime.config.reconnect().max_attempts => {
-                mark_degraded(runtime, &error.to_string());
-                return Err(error);
-            }
-            Err(error) => {
-                mark_degraded(runtime, &error.to_string());
-                attempt = attempt.saturating_add(1);
-                *runtime.state.write() = acquisition::SourceState::Backoff { attempt };
-                let mut closed = runtime.closed.subscribe();
-                tokio::select! {
-                    () = tokio::time::sleep(reconnect_delay(runtime.config.reconnect(), attempt)) => {}
-                    _ = closed.changed() => return Err(AcquisitionError::Closed),
-                }
-            }
-        }
-    }
+    let reconnect = runtime.config.reconnect().clone();
+    acquisition::session::ensure_connected(
+        runtime.as_ref(),
+        &reconnect,
+        || connect_context(&runtime.config),
+        |_context: &Context| {},
+    )
+    .await
 }
 
 pub fn mark_degraded(runtime: &Runtime, detail: &str) {
-    *runtime.state.write() = acquisition::SourceState::Degraded {
-        detail: detail.into(),
-    };
+    acquisition::session::mark_degraded(runtime, detail);
 }
 
 pub fn mark_online(runtime: &Runtime) {
-    *runtime.state.write() = acquisition::SourceState::Online {
-        connection_epoch: runtime.connection_epoch.load(Ordering::Acquire),
-    };
+    acquisition::session::mark_online(runtime);
 }
 
 async fn connect_context(config: &RuntimeConfig) -> AcquisitionResult<Context> {
@@ -414,11 +373,4 @@ async fn connect_rtu(config: &ModbusRtuConfig) -> AcquisitionResult<Context> {
         serial,
         Slave(config.unit_id),
     ))
-}
-
-pub fn now_unix_ns() -> i64 {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos());
-    i64::try_from(nanos).unwrap_or(i64::MAX)
 }

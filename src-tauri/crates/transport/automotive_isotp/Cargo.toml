@@ -33,4 +33,4 @@ error = { workspace = true }
 [package.metadata.lissio]
 domain = "transport"
 layer = 4
-responsibility = "Focused crate responsibility"
+responsibility = "ISO 15765-2 (ISO-TP) 传输层 — SF/FF/CF/FC 装配解析 + tokio 异步会话与流控配置"

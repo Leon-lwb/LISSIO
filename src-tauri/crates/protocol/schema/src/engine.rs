@@ -56,7 +56,7 @@ impl SchemaEngine {
         let mut bytes = Vec::new();
         for b in &self.schema.decode {
             if let DecoderBlockDef::Header { hex, .. } = b {
-                bytes.extend_from_slice(&schema_types::parse_hex(hex));
+                bytes.extend_from_slice(&schema_types::hex::parse_hex_lossy(hex));
             }
         }
         bytes
@@ -264,7 +264,7 @@ impl SchemaEngine {
                     }
                 }
                 DecoderBlockDef::Tail { hex, .. } => {
-                    let tail = schema_types::parse_hex(hex);
+                    let tail = schema_types::hex::parse_hex_lossy(hex);
                     if cursor + tail.len() > data.len() {
                         return ParseAttempt::Incomplete;
                     }

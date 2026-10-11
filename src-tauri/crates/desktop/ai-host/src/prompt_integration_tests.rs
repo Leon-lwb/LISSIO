@@ -8,7 +8,7 @@ async fn invalid_prompt_does_not_append_user_turn() {
     let dir = unique_temp_path("lissio-ai-turn-prompt");
     let host = AiHost::new(
         dir.clone(),
-        Toolbox::from_state(&app::AppState::new()),
+        Arc::new(app::AppState::new()),
         Arc::new(events::NullEventSink),
     );
     let session = chat_create_session(&host, "新会话".into()).expect("创建会话");

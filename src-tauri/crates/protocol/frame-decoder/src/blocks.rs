@@ -338,5 +338,5 @@ pub(crate) const fn checksum_byte_len(algo: ChecksumAlgorithm) -> usize {
 ///
 /// 解析失败 (奇数长度 / 非法字符) 返回空 Vec。
 pub fn parse_hex(hex: &str) -> Vec<u8> {
-    schema_types::parse_hex(hex)
+    schema_types::hex::parse_hex_lossy(hex)
 }

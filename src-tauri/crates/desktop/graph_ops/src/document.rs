@@ -16,7 +16,7 @@ use std::{
 
 #[allow(clippy::implicit_hasher, clippy::too_many_arguments)]
 pub async fn apply_document(
-    graphs: &Arc<parking_lot::Mutex<HashMap<String, pipeline::CompiledGraph>>>,
+    graphs: &Arc<parking_lot::Mutex<HashMap<String, graph::CompiledGraph>>>,
     version: &Arc<AtomicU64>,
     plane: &DataPlaneState,
     sources: &SourceGraphs,

@@ -4,11 +4,11 @@ use acquisition::{CapabilitySet, PortDescriptor, PortDirection};
 use async_trait::async_trait;
 use can::{CanDirection, CanFrame};
 use data_model::ConfigurationSchema;
+use data_model::device_tree::{ChildPolicy, DriverId, NodeId, NodePath, NodeRole, NodeState};
 use device_tree::{
     CAN_FRAMES_PORT_ID, CanFrameSinkCapability, CanFrameSourceCapability, Capability,
-    CapabilityMask, ChildPolicy, ConfigError, DriverId, FrameSubscription, NodeContext, NodeDriver,
-    NodeId, NodePath, NodeRole, NodeRuntime, NodeState, OpenError, ParentContract, PortError,
-    RuntimeCapabilities, ValidatedNodeConfig,
+    CapabilityMask, ConfigError, FrameSubscription, NodeContext, NodeDriver, NodeRuntime,
+    OpenError, ParentContract, PortError, RuntimeCapabilities, ValidatedNodeConfig,
 };
 use flow::{Boundary, BytesChunk, Direction, FlowEnvelope, Framing, SourceId};
 use protocol_can_bridge::{CandleEngine, SlcanEngine};

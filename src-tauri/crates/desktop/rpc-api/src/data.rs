@@ -4,12 +4,12 @@
 //! 订阅 (波形 / 原始 / CAN / 逻辑) 不走本模块: 它由出口层的流推送通道承载
 //! (桌面 IPC `Channel`, Web 出口 WebSocket), 见 `app::display::subscribe_data`。
 
-use app::{TriggerMatchResult, TriggerMatcher, TriggerRuleDef};
 use backend_host::BackendHost;
 use can::CanLoadSnapshot;
 use control_api::data;
 use logic::{DecodedEventBatch, LogicSampleBatch};
 use serde_json::Value;
+use trigger::{TriggerMatchResult, TriggerMatcher, TriggerRuleDef};
 
 use crate::args::{RpcError, encode, ok, optional, required};
 
@@ -90,7 +90,7 @@ pub fn clear_raw_data_collector(
     args: &Value,
 ) -> Result<Value, RpcError> {
     let source: Option<String> = optional(args, cmd, "source")?;
-    data::clear_raw_data_collector(&host.toolbox, source.as_deref());
+    data::clear_raw_data_collector(&host.state, source.as_deref());
     ok()
 }
 

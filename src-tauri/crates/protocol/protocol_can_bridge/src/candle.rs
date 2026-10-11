@@ -112,12 +112,11 @@ impl ProtocolEngine for CandleEngine {
     }
 
     fn encode_channel(&mut self, _channel: usize, value: f32) -> Vec<u8> {
-        format!("{value:.6}\n").into_bytes()
+        protocol::text::encode_ascii_value(value)
     }
 
     fn encode_channels(&mut self, values: &[f32]) -> Vec<u8> {
-        let s: Vec<String> = values.iter().map(|v| format!("{v:.6}")).collect();
-        format!("{}\n", s.join(",")).into_bytes()
+        protocol::text::encode_ascii_values(values)
     }
 
     fn name(&self) -> &'static str {

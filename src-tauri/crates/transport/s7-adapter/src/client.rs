@@ -1,6 +1,6 @@
 use crate::descriptor::{capability_set, point_descriptor};
 use crate::read::read_points;
-use crate::{ReconnectConfig, S7Config, S7Point};
+use crate::{S7Config, S7Point};
 use acquisition::{
     AcquisitionError, AcquisitionResult, DriverContext, EffectiveSubscription, ReadCapability,
     SessionCapabilities, SourceSession, SubscribeCapability, SubscriptionIntent, WriteCapability,
@@ -11,7 +11,7 @@ use points::{PointDescriptor, PointId, ReadRequest, ReadResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 use tokio::sync::{Mutex, watch};
 use tokio_s7::client::S7Client;
 
@@ -48,6 +48,27 @@ pub struct Runtime {
     pub(crate) execution: acquisition::ExecutionGate,
     pub(crate) state: parking_lot::RwLock<acquisition::SourceState>,
     pub(crate) closed: watch::Sender<bool>,
+}
+
+impl acquisition::session::SessionState for Runtime {
+    fn state(&self) -> &parking_lot::RwLock<acquisition::SourceState> {
+        &self.state
+    }
+    fn closed(&self) -> &watch::Sender<bool> {
+        &self.closed
+    }
+    fn connection_epoch(&self) -> &AtomicU64 {
+        &self.connection_epoch
+    }
+    fn sequence(&self) -> &AtomicU64 {
+        &self.sequence
+    }
+}
+
+impl acquisition::session::ConnectionSlot<S7Client> for Runtime {
+    fn connection(&self) -> &Mutex<Option<S7Client>> {
+        &self.client
+    }
 }
 
 pub struct S7Session {
@@ -118,30 +139,19 @@ impl SourceSession for S7Session {
     }
 
     async fn stopped(&self) -> AcquisitionResult<()> {
-        let mut closed = self.runtime.closed.subscribe();
-        while !*closed.borrow() {
-            closed
-                .changed()
-                .await
-                .map_err(|_| AcquisitionError::Closed)?;
-        }
-        Ok(())
+        acquisition::session::wait_closed(&*self.runtime).await
     }
 
     async fn close(&self) -> AcquisitionResult<()> {
-        *self.runtime.state.write() = acquisition::SourceState::Closing;
-        let _ = self.runtime.closed.send(true);
-        // 先取出客户端再 await, 避免 tokio MutexGuard 跨 await 点存活。
         // actor 可能正滞留在未完成的请求中而无法立即处理优雅断开, 因此断开是
         // 尽力而为的后台任务, 最迟随 TCP 生命周期终止。
-        let client = self.runtime.client.lock().await.take();
-        if let Some(mut client) = client {
+        acquisition::session::close_with(&*self.runtime, |mut client| async move {
             tokio::spawn(async move {
                 let _ = tokio::time::timeout(CLOSE_TIMEOUT, client.disconnect()).await;
             });
-        }
-        *self.runtime.state.write() = acquisition::SourceState::Closed;
-        Ok(())
+            Ok(())
+        })
+        .await
     }
 }
 
@@ -254,22 +264,7 @@ impl WriteCapability for S7Session {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct OperationError {
-    pub(crate) code: String,
-    pub(crate) detail: String,
-    pub(crate) disconnect: bool,
-}
-
-impl OperationError {
-    pub(crate) fn new(code: &str, detail: &str, disconnect: bool) -> Self {
-        Self {
-            code: code.into(),
-            detail: detail.into(),
-            disconnect,
-        }
-    }
-}
+pub use acquisition::operation::OperationError;
 
 pub fn normalize<T>(
     result: Result<Result<T, tokio_s7::error::S7Error>, tokio::time::error::Elapsed>,
@@ -311,61 +306,28 @@ pub fn is_disconnect(error: &tokio_s7::error::S7Error) -> bool {
 }
 
 pub async fn ensure_connected(runtime: &Arc<Runtime>) -> AcquisitionResult<()> {
-    if *runtime.closed.borrow() {
-        return Err(AcquisitionError::Closed);
-    }
-    if runtime.client.lock().await.is_some() {
-        return Ok(());
-    }
-    let mut attempt = 0_u32;
-    loop {
-        *runtime.state.write() = acquisition::SourceState::Connecting;
-        let mut closed = runtime.closed.subscribe();
-        let connected = tokio::select! {
-            _ = closed.changed() => return Err(AcquisitionError::Closed),
-            result = connect_client(&runtime.config) => result,
-        };
-        match connected {
-            Ok((client, pdu_length)) => {
-                runtime
-                    .max_read_bytes
-                    .store(read_budget(pdu_length), Ordering::Release);
-                *runtime.client.lock().await = Some(client);
-                runtime.sequence.store(0, Ordering::Release);
-                let epoch = runtime.connection_epoch.fetch_add(1, Ordering::AcqRel) + 1;
-                *runtime.state.write() = acquisition::SourceState::Online {
-                    connection_epoch: epoch,
-                };
-                return Ok(());
-            }
-            Err(error) if attempt >= runtime.config.reconnect.max_attempts => {
-                mark_degraded(runtime, &error.to_string());
-                return Err(error);
-            }
-            Err(error) => {
-                mark_degraded(runtime, &error.to_string());
-                attempt = attempt.saturating_add(1);
-                *runtime.state.write() = acquisition::SourceState::Backoff { attempt };
-                let mut closed = runtime.closed.subscribe();
-                tokio::select! {
-                    () = tokio::time::sleep(reconnect_delay(&runtime.config.reconnect, attempt)) => {}
-                    _ = closed.changed() => return Err(AcquisitionError::Closed),
-                }
-            }
-        }
-    }
+    let reconnect = runtime.config.reconnect.clone();
+    acquisition::session::ensure_connected(
+        runtime.as_ref(),
+        &reconnect,
+        || async {
+            let (client, pdu_length) = connect_client(&runtime.config).await?;
+            runtime
+                .max_read_bytes
+                .store(read_budget(pdu_length), Ordering::Release);
+            Ok(client)
+        },
+        |_client: &S7Client| {},
+    )
+    .await
 }
 
 pub fn mark_degraded(runtime: &Runtime, detail: &str) {
-    *runtime.state.write() = acquisition::SourceState::Degraded {
-        detail: detail.into(),
-    };
+    acquisition::session::mark_degraded(runtime, detail);
 }
 
 pub fn mark_online(runtime: &Runtime) {
-    *runtime.state.write() = acquisition::SourceState::Online {
-        connection_epoch: runtime.connection_epoch.load(Ordering::Acquire),
-    };
+    acquisition::session::mark_online(runtime);
 }
 
 /// Resolve the configured host and perform the tokio-s7 handshake. The SDK
@@ -410,23 +372,4 @@ async fn connect_client(config: &S7Config) -> AcquisitionResult<(S7Client, u16)>
             Err(AcquisitionError::Timeout)
         }
     }
-}
-
-pub fn reconnect_delay(config: &ReconnectConfig, attempt: u32) -> Duration {
-    let factor = 1_u64
-        .checked_shl(attempt.saturating_sub(1))
-        .unwrap_or(u64::MAX);
-    Duration::from_millis(
-        config
-            .initial_delay_ms
-            .saturating_mul(factor)
-            .min(config.max_delay_ms),
-    )
-}
-
-pub fn now_unix_ns() -> i64 {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos());
-    i64::try_from(nanos).unwrap_or(i64::MAX)
 }

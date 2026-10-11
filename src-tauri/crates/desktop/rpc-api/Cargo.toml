@@ -36,12 +36,14 @@ llm = { workspace = true }
 mcp-client = { workspace = true }
 graph_ops = { workspace = true }
 kind = { workspace = true }
+protocol = { workspace = true }
 logic = { workspace = true }
 pipeline = { workspace = true }
 performance = { workspace = true }
 points = { workspace = true }
 raw-data = { workspace = true }
 schema_types = { workspace = true }
+schema = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

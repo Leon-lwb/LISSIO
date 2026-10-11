@@ -97,31 +97,13 @@ fn read_json_text(path: &str) -> Result<String, String> {
 }
 
 /// 解析 hex 字节串 — 接受 `AABB` / `AA BB` / `0xAA,0xBB` 三种写法。
+///
+/// 实现由 [`schema_types::hex::parse_hex`] 唯一拥有。
+///
+/// # Errors
+/// 有效字符数为奇数或含非法十六进制字符时返回错误说明。
 pub fn parse_hex(input: &str) -> Result<Vec<u8>, String> {
-    let cleaned: String = input
-        .split([' ', ',', ':'])
-        .map(str::trim)
-        .filter(|segment| !segment.is_empty())
-        .map(|segment| {
-            segment
-                .strip_prefix("0x")
-                .or_else(|| segment.strip_prefix("0X"))
-                .unwrap_or(segment)
-        })
-        .collect();
-    if cleaned.is_empty() {
-        return Ok(Vec::new());
-    }
-    if !cleaned.len().is_multiple_of(2) {
-        return Err(format!("hex 字节串长度必须为偶数: {input}"));
-    }
-    (0..cleaned.len())
-        .step_by(2)
-        .map(|index| {
-            u8::from_str_radix(&cleaned[index..index + 2], 16)
-                .map_err(|error| format!("hex 字节串解析失败 ({input}): {error}"))
-        })
-        .collect()
+    schema_types::hex::parse_hex(input)
 }
 
 /// 解析 `name=value` 键值对列表 (命令帧 var_ref 输入)。
@@ -149,26 +131,4 @@ pub fn read_json_file(path: &str) -> Result<serde_json::Value, String> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{parse_hex, parse_inputs};
-
-    #[test]
-    fn hex_parsing_accepts_common_writings() {
-        assert_eq!(parse_hex("AABB"), Ok(vec![0xAA, 0xBB]));
-        assert_eq!(parse_hex("aa bb"), Ok(vec![0xAA, 0xBB]));
-        assert_eq!(parse_hex("0xAA,0x01"), Ok(vec![0xAA, 0x01]));
-        assert_eq!(parse_hex(""), Ok(Vec::new()));
-        // 空白/逗号是分隔符: 奇数长度的分段拼接连读 (A B = AB)
-        assert_eq!(parse_hex("A B"), Ok(vec![0xAB]));
-        assert!(parse_hex("A B C").is_err(), "拼后为奇数长度应报错");
-        assert!(parse_hex("ZZ").is_err());
-    }
-
-    #[test]
-    fn input_pairs_parse_to_map() {
-        let inputs = parse_inputs(&["ch1=1.5".into(), "ch2=-2".into()]).expect("valid pairs");
-        assert_eq!(inputs.get("ch1"), Some(&1.5));
-        assert_eq!(inputs.get("ch2"), Some(&-2.0));
-        assert!(parse_inputs(&["novalue".into()]).is_err());
-    }
-}
+mod tests;

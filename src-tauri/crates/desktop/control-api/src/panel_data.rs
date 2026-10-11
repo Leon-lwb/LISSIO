@@ -218,4 +218,5 @@ fn unresolved(panel: PanelKind, reason: PanelResolveReason) -> String {
 }
 
 #[cfg(test)]
+#[path = "panel_data_tests.rs"]
 mod tests;

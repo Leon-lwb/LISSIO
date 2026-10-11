@@ -25,30 +25,13 @@ pub fn detect_format(input: &str) -> InputFormat {
 }
 
 /// 解析 HEX 字符串为字节 — 兼容 "AA 01" / "AA01" / "AA,01" / "0xAA 0x01"
+///
+/// 实现由 [`schema_types::hex::parse_hex`] 唯一拥有。
+///
+/// # Errors
+/// 有效字符数为奇数或含非法十六进制字符时返回错误说明。
 pub fn parse_hex(input: &str) -> Result<Vec<u8>, String> {
-    // 先去掉所有 "0x" / "0X" 前缀, 再过滤空白与逗号
-    let no_prefix = input.replace("0x", "").replace("0X", "");
-    let clean: String = no_prefix
-        .chars()
-        .filter(|c| !c.is_whitespace() && *c != ',')
-        .collect();
-    if clean.is_empty() {
-        return Ok(Vec::new());
-    }
-    if !clean.len().is_multiple_of(2) {
-        return Err(format!(
-            "HEX 长度必须为偶数 (每字节 2 个十六进制字符), 当前长度 {}",
-            clean.len()
-        ));
-    }
-    let mut bytes = Vec::with_capacity(clean.len() / 2);
-    let chars: Vec<char> = clean.chars().collect();
-    for i in (0..chars.len()).step_by(2) {
-        let s: String = chars[i..i + 2].iter().collect();
-        let b = u8::from_str_radix(&s, 16).map_err(|_| format!("无效的 HEX 字节: {s}"))?;
-        bytes.push(b);
-    }
-    Ok(bytes)
+    schema_types::hex::parse_hex(input)
 }
 
 /// 解析 ASCII 文本 + 转义字符 (\n \r \t \xHH \0 \\)

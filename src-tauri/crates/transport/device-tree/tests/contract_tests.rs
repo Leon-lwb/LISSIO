@@ -1,8 +1,9 @@
 mod support;
 
+use data_model::device_tree::{ChildPolicy, DriverId, NodeRole};
 use device_tree::{
-    Capability, CapabilityMask, ChildPolicy, ConfigError, ContractError, DriverContractFixture,
-    DriverId, DriverRegistry, NodeDriver, NodeRole,
+    Capability, CapabilityMask, ConfigError, ContractError, DriverContractFixture, DriverRegistry,
+    NodeDriver,
 };
 use serde_json::json;
 use std::sync::Arc;
@@ -78,8 +79,8 @@ async fn child_driver_checks_required_parent_capability_and_port() {
             validated,
             None,
             device_tree::NodeContext::new(
-                device_tree::NodeId::new("parent").expect("id"),
-                device_tree::NodePath::root("parent").expect("path"),
+                data_model::device_tree::NodeId::new("parent").expect("id"),
+                data_model::device_tree::NodePath::root("parent").expect("path"),
                 1,
                 tokio::sync::broadcast::channel(1).0,
             ),
@@ -92,7 +93,7 @@ async fn child_driver_checks_required_parent_capability_and_port() {
         .register(child_driver.clone())
         .expect("register child");
     let fixture = device_tree::DriverContractFixture {
-        node_id: device_tree::NodeId::new("child").expect("id"),
+        node_id: data_model::device_tree::NodeId::new("child").expect("id"),
         driver_id: DriverId::new("protocol"),
         schema_version: 1,
         config: json!({}),
@@ -124,7 +125,7 @@ async fn registry_rejects_duplicate_driver_and_unsupported_child_role() {
     let mut root = node("root", "root", "strict-root");
     root.children.push(node("child", "child", "test"));
     let error = registry
-        .validate(&device_tree::DeviceTreeDocument::new(root))
+        .validate(&data_model::device_tree::DeviceTreeDocument::new(root))
         .expect_err("strict root rejects Bus child");
     assert!(matches!(
         error,
@@ -142,6 +143,6 @@ async fn registry_rejects_duplicate_driver_and_unsupported_child_role() {
     let mut root = node("root", "root", "parent");
     root.children.push(node("child", "child", "test"));
     registry
-        .validate(&device_tree::DeviceTreeDocument::new(root))
+        .validate(&data_model::device_tree::DeviceTreeDocument::new(root))
         .expect("explicit policy accepts Bus child");
 }

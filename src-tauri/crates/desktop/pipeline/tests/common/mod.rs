@@ -1,8 +1,9 @@
 use acquisition::{AcquisitionRunState, AcquisitionRuntime, ExecutionGate, TransportBackend};
 use data_model::TransportConfig;
 use data_model::device::SimulationConfig;
+use data_model::device_tree::NodeRole;
 use data_model::device_tree::{NodeDecl, SIMULATION_DRIVER_ID};
-use device_tree::{DeviceTreeAcquisition, DriverRegistry, NodeRole};
+use device_tree::{DeviceTreeAcquisition, DriverRegistry};
 use std::sync::Arc;
 use transport::device_driver::ByteDeviceDriver;
 

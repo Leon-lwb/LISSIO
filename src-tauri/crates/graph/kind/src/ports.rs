@@ -178,7 +178,11 @@ pub const fn port_table(kind: &NodeKind) -> PortTable {
 
 /// 查询节点某个端口的域 — 端口表查找；表外动态端口回落 F32
 /// （方向仅用于区分输入/输出子表；动态端口清单见 [`PortTable`] 文档）
-pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain {
+///
+/// 唯一的端口域判定入口: `hir` 编译期边分类与 `control-api` HIR 投影都调用它。
+/// Acquisition 的端口域是设备声明的事实: `Events` 是事件通道, 不参与字节/数值
+/// 平面, 因此返回 `None`; 静态端口表命中的端口总有域, 表外动态端口回落 F32。
+pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> Option<PortDomain> {
     if let NodeKind::Acquisition { ports, .. } = kind {
         return ports
             .iter()
@@ -192,10 +196,11 @@ pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain
                                 DevicePortDirection::Input
                             })
             })
-            .map_or(PortDomain::Points, |port| match port.domain {
-                DevicePortDomain::Bytes => PortDomain::Bytes,
-                DevicePortDomain::Points => PortDomain::Points,
-                DevicePortDomain::Events | DevicePortDomain::Numeric => PortDomain::F32,
+            .and_then(|port| match port.domain {
+                DevicePortDomain::Bytes => Some(PortDomain::Bytes),
+                DevicePortDomain::Points => Some(PortDomain::Points),
+                DevicePortDomain::Numeric => Some(PortDomain::F32),
+                DevicePortDomain::Events => None,
             });
     }
     let table = port_table(kind);
@@ -204,244 +209,14 @@ pub fn port_domain(kind: &NodeKind, handle: &str, is_output: bool) -> PortDomain
     } else {
         table.inputs
     };
-    ports
-        .iter()
-        .find(|p| p.handle == handle)
-        .map_or(PortDomain::F32, |p| p.domain)
+    Some(
+        ports
+            .iter()
+            .find(|p| p.handle == handle)
+            .map_or(PortDomain::F32, |p| p.domain),
+    )
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use data_model::device::{DevicePort, DevicePortDirection, DevicePortDomain};
-    use data_model::device_tree::{DriverId, NodeDecl, NodeId};
-    use serde_json::json;
-
-    use crate::kind::NodeKind;
-    use crate::math_op::MathOp;
-    use crate::str_op::{StrNumParams, StrOp};
-
-    fn device() -> NodeKind {
-        NodeKind::Acquisition {
-            node: NodeDecl {
-                id: NodeId::new("device").unwrap(),
-                name: "device".into(),
-                driver: DriverId("serial".into()),
-                schema_version: 1,
-                config: json!({}),
-                enabled: true,
-                capability_endpoint_id: None,
-                children: Vec::new(),
-            },
-            ports: vec![
-                DevicePort {
-                    id: "rx".into(),
-                    direction: DevicePortDirection::Output,
-                    domain: DevicePortDomain::Bytes,
-                },
-                DevicePort {
-                    id: "tx".into(),
-                    direction: DevicePortDirection::Input,
-                    domain: DevicePortDomain::Bytes,
-                },
-            ],
-        }
-    }
-
-    fn protocol_default() -> NodeKind {
-        let config = schema_types::ProtocolConfig::default();
-        NodeKind::Protocol {
-            schema: schema_types::schema_from_protocol_config(&config),
-            config,
-            convert_to: None,
-        }
-    }
-
-    fn decoder() -> NodeKind {
-        NodeKind::FrameDecoder {
-            blocks: vec![],
-            enable_valid: false,
-            enable_frame_count: false,
-            enable_last_timestamp: false,
-            enable_fps: false,
-        }
-    }
-
-    fn sink() -> NodeKind {
-        NodeKind::Sink
-    }
-
-    fn source() -> NodeKind {
-        NodeKind::ProtocolSource {
-            node_id: "p1".into(),
-            channels: 2,
-            port_names: Vec::new(),
-        }
-    }
-
-    fn math() -> NodeKind {
-        NodeKind::Math {
-            op: MathOp::Add,
-            input_count: 2,
-        }
-    }
-
-    fn str_op(op: StrOp) -> NodeKind {
-        NodeKind::Str {
-            op,
-            num: StrNumParams::default(),
-            tmpl: String::new(),
-        }
-    }
-
-    fn text_input() -> NodeKind {
-        NodeKind::TextInput {
-            text: "hello".to_string(),
-        }
-    }
-
-    #[test]
-    fn device_handles() {
-        let k = device();
-        assert_eq!(
-            port_domain(&k, TRANSPORT_RX_HANDLE, true),
-            PortDomain::Bytes
-        );
-        assert_eq!(
-            port_domain(&k, TRANSPORT_TX_HANDLE, false),
-            PortDomain::Bytes
-        );
-    }
-
-    #[test]
-    fn protocol_handles() {
-        let k = protocol_default();
-        assert_eq!(
-            port_domain(&k, PROTOCOL_IN_HANDLE, false),
-            PortDomain::Bytes
-        );
-        assert_eq!(
-            port_domain(&k, PROTOCOL_OUT_HANDLE, true),
-            PortDomain::Bytes
-        );
-    }
-
-    #[test]
-    fn decoder_handles() {
-        let k = decoder();
-        assert_eq!(
-            port_domain(&k, FRAME_DECODER_IN_HANDLE, false),
-            PortDomain::Bytes
-        );
-        assert_eq!(port_domain(&k, "value", true), PortDomain::F32);
-    }
-
-    #[test]
-    fn sink_and_command_loopback_out() {
-        let k = sink();
-        assert_eq!(
-            port_domain(&k, LOOPBACK_OUT_HANDLE, true),
-            PortDomain::Bytes
-        );
-        assert_eq!(port_domain(&k, "value", false), PortDomain::F32);
-    }
-
-    #[test]
-    fn sink_spectrum_input_is_spectrum_domain() {
-        // Spectrum 控件 (编译为 Sink) 经 "spectrum" 口消费频谱平面
-        let k = sink();
-        assert_eq!(port_domain(&k, "spectrum", false), PortDomain::Spectrum);
-        assert_eq!(port_domain(&k, "spectrum", true), PortDomain::F32);
-    }
-
-    #[test]
-    fn protocol_source_str_handle_is_string_domain() {
-        let k = source();
-        assert_eq!(port_domain(&k, "ch0", true), PortDomain::F32);
-        assert_eq!(port_domain(&k, "str", true), PortDomain::String);
-        assert_eq!(port_domain(&k, "str", false), PortDomain::F32);
-    }
-
-    #[test]
-    fn math_input_output_is_f32() {
-        let k = math();
-        assert_eq!(port_domain(&k, "in0", false), PortDomain::F32);
-        assert_eq!(port_domain(&k, "result", true), PortDomain::F32);
-    }
-
-    #[test]
-    fn str_op_port_table_is_source_of_truth() {
-        let len = str_op(StrOp::Len);
-        assert_eq!(port_domain(&len, "str", false), PortDomain::String);
-        assert_eq!(port_domain(&len, "result", true), PortDomain::F32);
-
-        let mid = str_op(StrOp::Mid);
-        assert_eq!(port_domain(&mid, "str", false), PortDomain::String);
-        assert_eq!(port_domain(&mid, "pos", false), PortDomain::F32);
-        assert_eq!(port_domain(&mid, "len", false), PortDomain::F32);
-        assert_eq!(port_domain(&mid, "result", true), PortDomain::String);
-
-        let replace = str_op(StrOp::Replace);
-        assert_eq!(port_domain(&replace, "str1", false), PortDomain::String);
-        assert_eq!(port_domain(&replace, "str2", false), PortDomain::String);
-        assert_eq!(port_domain(&replace, "pos", false), PortDomain::F32);
-        assert_eq!(port_domain(&replace, "result", true), PortDomain::String);
-    }
-
-    #[test]
-    fn text_input_str_handle_is_string_output_only() {
-        let k = text_input();
-        assert_eq!(port_domain(&k, "str", true), PortDomain::String);
-        assert_eq!(port_domain(&k, "str", false), PortDomain::F32);
-        assert_eq!(port_domain(&k, "value", true), PortDomain::F32);
-    }
-
-    #[test]
-    fn text_display_text_input_is_string_domain() {
-        // 回归: TextDisplay 的 "text" 输入口属字符串平面 —
-        // TextInput.str / Trigger.text / ProtocolSource.str 可连
-        let k = NodeKind::TextDisplay;
-        assert_eq!(port_domain(&k, "text", false), PortDomain::String);
-        assert_eq!(port_domain(&k, "text", true), PortDomain::F32);
-        assert_eq!(port_domain(&k, "value", false), PortDomain::F32);
-    }
-
-    #[test]
-    fn port_tables_expose_typed_specs() {
-        // 端口表即单一事实源 — 抽查静态表形状与 port_domain 一致
-        let trigger = NodeKind::Trigger {
-            mode: "manual".into(),
-            edge: "level".into(),
-            default_miss: 0.0,
-            default_miss_text: String::new(),
-            command: String::new(),
-            rules: vec![],
-        };
-        assert_eq!(
-            port_table(&trigger).outputs,
-            &[
-                PortSpec::new("value", PortDomain::F32),
-                PortSpec::new("matched", PortDomain::F32),
-                PortSpec::new("text", PortDomain::String),
-            ]
-        );
-        assert_eq!(
-            port_table(&NodeKind::TextDisplay).inputs,
-            &[PortSpec::new("text", PortDomain::String)]
-        );
-        assert_eq!(port_table(&NodeKind::TextDisplay).outputs, &[],);
-        assert_eq!(
-            port_table(&NodeKind::Str {
-                op: StrOp::Mid,
-                num: StrNumParams::default(),
-                tmpl: String::new(),
-            })
-            .inputs,
-            &[
-                PortSpec::new("str", PortDomain::String),
-                PortSpec::new("pos", PortDomain::F32),
-                PortSpec::new("len", PortDomain::F32),
-            ]
-        );
-    }
-}
+#[path = "ports_tests.rs"]
+mod tests;

@@ -8,7 +8,7 @@ use crate::{Host, read_json_file};
 
 /// 节点图命令分发 (update/connect/disconnect 与前端、MCP 同一编译提交路径)。
 pub async fn graph(host: &Host, action: &GraphAction) -> Result<Value, String> {
-    let tb = &host.toolbox;
+    let tb = &host.state;
     match action {
         GraphAction::Tabs => Ok(tools::list_tabs(tb)),
         GraphAction::Outputs => Ok(tools::get_graph_outputs(tb)),

@@ -396,4 +396,5 @@ pub fn merge_patch(target: &mut Value, patch: Value) {
 }
 
 #[cfg(test)]
+#[path = "prepare_tests.rs"]
 mod tests;

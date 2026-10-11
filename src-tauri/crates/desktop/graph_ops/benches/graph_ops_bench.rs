@@ -14,7 +14,7 @@ use std::hint::black_box;
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use graph_ops::{compute_derived, inject_protocol_sources};
 use graph_testkit::{edge, make_input, make_math, make_protocol, make_protocol_source};
-use pipeline::{MathOp, NodeDef};
+use kind::{MathOp, NodeDef};
 
 /// N 个 widget 节点 (Input/Math 交替)
 fn widget_nodes(n: usize) -> Vec<NodeDef> {
