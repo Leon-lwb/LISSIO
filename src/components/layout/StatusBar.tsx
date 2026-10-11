@@ -35,9 +35,10 @@ function AiPanelToggle() {
   );
 }
 
-/// 前后端性能监视器入口 — 仅订阅两个标量，避免采样更新引发状态栏整体重渲染。
+/// Wait for workspace restoration; metric updates stay local to this entry.
 function PerformanceIndicator({ compact }: { compact: boolean }) {
   const lang = useAppStore((s) => s.lang);
+  const workspaceReady = useAppStore((s) => s.workspaceReady);
   const fps = usePerformanceStore((s) => s.frontend?.fps ?? null);
   const cpu = usePerformanceStore((s) => s.backend?.process.cpuPercent ?? null);
   const label = compact
@@ -48,6 +49,7 @@ function PerformanceIndicator({ compact }: { compact: boolean }) {
       className="flex h-full items-center gap-1 whitespace-nowrap rounded px-1 text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
       title={translate('performanceMonitor', lang)}
       aria-label={translate('performanceMonitor', lang)}
+      disabled={!workspaceReady}
       onClick={() => openDataPanelAndReveal(() => useAppStore.getState().addPerformanceMonitorTab())}
     >
       <Gauge size={12} className="shrink-0" />

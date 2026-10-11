@@ -246,9 +246,9 @@ mod tests {
         let snapshot = state.snapshot();
         assert_eq!(snapshot.calls, 3);
         assert_eq!(snapshot.errors, 1);
-        assert_eq!(snapshot.p50_latency_ms, 2.0);
-        assert_eq!(snapshot.p95_latency_ms, 9.0);
-        assert_eq!(snapshot.max_latency_ms, 9.0);
+        assert!((snapshot.p50_latency_ms - 2.0).abs() < f64::EPSILON);
+        assert!((snapshot.p95_latency_ms - 9.0).abs() < f64::EPSILON);
+        assert!((snapshot.max_latency_ms - 9.0).abs() < f64::EPSILON);
     }
 
     #[test]

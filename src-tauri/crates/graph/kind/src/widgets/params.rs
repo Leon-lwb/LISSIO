@@ -289,12 +289,16 @@ mod tests {
 
     #[test]
     fn snap_matches_frontend_semantics() {
-        assert_eq!(snap_control_value(50.0, 0.0, 100.0, 1.0), 50.0);
-        assert_eq!(snap_control_value(50.4, 0.0, 100.0, 1.0), 50.0);
-        assert_eq!(snap_control_value(150.0, 0.0, 100.0, 1.0), 100.0);
-        // 无效 range 原样返回
-        assert_eq!(snap_control_value(50.0, 100.0, 0.0, 1.0), 50.0);
-        assert_eq!(snap_control_value(-0.0, 0.0, 100.0, 1.0), 0.0);
+        assert!((snap_control_value(50.0, 0.0, 100.0, 1.0) - 50.0).abs() < f64::EPSILON);
+        assert!((snap_control_value(50.4, 0.0, 100.0, 1.0) - 50.0).abs() < f64::EPSILON);
+        assert!((snap_control_value(150.0, 0.0, 100.0, 1.0) - 100.0).abs() < f64::EPSILON);
+        // Invalid ranges return the original value.
+        assert!((snap_control_value(50.0, 100.0, 0.0, 1.0) - 50.0).abs() < f64::EPSILON);
+        // Negative zero must normalize to positive zero.
+        assert_eq!(
+            snap_control_value(-0.0, 0.0, 100.0, 1.0).to_bits(),
+            0.0_f64.to_bits()
+        );
     }
 
     #[test]

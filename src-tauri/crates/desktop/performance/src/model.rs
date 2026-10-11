@@ -134,8 +134,8 @@ mod tests {
         );
 
         assert_eq!(snapshot.queued_frames, 7);
-        assert_eq!(snapshot.queue_wait_max_ms, 2.0);
-        assert_eq!(snapshot.eval_service_max_ms, 4.0);
+        assert!((snapshot.queue_wait_max_ms - 2.0).abs() < f64::EPSILON);
+        assert!((snapshot.eval_service_max_ms - 4.0).abs() < f64::EPSILON);
         assert_eq!(snapshot.published_samples, 13);
         assert_eq!(snapshot.ingress_dropped, 4);
     }
