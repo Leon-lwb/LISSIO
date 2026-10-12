@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-12
 applies-to: Release history for the current Lissio repository
 -->
 
@@ -11,40 +11,7 @@ All notable Lissio changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and releases use
 semantic versioning.
 
-## [0.9.0] - 2026-10-11
-
-### Removed
-
-- Repository prose is written in English. Removed the Chinese translation backups
-    under `docs/community/`, dropped `language` and `authoritative` from the
-    documentation metadata contract, translated the Chinese prose out of `scripts/`,
-    `e2e/`, and the build/CI configuration, and `check:release-sync` no longer
-    requires a Chinese CHANGELOG backup. Historical review records and product
-    localization (`src/i18n/resources/zh/`, runtime capability help `docs/zh/`) are
-    unchanged, and the English requirement is a reviewer-confirmed convention rather
-    than a gate rule.
-- Removed the Parquet export format for recorded data. Parquet was reachable only
-    through the DuckDB engine's `COPY … (FORMAT PARQUET)`, and DuckDB is being
-    replaced, so the export dialog now offers CSV and JSON only. A request that still
-    asks for `format: "parquet"` is rejected as an invalid export request.
-
-### Fixed
-
-- Fixed the I2C START/STOP event rendering, which threw a `TypeError` because the
-    hand-written wire type declared `{ Start: null }` while Rust serializes those
-    unit variants as the strings `"Start"`/`"Stop"`; the frontend now consumes the
-    generated logic types. Frequency and byte values render consistently across the
-    spectrum chart, measurement grid, FFT readout, recording views, performance
-    monitor, and status bar instead of the three frequency and two byte formats that
-    had drifted apart, and clipboard copies fall back to `execCommand` outside a
-    secure context.
-- Fixed onboarding reopening after dismissal or version changes. Ending or completing the tour persists the disabled preference; Help still supports manual replay. Desktop and Web settings now use the connected backend, serialize acknowledged writes, and offer retries for read or save failures without overwriting unread configuration. Open onboarding also keeps later startup dialogs queued.
-    
-    Bound default validation concurrency to one Vitest worker, one Playwright worker, two Cargo build jobs, and one Rust test thread to reduce peak memory use.
-    
-    Keep the performance-monitor entry disabled until workspace restoration finishes so an early click cannot be overwritten by the restored tab list.
-
-## [0.8.0] - 2026-10-08
+## [0.8.0] - 2026-10-12
 
 ### Added
 
@@ -62,11 +29,59 @@ semantic versioning.
   derives the next version, generates the `CHANGELOG.md` entry, and synchronizes
   every version file. Two new PR-tier gates keep that state honest:
   `check:changes` rejects change files that covector would silently drop, and
-  `check:release-sync` fails when the version fields, the changelog, and its
-  Chinese backup disagree.
+  `check:release-sync` fails when the version fields and the changelog
+  disagree.
+- Unified the duplicated abstractions the cleanup review found. The acquisition
+  loops now share one configuration, plan, operation, session, and pump owner;
+  point scaling, schema-type checksum/hex/field-type handling, the JustFloat tail
+  preset, protocol text and buffer handling, and stream sinks each have a single
+  implementation, and `now_us`/`now_ms`/`now_ns`, `RuntimeLimits::from(&PipelineConfig)`,
+  and the adaptive sample rate moved to the type owners. The deliberate
+  non-unifications (the UDP/candleLight/serial loops, Modbus register reads versus
+  S7 byte windows, protocol-specific read/write bodies) are recorded with their
+  reasons in `docs/reviews/records/2026-10-11-unification-batches.md`.
+- Rust unit tests live in flat `<module>_tests.rs` files next to the module they
+  cover instead of in a `tests/` subdirectory, so no crate `src/` carries an
+  extra folder. The layout rule and its exemptions (`tests/`, `benches/`) are in
+  `docs/architecture/crates.md`.
+
+### Removed
+
+- Repository prose is written in English. Removed the Chinese translation backups
+  under `docs/community/`, dropped `language` and `authoritative` from the
+  documentation metadata contract, translated the Chinese prose out of `scripts/`,
+  `e2e/`, and the build/CI configuration, and `check:release-sync` no longer
+  requires a Chinese CHANGELOG backup. Historical review records and product
+  localization (`src/i18n/resources/zh/`, runtime capability help `docs/zh/`) are
+  unchanged, and the English requirement is a reviewer-confirmed convention rather
+  than a gate rule.
+- Removed the Parquet export format for recorded data. Parquet was reachable only
+  through the DuckDB engine's `COPY … (FORMAT PARQUET)`, and DuckDB is being
+  replaced, so the export dialog now offers CSV and JSON only. A request that still
+  asks for `format: "parquet"` is rejected as an invalid export request.
+- Removed the dead Rust surfaces the cleanup review identified: the legacy
+  `src-tauri/src/commands/` command layer with its `event_sink` and `gui_host`
+  shims, the `runtime` crate under `data/`, the `graph` trait/prelude facade,
+  `buffer_graph`'s unreachable `NodeGraph`/`RoutedData` types with their tests and
+  benchmark, the `pipeline::runtime` facade, and the `wgpu`/`Envelope`,
+  `serialport`, and `device_tree::model` re-export shims. The Rust toolbox handle
+  is now the `Arc<AppState>` alias it always was.
 
 ### Fixed
 
+- Fixed the I2C START/STOP event rendering, which threw a `TypeError` because the
+  hand-written wire type declared `{ Start: null }` while Rust serializes those
+  unit variants as the strings `"Start"`/`"Stop"`; the frontend now consumes the
+  generated logic types. Frequency and byte values render consistently across the
+  spectrum chart, measurement grid, FFT readout, recording views, performance
+  monitor, and status bar instead of the three frequency and two byte formats that
+  had drifted apart, and clipboard copies fall back to `execCommand` outside a
+  secure context.
+- Fixed onboarding reopening after dismissal or version changes. Ending or completing the tour persists the disabled preference; Help still supports manual replay. Desktop and Web settings now use the connected backend, serialize acknowledged writes, and offer retries for read or save failures without overwriting unread configuration. Open onboarding also keeps later startup dialogs queued.
+  
+  Bound default validation concurrency to one Vitest worker, one Playwright worker, two Cargo build jobs, and one Rust test thread to reduce peak memory use.
+  
+  Keep the performance-monitor entry disabled until workspace restoration finishes so an early click cannot be overwritten by the restored tab list.
 - Fixed the sidebar palette clipping the top of Chinese glyphs (`右截取` /
   `插入` / `删除`) when the UI font has tight vertical metrics: with
   `leading-none` the truncated label's line box was exactly 1em, while most CJK

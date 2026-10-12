@@ -1,6 +1,6 @@
 [package]
 name = "lissio"
-version = "0.9.0"
+version = "0.8.0"
 description = "Modern serial data assistant with VOFA-compatible protocol support"
 authors = ["Horldsence", "sloray"]
 license = "Apache-2.0"
@@ -114,7 +114,7 @@ members = [
 [workspace.package]
 edition = "2024"
 repository = "https://codeberg.org/Horldsence/Lissio"
-version = "0.9.0"
+version = "0.8.0"
 license = "Apache-2.0"
 
 [workspace.lints.clippy]
@@ -288,74 +288,74 @@ duckdb = { version = "1.5.5", features = ["bundled", "parquet"] }
 sea-orm = { version = "2.0.4", default-features = false, features = ["runtime-tokio-rustls", "macros"] }
 # ---- workspace-internal crates (path = crates/<domain>/<crate>) ----
 # L0 foundation
-gpu = { version = "0.9.0", package = "lissio-gpu", path = "crates/signal/gpu" }
-waveform = { version = "0.9.0", package = "lissio-waveform", path = "crates/signal/waveform" }
-buffer_graph = { version = "0.9.0", package = "lissio-buffer-graph", path = "crates/graph/buffer_graph" }
-raw-data = { version = "0.9.0", package = "lissio-raw-data", path = "crates/signal/raw-data" }
-data_model = { version = "0.9.0", package = "lissio-data-model", path = "crates/shared/data-model" }
-error = { version = "0.9.0", package = "lissio-error", path = "crates/shared/error" }
-flow = { version = "0.9.0", package = "lissio-flow", path = "crates/shared/flow" }
-points = { version = "0.9.0", package = "lissio-points", path = "crates/protocol/points" }
-acquisition = { version = "0.9.0", package = "lissio-acquisition", path = "crates/protocol/acquisition" }
-can = { version = "0.9.0", package = "lissio-can", path = "crates/vehicle/can" }
-logic = { version = "0.9.0", package = "lissio-logic", path = "crates/protocol/logic" }
-diagnostic = { version = "0.9.0", package = "lissio-diagnostic", path = "crates/vehicle/diagnostic" }
-schema_types = { version = "0.9.0", package = "lissio-schema-types", path = "crates/protocol/schema_types" }
-events = { version = "0.9.0", package = "lissio-events", path = "crates/desktop/events" }
-subscription = { version = "0.9.0", package = "lissio-subscription", path = "crates/shared/subscription" }
-filter = { version = "0.9.0", package = "lissio-filter", path = "crates/signal/filter" }
-spectrum = { version = "0.9.0", package = "lissio-spectrum", path = "crates/signal/spectrum" }
-measurement = { version = "0.9.0", package = "lissio-measurement", path = "crates/signal/measurement" }
+gpu = { version = "0.8.0", package = "lissio-gpu", path = "crates/signal/gpu" }
+waveform = { version = "0.8.0", package = "lissio-waveform", path = "crates/signal/waveform" }
+buffer_graph = { version = "0.8.0", package = "lissio-buffer-graph", path = "crates/graph/buffer_graph" }
+raw-data = { version = "0.8.0", package = "lissio-raw-data", path = "crates/signal/raw-data" }
+data_model = { version = "0.8.0", package = "lissio-data-model", path = "crates/shared/data-model" }
+error = { version = "0.8.0", package = "lissio-error", path = "crates/shared/error" }
+flow = { version = "0.8.0", package = "lissio-flow", path = "crates/shared/flow" }
+points = { version = "0.8.0", package = "lissio-points", path = "crates/protocol/points" }
+acquisition = { version = "0.8.0", package = "lissio-acquisition", path = "crates/protocol/acquisition" }
+can = { version = "0.8.0", package = "lissio-can", path = "crates/vehicle/can" }
+logic = { version = "0.8.0", package = "lissio-logic", path = "crates/protocol/logic" }
+diagnostic = { version = "0.8.0", package = "lissio-diagnostic", path = "crates/vehicle/diagnostic" }
+schema_types = { version = "0.8.0", package = "lissio-schema-types", path = "crates/protocol/schema_types" }
+events = { version = "0.8.0", package = "lissio-events", path = "crates/desktop/events" }
+subscription = { version = "0.8.0", package = "lissio-subscription", path = "crates/shared/subscription" }
+filter = { version = "0.8.0", package = "lissio-filter", path = "crates/signal/filter" }
+spectrum = { version = "0.8.0", package = "lissio-spectrum", path = "crates/signal/spectrum" }
+measurement = { version = "0.8.0", package = "lissio-measurement", path = "crates/signal/measurement" }
 # L1 protocol
-protocol = { version = "0.9.0", package = "lissio-protocol", path = "crates/protocol/protocol" }
-protocol_float = { version = "0.9.0", package = "lissio-protocol-float", path = "crates/protocol/protocol_float" }
-protocol_can_bridge = { version = "0.9.0", package = "lissio-protocol-can-bridge", path = "crates/protocol/protocol_can_bridge" }
-logic_decoder = { version = "0.9.0", package = "lissio-logic-decoder", path = "crates/protocol/logic_decoder" }
-schema = { version = "0.9.0", package = "lissio-schema", path = "crates/protocol/schema" }
+protocol = { version = "0.8.0", package = "lissio-protocol", path = "crates/protocol/protocol" }
+protocol_float = { version = "0.8.0", package = "lissio-protocol-float", path = "crates/protocol/protocol_float" }
+protocol_can_bridge = { version = "0.8.0", package = "lissio-protocol-can-bridge", path = "crates/protocol/protocol_can_bridge" }
+logic_decoder = { version = "0.8.0", package = "lissio-logic-decoder", path = "crates/protocol/logic_decoder" }
+schema = { version = "0.8.0", package = "lissio-schema", path = "crates/protocol/schema" }
 # L1 transport
-device_tree = { version = "0.9.0", package = "lissio-device-tree", path = "crates/transport/device-tree" }
-can_transport = { version = "0.9.0", package = "lissio-can-transport", path = "crates/transport/can-transport" }
-transport = { version = "0.9.0", package = "lissio-transport", path = "crates/transport/transport" }
-network = { version = "0.9.0", package = "lissio-network", path = "crates/transport/network" }
-serial = { version = "0.9.0", package = "lissio-serial", path = "crates/transport/serial" }
-modbus-adapter = { version = "0.9.0", package = "lissio-modbus-adapter", path = "crates/transport/modbus-adapter" }
-s7-adapter = { version = "0.9.0", package = "lissio-s7-adapter", path = "crates/transport/s7-adapter" }
-automotive = { version = "0.9.0", package = "lissio-automotive", path = "crates/transport/automotive" }
-automotive-isotp = { version = "0.9.0", package = "lissio-automotive-isotp", path = "crates/transport/automotive_isotp" }
-automotive-diag = { version = "0.9.0", package = "lissio-automotive-diag", path = "crates/transport/automotive_diag" }
+device_tree = { version = "0.8.0", package = "lissio-device-tree", path = "crates/transport/device-tree" }
+can_transport = { version = "0.8.0", package = "lissio-can-transport", path = "crates/transport/can-transport" }
+transport = { version = "0.8.0", package = "lissio-transport", path = "crates/transport/transport" }
+network = { version = "0.8.0", package = "lissio-network", path = "crates/transport/network" }
+serial = { version = "0.8.0", package = "lissio-serial", path = "crates/transport/serial" }
+modbus-adapter = { version = "0.8.0", package = "lissio-modbus-adapter", path = "crates/transport/modbus-adapter" }
+s7-adapter = { version = "0.8.0", package = "lissio-s7-adapter", path = "crates/transport/s7-adapter" }
+automotive = { version = "0.8.0", package = "lissio-automotive", path = "crates/transport/automotive" }
+automotive-isotp = { version = "0.8.0", package = "lissio-automotive-isotp", path = "crates/transport/automotive_isotp" }
+automotive-diag = { version = "0.8.0", package = "lissio-automotive-diag", path = "crates/transport/automotive_diag" }
 # L1 node
-graph = { version = "0.9.0", package = "lissio-graph", path = "crates/graph/graph" }
-eval = { version = "0.9.0", package = "lissio-eval", path = "crates/graph/eval" }
-frame-decoder = { version = "0.9.0", package = "lissio-frame-decoder", path = "crates/protocol/frame-decoder" }
-hir = { version = "0.9.0", package = "lissio-hir", path = "crates/graph/hir" }
-kind = { version = "0.9.0", package = "lissio-kind", path = "crates/graph/kind" }
-lower = { version = "0.9.0", package = "lissio-lower", path = "crates/graph/lower" }
-plane = { version = "0.9.0", package = "lissio-plane", path = "crates/graph/plane" }
-graph_testkit = { version = "0.9.0", package = "lissio-graph-testkit", path = "crates/graph/graph-testkit" }
-trigger = { version = "0.9.0", package = "lissio-trigger", path = "crates/graph/trigger" }
+graph = { version = "0.8.0", package = "lissio-graph", path = "crates/graph/graph" }
+eval = { version = "0.8.0", package = "lissio-eval", path = "crates/graph/eval" }
+frame-decoder = { version = "0.8.0", package = "lissio-frame-decoder", path = "crates/protocol/frame-decoder" }
+hir = { version = "0.8.0", package = "lissio-hir", path = "crates/graph/hir" }
+kind = { version = "0.8.0", package = "lissio-kind", path = "crates/graph/kind" }
+lower = { version = "0.8.0", package = "lissio-lower", path = "crates/graph/lower" }
+plane = { version = "0.8.0", package = "lissio-plane", path = "crates/graph/plane" }
+graph_testkit = { version = "0.8.0", package = "lissio-graph-testkit", path = "crates/graph/graph-testkit" }
+trigger = { version = "0.8.0", package = "lissio-trigger", path = "crates/graph/trigger" }
 # L2 pipeline
-pipeline = { version = "0.9.0", package = "lissio-pipeline", path = "crates/desktop/pipeline" }
-bus = { version = "0.9.0", package = "lissio-bus", path = "crates/data/bus" }
-recording = { version = "0.9.0", package = "lissio-recording", path = "crates/data/recording" }
-evaluator = { version = "0.9.0", package = "lissio-evaluator", path = "crates/desktop/evaluator" }
-stream = { version = "0.9.0", package = "lissio-stream", path = "crates/desktop/stream" }
+pipeline = { version = "0.8.0", package = "lissio-pipeline", path = "crates/desktop/pipeline" }
+bus = { version = "0.8.0", package = "lissio-bus", path = "crates/data/bus" }
+recording = { version = "0.8.0", package = "lissio-recording", path = "crates/data/recording" }
+evaluator = { version = "0.8.0", package = "lissio-evaluator", path = "crates/desktop/evaluator" }
+stream = { version = "0.8.0", package = "lissio-stream", path = "crates/desktop/stream" }
 # L3 app
-app = { version = "0.9.0", package = "lissio-app", path = "crates/desktop/app" }
-graph_ops = { version = "0.9.0", package = "lissio-graph-ops", path = "crates/desktop/graph_ops" }
-menu_shell = { version = "0.9.0", package = "lissio-menu-shell", path = "crates/desktop/menu_shell" }
-update_flow = { version = "0.9.0", package = "lissio-update-flow", path = "crates/desktop/update_flow" }
+app = { version = "0.8.0", package = "lissio-app", path = "crates/desktop/app" }
+graph_ops = { version = "0.8.0", package = "lissio-graph-ops", path = "crates/desktop/graph_ops" }
+menu_shell = { version = "0.8.0", package = "lissio-menu-shell", path = "crates/desktop/menu_shell" }
+update_flow = { version = "0.8.0", package = "lissio-update-flow", path = "crates/desktop/update_flow" }
 # L3 ai
-llm = { version = "0.9.0", package = "lissio-llm", path = "crates/ai/llm" }
-chat = { version = "0.9.0", package = "lissio-chat", path = "crates/ai/chat" }
-chat-session = { version = "0.9.0", package = "lissio-chat-session", path = "crates/ai/chat-session" }
-mcp-client = { version = "0.9.0", package = "lissio-mcp-client", path = "crates/ai/mcp-client" }
-ai-host = { version = "0.9.0", package = "lissio-ai-host", path = "crates/desktop/ai-host" }
-mcp-server = { version = "0.9.0", package = "lissio-mcp-server", path = "crates/desktop/mcp-server" }
-control-api = { version = "0.9.0", package = "lissio-control-api", path = "crates/desktop/control-api" }
-rpc-api = { version = "0.9.0", package = "lissio-rpc-api", path = "crates/desktop/rpc-api" }
-performance = { version = "0.9.0", package = "lissio-performance", path = "crates/desktop/performance" }
-backend-server = { version = "0.9.0", package = "lissio-backend-server", path = "crates/desktop/backend-server" }
-backend-host = { version = "0.9.0", package = "lissio-backend-host", path = "crates/desktop/backend-host" }
+llm = { version = "0.8.0", package = "lissio-llm", path = "crates/ai/llm" }
+chat = { version = "0.8.0", package = "lissio-chat", path = "crates/ai/chat" }
+chat-session = { version = "0.8.0", package = "lissio-chat-session", path = "crates/ai/chat-session" }
+mcp-client = { version = "0.8.0", package = "lissio-mcp-client", path = "crates/ai/mcp-client" }
+ai-host = { version = "0.8.0", package = "lissio-ai-host", path = "crates/desktop/ai-host" }
+mcp-server = { version = "0.8.0", package = "lissio-mcp-server", path = "crates/desktop/mcp-server" }
+control-api = { version = "0.8.0", package = "lissio-control-api", path = "crates/desktop/control-api" }
+rpc-api = { version = "0.8.0", package = "lissio-rpc-api", path = "crates/desktop/rpc-api" }
+performance = { version = "0.8.0", package = "lissio-performance", path = "crates/desktop/performance" }
+backend-server = { version = "0.8.0", package = "lissio-backend-server", path = "crates/desktop/backend-server" }
+backend-host = { version = "0.8.0", package = "lissio-backend-host", path = "crates/desktop/backend-host" }
 # backend-cli is a leaf bin (no consumers), included in the build only via [workspace].members
 # L4 cmd
 libautomotive = "0.1"
