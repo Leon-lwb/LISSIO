@@ -358,6 +358,19 @@ export function tierCommandText(tier) {
   return TIER_COMMANDS[tier].join(' ');
 }
 
+/**
+ * Files that implement a tier driver: the shell entry point CI invokes verbatim,
+ * and the Node driver it forwards to.
+ *
+ * `TIER_COMMANDS` names the shell file because the workflows run it byte for byte,
+ * but the implementation is `scripts/check-all.mjs`: the same driver has to run on
+ * a Windows checkout, where bash is not guaranteed and `pnpm check:all` otherwise
+ * fails before a single gate runs. A `check:*` script that invokes either file is
+ * the tier driver, not a gate, and is exempt from the orphan check for that
+ * structural reason rather than through an allowlist.
+ */
+export const TIER_DRIVERS = ['scripts/check-all.sh', 'scripts/check-all.mjs'];
+
 /** `pnpm` script names that may appear in a workflow without being a gate. */
 export const NON_GATE_SCRIPTS = [
   'install',

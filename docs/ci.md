@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-14
 applies-to: CI platform, runner setup, gate execution, and the release pipeline
 -->
 
@@ -25,8 +25,9 @@ The workflows live in `.forgejo/workflows/`:
 
 `ci.yml` names no gate. Its PR job runs one command — the `pr` tier command —
 and its full job runs one command, the `full` tier command. Both are defined in
-`scripts/gates.mjs` and both drive `scripts/check-all.sh`, which reads the
-registry.
+`scripts/gates.mjs` and both drive `scripts/check-all.mjs`, which reads the
+registry; `scripts/check-all.sh` is the shell entry point the workflow text names,
+and it forwards to that driver unchanged.
 
 That is deliberate, and it is the property the CI design rests on. A workflow
 that lists gates as individual steps can be silently defanged: comment a step
@@ -102,8 +103,9 @@ editing `scripts/gates.mjs`. The anchors make that a deliberate, multi-file,
 reviewable act rather than a one-line change, which is the achievable goal; they
 do not make it impossible.
 
-**The check cannot police itself.** `scripts/gates.mjs`, `scripts/check-all.sh`,
-and `scripts/check-ci-gates.mjs` are ordinary files in this repository, and
+**The check cannot police itself.** `scripts/gates.mjs`, `scripts/check-all.mjs`,
+`scripts/check-all.sh`, and `scripts/check-ci-gates.mjs` are ordinary files in this
+repository, and
 `check:ci-gates` runs *inside* the tier it verifies. Anyone with commit access can
 edit a gate and the code that checks it together, and CI will report green. The
 same applies to whatever runs before it: an install hook or an earlier workflow
@@ -114,12 +116,12 @@ plan rather than only the registry — but a determined author is outside what a
 in-repo check can stop.
 
 Closing this class properly means verifying the reviewed revision of the gate
-machinery *before* anything else runs: commit SHA-256 hashes of the three files
-and check them as the first CI step, before `pnpm install`, using a copy of the
+machinery *before* anything else runs: commit SHA-256 hashes of those files and
+check them as the first CI step, before `pnpm install`, using a copy of the
 checker taken from the protected branch rather than from the pull request. That is
 not implemented here. Reviewing changes to `scripts/gates.mjs`,
-`scripts/check-all.sh`, and `scripts/check-ci-gates.mjs` with the same care as
-production code is the control actually in force.
+`scripts/check-all.mjs`, `scripts/check-all.sh`, and `scripts/check-ci-gates.mjs`
+with the same care as production code is the control actually in force.
 
 ### Why the runner is self-hosted
 
@@ -181,8 +183,8 @@ argv to run, whether it runs on PRs (`pr`) or only in the complete flow
 
 Everything else derives from it:
 
-- `scripts/check-all.sh` reads its execution plan via `pnpm gates --plan`, so
-  local runs and CI run the same list.
+- `scripts/check-all.mjs` reads its execution plan via `pnpm gates --plan`, so
+  local runs and CI run the same list; `scripts/check-all.sh` forwards to it.
 - `AGENTS.md`, `CONTRIBUTING.md`, and `.github/PULL_REQUEST_TEMPLATE.md` embed a
   **generated block** between `<!-- lissio-gates:start -->` and
   `<!-- lissio-gates:end -->`.
@@ -221,6 +223,19 @@ everything; `--json` is available for tooling.
 
 A full local run needs Playwright browsers
 (`pnpm exec playwright install --with-deps chromium`) and `cargo-deny` 0.20.2.
+
+The tier driver is Node (`scripts/check-all.mjs`; `scripts/check-all.sh` forwards
+to it), so these commands run on Windows too, where no shell is required. On
+Windows the driver first applies `scripts/local-env.mjs`: it points `TMP`, `TEMP`,
+and `TMPDIR` at `output/local-tmp` inside the checkout, and removes the stale
+`msvcrt.lib` stub an older `tauri-build` left in
+`target/<profile>/build/lissio-<hash>/out`. Without that, MSVC aborts with `cl.exe`
+D8050, esbuild aborts `vite build` with `Access is denied`, and the contract
+exporter cannot write its output directory — failures that have nothing to do with
+the gate that reports them. The build and development scripts run through the same
+prelude, so `pnpm build:all` and `pnpm dev:desktop` work there as well. The
+render-budget gate still needs bash (Git Bash) on Windows, because it runs
+`scripts/perf-gate.sh`.
 
 Both gate jobs cache `~/.cargo/{registry,git}` and `src-tauri/target`, keyed on
 `src-tauri/Cargo.lock`. Clippy and the test suite across 63 crates do not fit

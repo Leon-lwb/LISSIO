@@ -56,7 +56,7 @@ import {
   renderDocBlock,
   repoRoot,
   spliceDocBlock,
-  TIER_COMMANDS,
+  TIER_DRIVERS,
   tierCommandText,
   validateRegistry,
 } from './gates.mjs';
@@ -164,9 +164,9 @@ for (const gate of GATES) {
     }
   }
 
-  // The tier driver script, e.g. `scripts/check-all.sh`. A `check:*` script that
-  // invokes it is the tier driver, not a gate.
-  const tierDriverFile = TIER_COMMANDS.pr.find((part) => part.endsWith('.sh'));
+  // Tier drivers: the shell entry point CI runs verbatim and the Node driver it
+  // forwards to. A `check:*` script that invokes either is the tier driver, not a
+  // gate.
 
   for (const [name, command] of Object.entries(scripts)) {
     if (!CHECK_SHAPED.test(name)) continue;
@@ -180,7 +180,7 @@ for (const gate of GATES) {
     // deleted from the registry and silenced with a single well-reasoned-looking
     // line added to LOCAL_ONLY_SCRIPTS — which the failure text used to invite.
     if (name.startsWith('check:')) {
-      if (tierDriverFile && command.includes(tierDriverFile)) continue;
+      if (TIER_DRIVERS.some((driver) => command.includes(driver))) continue;
       fail(
         `package.json: script "${name}" is a check but no gate in scripts/gates.mjs runs it. A ` +
           '`check:*` script is a gate: register it in the registry, or delete the script. There is ' +
@@ -590,11 +590,13 @@ const nonGateScripts = new Set(NON_GATE_SCRIPTS);
  * Files that define or verify the gates. A workflow must not read or write these.
  *
  * `scripts/check-all.sh` is deliberately absent: it is the tier command's target
- * and therefore appears in the one allowed place. These two are the machinery a
+ * and therefore appears in the one allowed place. The others are the machinery a
  * step could rewrite to turn every gate that follows into a no-op while the
- * workflow text still contains the byte-exact tier command.
+ * workflow text still contains the byte-exact tier command. `scripts/check-all.mjs`
+ * is listed because the shim now only executes that driver, so the driver is the
+ * machinery.
  */
-const GATE_MACHINERY = ['scripts/gates.mjs', 'scripts/check-ci-gates.mjs'];
+const GATE_MACHINERY = ['scripts/gates.mjs', 'scripts/check-ci-gates.mjs', 'scripts/check-all.mjs'];
 
 // Every pnpm invocation in a `run:` body, so an unregistered gate-shaped script
 // is still reported rather than silently allowed. `pnpm`/`pnpm run` only; a
