@@ -97,6 +97,7 @@ Change the registry, then run `pnpm check:ci-gates --fix`.
 - `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory for finding the type owner; prints a report and never fails, so it is informational — `check:architecture` is the gate that enforces these rules
 - `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules
 - `pnpm check:deps` — centralized third-party dependency versions inherited from the root workspace
+- `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
 - `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage

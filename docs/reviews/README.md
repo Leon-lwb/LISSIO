@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-13 | Tauri npm/crate version alignment and gate | passed with conditions | [records/2026-10-13-tauri-version-alignment.md](records/2026-10-13-tauri-version-alignment.md) |
 | 2026-10-13 | Linux device selection rendering | passed with conditions | [records/2026-10-13-linux-device-select.md](records/2026-10-13-linux-device-select.md) |
 | 2026-10-13 | Linux controls and content-switch rendering | passed with conditions | [records/2026-10-13-linux-controls-and-switch-flicker.md](records/2026-10-13-linux-controls-and-switch-flicker.md) |
 | 2026-10-04 | Open-source and IP baseline | passed with conditions | [records/2026-10-04-open-source-ip-baseline.md](records/2026-10-04-open-source-ip-baseline.md) |

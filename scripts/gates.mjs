@@ -96,6 +96,16 @@ export const GATES = [
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
+    id: 'check-tauri-versions',
+    label: 'Tauri npm ↔ crate version sync',
+    group: 'Architecture',
+    cwd: 'root',
+    cmd: ['pnpm', 'check:tauri-versions'],
+    tier: 'pr',
+    why: 'the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start',
+    docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
+  },
+  {
     id: 'check-web-contract',
     label: 'Command exit contract',
     group: 'Architecture',

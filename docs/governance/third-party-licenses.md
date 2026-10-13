@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-11
+last-reviewed: 2026-10-13
 applies-to: Dependency policy, current snapshot, special obligations, and review workflow
 -->
 
@@ -24,14 +24,14 @@ frontend inventory is generated with pnpm and reviewed when dependencies change.
 
 ## Rust snapshot
 
-The current graph contains 772 external crates. Frequent SPDX expressions are:
+The current graph contains 766 external crates. Frequent SPDX expressions are:
 
 | Expression | Packages |
 | --- | ---: |
 | `MIT OR Apache-2.0` | 363 |
-| `MIT` | 163 |
-| `Apache-2.0 OR MIT` | 66 |
-| `MIT/Apache-2.0` | 34 |
+| `MIT` | 164 |
+| `Apache-2.0 OR MIT` | 64 |
+| `MIT/Apache-2.0` | 29 |
 | `Apache-2.0` | 26 |
 | `Zlib OR Apache-2.0 OR MIT` | 23 |
 | `Unicode-3.0` | 18 |

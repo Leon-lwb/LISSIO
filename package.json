@@ -29,6 +29,7 @@
     "architecture": "node scripts/architecture.mjs",
     "check:architecture": "node scripts/check-crate-architecture.mjs",
     "check:deps": "node scripts/check-deps.mjs",
+    "check:tauri-versions": "node scripts/check-tauri-versions.mjs",
     "check:web-contract": "node scripts/check-web-contract.mjs",
     "generate:contracts": "node scripts/generate-contracts.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",

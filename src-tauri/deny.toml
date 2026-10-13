@@ -29,12 +29,6 @@ ignore = [
   # paste / proc-macro-error: 过程宏辅助库, 经三方宏依赖引入, 无可控替代点
   { id = "RUSTSEC-2024-0436", reason = "paste unmaintained, 三方传递依赖, 无已知漏洞" },
   { id = "RUSTSEC-2024-0370", reason = "proc-macro-error unmaintained, 三方传递依赖, 无已知漏洞" },
-  # rust-unic 家族: 无上游维护, 三方传递依赖 (经 tauri-utils → urlpattern), 无已知漏洞
-  { id = "RUSTSEC-2025-0081", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
-  { id = "RUSTSEC-2025-0075", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
-  { id = "RUSTSEC-2025-0080", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
-  { id = "RUSTSEC-2025-0100", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
-  { id = "RUSTSEC-2025-0098", reason = "rust-unic 家族 unmaintained, tauri 传递依赖" },
 ]
 
 [licenses]

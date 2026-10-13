@@ -41,6 +41,7 @@ stays in sync with the registry, CI, and the other documents.
 
 - [ ] `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules
 - [ ] `pnpm check:deps` — centralized third-party dependency versions inherited from the root workspace
+- [ ] `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - [ ] `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - [ ] `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
 - [ ] `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
