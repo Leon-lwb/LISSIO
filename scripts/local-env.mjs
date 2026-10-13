@@ -105,7 +105,10 @@ export function applyLocalEnv({ quiet = false } = {}) {
 
 /** Run one command with inherited streams, resolving Windows `.cmd` shims. */
 function run(argv, { shell }) {
-  const options = { stdio: 'inherit', cwd: repoRoot };
+  // The caller's directory, not the repository root: pnpm already runs package
+  // scripts from the root, and an ad-hoc `node scripts/local-env.mjs cargo …` from
+  // `src-tauri` must stay there.
+  const options = { stdio: 'inherit' };
   if (process.platform === 'win32') {
     return spawnSync(argv.join(' '), { ...options, shell: true });
   }
