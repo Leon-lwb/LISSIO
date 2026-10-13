@@ -68,6 +68,9 @@ const errors = [];
 const fail = (message) => errors.push(message);
 const read = (path) => readFileSync(path, 'utf8');
 
+/** Line endings are never part of what a gate verifies: a CRLF checkout is equal. */
+const normalizeEol = (text) => text.replace(/\r\n/g, '\n');
+
 // ── 1. Registry self-consistency ──────────────────────────────
 for (const problem of validateRegistry()) fail(`gates.mjs: ${problem}`);
 
@@ -437,9 +440,14 @@ for (const doc of documentedDocs) {
     continue;
   }
   const expected = renderDocBlock(doc);
-  if (current !== expected) {
+  // Line endings are not part of the block, so a CRLF checkout carries the same
+  // content; comparing raw bytes would report drift on it.
+  if (normalizeEol(current) !== expected) {
     if (FIX) {
-      writeFileSync(path, spliceDocBlock(text, doc));
+      // Write the document back with one consistent line ending, so a Windows
+      // checkout is not left with a CRLF file holding an LF block.
+      const eol = text.includes('\r\n') ? '\r\n' : '\n';
+      writeFileSync(path, spliceDocBlock(text, doc).replace(/\r?\n/g, eol));
       console.log(`  fixed ${display}`);
     } else {
       fail(
@@ -635,7 +643,10 @@ function namedGates(run) {
 // `--labels ci-legacy:...`" would be adopted as the expected label, and every
 // job could then be moved to a label no runner carries while reporting green.
 const ciDoc = read(join(repoRoot, 'docs', 'ci.md'));
-const registrationBlocks = [...ciDoc.matchAll(/```[a-z]*\n([\s\S]*?)```/g)]
+// `\r?\n` because the working copy is CRLF whenever core.autocrlf is on (the
+// Windows default); an LF-only pattern matches no block at all there and the
+// runner label silently reads as missing.
+const registrationBlocks = [...ciDoc.matchAll(/```[a-z]*\r?\n([\s\S]*?)```/g)]
   .map((match) => match[1])
   .join('\n');
 const runnerLabel = documentedRunnerLabel(registrationBlocks);

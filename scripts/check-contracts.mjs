@@ -8,9 +8,8 @@
 // Usage: pnpm check:contracts
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, mkdtempSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { tmpdir } from 'node:os';
 // import.meta.dirname is a platform-native path; on Windows new URL(...).pathname yields
 // a "/C:/..." form that existsSync treats as missing, making this check always fail there
 const root = join(import.meta.dirname, '..');
@@ -21,7 +20,13 @@ if (!existsSync(committedDir)) {
   process.exit(1);
 }
 
-const tempDir = mkdtempSync(join(tmpdir(), 'lissio-contracts-'));
+// Export inside the workspace rather than the OS temp directory: the exporter is
+// a child process, and a confined environment can deny it writes outside the
+// checkout while still allowing the build tree. src-tauri/target is gitignored,
+// so nothing written here can be committed.
+const scratchRoot = join(root, 'src-tauri', 'target');
+mkdirSync(scratchRoot, { recursive: true });
+const tempDir = mkdtempSync(join(scratchRoot, 'contracts-check-'));
 const result = spawnSync(
   'cargo',
   ['run', '-p', 'lissio-rpc-api', '--example', 'export_contracts'],

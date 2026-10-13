@@ -93,7 +93,13 @@ const licensePath = join(repoRoot, 'LICENSE');
 if (!existsSync(licensePath)) {
   fail('LICENSE is missing');
 } else {
-  const digest = createHash('sha256').update(readFileSync(licensePath)).digest('hex');
+  // Line endings are not part of the license text: a Windows checkout with
+  // core.autocrlf=true rewrites LICENSE to CRLF, and hashing the bytes exactly as
+  // they sit on disk would fail that checkout for a reason that has nothing to do
+  // with the license. Normalize first, as check-contracts.mjs does for the
+  // generated contracts.
+  const licenseText = readFileSync(licensePath, 'utf8').replace(/\r\n/g, '\n');
+  const digest = createHash('sha256').update(licenseText).digest('hex');
   if (digest !== APACHE_2_SHA256) {
     fail(`LICENSE is not the canonical Apache-2.0 text (sha256 ${digest.slice(0, 12)}…)`);
   }

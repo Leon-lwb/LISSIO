@@ -147,7 +147,7 @@ for (const file of collect(path.join(root, 'src'))) {
     const line = raw.split('\n').findIndex((l) => TAILWIND_ANIMATION.test(l)) + 1;
     errors.push(`${rel}:${line}  built-in Tailwind animation — use motion-spin / motion-pulse instead`);
   }
-  if (isCss && !rel.endsWith('styles/theme.css')) {
+  if (isCss && !normalizedRel.endsWith('styles/theme.css')) {
     // Remove var(--ease-*) references and linear-gradient before checking for bare easing functions
     const cssWithoutEaseVars = raw
       .replace(/var\(--ease-[a-z-]+\)/g, '')
@@ -184,20 +184,20 @@ for (const file of collect(path.join(root, 'src'))) {
     }
   });
 
-  const isTest = rel.includes('__tests__') || /\.(test|spec)\.(ts|tsx)$/.test(rel);
+  const isTest = normalizedRel.includes('__tests__') || /\.(test|spec)\.(ts|tsx)$/.test(normalizedRel);
   if (!isTest && lines.length > FRONTEND_LIMIT) {
     errors.push(`${rel}:${lines.length}  frontend production file exceeds ${FRONTEND_LIMIT} lines — split it by responsibility and keep the public API stable`);
   }
   if (
     isCss &&
-    !rel.endsWith('styles/theme.css') &&
-    !rel.endsWith('styles/component-tokens.css') &&
+    !normalizedRel.endsWith('styles/theme.css') &&
+    !normalizedRel.endsWith('styles/component-tokens.css') &&
     RAW_CSS_COLOR.test(raw.replace(/\/\*[\s\S]*?\*\//g, ''))
   ) {
     errors.push(`${rel}  bare CSS color — colors may only be defined in theme.css / component-tokens.css; component rules use var(--*)`);
   }
 
-  if (isCss && !rel.endsWith('styles/theme.css')) {
+  if (isCss && !normalizedRel.endsWith('styles/theme.css')) {
     const css = stripKeyframes(raw);
     const re = /(^|[;{\s])opacity:\s*(?!var\()([0-9]*\.?[0-9]+)/g;
     let m;
