@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-14 | Recording read handle under Windows locking | passed with conditions | [records/2026-10-14-recording-read-handle.md](records/2026-10-14-recording-read-handle.md) |
 | 2026-10-14 | Windows local run environment | passed with conditions | [records/2026-10-14-windows-local-run-environment.md](records/2026-10-14-windows-local-run-environment.md) |
 | 2026-10-13 | Check platform and confinement portability | passed with conditions | [records/2026-10-13-check-platform-portability.md](records/2026-10-13-check-platform-portability.md) |
 | 2026-10-13 | Tauri npm/crate version alignment and gate | passed with conditions | [records/2026-10-13-tauri-version-alignment.md](records/2026-10-13-tauri-version-alignment.md) |

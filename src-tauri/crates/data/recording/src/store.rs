@@ -27,8 +27,15 @@ pub struct RecordingStore {
     engine: Arc<dyn StoreEngine>,
     /// Read-path handle — with it every read (query / export / session checks)
     /// runs on the writer task's **single** connection; `None` means no writer is
-    /// attached yet (construction, repair, tests that open directly) and reads
-    /// degrade to a private connection.
+    /// attached, so reads degrade to a private connection. That is the correct mode
+    /// for construction, repair, and a store reopened after the writer stopped.
+    ///
+    /// It is **not** valid while a writer holds the file: under Windows mandatory
+    /// file locking the private connection fails with "another program is using
+    /// this file". The handle a caller opened before handing a clone to
+    /// `Recorder::start` never receives this reader, so reads issued during
+    /// recording must use the store the recorder owns (`Recorder::store`, exposed
+    /// to product code as `RecordingHub::store`).
     reader: Option<RecordingReader>,
 }
 

@@ -50,7 +50,7 @@ fn persists_and_queries_all_domains_without_loss() {
         binding("spectrum", Domain::Spectrum),
     ];
     let recorder = Recorder::start(
-        store.clone(),
+        store,
         bindings,
         RecordingLimits {
             queue_batches: 16,
@@ -59,6 +59,11 @@ fn persists_and_queries_all_domains_without_loss() {
         },
     )
     .unwrap();
+    // Read through the store the writer owns: it carries the single connection the
+    // writer task serves reads on. The handle opened above never receives that
+    // reader, and its private-connection fallback cannot open a second handle while
+    // the writer holds the file under Windows mandatory locking (see `store.rs`).
+    let store = recorder.store().clone();
     let session_id = recorder.session().id.clone();
     let inputs = vec![
         batch(

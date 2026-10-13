@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-14
 applies-to: Byte, record, evaluation, storage, and display contracts
 -->
 
@@ -60,6 +60,15 @@ Device session declares a clock source
 5. **Drops are explicit.** Evaluation drops mark queue gaps and reset filters,
    triggers, and IFFT state. Raw overflow is counted and surfaced in WWB1 and
    the UI. Queue lag is reported before parsing. No loss is silently joined.
+
+6. **Recording reads share the writer's one connection.** A running recorder owns
+   the database file and serves queries, exports, and session checks on its single
+   connection, reached through the store the recorder owns (`Recorder::store`,
+   exposed to product code as `RecordingHub::store`). A store opened directly has
+   no reader and falls back to a private connection, which is correct only while no
+   writer holds the file: under Windows mandatory file locking that fallback fails
+   with "another program is using this file". A read issued during recording must
+   therefore go through the recorder's store.
 
 ## Storage and cost model
 
