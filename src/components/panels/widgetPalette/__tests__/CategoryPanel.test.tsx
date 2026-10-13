@@ -278,7 +278,11 @@ describe('CategoryPanel', () => {
     useAppStore.setState({ activeCategory: 'transport' });
     renderWithI18n(<CategoryPanel />);
     expect(await screen.findAllByText('USB bridge')).toHaveLength(1);
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'rtu:primary' } });
+    const picker = screen.getByRole('combobox');
+    await waitFor(() => expect(picker).toBeEnabled());
+    fireEvent.click(picker);
+    fireEvent.click(screen.getByRole('option', { name: 'rtu' }));
+    expect(picker).toHaveTextContent('rtu');
     fireEvent.click(screen.getByRole('button', { name: /USB bridge/ }));
     await waitFor(() => expect(useAppStore.getState().rfNodes).toHaveLength(1));
     expect(useAppStore.getState().rfNodes[0].data.node).toMatchObject({

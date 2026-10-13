@@ -12,7 +12,7 @@ const AXIS_FACTOR = { x: 1, y: 0.6 } as const;
  * Direction comes from where the new key sits relative to the old one, and the
  * magnitude scales with how many positions were crossed: nudging one tab should
  * not read the same as jumping the length of the strip. Returns 0 when the two
- * keys have no spatial relationship, which degrades to a pure cross-fade.
+ * keys have no spatial relationship, which makes the switch immediate.
  */
 export function switchTravel(
   from: string,

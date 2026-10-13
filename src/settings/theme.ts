@@ -402,10 +402,13 @@ export function applyTheme(theme: ThemeDefinition): void {
     root.style.setProperty(getCssVariableName(token), theme.tokens[token]);
   }
   applySemanticTheme();
+  // Native select surfaces must keep an opaque palette even when acrylic changes bgInput.
+  root.style.setProperty('--color-select-surface', theme.tokens.bgInput);
   root.dataset.theme = theme.isBuiltIn ? theme.id : `custom-${theme.id}`;
 }
 
 /// 更新单个 token (用于编辑器实时预览)
 export function applyThemeToken(token: ThemeToken, value: string): void {
   document.documentElement.style.setProperty(getCssVariableName(token), value);
+  if (token === 'bgInput') document.documentElement.style.setProperty('--color-select-surface', value);
 }

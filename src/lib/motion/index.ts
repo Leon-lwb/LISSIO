@@ -52,6 +52,7 @@ export {
   type VariantGeometry,
 } from './presence';
 export { useMotionPresence } from './useMotionPresence';
+export { useContentSwitch } from './useContentSwitch';
 export { usePresence, type PresenceOptions } from './usePresence';
 export { RetentionScope } from './RetentionScope';
 export { useRetention, useExitSnapshot } from './retention';

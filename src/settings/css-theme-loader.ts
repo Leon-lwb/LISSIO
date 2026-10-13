@@ -1,48 +1,62 @@
-//! CSS样式主题加载器
-//!
-//! 管理CSS主题的加载/卸载，支持内置主题和外部URL
+//! CSS theme loading: retain the active sheet until its replacement has loaded.
 
 import type { CssStyleTheme } from './theme';
 
-/// 已加载的CSS主题映射
-const LOADED_CSS_THEMES = new Map<string, HTMLLinkElement>();
+interface ThemeSheet {
+  id: string;
+  url: string;
+  link: HTMLLinkElement;
+}
 
-/// 加载CSS主题
+let active: ThemeSheet | null = null;
+let pending: ThemeSheet | null = null;
+
 export function loadCssTheme(theme: CssStyleTheme): void {
-  // 卸载已加载的CSS主题
-  unloadAllCssThemes();
+  const url = new URL(theme.url, document.baseURI).href;
+  if (pending?.id === theme.id && pending.url === url) return;
+  pending?.link.remove();
+  pending = null;
+  if (active?.id === theme.id && active.url === url && active.link.isConnected) return;
 
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = theme.url;
-  link.id = `css-theme-${theme.id}`;
+  link.href = url;
+  link.id = `css-theme-${theme.id}-pending`;
+  // Fetch without partially applying the new theme before the atomic handoff.
+  link.media = 'not all';
+  const sheet = { id: theme.id, url, link };
+  pending = sheet;
+  link.onload = () => {
+    if (pending !== sheet) return;
+    link.media = 'all';
+    active?.link.remove();
+    link.id = `css-theme-${theme.id}`;
+    active = sheet;
+    pending = null;
+  };
+  link.onerror = () => {
+    if (pending !== sheet) return;
+    link.remove();
+    pending = null;
+  };
   document.head.appendChild(link);
-  LOADED_CSS_THEMES.set(theme.id, link);
 }
 
-/// 卸载指定CSS主题
 export function unloadCssTheme(themeId: string): void {
-  const link = LOADED_CSS_THEMES.get(themeId);
-  if (link) {
-    link.remove();
-    LOADED_CSS_THEMES.delete(themeId);
-  }
+  if (pending?.id === themeId) { pending.link.remove(); pending = null; }
+  if (active?.id === themeId) { active.link.remove(); active = null; }
 }
 
-/// 卸载所有已加载的CSS主题
 export function unloadAllCssThemes(): void {
-  for (const link of LOADED_CSS_THEMES.values()) {
-    link.remove();
-  }
-  LOADED_CSS_THEMES.clear();
+  pending?.link.remove();
+  active?.link.remove();
+  pending = active = null;
 }
 
-/// 获取当前激活的CSS主题ID
 export function getActiveCssThemeId(): string | null {
-  return LOADED_CSS_THEMES.keys().next().value ?? null;
+  return active?.id ?? null;
 }
 
-/// 检查CSS主题是否已加载
 export function isCssThemeLoaded(themeId: string): boolean {
-  return LOADED_CSS_THEMES.has(themeId);
+  return active?.id === themeId && active.link.isConnected;
 }

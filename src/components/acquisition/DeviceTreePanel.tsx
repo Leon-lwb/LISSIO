@@ -15,6 +15,7 @@ import {
 } from '../../lib/acquisition/deviceTree';
 import { refreshDeviceNodeSnapshots, useDeviceNodeSnapshot } from '../../lib/acquisition/useDeviceNodeSnapshot';
 import { SearchInput } from '../ui/SearchInput';
+import { Select } from '../ui/Select';
 import { DeviceTreeInspector } from './DeviceTreeInspector';
 import { asFormSchema, defaultsFromSchema } from '../../lib/acquisition/schemaForm';
 import { uniqueDeviceTreeName } from '../../lib/acquisition/deviceTree';
@@ -90,11 +91,9 @@ export function DeviceTreePanel() {
   return <div className="flex h-full min-h-0 flex-col gap-3" data-testid="device-tree-panel">
     <p className="text-[11px] leading-relaxed text-text-muted">{translate('deviceTreeHint', lang)}</p>
     <div className="flex gap-1">
-      <select aria-label={translate('deviceTreeAddRoot', lang)} className="form-select min-w-0 flex-1" value={card?.key ?? ''}
-        disabled={pending || !rootCards.length} onChange={event => setDriverKey(event.target.value)}>
-        {!rootCards.length && <option value="">{translate('deviceTreeAddRoot', lang)}</option>}
-        {rootCards.map(item => <option key={item.key} value={item.key}>{item.adapter.displayName}{item.adapter.endpoints.length > 1 ? ` · ${item.endpoint.displayName}` : ''}</option>)}
-      </select>
+      <Select label={translate('deviceTreeAddRoot', lang)} className="min-w-0 flex-1" value={card?.key ?? ''}
+        disabled={pending || !rootCards.length} onChange={setDriverKey}
+        options={rootCards.map(item => ({ value: item.key, label: `${item.adapter.displayName}${item.adapter.endpoints.length > 1 ? ` · ${item.endpoint.displayName}` : ''}` }))} />
       <button type="button" className="rounded bg-bg-button px-2 text-text-inverse disabled:opacity-disabled" title={translate('deviceTreeAddRoot', lang)}
         aria-label={translate('deviceTreeAddRoot', lang)} disabled={pending || !card} onClick={() => {
           if (!card) return;
@@ -149,11 +148,10 @@ export function DeviceTreePanel() {
               if (addDeviceTreeChild(selected.rootId, selected.id, child)) select(child.id);
             }}><FlaskConical size={13} />{translate('deviceTreeAddSimulation', lang)}</button>}
           {childOptions.length > 0 && <div className="flex gap-1">
-            <select className="form-select min-w-0 flex-1" aria-label={translate('deviceTreeAddChild', lang)}
+            <Select className="min-w-0 flex-1" label={translate('deviceTreeAddChild', lang)}
               value={childOptions.some(option => option.driverId === childDriver) ? childDriver : childOptions[0].driverId}
-              onChange={event => setChildDriver(event.target.value)}>
-              {childOptions.map(option => <option key={option.driverId} value={option.driverId}>{option.driverId}</option>)}
-            </select>
+              onChange={setChildDriver}
+              options={childOptions.map(option => ({ value: option.driverId, label: option.driverId }))} />
             <button type="button" className="rounded border border-border px-2 hover:bg-bg-hover" aria-label={translate('deviceTreeAddChild', lang)}
               onClick={() => {
                 const driver = childOptions.find(option => option.driverId === childDriver) ?? childOptions[0];

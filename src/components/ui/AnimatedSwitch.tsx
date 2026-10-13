@@ -1,5 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { motionDuration, motionIsReduced } from '../../lib/motion';
+import { useRef, type ReactNode } from 'react';
+import { useContentSwitch } from '../../lib/motion';
 import { switchTravel } from './tabTravel';
 
 interface AnimatedSwitchProps {
@@ -8,60 +8,21 @@ interface AnimatedSwitchProps {
   /// 有序 key 列表 — 与 axis 配合, 按新旧位置关系决定滑入方向
   /// (横向 Tab 条传 x, 竖向 Tab 列传 y; 向右/下移动时内容从右/下方滑入)
   order?: readonly string[];
-  /// 滑动轴向; 缺省时仅淡入淡出 (用于无空间顺序的模式切换)
+  /// 滑动轴向; 缺省时立即切换, 不在磨砂表面祖先上淡入淡出
   axis?: 'x' | 'y';
   children: ReactNode;
   className?: string;
 }
 
 /// 通用切换转场容器
-/// 纯 CSS transition (transform + opacity) — 动画由合成器线程接管, 不触发任何
-/// React 状态更新 / rAF 逐帧重渲染, 也不依赖 Web Animations API。
+/// 动效层通过 Web Animations 驱动 transform, 不在磨砂表面的祖先上写 opacity。
 /// 在不 remount 子树的前提下播放过渡动画, 保留子组件内部状态 (如 ReactFlow 视口)
 export function AnimatedSwitch({ switchKey, order, axis, children, className }: AnimatedSwitchProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const prevKey = useRef(switchKey);
-  // 最新 order/axis 的 ref, 避免 effect 依赖每次渲染新建的数组
-  const navRef = useRef({ order, axis });
-  navRef.current = { order, axis };
-
-  useEffect(() => {
-    const from = prevKey.current;
-    prevKey.current = switchKey;
-    if (from === switchKey) return;
-    const el = ref.current;
-    if (!el) return;
-    if (motionIsReduced()) return;
-
-    // 方向由新旧位置关系决定, 距离由跨越的索引数决定 —— 跳过一格和横穿整个
-    // Tab 条不该是同一种幅度, 否则远距离切换会显得被"拽"过来。
-    const { order: ord, axis: ax } = navRef.current;
-    const travel = switchTravel(from, switchKey, ord, ax);
-
-    // 时长与缓动都取自 content 家族的弹簧令牌, 与 CSS 其余部分同一来源。
-    // 缓动令牌固定由 installMotionTokens() 在 main.tsx 里于首次渲染前写入 <html>
-    // (main.tsx 在 createRoot 之前调用它), 所以这里不再需要本地的兜底曲线:
-    // 真有缺口也该暴露出来, 而不是被一条写死的 cubic-bezier 悄悄遮住。
-    const duration = Math.round(motionDuration('content', 'in') * 1000);
-    const easing = getComputedStyle(el).getPropertyValue('--ease-content-in').trim();
-
-    const settle = el.style;
-    settle.transition = 'none';
-    settle.opacity = '0';
-    settle.transform = travel === 0 ? 'none' : `translate${ax === 'y' ? 'Y' : 'X'}(${travel}px)`;
-    void el.offsetWidth; // 让起始态立即生效
-    settle.transition = `opacity ${duration}ms ${easing}, transform ${duration}ms ${easing}`;
-    settle.opacity = '1';
-    settle.transform = 'none';
-
-    // 交还合成器: 动画结束即释放, 不长期占用图层。
-    const timer = window.setTimeout(() => {
-      settle.transition = '';
-      settle.opacity = '';
-      settle.transform = '';
-    }, duration);
-    return () => window.clearTimeout(timer);
-  }, [switchKey]);
+  useContentSwitch(ref, switchKey, previous => {
+    const travel = switchTravel(previous, switchKey, order, axis);
+    return { x: axis === 'x' ? travel : 0, y: axis === 'y' ? travel : 0 };
+  });
 
   return (
     <div ref={ref} className={`motion-switch ${className ?? ''}`}>

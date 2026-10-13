@@ -69,11 +69,8 @@
     box-shadow var(--motion-duration-spatial-in) var(--ease-spatial-in);
 }
 
-.motion-switch {
-  transition:
-    opacity var(--motion-duration-content-in) var(--ease-content-in),
-    transform var(--motion-duration-content-in) var(--ease-content-in);
-}
+/* Content switches animate transform through useContentSwitch. Opacity on this
+   ancestor changes every frosted descendant's Backdrop Root at completion. */
 
 /* 窗口从它被生成的角落长出来, 而不是从自己的中心。 */
 [data-motion-variant='window'] {

@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-13
 applies-to: Repository documentation index and language policy
 -->
 
@@ -59,6 +59,7 @@ Historical review records preserve their original language and facts.
 | [architecture/modbus-capability-cards.md](architecture/modbus-capability-cards.md) | Modbus capability projection |
 | [architecture/ui-layers.md](architecture/ui-layers.md) | Frontend dependency layers |
 | [architecture/ui-color-tokens.md](architecture/ui-color-tokens.md) | Color, opacity, frost, and glass tokens |
+| [architecture/linux-rendering.md](architecture/linux-rendering.md) | Linux/Wayland controls, content switching, CSS theme lifetime, and platform-safe validation |
 | [architecture/ui-motion.md](architecture/ui-motion.md) | Motion modules and rules |
 | [architecture/motion-tokens.md](architecture/motion-tokens.md) | Generated spring tokens |
 | [architecture/motion-spatial-plan.md](architecture/motion-spatial-plan.md) | Spatial motion decisions |

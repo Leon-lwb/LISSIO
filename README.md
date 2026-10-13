@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-11
+last-reviewed: 2026-10-13
 applies-to: Product overview, setup, development, and distribution
 -->
 
@@ -322,6 +322,10 @@ menus, updates, file dialogs, and sidecar supervision. A connection diagnostic p
 shown before application stores mount when the sidecar is missing, unauthorized,
 incompatible, or has crashed.
 
+For Linux/Wayland rendering checks, device-selector behavior, and commands that
+preserve other platform build caches, see
+[Linux desktop rendering](docs/architecture/linux-rendering.md).
+
 ### Standalone web server (`lissio-server`)
 
 ```sh
@@ -402,11 +406,11 @@ pnpm build:desktop
 
 Web assets are output to `dist/`, server and CLI binaries to `src-tauri/target/release/`, and desktop installers to `src-tauri/target/release/bundle/`.
 
-Cross-platform builds and releases are handled by one script, which covers the
-cross-target builds, the updater signing, and the artifact collection:
+On a macOS host, the automated packaging script covers cross-target builds,
+updater signing, and artifact collection:
 
 ```sh
-pnpm auto-build              # current platform
+pnpm auto-build              # current macOS architecture (macOS host required)
 pnpm auto-build --all        # macOS (arm64 + x64), Windows, Linux
 ```
 

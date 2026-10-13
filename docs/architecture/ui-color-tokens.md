@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-13
 applies-to: Theme roles, opacity tiers, frost surfaces, glass tiers, and static checks
 -->
 
@@ -73,6 +73,15 @@ Glass roles use one tier: solid, blur, or liquid refraction.
 - Fluid pointer response is used instead of tilt.
 
 ## Text and state colors
+
+Device-card and device-tree select popups pair `--color-text-primary` with the opaque
+`--color-float-surface` preserved by `applyAppearance`. They render inside the
+page instead of delegating option colors to GTK; see
+[Linux desktop rendering](linux-rendering.md) for scope and acceptance checks.
+Closed native selects use `--color-select-surface`, derived from the theme's
+original `bgInput` by `applyTheme` and updated by `applyThemeToken`. Acrylic
+changes do not make this surface translucent. The persisted token set stays
+unchanged; `form-control.css` owns the closed control's bezel and arrow.
 
 Use semantic tokens such as `text-text-primary`, `text-text-secondary`,
 `text-text-bright`, `text-text-inverse`, `text-text-disabled`, and

@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-13
 applies-to: Motion modules, families, CSS primitives, and invariant rules
 -->
 
@@ -18,6 +18,7 @@ applies-to: Motion modules, families, CSS primitives, and invariant rules
 | `presence.ts` | Role geometry and CSS travel/scale token projection |
 | `MotionPresence.tsx` | Entry/exit lifecycle for removable surfaces |
 | `useMotionPresence.ts` | Entry-only lifecycle when DOM removal owns exit |
+| `useContentSwitch.ts` | Transform-only, non-remounting content switching with browser-owned completion |
 | `stagger.ts` | Bounded index-based entry delay |
 | `release.ts` | Converts handoff velocity into an effect-layer release plan |
 | `dockReorder.ts` / `useDockReorder` | Geometry continuity and dock-yield selection |
@@ -44,7 +45,7 @@ Entry may overshoot. Exit is always critically damped.
 - `motion-surface`: module and widget surface state.
 - `motion-float`: floating opacity, translation, scale, and shadow.
 - `motion-pill`: tab indicator geometry.
-- `motion-switch`: non-remounting mode/tab transitions.
+- `motion-switch`: content-switch marker; `useContentSwitch` owns its transform through Web Animations.
 - `motion-transition`: explicit replacement for `transition-all`.
 - `motion-*-in`: JavaScript-free entry fallback using role geometry tokens.
 
@@ -61,3 +62,15 @@ Entry may overshoot. Exit is always critically damped.
 9. Do not drive one element with both CSS keyframes and JavaScript tweens.
 10. Stagger uses `--motion-stagger-delay`, not inline `animation-delay`.
 11. Role token names and geometry are owned by `presence.ts`; `pnpm check:motion` verifies both directions.
+12. Whole-content switching must keep ancestor opacity stable around frosted
+    descendants. Fractional opacity introduces a Backdrop Root, changing blur
+    sampling when the animation ends. Use ordered transform travel, cancel on
+    interruption, and let the animation engine own completion. Reduced motion
+    and switches without a spatial relationship complete immediately.
+
+Authoritative switching sources are
+[`AnimatedSwitch.tsx`](../../src/components/ui/AnimatedSwitch.tsx),
+[`useContentSwitch.ts`](../../src/lib/motion/useContentSwitch.ts), and
+[`tabTravel.ts`](../../src/components/ui/tabTravel.ts). Linux acceptance and
+the separate CSS-theme loading lifetime are documented in
+[Linux desktop rendering](linux-rendering.md).

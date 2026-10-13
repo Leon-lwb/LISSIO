@@ -8,6 +8,7 @@ import { dockDrag } from '../../lib/interaction/dockDrag';
 import { endpointHardwareDetails, endpointSubtitle, endpointTypeLabel } from './discoveredEndpoints';
 import { adapterLabel, groupDevices, type DeviceOption, type PanelDevice } from './devicePanelModel';
 import { useDeviceDiscovery } from './useDeviceDiscovery';
+import { Select } from '../ui/Select';
 
 export function DevicePanel({ cards, query }: { cards: DeviceCardModel[]; query: string }) {
   const lang = useAppStore((s) => s.lang);
@@ -103,11 +104,10 @@ function DeviceRow({ device, disabled, onAdd }: { device: PanelDevice; disabled:
       </button>
       <div className="flex items-center gap-2 border-t border-border px-2.5 py-1.5 text-[10px] text-text-muted">
         <span>{translate('devicePanelConnectVia', lang)}</span>
-        {device.options.length > 1 ? <select aria-label={`${translate('devicePanelConnectVia', lang)} ${endpoint.displayName}`} value={option.card.key}
-          disabled={disabled} onChange={(event) => setSelected(event.target.value)}
-          className="min-w-0 flex-1 rounded border border-border bg-bg-input px-1 py-1 text-[11px] text-text-primary focus:outline-accent">
-          {device.options.map(({ card }) => <option key={card.key} value={card.key}>{adapterLabel(card)}</option>)}
-        </select> : <span className="truncate text-text-secondary">{adapterLabel(option.card)}</span>}
+        {device.options.length > 1 ? <Select label={`${translate('devicePanelConnectVia', lang)} ${endpoint.displayName}`} value={option.card.key}
+          disabled={disabled} onChange={setSelected} className="min-w-0 flex-1"
+          options={device.options.map(({ card }) => ({ value: card.key, label: adapterLabel(card) }))} />
+          : <span className="truncate text-text-secondary">{adapterLabel(option.card)}</span>}
       </div>
     </div>
   );
