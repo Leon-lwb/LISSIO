@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-14
 applies-to: Issue, pull request, documentation, and release contributions
 -->
 
@@ -34,6 +34,23 @@ Repository conventions are maintained in `AGENTS.md`. Rust members are grouped
 under `src-tauri/crates/<domain>/<crate>`. Before changing Rust, read
 `docs/architecture/crates.md` and run `pnpm architecture` to identify the type
 owner and affected dependents.
+
+`pnpm build:all` builds the headless binaries and desktop installers. Release
+builds disable debug information and strip symbols from both the desktop shell
+and its server sidecar; on Linux, embedded DWARF would otherwise dominate the
+deb and AppImage sizes. AppImage also bundles WebKit/GTK libraries, so it remains
+larger than the deb package, which uses system dependencies.
+
+For optimized performance analysis with full symbols, use the separate
+`profiling` profile:
+
+```bash
+cargo build --manifest-path src-tauri/Cargo.toml --profile profiling -p lissio-backend-server
+```
+
+The executable is written to `src-tauri/target/profiling/lissio-server` (with
+`.exe` on Windows). Development and benchmark builds retain their debug information;
+the benchmark audit script continues to disable it explicitly.
 
 ## Required checks
 

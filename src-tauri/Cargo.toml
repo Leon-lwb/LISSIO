@@ -26,7 +26,22 @@ path = "src/main.rs"
 default = []
 
 [profile.release]
+debug = false
+# Linux embeds DWARF in each executable, including the bundled server sidecar.
+# Strip symbols at link time so every release entry point produces small binaries.
+strip = "symbols"
+
+# Preserve benchmark symbols; bench-audit.sh opts out of debug info separately.
+[profile.bench]
 debug = true
+strip = "none"
+
+# Keep optimized builds with full symbols available for perf/flamegraph work.
+# cargo build --profile profiling -p lissio-backend-server
+[profile.profiling]
+inherits = "release"
+debug = true
+strip = "none"
 
 [workspace]
 # Domain and dependency rules: see docs/architecture/crates.md. Directories group by domain

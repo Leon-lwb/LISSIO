@@ -12,7 +12,7 @@
 #   quick — covers all Criterion benchmarks + a 60s soak, for routine regression
 #   full  — 300s soak, full recording-to-disk capture, and the Modbus load sweep, for pre-release evidence
 set -euo pipefail
-# Pin the benchmark symbol overhead; do not override the user's Release debug/flamegraph profile.
+# Pin audit symbol overhead without changing the default benchmark/profiling profiles.
 export CARGO_PROFILE_BENCH_DEBUG=0
 export VOFA_SOAK_EVAL_STALL_MS=0 VOFA_SOAK_INGEST_STALL_MS=0
 audit_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
