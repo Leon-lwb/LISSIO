@@ -140,3 +140,31 @@ helpAiSteps: |-
   With Built-in Tools enabled in settings, the AI can build and edit node graphs, read waveform/CAN/raw data, send data to the device, and consult the bundled usage knowledge base
   Settings → AI → MCP adds external MCP servers (stdio command or http URL), exposing their tools to the model
   The app also serves MCP at 127.0.0.1:8765/mcp (loopback only, port configurable in settings) - point Claude Desktop or other external clients at it to drive this app
+
+# Configuration guide (language → theme → motion and glass)
+configGuideTitle: Configuration guide
+configGuideIntro: Choose the interface language, color theme, and motion settings. All of them can be changed later in Settings.
+configGuideStepLanguage: Interface language
+configGuideStepTheme: Color theme
+configGuideStepMotion: Motion and glass
+configGuideThemeDark: Dark
+configGuideThemeLight: Light
+configGuideThemeMonet: Monet
+configGuideThemeCustom: Current custom theme
+configGuideInheritanceTitle: Configuration inheritance
+configGuideSourceStored: Inherited from existing configuration
+configGuideSourceSystem: Derived from the system preference
+configGuideSourceDefault: Using the default
+configGuideSourceManual: Chosen here
+configGuideBack: Back
+configGuideNext: Next
+configGuideContinue: Get started
+configGuidePreviewLanguage: Text sample
+configGuidePreviewTheme: Color sample
+configGuidePreviewTitleBar: Title bar
+configGuidePreviewSidebar: Sidebar
+configGuidePreviewCanvas: Canvas
+configGuidePreviewAction: Button
+configGuidePreviewStatusBar: Status bar
+configGuidePreviewMotion: Motion and frost
+configGuidePreviewMotionDesc: The speed preset, the reduced-motion preference, and the frost switch all apply to this preview immediately.

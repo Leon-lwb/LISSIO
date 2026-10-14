@@ -34,32 +34,46 @@ const surface = () => document.querySelector<HTMLElement>('[data-motion-variant=
 /** GSAP 把 transform-origin 归一化成百分比; 断言的是它锚在哪条边, 不是写法。 */
 const anchor = () => surface().style.transformOrigin;
 
+/**
+ * 等锚点落到内联样式后再读。
+ *
+ * GSAP 的进场补间可能在**下一个 tick** 才写起始态 (而不是创建补间时), 于是紧接着
+ * `render()` 同步读会读到空串 —— 断言的是锚在哪条边, 不是它第几毫秒落笔。
+ */
+const settledAnchor = async () => {
+  await waitFor(() => {
+    expect(anchor()).not.toBe('');
+  });
+  return anchor();
+};
+
 describe('DockedPanel', () => {
   it('records which edge it is docked to', () => {
     render(<Group edge="left" />);
     expect(panel().dataset.dockEdge).toBe('left');
   });
 
-  it('anchors the surface to the edge it is docked to', () => {
+  it('anchors the surface to the edge it is docked to', async () => {
     // 面板的归属只能从缩放原点读出来: 必须朝所属的那条边生长, 否则左右停靠读起来一样。
     render(<Group edge="left" />);
-    expect(anchor().startsWith('0%')).toBe(true);
+    expect((await settledAnchor()).startsWith('0%')).toBe(true);
   });
 
-  it('anchors a right-docked panel to the opposite edge from a left-docked one', () => {
+  it('anchors a right-docked panel to the opposite edge from a left-docked one', async () => {
     const { unmount } = render(<Group edge="left" />);
-    const left = anchor();
+    const left = await settledAnchor();
     unmount();
     render(<Group edge="right" />);
     // GSAP 归一化后: left → "0% 50%", right → "100% 50%"。
-    expect(anchor()).not.toBe(left);
-    expect(anchor().startsWith('100%')).toBe(true);
+    const right = await settledAnchor();
+    expect(right).not.toBe(left);
+    expect(right.startsWith('100%')).toBe(true);
   });
 
-  it('anchors a bottom-docked panel to the bottom edge', () => {
+  it('anchors a bottom-docked panel to the bottom edge', async () => {
     render(<Group edge="bottom" />);
     // "50% 100%" —— 水平居中, 垂直锚在下边。
-    expect(anchor().endsWith('100%')).toBe(true);
+    expect((await settledAnchor()).endsWith('100%')).toBe(true);
   });
 
   it('keeps its slot when hidden instead of unmounting', () => {

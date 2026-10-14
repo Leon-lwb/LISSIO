@@ -2,7 +2,9 @@
 //!
 //! 串行规则 (resolveStartupFlow) 已由 phases.test.ts 钉死; 这里只验证:
 //! - 设置未加载前不触发任何弹窗动作
-//! - 加载完成后: 首次引导按 showOnboarding 弹出且只弹一次
+//! - 全新安装先弹配置引导, 使用引导/自动更新排队; 升级安装不受打扰
+//! - 预览开关打开时升级安装也会弹, 确认后使用引导接手
+//! - 使用引导按 showOnboarding 弹出且只弹一次
 //! - 自动更新检查受串行闸门约束且只发起一次
 //! - 录制恢复提示每会话只查一次健康
 
@@ -10,14 +12,33 @@ import { StrictMode } from 'react';
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../../../settings/defaults';
+import {
+  DEFAULT_CONFIG_GUIDE_SOURCES,
+  type ConfigGuideSources,
+} from '../../../settings/configGuideSources';
 import { api } from '../../../lib/tauri/tauri';
 import { notify } from '../../../lib/tauri/notifications';
 import { platform } from '../../../lib/platform';
 import { useAppStore } from '../../../store/appStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useOnboardingStore } from '../../../store/onboardingStore';
+import { useConfigGuideStore } from '../../../store/configGuideStore';
 import { useUpdateStore } from '../../../store/updateStore';
 import { useStartupDialogs } from '../useStartupDialogs';
+
+/// 全新安装: 后端那份设置文档根本不存在。
+const FRESH_SOURCES: ConfigGuideSources = DEFAULT_CONFIG_GUIDE_SOURCES;
+/// 升级安装: 文档已存在, 语言与主题都是用户选过的。
+const UPGRADE_SOURCES: ConfigGuideSources = {
+  document: 'present',
+  language: 'stored',
+  theme: 'stored',
+};
+
+const general = (overrides: Partial<typeof DEFAULT_SETTINGS.general> = {}) => ({
+  ...DEFAULT_SETTINGS.general,
+  ...overrides,
+});
 
 let notifyError: ReturnType<typeof vi.spyOn>;
 
@@ -25,13 +46,21 @@ beforeEach(() => {
   vi.clearAllMocks();
   useSettingsStore.setState({
     settings: structuredClone(DEFAULT_SETTINGS),
+    configGuideSources: FRESH_SOURCES,
     loaded: false,
     loadError: null,
     keychainPermissionPromptOpen: false,
   });
   useOnboardingStore.setState({ isWizardOpen: false, hasOpenedThisSession: false });
-  useUpdateStore.setState({ status: 'idle', dialogOpen: false, lastTrigger: 'manual', updateInfo: null, currentVersion: '', progress: 0, error: null });
+  useConfigGuideStore.setState({
+    isOpen: false,
+    completedThisSession: false,
+    sources: FRESH_SOURCES,
+  });
+  useUpdateStore.setState({ status: 'idle', dialogOpen: false, lastTrigger: 'manual', updateInfo: null, currentVersion: '', progress: 0, error: null, remoteConfigGuide: false });
   useAppStore.setState({ lang: 'zh' });
+  // 系统偏好固定成"与默认值一致", 于是引导的推导不会产生额外写入。
+  vi.spyOn(navigator, 'languages', 'get').mockReturnValue(['zh-CN']);
   notifyError = vi.spyOn(notify, 'error').mockImplementation(() => 'id');
   vi.spyOn(api, 'getRecordingHealth').mockResolvedValue({
     accepted_batches: 0, accepted_bytes: 0, persisted_batches: 0, persisted_bytes: 0,
@@ -47,27 +76,87 @@ afterEach(() => {
 });
 
 describe('useStartupDialogs', () => {
-  it('设置未加载前不弹引导, 也不检查更新', async () => {
+  it('设置未加载前不弹任何启动弹窗', async () => {
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();
     });
+    expect(useConfigGuideStore.getState().isOpen).toBe(false);
     expect(useOnboardingStore.getState().hasOpenedThisSession).toBe(false);
     expect(useUpdateStore.getState().status).toBe('idle');
   });
 
-  it('设置加载后: showOnboarding 打开则自动弹首次引导, 且只弹一次', async () => {
-    useSettingsStore.setState({ loaded: true, settings: { ...useSettingsStore.getState().settings, general: { ...DEFAULT_SETTINGS.general, showOnboarding: true } } });
+  it('全新安装: 先弹配置引导, 使用引导与自动更新排队', async () => {
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: FRESH_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: true, autoCheckUpdate: true }),
+      },
+    });
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();
     });
-    expect(useOnboardingStore.getState().isWizardOpen).toBe(true);
-    expect(useOnboardingStore.getState().hasOpenedThisSession).toBe(true);
+    expect(useConfigGuideStore.getState().isOpen).toBe(true);
+    expect(useOnboardingStore.getState().isWizardOpen).toBe(false);
+    expect(useUpdateStore.getState().check).not.toHaveBeenCalled();
   });
 
-  it('设置加载后: showOnboarding 关闭则不弹引导', async () => {
-    useSettingsStore.setState({ loaded: true, settings: { ...useSettingsStore.getState().settings, general: { ...DEFAULT_SETTINGS.general, showOnboarding: false } } });
+  it('升级安装: 不弹配置引导, 使用引导照常自动弹出', async () => {
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: true }),
+      },
+    });
+    await act(async () => {
+      renderHook(() => useStartupDialogs());
+      await Promise.resolve();
+    });
+    expect(useConfigGuideStore.getState().isOpen).toBe(false);
+    expect(useOnboardingStore.getState().isWizardOpen).toBe(true);
+  });
+
+  it('预览开关打开时升级安装也弹; 确认后使用引导接手', async () => {
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: true, showConfigGuide: true }),
+      },
+    });
+    await act(async () => {
+      renderHook(() => useStartupDialogs());
+      await Promise.resolve();
+    });
+    expect(useConfigGuideStore.getState().isOpen).toBe(true);
+    expect(useOnboardingStore.getState().isWizardOpen).toBe(false);
+
+    await act(async () => {
+      await useConfigGuideStore.getState().confirm();
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(useSettingsStore.getState().settings.general.lastSeenVersion).toBe('1.0.0');
+    expect(useConfigGuideStore.getState().isOpen).toBe(false);
+    expect(useOnboardingStore.getState().isWizardOpen).toBe(true);
+  });
+
+  it('升级安装 + showOnboarding 关闭则不弹使用引导', async () => {
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: false }),
+      },
+    });
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();
@@ -76,10 +165,14 @@ describe('useStartupDialogs', () => {
   });
 
   it('version changes cannot override the disabled onboarding preference', async () => {
-    useSettingsStore.setState({ loaded: true, settings: {
-      ...useSettingsStore.getState().settings,
-      general: { ...DEFAULT_SETTINGS.general, showOnboarding: false, lastSeenVersion: '0.1.0' },
-    } });
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: false, lastSeenVersion: '0.1.0' }),
+      },
+    });
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();
@@ -88,7 +181,14 @@ describe('useStartupDialogs', () => {
   });
 
   it('串行闸门放行后发起一次自动更新检查 (auto) 且不重复', async () => {
-    useSettingsStore.setState({ loaded: true, settings: { ...useSettingsStore.getState().settings, general: { ...DEFAULT_SETTINGS.general, showOnboarding: false, autoCheckUpdate: true } } });
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+      settings: {
+        ...useSettingsStore.getState().settings,
+        general: general({ showOnboarding: false, autoCheckUpdate: true }),
+      },
+    });
     await act(async () => {
       renderHook(() => useStartupDialogs());
       await Promise.resolve();
@@ -99,7 +199,10 @@ describe('useStartupDialogs', () => {
   });
 
   it('录制健康每会话只查一次; 有 warning 时发持久错误提示', async () => {
-    useSettingsStore.setState({ loaded: true });
+    useSettingsStore.setState({
+      loaded: true,
+      configGuideSources: UPGRADE_SOURCES,
+    });
     vi.mocked(api.getRecordingHealth).mockResolvedValue({
       accepted_batches: 0, accepted_bytes: 0, persisted_batches: 0, persisted_bytes: 0,
       accepted_sequence: 0, persisted_sequence: 0, queued_batches: 0, enabled: true,

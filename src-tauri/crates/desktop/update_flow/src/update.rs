@@ -33,6 +33,11 @@ pub struct CheckUpdateResult {
     pub version: Option<String>,
     pub notes: Option<String>,
     pub date: Option<String>,
+    /// 远程配置入口: 发布方要求本次启动显示配置引导。
+    ///
+    /// 恒为 `None` —— manifest 里的对应字段还没定义, 前端按"缺省 = 不要求"处理。字段先
+    /// 留在这里, 将来接入时只需在下面的响应装配处填值, 命令契约与前端调用点都不变。
+    pub config_guide: Option<bool>,
 }
 
 /// 暂存已检测到、等待用户确认下载的更新。
@@ -68,6 +73,7 @@ pub async fn check_update(
         version: None,
         notes: None,
         date: None,
+        config_guide: None,
     };
 
     // 以通道对应的静态 manifest 为 endpoint, 交给 updater 插件做版本比较
@@ -96,6 +102,7 @@ pub async fn check_update(
             version: Some(update.version.trim_start_matches('v').to_string()),
             notes: update.body.clone(),
             date: update.date.map(|d| d.to_string()),
+            config_guide: None,
         };
         *pending
             .0

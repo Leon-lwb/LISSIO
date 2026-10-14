@@ -9,6 +9,11 @@ import {
   deepMergeSettings,
 } from '../settings/defaults';
 import { migrateLegacyFontDefaults } from '../settings/fontDefaults';
+import {
+  DEFAULT_CONFIG_GUIDE_SOURCES,
+  readConfigGuideSources,
+  type ConfigGuideSources,
+} from '../settings/configGuideSources';
 import { applyAppearance } from '../settings/applyTheme';
 import { api, type PipelineConfig, type RecordingCleanupPolicy } from '../lib/tauri/tauri';
 import { setRawDataPreviewCapacity } from '../lib/buffers/rawDataPreviewRegistry';
@@ -98,6 +103,9 @@ interface SettingsStore {
   isAboutOpen: boolean;
   activeCategory: keyof AppSettings;
   searchQuery: string;
+  /// 配置引导的取值来源与文档存在性 (基于最近一次读取的持久化文档判定,
+  /// 见 settings/configGuideSources)。
+  configGuideSources: ConfigGuideSources;
   /// Initialization has settled, including failure, so the main window can open.
   loaded: boolean;
   loadError: string | null;
@@ -236,6 +244,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   isAboutOpen: false,
   activeCategory: 'general',
   searchQuery: '',
+  configGuideSources: DEFAULT_CONFIG_GUIDE_SOURCES,
   loaded: false,
   loadError: null,
   saveError: null,
@@ -298,6 +307,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     try {
       const raw = await getStore().get<AppSettings>(STORE_KEY);
       if (sequence !== loadSequence) return;
+      const configGuideSources = readConfigGuideSources(raw);
       const base = raw ? deepMergeSettings(DEFAULT_SETTINGS, raw) : structuredClone(DEFAULT_SETTINGS);
       delete (base.ai as AppSettings['ai'] & { systemPrompt?: string }).systemPrompt;
       const hydrated = await hydrateApiKey(base);
@@ -306,6 +316,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const merged = migrated.settings;
       set({
         settings: merged,
+        configGuideSources,
         loaded: true,
         loadError: null,
         keychainPermissionPromptOpen:

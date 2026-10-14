@@ -13,6 +13,13 @@ export interface AppSettings {
     autoConnectOnStart: boolean;
     confirmBeforeQuit: boolean;
     showOnboarding: boolean;
+    /**
+     * 启动时始终显示配置引导。
+     *
+     * 这是**预览用**开关: 打开后每次启动都弹, 与"仅在全新安装自动出现"的默认路径互不
+     * 干扰 (升级用户默认看不到引导, 需要看效果时用这个开关)。
+     */
+    showConfigGuide: boolean;
     showContextualTips: boolean;
     debug: boolean;
     /** 启动时自动检查更新 */
@@ -21,7 +28,14 @@ export interface AppSettings {
     updateChannel: 'stable' | 'beta' | null;
     /** 用户选择跳过的更新版本号 (内部字段, 不进设置 UI) */
     skippedUpdateVersion: string | null;
-    /** Version metadata; never used to override the onboarding preference. */
+    /**
+     * 最后确认过配置引导的应用版本。
+     *
+     * `null` = 从未确认过。它与"读取时设置文档是否存在"一起决定引导是否自动出现
+     * (见 `lib/startup/configGuide`): 文档不存在 = 全新安装才自动弹; 确认时写入当前
+     * 版本, 于是本次会话与后续启动都不再弹。**永远不得用来覆盖 `showOnboarding`
+     * 引导偏好** (关掉使用引导的用户不该被重新弹引导)。
+     */
     lastSeenVersion: string | null;
     /** 用户选择不再显示启动时钥匙串授权提醒 (内部字段, 不进设置 UI) */
     suppressKeychainPermissionReminder: boolean;
@@ -159,6 +173,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     autoConnectOnStart: false,
     confirmBeforeQuit: true,
     showOnboarding: true,
+    showConfigGuide: false,
     showContextualTips: true,
     debug: false,
     autoCheckUpdate: true,

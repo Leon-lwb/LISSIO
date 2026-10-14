@@ -37,6 +37,11 @@ interface CheckUpdateResult {
   version: string | null;
   notes: string | null;
   date: string | null;
+  /// 远程配置入口: 发布方要求本次启动显示配置引导。
+  ///
+  /// 目前后端恒不返回该字段 (缺省 = 不要求) —— 位置先留好, 将来由更新 manifest 提供,
+  /// 前端接线处 (见 `lib/startup/configGuide`) 不必再改。
+  configGuide?: boolean | null;
 }
 
 interface UpdateStore {
@@ -49,6 +54,8 @@ interface UpdateStore {
   progress: number;
   error: string | null;
   dialogOpen: boolean;
+  /// 发布方通过远程配置要求显示配置引导 (缺省 false)。
+  remoteConfigGuide: boolean;
 
   check: (trigger: 'auto' | 'manual') => Promise<void>;
   downloadAndInstall: () => Promise<void>;
@@ -80,12 +87,15 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
   progress: 0,
   error: null,
   dialogOpen: false,
+  remoteConfigGuide: false,
 
   check: async (trigger) => {
     set({ status: 'checking', lastTrigger: trigger, error: null });
     try {
       const channel = await resolveUpdateChannel();
       const res = await transport.call<CheckUpdateResult>('check_update', { channel });
+      // 远程配置与"有没有新版本"无关: 后端每次回答都以它为准 (缺省 = 不要求)。
+      const remoteConfigGuide = res.configGuide === true;
       if (res.available && res.version) {
         set({
           status: 'available',
@@ -95,6 +105,7 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
             date: res.date ?? '',
           },
           currentVersion: res.currentVersion,
+          remoteConfigGuide,
         });
         // 自动检查只在用户未跳过该版本时打扰用户; 手动检查不自动弹窗
         const skipped = useSettingsStore.getState().settings.general.skippedUpdateVersion;
@@ -102,7 +113,12 @@ export const useUpdateStore = create<UpdateStore>((set, get) => ({
           set({ dialogOpen: true });
         }
       } else {
-        set({ status: 'up-to-date', updateInfo: null, currentVersion: res.currentVersion });
+        set({
+          status: 'up-to-date',
+          updateInfo: null,
+          currentVersion: res.currentVersion,
+          remoteConfigGuide,
+        });
       }
     } catch (e) {
       // auto 失败不打断用户 — 仅记录状态, UI 层对 auto 失败保持静默

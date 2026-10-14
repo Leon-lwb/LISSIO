@@ -6,6 +6,7 @@ import {
 
 const READY: StartupFlowState = {
   settingsLoaded: true,
+  configGuidePending: false,
   showOnboarding: false,
   hasOpenedOnboarding: false,
   isOnboardingOpen: false,
@@ -14,7 +15,22 @@ const READY: StartupFlowState = {
 };
 
 describe('resolveStartupFlow', () => {
-  it('keeps keychain and update behind the first-run onboarding', () => {
+  it('keeps every later dialog queued while the configuration guide is pending', () => {
+    expect(
+      resolveStartupFlow({
+        ...READY,
+        configGuidePending: true,
+        showOnboarding: true,
+        keychainPermissionPromptOpen: true,
+      })
+    ).toEqual({
+      onboardingSettled: false,
+      showKeychainPermissionPrompt: false,
+      canCheckForUpdates: false,
+    });
+  });
+
+  it('keeps keychain and update behind the open onboarding', () => {
     expect(
       resolveStartupFlow({
         ...READY,

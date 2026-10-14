@@ -49,14 +49,35 @@ async function startBackend(configDir: string) {
 let configDir: string;
 let settingsPath: string;
 let backend: Awaited<ReturnType<typeof startBackend>>;
+
+// The pinned color scheme keeps the guide's theme preselection deterministic (the language step
+// no longer reads the locale: its default is English by design).
+test.use({ locale: 'en-US', colorScheme: 'light' });
+
+/// Upgrading users: a settings document already exists, so the configuration guide stays away
+/// and these tests keep measuring the tour and the settings document only.
 const document = (showOnboarding: boolean) => JSON.stringify({
-  app: { general: { showOnboarding, autoCheckUpdate: false, language: 'zh' } },
+  app: {
+    general: { showOnboarding, autoCheckUpdate: false, language: 'zh', lastSeenVersion: '0.7.1' },
+  },
 });
 const persistedOnboarding = async () => {
   const settings = JSON.parse(await readFile(settingsPath, 'utf8')) as {
     app: { general: { showOnboarding: boolean } };
   };
   return settings.app.general.showOnboarding;
+};
+/// Tolerant reader: on a fresh installation the document does not exist until the first save
+/// lands, and polling must see "not yet" rather than an ENOENT abort.
+const persistedGeneral = async () => {
+  try {
+    const settings = JSON.parse(await readFile(settingsPath, 'utf8')) as {
+      app: { general: { language: string; lastSeenVersion: string | null } };
+    };
+    return settings.app.general;
+  } catch {
+    return null;
+  }
 };
 
 test.beforeEach(async () => {
@@ -119,4 +140,39 @@ test('failed dismissal saves offer a retry and persist the latest choice', async
   await page.reload();
   await expect(page.locator('[data-tour="help"]')).toBeVisible();
   await expect(page.getByText('欢迎使用 Lissio', { exact: true })).toBeHidden();
+});
+
+test('a fresh installation meets the configuration guide instead of the workbench', async ({ page }) => {
+  // Fresh installation: there is no settings document at all, which is the only path that
+  // makes the guide appear on its own. An upgrading document never reaches it.
+  await rm(settingsPath, { force: true });
+  await page.goto(`/?server=${backend.base}&token=e2e-token`);
+
+  // The guide is a page, not a dialog: the workbench is not mounted behind it, and the
+  // language step opens in English because that is the guide's preselected default.
+  await expect(page.locator('#config-guide-title')).toBeVisible();
+  await expect(page.getByText('Configuration guide', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-tour="canvas"]')).toHaveCount(0);
+
+  // The language switch is live and the changed field stops claiming to be the default.
+  await page.getByRole('button', { name: '中文' }).click();
+  await expect(page.getByText('配置引导', { exact: true })).toBeVisible();
+  await expect(page.getByText('手动选择')).toBeVisible();
+
+  // Walk to the last step and confirm.
+  await page.getByRole('button', { name: '下一步' }).click();
+  await page.getByRole('button', { name: '下一步' }).click();
+  await page.getByRole('button', { name: '开始使用' }).click();
+
+  // Poll the language: asserting on the version marker would pass on `undefined` before the
+  // save lands, which is exactly how an earlier version of this test hid a real gap.
+  await expect.poll(async () => (await persistedGeneral())?.language).toBe('zh');
+  expect(typeof (await persistedGeneral())?.lastSeenVersion).toBe('string');
+
+  // The workbench mounts only after the guide is confirmed, and the tour takes over.
+  await expect(page.locator('[data-tour="canvas"]')).toHaveCount(1);
+  await expect(page.getByText('欢迎使用 Lissio', { exact: true })).toBeVisible();
+
+  await page.reload();
+  await expect(page.locator('#config-guide-title')).toBeHidden();
 });

@@ -126,6 +126,8 @@ settingConfirmBeforeQuit: 退出前确认
 settingConfirmBeforeQuitDesc: 关闭窗口时弹出确认对话框
 settingShowOnboarding: 显示使用引导
 settingShowOnboardingDesc: 应用首次启动时自动显示使用引导
+settingConfigGuide: 配置引导
+settingConfigGuideDesc: 启动时始终显示配置引导（仅在全新安装时自动出现，打开此项可随时预览显示效果）
 settingShowContextualTips: 显示内部提示
 settingShowContextualTipsDesc: 在 CAN / 逻辑分析仪等视图中显示操作提示
 settingDebug: 调试模式

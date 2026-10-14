@@ -37,6 +37,14 @@ export const generalFields: SettingFieldDef[] = [
   },
   {
     category: 'general',
+    field: 'showConfigGuide',
+    labelKey: 'settingConfigGuide',
+    descKey: 'settingConfigGuideDesc',
+    control: { kind: 'toggle' },
+    keywords: ['config', 'guide', 'first run', 'language', 'theme', '配置引导', '语言', '主题'],
+  },
+  {
+    category: 'general',
     field: 'showContextualTips',
     labelKey: 'settingShowContextualTips',
     descKey: 'settingShowContextualTipsDesc',

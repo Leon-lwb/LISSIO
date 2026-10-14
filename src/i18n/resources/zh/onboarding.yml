@@ -140,3 +140,31 @@ helpAiSteps: |-
   设置中开启「内置工具」后，AI 能直接搭建与修改节点图、读取波形/CAN/原始数据、向设备发送数据，并可查询内置使用知识库
   设置 → AI → MCP 可添加外部 MCP server（stdio 命令或 http 地址），其工具随即提供给模型调用
   本应用同时在 127.0.0.1:8765/mcp 提供 MCP 服务（仅监听本机回环，端口可在设置中修改），Claude Desktop 等外部客户端接入后即可控制本软件
+
+# 配置引导（语言 → 主题 → 动画与磨砂）
+configGuideTitle: 配置引导
+configGuideIntro: 选择界面语言、配色主题与动效，之后可随时在设置中修改。
+configGuideStepLanguage: 界面语言
+configGuideStepTheme: 配色主题
+configGuideStepMotion: 动画与磨砂
+configGuideThemeDark: 深色
+configGuideThemeLight: 浅色
+configGuideThemeMonet: Monet
+configGuideThemeCustom: 当前自定义主题
+configGuideInheritanceTitle: 配置继承
+configGuideSourceStored: 继承自现有配置
+configGuideSourceSystem: 按系统偏好推导
+configGuideSourceDefault: 使用默认值
+configGuideSourceManual: 手动选择
+configGuideBack: 上一步
+configGuideNext: 下一步
+configGuideContinue: 开始使用
+configGuidePreviewLanguage: 文字效果
+configGuidePreviewTheme: 配色效果
+configGuidePreviewTitleBar: 标题栏
+configGuidePreviewSidebar: 侧边栏
+configGuidePreviewCanvas: 画布
+configGuidePreviewAction: 按钮
+configGuidePreviewStatusBar: 状态栏
+configGuidePreviewMotion: 动效与磨砂
+configGuidePreviewMotionDesc: 速度档位、低动画偏好与磨砂开关都会立刻反映在这块预览上。

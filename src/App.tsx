@@ -18,12 +18,14 @@ import { useContextMenu } from './lib/hooks/useContextMenu';
 import { useAppStore } from './store/appStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useOnboardingStore } from './store/onboardingStore';
+import { useConfigGuideStore } from './store/configGuideStore';
 import { useLayoutStore, AI_FLOAT_MIN_W, AI_FLOAT_MIN_H } from './store/layoutStore';
 import { useUpdateStore } from './store/updateStore';
 import { useTranslation } from './i18n';
 import { openDataPanelAndReveal } from './lib/utils/revealDataTab';
 import { useCanFrameSubscription } from './lib/buffers/useCanFrameSubscription';
 import { resolveStartupFlow } from './lib/startup/phases';
+import { useConfigGuidePending } from './lib/startup/useConfigGuidePending';
 import { useBootstrap } from './lib/startup/useBootstrap';
 import { useWorkspaceSeed } from './lib/startup/useWorkspaceSeed';
 import { useFirstFrameReveal } from './lib/startup/useFirstFrameReveal';
@@ -31,6 +33,7 @@ import { startPerformanceTelemetry } from './lib/performance/telemetry';
 import { startAcrylicPerformanceGuard } from './lib/performance/acrylicGuard';
 import { useAppShortcuts, useShortcutDispatcher } from './lib/interaction/useAppShortcuts';
 import { useStartupDialogs } from './lib/startup/useStartupDialogs';
+import { ConfigGuide } from './components/onboarding/ConfigGuide';
 import {
   LazyAboutModal,
   LazyAiChatPanel,
@@ -60,6 +63,7 @@ function App() {
   const isSettingsOpen = useSettingsStore((s) => s.isOpen);
 
   const settingsLoaded = useSettingsStore((s) => s.loaded && s.loadError === null);
+  const settingsLoadError = useSettingsStore((s) => s.loadError);
   const showOnboarding = useSettingsStore((s) => s.settings.general.showOnboarding);
   const autoCheckUpdate = useSettingsStore((s) => s.settings.general.autoCheckUpdate);
   const keychainPermissionPromptOpen = useSettingsStore(
@@ -71,10 +75,13 @@ function App() {
   const isWizardOpen = useOnboardingStore((s) => s.isWizardOpen);
   const isHelpOpen = useOnboardingStore((s) => s.isHelpOpen);
   const isCustomEditorOpen = useAppStore((s) => s.customEditorState.open);
+  const configGuideOpen = useConfigGuideStore((s) => s.isOpen);
 
-  // 启动弹窗串行闸门 (首次引导 → 钥匙串提醒 → 自动更新) — 见 lib/startup/phases
+  // 启动弹窗串行闸门 (配置引导 → 使用引导 → 钥匙串提醒 → 自动更新) — 见 lib/startup/phases
+  const configGuidePending = useConfigGuidePending();
   const startupFlow = resolveStartupFlow({
     settingsLoaded,
+    configGuidePending,
     showOnboarding,
     hasOpenedOnboarding,
     isOnboardingOpen: isWizardOpen,
@@ -291,6 +298,14 @@ function App() {
       </div>
     </div>
   );
+
+  // 首启门控: 配置引导未完成前**不挂载工作台** —— 桌面原生窗口在设置读取完成时放行,
+  // 于是用户先看到这张卡片, 再看到主窗口。读取失败时照常进工作台: 否则重试提示与
+  // 诊断入口都会被挡在一张空白页后面。
+  if (configGuideOpen) return <ConfigGuide />;
+  if (configGuidePending || (!settingsLoaded && settingsLoadError === null)) {
+    return <div className="h-screen w-screen bg-bg-window" />;
+  }
 
   return (
     <div className="relative flex h-full flex-col bg-bg-window p-2" onContextMenu={onAppContextMenu}>

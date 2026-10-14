@@ -126,6 +126,8 @@ settingConfirmBeforeQuit: Confirm before quit
 settingConfirmBeforeQuitDesc: Show a confirmation dialog when closing the window
 settingShowOnboarding: Show onboarding
 settingShowOnboardingDesc: Show the onboarding guide on first launch
+settingConfigGuide: Configuration guide
+settingConfigGuideDesc: Always show the configuration guide at startup (it appears on its own only for a fresh installation; turn this on to preview it)
 settingShowContextualTips: Show contextual tips
 settingShowContextualTipsDesc: Show operation tips in CAN / logic analyzer views
 settingDebug: Debug mode

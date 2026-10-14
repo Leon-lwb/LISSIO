@@ -1,4 +1,14 @@
 import { defineConfig } from '@playwright/test';
+import { resolve } from 'node:path';
+import { seedSharedEndToEndConfig } from './e2e/seedSharedConfig';
+
+// Every suite that does not own its own backend shares this config directory. A fresh
+// checkout would otherwise start with no settings document, which the first-launch page
+// reads as "never set up" — every spec would meet that modal before its own subject.
+// The relative form is shared with the webServer command below, so the seed and the
+// backend provably name the same directory (both resolve against the repo root).
+const SHARED_CONFIG_DIR = 'src-tauri/target/e2e-config';
+seedSharedEndToEndConfig(resolve(SHARED_CONFIG_DIR));
 
 export default defineConfig({
   testDir: './e2e',
@@ -21,7 +31,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'pnpm dev:server --no-mcp --cors-origin http://localhost:1420 --config-dir src-tauri/target/e2e-config',
+      command: `pnpm dev:server --no-mcp --cors-origin http://localhost:1420 --config-dir ${SHARED_CONFIG_DIR}`,
       url: 'http://127.0.0.1:8790/api/v1/health',
       env: { LISSIO_TOKEN: 'e2e-token' },
       reuseExistingServer: !process.env.CI,

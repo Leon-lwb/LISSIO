@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-11
+last-reviewed: 2026-10-14
 applies-to: lissio.web.v2 HTTP/WebSocket protocol and Web delivery boundary
 -->
 Desktop and browser business calls enter the same `lissio-server` through
@@ -109,6 +109,24 @@ with a retry notification. Save failures retain the in-memory choice and offer
 retry. Closing or completing onboarding saves `showOnboarding: false`
 immediately; version changes do not reopen it. Help Center can replay it, and
 any open tour keeps keychain reminders and automatic updates queued.
+
+The configuration guide is the first screen of a fresh installation: interface
+language, color theme, and motion and glass, presented as one full-page card with
+the workbench deliberately not mounted behind it, ahead of the product tour and of
+the keychain reminder. `src/settings/configGuideSources.ts` records whether the
+settings document existed at read time, and `src/lib/startup/configGuide.ts` opens
+the guide only when it did not, so an upgrading installation never meets it.
+Two explicit overrides exist: the `general.showConfigGuide` switch, which forces
+the guide on every launch so its appearance can be previewed, and the remote entry
+carried by the desktop `check_update` response, which currently always leaves it
+unset. Confirming writes the current app version into `general.lastSeenVersion`
+and saves immediately, which is also what releases the workbench. Each value is
+applied as soon as it is chosen, and the page labels it as inherited from the
+current-format document, derived from the system appearance preference, or taken
+from the defaults; the language step preselects English rather than reading the
+system locale, and the system is consulted only for fields the user has never
+persisted. A read failure never opens the guide and never writes settings, so an
+unreadable file cannot be mistaken for a fresh installation.
 
 ## Authentication
 
