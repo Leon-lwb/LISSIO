@@ -283,7 +283,9 @@ tauri-plugin-notification = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
-window-vibrancy = "0.6"
+# 0.8 is the line tauri 2.12 itself resolves, so the workspace compiles one copy
+# instead of also linking 0.6 for the shell's window material.
+window-vibrancy = "0.8"
 getrandom = "0.3"
 # Hardware/platform access
 serialport = "4"

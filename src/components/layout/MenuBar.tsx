@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { platform } from '../../lib/platform';
+import { isWindowsHost } from '../../lib/platform/host';
 import {
   closeWindow,
   minimizeWindow,
@@ -23,8 +24,10 @@ const APP_DOCS = 'https://codeberg.org/Horldsence/Lissio#readme';
 /// 无法正确绘制 — 菜单文字按深色模式渲染为白色, 但菜单背景不填充, 造成
 /// "白字白底" 且背景透视露出下层内容。因此 Windows 端原生菜单已停用
 /// (见 src-tauri/src/lib.rs setup), 由本组件复刻同等菜单。
+///
+/// 实现与设置层的亚克力背板补偿共用 `lib/platform/host`, 同一份 UA 判断只维护一处。
 export function isWindowsPlatform(): boolean {
-  return typeof navigator !== 'undefined' && /Windows/i.test(navigator.userAgent);
+  return isWindowsHost();
 }
 
 /// 窗口控制 (缩放 / 最小化 / 最大化 / 关闭) 只存在于 Tauri 宿主窗口: 浏览器标签页

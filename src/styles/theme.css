@@ -380,9 +380,9 @@
    与 inline zIndex 消费。新增层级别忘了同步这三处。
 
    --z-tour 特意高于 1000: @xyflow/react 会把选中节点抬到 SELECTED_NODE_Z=1000、连线抬到
-   1001 (zIndexMode 默认 'basic'), 而亚克力默认关闭 (appearance.acrylicBackground=false),
-   dock 卡片没有 backdrop-filter 也就没有层叠上下文, 画布内的节点会直接参与根层叠 ——
-   取值 ≤1000 时被选中的卡片会穿透引导遮罩。 */
+   1001 (zIndexMode 默认 'basic'), 而亚克力关闭时 (appearance.acrylicBackground 默认 true,
+   但用户可关) dock 卡片没有 backdrop-filter 也就没有层叠上下文, 画布内的节点会直接参与
+   根层叠 —— 取值 ≤1000 时被选中的卡片会穿透引导遮罩。 */
 :root {
   --z-dropdown: 10;
   --z-tooltip: 50;

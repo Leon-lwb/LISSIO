@@ -10,6 +10,14 @@ import type { AppSettings } from './defaults';
 import { applyTheme, getCssVariableName, resolveActiveTheme, getBuiltInCssTheme, type ThemeToken } from './theme';
 import { loadCssTheme } from './css-theme-loader';
 import { installMotionTokens, setReducedMotionSetting } from '../lib/motion';
+import {
+  ACRYLIC_BASE_OPACITY,
+  acrylicTokenAlpha,
+  hostBorrowsSystemMaterial,
+  isDarkBackground,
+  materialMismatchesTheme,
+  parseHexColor,
+} from './acrylicMaterial';
 
 /// 亚克力模式下各背景 token 的基准透明度 (未列出的 token 保持不透明)
 /// 基准对应 acrylicOpacity = 0.6, 实际透明度 = 基准值 / 0.6 * acrylicOpacity
@@ -22,9 +30,6 @@ const ACRYLIC_TOKEN_ALPHA: Partial<Record<ThemeToken, number>> = {
   bgInput: 0.6,
   bgHover: 0.6,
 };
-
-/// 基准透明度对应的 acrylicOpacity 设置值
-const ACRYLIC_BASE_OPACITY = 0.6;
 
 export function applyAppearance(appearance: AppSettings['appearance']): void {
   const root = document.documentElement;
@@ -63,13 +68,22 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
   root.style.setProperty('--color-dialog-chrome-muted', activeTheme.tokens.bgSidebar);
   root.style.setProperty('--color-float-content', activeTheme.tokens.bgEditor);
   const acrylic = appearance.acrylicBackground === true;
+  // 原生侧要跟着应用主题走的两件事 (set_window_acrylic):
+  //   1. 窗口边框档位 — Windows 的边框默认恒为浅色 (MS: DWMWA_USE_IMMERSIVE_DARK_MODE),
+  //      不同步的话深色主题配浅色标题栏。
+  //   2. 材料 tint — Win10 的 SWCA 亚克力由应用给色; Win11 的系统背板不接受染色 (Rust 侧忽略)。
+  // 材料反档补偿只在"系统材料可能与应用主题相反"的宿主上生效 (见 acrylicMaterial)。
+  const themeBackground = activeTheme.tokens.bgWindow;
+  const themeDark = isDarkBackground(themeBackground);
+  const compensateMaterial = acrylic
+    && hostBorrowsSystemMaterial()
+    && materialMismatchesTheme(themeBackground);
   if (acrylic) {
     root.dataset.acrylic = 'true';
-    root.dataset.acrylic = 'true';
-    const opacity = Math.min(1, Math.max(0.1, appearance.acrylicOpacity ?? ACRYLIC_BASE_OPACITY));
+    const opacity = appearance.acrylicOpacity ?? ACRYLIC_BASE_OPACITY;
     for (const [token, baseAlpha] of Object.entries(ACRYLIC_TOKEN_ALPHA) as [ThemeToken, number][]) {
       const varName = getCssVariableName(token);
-      const alpha = Math.min(1, (baseAlpha / ACRYLIC_BASE_OPACITY) * opacity);
+      const alpha = acrylicTokenAlpha(baseAlpha, opacity, compensateMaterial);
       root.style.setProperty(varName, withAlpha(activeTheme.tokens[token], alpha));
     }
   } else {
@@ -80,7 +94,11 @@ export function applyAppearance(appearance: AppSettings['appearance']): void {
     }
   }
   // 纯浏览器 dev 环境无 Tauri 后端, 调用失败时静默忽略
-  transport.call('set_window_acrylic', { enabled: acrylic }).catch(() => { return undefined; });
+  transport.call('set_window_acrylic', {
+    enabled: acrylic,
+    dark: themeDark,
+    tint: parseHexColor(themeBackground) ?? [],
+  }).catch(() => { return undefined; });
 
   // 磨砂参数: Widget 与二级卡片共享基础 blur/saturate token, 透明度和模糊强度按各自设置独立计算。
   // 关键: alpha 必须显著低于 100% 才能看到背后内容 (毛玻璃核心), blur 必须 > 0
