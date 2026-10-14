@@ -3,6 +3,7 @@
 //! Product logic lives in the independently running `lissio-server`. This crate only owns
 //! windows, menus, updates, platform plugins, and the supervised server sidecar.
 
+mod logging;
 mod shell;
 mod sidecar;
 
@@ -16,11 +17,11 @@ pub use sidecar::{backend_sidecar_info, backend_sidecar_open_logs, backend_sidec
 pub use update_flow::*;
 
 use tauri::Manager;
-use tauri_plugin_log::{Target, TargetKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[allow(clippy::large_stack_frames)]
 pub fn run() {
+    let context = tauri::generate_context!();
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -29,11 +30,12 @@ pub fn run() {
                 } else {
                     log::LevelFilter::Info
                 })
-                .targets([
-                    Target::new(TargetKind::Stdout),
-                    Target::new(TargetKind::LogDir { file_name: None }),
-                    Target::new(TargetKind::Webview),
-                ])
+                // 目标在插件初始化前就定好: 日志文件写不出来时必须降级而不是中止启动,
+                // 见 `logging` 模块头注。
+                .targets(logging::targets(
+                    &context.config().identifier,
+                    &context.package_info().name,
+                ))
                 .build(),
         )
         .plugin(tauri_plugin_notification::init())
@@ -45,6 +47,9 @@ pub fn run() {
         .manage(PendingUpdate(std::sync::Mutex::default()))
         .manage(sidecar::SidecarManager::default())
         .setup(|app| {
+            // 日志后端此刻已就绪: 把文件目标的降级/禁用原因补记进日志本身
+            logging::report_degradation();
+
             if let Err(error) = app.state::<sidecar::SidecarManager>().start(app.handle()) {
                 log::error!("sidecar startup failed: {error}");
             }
@@ -71,7 +76,7 @@ pub fn run() {
             backend_sidecar_restart,
             backend_sidecar_open_logs,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building tauri application")
         .run(|app, event| {
             if matches!(event, tauri::RunEvent::Exit) {

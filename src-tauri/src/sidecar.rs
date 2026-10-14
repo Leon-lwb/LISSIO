@@ -119,10 +119,11 @@ impl SidecarManager {
             .app_config_dir()
             .map_err(|error| error.to_string())?;
         std::fs::create_dir_all(&config_dir).map_err(|error| error.to_string())?;
-        let log_dir = app
-            .path()
-            .app_log_dir()
-            .map_err(|error| error.to_string())?;
+        // 日志目录以 `logging` 预检过的那个为准: 主目录不可写时它已经降级到兜底目录,
+        // 这里若各自解析一遍, 插件写兜底目录而侧车仍去开主目录, 就成了"日志没了 + 后端起不来"。
+        let log_dir = crate::logging::resolved_log_dir()
+            .or_else(|| app.path().app_log_dir().ok())
+            .ok_or_else(|| "无法解析日志目录".to_string())?;
         std::fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
         let log_path = log_dir.join("lissio-server.log");
         let stdout_log = OpenOptions::new()

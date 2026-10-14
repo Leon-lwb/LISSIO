@@ -286,6 +286,9 @@ tauri-plugin-updater = "2"
 # 0.8 is the line tauri 2.12 itself resolves, so the workspace compiles one copy
 # instead of also linking 0.6 for the shell's window material.
 window-vibrancy = "0.8"
+# dirs: 与 tauri 同一条依赖线 (7), 桌面壳用它解析日志目录 —— 与 tauri 的
+# `PathResolver::app_log_dir` 用同一个 crate, 预检路径才不会和插件各解析一套。
+dirs = "7"
 getrandom = "0.3"
 # Hardware/platform access
 serialport = "4"
@@ -395,6 +398,7 @@ tauri-plugin-notification = { workspace = true }
 tauri-plugin-process = { workspace = true }
 getrandom = { workspace = true }
 window-vibrancy = { workspace = true }
+dirs = { workspace = true }
 
 [dev-dependencies]
 app = { workspace = true }
