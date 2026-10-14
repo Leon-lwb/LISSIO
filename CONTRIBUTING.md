@@ -30,6 +30,14 @@ pnpm install
 pnpm dev:desktop
 ```
 
+The desktop mode in [`scripts/local-env.mjs`](scripts/local-env.mjs), invoked by
+`pnpm dev:desktop`, keeps the Windows WebView2 browser profile in
+`output/desktop-webview`, separate from the installed application's profile.
+This avoids startup failures caused by an inaccessible or occupied application
+profile. The directory is reused across restarts; browser-stored layout and
+preferences start fresh on the first run. Backend settings and recordings keep
+their existing location. An explicit `WEBVIEW2_USER_DATA_FOLDER` takes precedence.
+
 Repository conventions are maintained in `AGENTS.md`. Rust members are grouped
 under `src-tauri/crates/<domain>/<crate>`. Before changing Rust, read
 `docs/architecture/crates.md` and run `pnpm architecture` to identify the type

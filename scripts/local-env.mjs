@@ -31,6 +31,7 @@
  *   node scripts/local-env.mjs print             # resolved temp directory
  *   node scripts/local-env.mjs <command…>        # run one command with the env
  *   node scripts/local-env.mjs run "<command>"   # run a shell string (for `&&` chains)
+ *   node scripts/local-env.mjs desktop "<command>" # also isolate Windows WebView2 data
  *
  * `scripts/check-all.mjs` imports `applyLocalEnv()` directly.
  */
@@ -43,6 +44,20 @@ export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /** Stands in for the OS temp directory on Windows; gitignored via `/output/`. */
 export const LOCAL_TMP_DIR = join(repoRoot, 'output', 'local-tmp');
+
+/** Persistent development profile, separate from installed-app data and temp files. */
+export const DESKTOP_WEBVIEW_DIR = join(repoRoot, 'output', 'desktop-webview');
+
+/** Select a Windows desktop development profile before Tauri starts either window. */
+export function applyDesktopEnv(env = process.env, platform = process.platform) {
+  if (platform !== 'win32') return null;
+  // Respect an explicitly selected profile; never reset or delete existing data.
+  if (!env.WEBVIEW2_USER_DATA_FOLDER) {
+    mkdirSync(DESKTOP_WEBVIEW_DIR, { recursive: true });
+    env.WEBVIEW2_USER_DATA_FOLDER = DESKTOP_WEBVIEW_DIR;
+  }
+  return env.WEBVIEW2_USER_DATA_FOLDER;
+}
 
 /** A stub is tiny; a real import library is hundreds of kilobytes. */
 const STUB_MAX_BYTES = 4096;
@@ -122,20 +137,24 @@ function main() {
     console.log(applied ? tmpDir : '(no relocation on this platform)');
     return;
   }
-  if (mode === 'run') {
+  if (mode === 'run' || mode === 'desktop') {
     const command = rest.join(' ');
     if (!command) {
-      console.error('local-env: run needs a command string, for example: run "pnpm build:web"');
+      console.error(`local-env: ${mode} needs a command string, for example: run "pnpm build:web"`);
       process.exit(2);
     }
     applyLocalEnv();
+    if (mode === 'desktop') {
+      const webviewDir = applyDesktopEnv();
+      if (webviewDir) console.log(`local-env: WebView2 profile ${webviewDir}`);
+    }
     process.exit(run([command], { shell: true }).status ?? 1);
   }
   if (mode !== undefined) {
     applyLocalEnv();
     process.exit(run(process.argv.slice(2), { shell: false }).status ?? 1);
   }
-  console.error('usage: node scripts/local-env.mjs print | run "<command>" | <command…>');
+  console.error('usage: node scripts/local-env.mjs print | run "<command>" | desktop "<command>" | <command…>');
   process.exit(2);
 }
 

@@ -36,6 +36,8 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-14 | Windows development dependency audit retry | failed | [records/2026-10-14-windows-development-audit-retry.md](records/2026-10-14-windows-development-audit-retry.md) |
+| 2026-10-14 | Windows desktop development and quality gates | failed | [records/2026-10-14-windows-development-gates.md](records/2026-10-14-windows-development-gates.md) |
 | 2026-10-14 | Log file target fallback | passed with conditions | [records/2026-10-14-log-file-target-fallback.md](records/2026-10-14-log-file-target-fallback.md) |
 | 2026-10-14 | Windows acrylic backdrop | passed with conditions | [records/2026-10-14-windows-acrylic-backdrop.md](records/2026-10-14-windows-acrylic-backdrop.md) |
 | 2026-10-14 | Configuration guide and Rust build parallelism | passed with conditions | [records/2026-10-14-configuration-guide-and-build-parallelism.md](records/2026-10-14-configuration-guide-and-build-parallelism.md) |

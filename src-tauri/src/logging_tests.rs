@@ -102,17 +102,20 @@ fn plan_reports_both_directories_when_neither_is_usable() {
 
 #[test]
 fn the_platform_layout_is_the_one_this_host_should_use() {
-    // 只钉住"本机该用哪一支": macOS 走 Library/Logs, 其它桌面走 data-local/logs
+    // Check the host base directory and the complete platform-specific layout.
     let identifier = "top.pengheng.lissio";
     let resolved = app_log_dir(identifier).expect("host must expose a home/data-local dir");
-    assert!(resolved.ends_with(identifier), "{resolved:?}");
     let expected = if cfg!(target_os = "macos") {
-        "Library/Logs"
+        dirs::home_dir()
+            .expect("host must expose a home directory")
+            .join("Library")
+            .join("Logs")
+            .join(identifier)
     } else {
-        "logs"
+        dirs::data_local_dir()
+            .expect("host must expose a local data directory")
+            .join(identifier)
+            .join("logs")
     };
-    assert!(
-        resolved.to_string_lossy().contains(expected),
-        "{resolved:?}"
-    );
+    assert_eq!(resolved, expected);
 }

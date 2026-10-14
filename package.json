@@ -8,7 +8,7 @@
     "dev": "node scripts/local-env.mjs vite",
     "dev:web": "node scripts/local-env.mjs vite",
     "dev:server": "node scripts/local-env.mjs cargo run --manifest-path src-tauri/Cargo.toml -p lissio-backend-server --",
-    "dev:desktop": "node scripts/local-env.mjs run \"pnpm prepare:sidecar && tauri dev\"",
+    "dev:desktop": "node scripts/local-env.mjs desktop \"pnpm prepare:sidecar && tauri dev\"",
     "server": "pnpm dev:server",
     "prepare:sidecar": "node scripts/local-env.mjs node scripts/prepare-sidecar.mjs",
     "prepare:sidecar:release": "node scripts/local-env.mjs node scripts/prepare-sidecar.mjs --release",

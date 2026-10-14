@@ -197,6 +197,11 @@ times and had already drifted: one workflow ran `check:layers` while `AGENTS.md`
 and the pull-request template omitted it, and a 500-line source limit existed
 only inside a job that could never run, so a 514-line file went unnoticed.
 
+The generated-block reader in `scripts/gates.mjs` normalizes CRLF to LF before
+trimming boundary blank lines. Gate descriptions, order, and meaningful
+whitespace still compare exactly. A Windows checkout does not need `--fix`
+solely because its line endings differ from the generated output.
+
 To change the gate surface:
 
 ```bash

@@ -498,13 +498,15 @@ export function spliceDocBlock(text, docPath) {
   return `${before}\n\n${renderDocBlock(docPath)}\n\n${after}`;
 }
 
-/** Extract the current generated block body (markers excluded), or null if unmarked. */
+/** Extract the generated block with LF line endings (markers excluded), or null if unmarked. */
 export function extractDocBlock(text) {
   const start = text.indexOf(BLOCK_START);
   const end = text.indexOf(BLOCK_END);
   if (start === -1 || end === -1 || end < start) return null;
   return text
     .slice(start + BLOCK_START.length, end)
+    // Normalize before trimming blank lines: trimming LF first leaves CR residues.
+    .replace(/\r\n/g, '\n')
     .replace(/^\n+/, '')
     .replace(/\n+$/, '');
 }
