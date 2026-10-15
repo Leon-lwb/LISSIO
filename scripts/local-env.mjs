@@ -18,14 +18,14 @@
  * `output/local-tmp` (gitignored through `/output/`); elsewhere this is a no-op,
  * so CI keeps using the system temp directory.
  *
- * It also drops the stale `msvcrt.lib` stub an older Tauri build script left
- * behind. `tauri-build` 2.6.3 wrote an 82-byte stub into its reused
- * `target/<profile>/build/lissio-<hash>/out` so the app would link the static CRT;
- * 2.7.2 writes a content-hashed name instead and never removes the old file. The
- * leftover stays on the link search path of unrelated doctests and shadows the
- * real `msvcrt.lib`, so they fail with LNK2001 for `__CxxFrameHandler3`. Only
- * files that are demonstrably that stub are removed: under 4 KiB and without the
- * `__CxxFrameHandler3` symbol, so a real import library is never touched.
+ * It also drops cached `msvcrt.lib` stubs left by Tauri builds. Both
+ * `tauri-build` 2.6.3 and 2.7.2 write an 82-byte stub into
+ * `target/<profile>/build/lissio-<hash>/out` for static CRT linking. The
+ * repository build script removes each newly generated exact placeholder;
+ * this prelude also cleans cached build outputs. A leftover shadows the
+ * real `msvcrt.lib`, so they fail with LNK2001 for `__CxxFrameHandler3`. Cached
+ * candidates are limited to 4 KiB and must lack the `__CxxFrameHandler3` symbol.
+ * The build script uses the exact upstream bytes for newly generated files.
  *
  * Usage:
  *   node scripts/local-env.mjs print             # resolved temp directory
@@ -59,10 +59,10 @@ export function applyDesktopEnv(env = process.env, platform = process.platform) 
   return env.WEBVIEW2_USER_DATA_FOLDER;
 }
 
-/** A stub is tiny; a real import library is hundreds of kilobytes. */
+/** Bound the cached placeholder candidates considered for cleanup. */
 const STUB_MAX_BYTES = 4096;
 
-/** The symbol the stub exists to *not* provide; its absence proves it is the stub. */
+/** Preserve any cached candidate that supplies this CRT symbol. */
 const CXX_FRAME_HANDLER = '__CxxFrameHandler3';
 
 /** Subdirectories of a directory, ignoring files and symlinks. */
@@ -74,8 +74,8 @@ function subdirectories(dir) {
 
 /**
  * Delete the stale Tauri `msvcrt.lib` stubs. Returns the removed paths so the
- * caller can report them; a machine that never built an older `tauri-build` has
- * nothing to remove and nothing is printed.
+ * caller can report them; a checkout without a cached placeholder has nothing
+ * to remove and nothing is printed.
  */
 function removeStaleMsvcrtStubs() {
   const targetRoot = join(repoRoot, 'src-tauri', 'target');
@@ -112,7 +112,7 @@ export function applyLocalEnv({ quiet = false } = {}) {
   const removed = removeStaleMsvcrtStubs();
   if (!quiet && removed.length > 0) {
     console.log(
-      `local-env: removed ${removed.length} stale msvcrt.lib stub(s) left by an older tauri-build`,
+      `local-env: removed ${removed.length} cached Tauri msvcrt.lib stub(s)`,
     );
   }
   return { applied: true, tmpDir: LOCAL_TMP_DIR, removed };

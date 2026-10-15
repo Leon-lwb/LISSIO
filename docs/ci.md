@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-14
+last-reviewed: 2026-10-15
 applies-to: CI platform, runner setup, gate execution, and the release pipeline
 -->
 
@@ -127,8 +127,8 @@ with the same care as production code is the control actually in force.
 
 Codeberg's hosted runners are tightly capped: `codeberg-tiny` allows 2 minutes
 and `codeberg-medium` 10 minutes, with a stated preference that projects needing
-hosted CI use Woodpecker instead. This repository has 63 Rust crates and a
-Tauri build that links `webkit2gtk`; a cold `cargo test --workspace` alone
+hosted CI use Woodpecker instead. The Rust workspace includes a Tauri build
+that links `webkit2gtk`; a cold `cargo test --workspace` alone
 exceeds the hosted budget. The gates in `scripts/gates.mjs` therefore run
 locally, on the self-hosted runner, and — unchanged — in the release pipeline.
 
@@ -232,8 +232,8 @@ A full local run needs Playwright browsers
 The tier driver is Node (`scripts/check-all.mjs`; `scripts/check-all.sh` forwards
 to it), so these commands run on Windows too, where no shell is required. On
 Windows the driver first applies `scripts/local-env.mjs`: it points `TMP`, `TEMP`,
-and `TMPDIR` at `output/local-tmp` inside the checkout, and removes the stale
-`msvcrt.lib` stub an older `tauri-build` left in
+and `TMPDIR` at `output/local-tmp` inside the checkout, and removes
+cached `msvcrt.lib` stubs that `tauri-build` leaves in
 `target/<profile>/build/lissio-<hash>/out`. Without that, MSVC aborts with `cl.exe`
 D8050, esbuild aborts `vite build` with `Access is denied`, and the contract
 exporter cannot write its output directory — failures that have nothing to do with
@@ -242,8 +242,21 @@ prelude, so `pnpm build:all` and `pnpm dev:desktop` work there as well. The
 render-budget gate still needs bash (Git Bash) on Windows, because it runs
 `scripts/perf-gate.sh`.
 
+`tauri-build` 2.7.2 also generates the empty MSVC library during a fresh build.
+[`src-tauri/build.rs`](../src-tauri/build.rs) removes only the exact upstream
+82-byte COFF placeholder from its own output after Tauri emits its static CRT
+link arguments. This prevents the placeholder from shadowing the SDK's real
+library in other workspace crates' documentation tests. The runtime link
+arguments remain unchanged, and the prelude still handles cached output.
+
+`eslint.config.js` owns the lint input scope. `output/` contains gitignored local
+diagnostics, browser-test transforms, and tool temporary files; its generated
+contents are excluded by the global `output/**` ignore alongside build and
+coverage output. Application code, repository scripts, and browser-test sources
+remain subject to their existing lint rules.
+
 Both gate jobs cache `~/.cargo/{registry,git}` and `src-tauri/target`, keyed on
-`src-tauri/Cargo.lock`. Clippy and the test suite across 63 crates do not fit
+`src-tauri/Cargo.lock`. Clippy and the test suite across the Rust workspace do not fit
 comfortably in the job's 60-minute budget on a cold cache, and a timeout there
 would fail every pull request with no useful signal. The cache step carries
 step-level `continue-on-error: true` — a form Forgejo honours, unlike the

@@ -16,6 +16,8 @@ export default tseslint.config(
       'src-tauri/**',
       'public/**',
       'coverage/**',
+      // Checkout-local diagnostics and TMP caches are generated, gitignored artifacts.
+      'output/**',
       'docs/**',
       '**/*.d.ts',
       'src/types/generated/**',

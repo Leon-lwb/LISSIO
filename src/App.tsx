@@ -304,11 +304,11 @@ function App() {
   // 诊断入口都会被挡在一张空白页后面。
   if (configGuideOpen) return <ConfigGuide />;
   if (configGuidePending || (!settingsLoaded && settingsLoadError === null)) {
-    return <div className="h-screen w-screen bg-bg-window" />;
+    return <div className="h-screen w-screen" />;
   }
 
   return (
-    <div className="relative flex h-full flex-col bg-bg-window p-2" onContextMenu={onAppContextMenu}>
+    <div className="relative flex h-full flex-col p-2" onContextMenu={onAppContextMenu}>
       {/* Windows: 透明窗口下原生菜单栏无法正确渲染 (白字白底/透视), 由自定义菜单栏接管; 其它平台内部返回 null */}
       <MenuBar />
       {bottomDocked ? (

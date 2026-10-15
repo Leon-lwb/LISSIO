@@ -4,7 +4,6 @@ import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
 import {
   TOKEN_LABELS,
-  applyTheme,
   type ThemeDefinition,
   type ThemeToken,
 } from '../settings/theme';
@@ -266,10 +265,7 @@ export function ThemeEditorColorPanel({
                         {selectedThemeId !== activeThemeId && !isBuiltIn && (
                           <button
                             className="px-3 py-1.5 bg-bg-button text-text-inverse border-none rounded text-sm cursor-pointer hover:bg-bg-button-hover"
-                            onClick={() => {
-                              onActiveThemeChange(selectedTheme.id);
-                              applyTheme(selectedTheme);
-                            }}
+                            onClick={() => onActiveThemeChange(selectedTheme.id)}
                           >
                             {translate('themeActivate', lang)}
                           </button>

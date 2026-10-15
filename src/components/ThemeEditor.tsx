@@ -22,8 +22,6 @@ import {
   DARK_THEME,
   LIGHT_THEME,
   THEME_TOKENS,
-  applyTheme,
-  applyThemeToken,
   createCustomTheme,
   getTokenGroup,
   type ThemeDefinition,
@@ -156,11 +154,9 @@ export function ThemeEditor({
     if (isBuiltIn) return;
     const next = typeof patch === 'function' ? patch(selectedTheme) : { ...selectedTheme, ...patch };
     const newThemes = themes.map((t) => (t.id === next.id ? next : t));
+    // The settings callback applies the active theme together with its appearance settings.
+    // Writing raw tokens afterward would discard acrylic background alpha.
     onThemesChange(newThemes);
-    // 实时预览: 如果编辑的就是当前激活主题, 直接应用 token
-    if (selectedThemeId === activeThemeId) {
-      applyTheme(next);
-    }
   };
 
   const handleTokenChange = (token: ThemeToken, value: string) => {
@@ -168,9 +164,6 @@ export function ThemeEditor({
       ...prev,
       tokens: { ...prev.tokens, [token]: value },
     }));
-    if (selectedThemeId === activeThemeId) {
-      applyThemeToken(token, value);
-    }
   };
 
   const handleAddTheme = () => {
@@ -179,7 +172,6 @@ export function ThemeEditor({
     onThemesChange([...themes, newTheme]);
     setSelectedThemeId(newTheme.id);
     onActiveThemeChange(newTheme.id);
-    applyTheme(newTheme);
   };
 
   const handleDuplicate = () => {
@@ -195,7 +187,6 @@ export function ThemeEditor({
     // 若删除的是当前激活主题, 回退到 dark
     if (selectedTheme.id === activeThemeId) {
       onActiveThemeChange(DARK_THEME.id);
-      applyTheme(DARK_THEME);
     }
     setSelectedThemeId(DARK_THEME.id);
   };
@@ -219,9 +210,6 @@ export function ThemeEditor({
     if (isBuiltIn) return;
     const base = selectedThemeId === LIGHT_THEME.id ? LIGHT_THEME : DARK_THEME;
     updateSelectedTheme({ tokens: { ...base.tokens } });
-    if (selectedThemeId === activeThemeId) {
-      applyTheme({ ...selectedTheme, tokens: { ...base.tokens } });
-    }
   };
 
   const handleExport = () => {
@@ -254,7 +242,6 @@ export function ThemeEditor({
         onThemesChange([...themes, newTheme]);
         setSelectedThemeId(newTheme.id);
         onActiveThemeChange(newTheme.id);
-        applyTheme(newTheme);
       } catch {
         // ignore invalid import
       }

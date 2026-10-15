@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-13
+last-reviewed: 2026-10-15
 applies-to: Dependency policy, current snapshot, special obligations, and review workflow
 -->
 
@@ -24,13 +24,13 @@ frontend inventory is generated with pnpm and reviewed when dependencies change.
 
 ## Rust snapshot
 
-The current graph contains 766 external crates. Frequent SPDX expressions are:
+The current graph contains 765 external crates. Frequent SPDX expressions are:
 
 | Expression | Packages |
 | --- | ---: |
 | `MIT OR Apache-2.0` | 363 |
 | `MIT` | 164 |
-| `Apache-2.0 OR MIT` | 64 |
+| `Apache-2.0 OR MIT` | 63 |
 | `MIT/Apache-2.0` | 29 |
 | `Apache-2.0` | 26 |
 | `Zlib OR Apache-2.0 OR MIT` | 23 |
@@ -46,6 +46,14 @@ Special selections:
 | `unescaper` 0.1.10 | `MIT OR GPL-3.0-only` | Use the MIT branch; do not select GPL-3.0-only |
 | two crates | `MIT OR Apache-2.0 OR LGPL-2.1-or-later` | Use MIT or Apache-2.0 |
 | `dompurify` | `MPL-2.0 OR Apache-2.0` | Use Apache-2.0 |
+| `rustls` 0.23.46 | `Apache-2.0 OR ISC OR MIT` | Use Apache-2.0; preserve the upstream license text |
+
+`src-tauri/Cargo.lock` resolves `rustls` to 0.23.46, the patch release fixing
+`RUSTSEC-2026-0346` through `RUSTSEC-2026-0349`. Its package metadata and
+`LICENSE-APACHE`, `LICENSE-ISC`, and `LICENSE-MIT` files retain the same terms
+as 0.23.45. The existing dependency allow-list and advisory exceptions remain
+unchanged. See the [dependency review](../reviews/records/2026-10-15-rustls-security-update.md)
+for the upstream evidence and audit result.
 
 The project does not allow single-license GPL, AGPL, SSPL, BUSL, Elastic, or
 commercial-only dependencies in linked production code. Dual-license packages
@@ -54,13 +62,15 @@ copyleft handling.
 
 ## Frontend snapshot
 
-Production contains 391 packages; the complete graph contains 820 packages.
+The installed production graph contains 394 packages; the complete graph
+contains 820 packages. This snapshot was regenerated with the commands above
+on Windows; no frontend dependency version changed in the Rust security update.
 
 | Expression | Production | Including development |
 | --- | ---: | ---: |
-| MIT | 325 | 673 |
+| MIT | 327 | 673 |
 | ISC | 38 | 58 |
-| Apache-2.0 | 7 | 36 |
+| Apache-2.0 | 8 | 36 |
 | BSD-3-Clause | 8 | 14 |
 | BSD-2-Clause | 1 | 10 |
 | `MIT OR Apache-2.0` | 4 | 4 |

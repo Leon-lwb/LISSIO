@@ -157,7 +157,7 @@ export function ConfigGuide() {
   const lastStep = stepIndex === CONFIG_GUIDE_STEPS.length - 1;
 
   return (
-    <div className="fixed inset-0 bg-bg-window flex items-center justify-center">
+    <div className="fixed inset-0 flex items-center justify-center">
       {/* 卡片外壳只负责浮层 chrome; 左右分栏放在**内层**。
           `.dialog-surface` 是无 layer 的组件 CSS (自带 `display:flex; flex-direction:column`
           —— 设置弹窗靠它纵向堆头部/主体/底部), 无 layer 样式优先于 Tailwind utilities,

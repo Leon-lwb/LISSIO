@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-14
+last-reviewed: 2026-10-15
 applies-to: Historical records under docs/reviews/records
 -->
 
@@ -36,6 +36,8 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-15 | Windows transparency and background composition | passed with conditions | [records/2026-10-15-windows-transparency-and-backgrounds.md](records/2026-10-15-windows-transparency-and-backgrounds.md) |
+| 2026-10-15 | Rustls security update | passed with conditions | [records/2026-10-15-rustls-security-update.md](records/2026-10-15-rustls-security-update.md) |
 | 2026-10-14 | Windows development dependency audit retry | failed | [records/2026-10-14-windows-development-audit-retry.md](records/2026-10-14-windows-development-audit-retry.md) |
 | 2026-10-14 | Windows desktop development and quality gates | failed | [records/2026-10-14-windows-development-gates.md](records/2026-10-14-windows-development-gates.md) |
 | 2026-10-14 | Log file target fallback | passed with conditions | [records/2026-10-14-log-file-target-fallback.md](records/2026-10-14-log-file-target-fallback.md) |
