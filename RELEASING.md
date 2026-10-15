@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-15
 applies-to: Versioning, verification, packaging, and publication
 -->
 
@@ -102,6 +102,33 @@ the constraint and the required secrets.
 Install the resulting artifacts and launch them on every published platform.
 Collect Web, server/CLI, desktop, source, `LICENSE`, `NOTICE`, and required
 third-party license files.
+
+### Native Windows delivery
+
+`pnpm build:all` runs `scripts/finalize-bundles.mjs` after the server and desktop
+builds. Native Windows installers stay in
+`src-tauri/target/release/bundle/nsis/` and `bundle/msi/`. The final step raises
+only labels below Medium (`S-1-16-8192`), reads native numeric SIDs with
+`scripts/windows-integrity.ps1`, and checks that SHA256 is unchanged. Existing
+Medium or higher labels are preserved. There is no artifact copy, build receipt,
+separate export command, or configurable destination.
+
+A Low-integrity process, a denied label update, or a failed verification makes
+`build:all` fail. Run the same command from an ordinary Windows terminal outside
+the sandbox. The checkout directories retain their existing labels; the repair
+applies only to installer files. macOS and Linux skip Windows tools and keep
+their existing bundle outputs.
+
+Install and distribute the verified bundle files. Confirm a normal double-click
+opens the installer, then verify installation, application and server-sidecar
+startup, and uninstallation as an ordinary user. NSIS validates its temporary
+directory before executing `.onInit`; changing application logging or adding an
+installer hook cannot repair a Low-integrity executable's startup failure.
+The existing checkout-local build temp environment remains in effect.
+
+The macOS-host cross-packaging matrix still uses its own output collection and
+signing path. NTFS labels are a native Windows filesystem property; Windows
+delivery validation supplements the existing per-platform installation check.
 
 ## Publish
 

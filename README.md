@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-13
+last-reviewed: 2026-10-15
 applies-to: Product overview, setup, development, and distribution
 -->
 
@@ -393,7 +393,7 @@ Build server, CLI, desktop, and web for the current platform:
 pnpm build:all
 ```
 
-This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once. The build stops if any step fails. Local desktop builds disable updater artifacts using `src-tauri/tauri.local.conf.json`, so `TAURI_SIGNING_PRIVATE_KEY` is not required. Release CI retains updater signing through the default Tauri configuration.
+This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once, and finally checks native Windows installer integrity. The build stops if any step fails. Local desktop builds disable updater artifacts using `src-tauri/tauri.local.conf.json`, so `TAURI_SIGNING_PRIVATE_KEY` is not required. Release packaging retains updater signing through the default Tauri configuration.
 
 Individual build commands:
 
@@ -405,6 +405,16 @@ pnpm build:desktop
 ```
 
 Web assets are output to `dist/`, server and CLI binaries to `src-tauri/target/release/`, and desktop installers to `src-tauri/target/release/bundle/`.
+
+On Windows, `build:all` finishes with `scripts/finalize-bundles.mjs`. It checks
+the current-version installers in the existing `bundle/nsis/` and `bundle/msi/`
+folders, raises Low integrity labels to Medium, and verifies SHA256 is unchanged.
+A Low-integrity EXE can make NSIS report "Error writing temporary file" even
+when the user's Temp directory is healthy. Installer paths stay fixed inside
+the checkout; there is no separate export command or destination setting.
+If the integrity check fails, run `pnpm build:all` from an ordinary Windows
+terminal outside the sandbox. macOS and Linux skip this Windows-specific step
+and keep Tauri's normal bundle outputs.
 
 On a macOS host, the automated packaging script covers cross-target builds,
 updater signing, and artifact collection:

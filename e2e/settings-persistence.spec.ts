@@ -164,10 +164,10 @@ test('a fresh installation meets the configuration guide instead of the workbenc
   await page.getByRole('button', { name: '下一步' }).click();
   await page.getByRole('button', { name: '开始使用' }).click();
 
-  // Poll the language: asserting on the version marker would pass on `undefined` before the
-  // save lands, which is exactly how an earlier version of this test hid a real gap.
+  // Language changes save before confirmation, so wait for the completion marker too.
+  // Checking its type rejects both null and an absent field while the save is pending.
   await expect.poll(async () => (await persistedGeneral())?.language).toBe('zh');
-  expect(typeof (await persistedGeneral())?.lastSeenVersion).toBe('string');
+  await expect.poll(async () => typeof (await persistedGeneral())?.lastSeenVersion).toBe('string');
 
   // The workbench mounts only after the guide is confirmed, and the tour takes over.
   await expect(page.locator('[data-tour="canvas"]')).toHaveCount(1);

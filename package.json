@@ -16,7 +16,7 @@
     "build:web": "node scripts/local-env.mjs run \"tsc && vite build\"",
     "build:server": "node scripts/local-env.mjs cargo build --manifest-path src-tauri/Cargo.toml --release -p lissio-backend-server -p lissio-backend-cli",
     "build:cli": "node scripts/local-env.mjs cargo build --manifest-path src-tauri/Cargo.toml --release -p lissio-backend-cli",
-    "build:all": "pnpm build:server && pnpm build:desktop",
+    "build:all": "pnpm build:server && pnpm build:desktop && node scripts/local-env.mjs node scripts/finalize-bundles.mjs",
     "build": "pnpm build:web",
     "preview": "vite preview",
     "test": "vitest run",

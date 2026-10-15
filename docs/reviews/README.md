@@ -36,6 +36,8 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-15 | Build-all bundle finalization | passed with conditions | [records/2026-10-15-build-all-bundle-finalization.md](records/2026-10-15-build-all-bundle-finalization.md) |
+| 2026-10-15 | Windows installer integrity and delivery | passed with conditions | [records/2026-10-15-windows-installer-integrity.md](records/2026-10-15-windows-installer-integrity.md) |
 | 2026-10-15 | Windows transparency and background composition | passed with conditions | [records/2026-10-15-windows-transparency-and-backgrounds.md](records/2026-10-15-windows-transparency-and-backgrounds.md) |
 | 2026-10-15 | Rustls security update | passed with conditions | [records/2026-10-15-rustls-security-update.md](records/2026-10-15-rustls-security-update.md) |
 | 2026-10-14 | Windows development dependency audit retry | failed | [records/2026-10-14-windows-development-audit-retry.md](records/2026-10-14-windows-development-audit-retry.md) |

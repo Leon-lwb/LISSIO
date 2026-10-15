@@ -242,6 +242,16 @@ prelude, so `pnpm build:all` and `pnpm dev:desktop` work there as well. The
 render-budget gate still needs bash (Git Bash) on Windows, because it runs
 `scripts/perf-gate.sh`.
 
+The build temp environment does not make a Windows installer ready to deliver.
+`pnpm build:all` finishes with `scripts/finalize-bundles.mjs`, which raises Low
+installer labels to Medium in the original `src-tauri/target/release/bundle/`
+subfolders and verifies that the bytes are unchanged. Native SID checks in
+`scripts/windows-integrity.ps1` avoid localized permission text. A failed check
+fails `build:all` and directs the user to run it from an ordinary Windows
+terminal. Other platforms skip this step. See
+[the release handbook](../RELEASING.md#native-windows-delivery).
+This is a native packaging check; Linux CI still does not build desktop installers.
+
 `tauri-build` 2.7.2 also generates the empty MSVC library during a fresh build.
 [`src-tauri/build.rs`](../src-tauri/build.rs) removes only the exact upstream
 82-byte COFF placeholder from its own output after Tauri emits its static CRT
