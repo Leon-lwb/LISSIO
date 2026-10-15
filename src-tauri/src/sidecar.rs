@@ -133,13 +133,15 @@ impl SidecarManager {
             .map_err(|error| format!("无法打开 sidecar 日志: {error}"))?;
         let stderr = stdout_log.try_clone().map_err(|error| error.to_string())?;
         let mut command = Command::new(&binary);
+        // MCP 端口不在这里指定: 侧车按 `--config-dir` 里的 settings.json
+        // (`ai.mcpServerPort`) 监听, 也就是设置页那一个端口。以前这里硬编码
+        // `--mcp-port 0`, 后端每次启动都落在随机高端口上, 与设置里写的端口对不上。
+        // HTTP 端口仍交给 OS 分配 — 前端从 ready 记录里取实际地址。
         command
             .args([
                 "--bind",
                 "127.0.0.1",
                 "--http-port",
-                "0",
-                "--mcp-port",
                 "0",
                 "--supervised-stdio",
                 "--config-dir",

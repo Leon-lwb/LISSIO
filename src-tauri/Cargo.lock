@@ -4204,6 +4204,7 @@ dependencies = [
  "lissio-events",
  "log",
  "rmcp",
+ "serde",
  "serde_json",
  "tokio",
 ]

@@ -4,6 +4,8 @@ import type {
   AiToolRun,
   AiTurnEvent,
   AiViewItem,
+  McpPortCheck,
+  McpPortConflict,
   McpServerConfig,
   McpToolInfo,
 } from '../types';
@@ -36,6 +38,8 @@ export interface AiChatState {
   /** 本地 MCP server 状态 */
   serverRunning: boolean;
   serverPort: number | null;
+  /** 最近一次启动失败的端口冲突 (成功后为 null) */
+  serverConflict: McpPortConflict | null;
 
   refreshSessions: () => Promise<void>;
   createSession: (title: string) => Promise<void>;
@@ -50,8 +54,15 @@ export interface AiChatState {
   refreshTools: () => Promise<void>;
   refreshServers: () => Promise<void>;
   refreshServerStatus: () => Promise<void>;
-  startLocalServer: () => Promise<void>;
+  /** 启动本地 MCP server; 省略 port 时用设置里的端口 */
+  startLocalServer: (port?: number) => Promise<void>;
   stopLocalServer: () => Promise<void>;
+  /** 设置页改端口: 写入设置; 已在监听时立即切到新端口 */
+  changeServerPort: (port: number) => Promise<void>;
+  /** 检查候选端口能否用于监听 (后端不可达时返回 null) */
+  probePort: (port: number) => Promise<McpPortCheck | null>;
+  /** 改用建议端口: 写入设置并按新端口启动 */
+  applyPortSuggestion: (port: number) => Promise<void>;
   addServer: (config: McpServerConfig) => Promise<void>;
   removeServer: (id: string) => Promise<void>;
   setServerEnabled: (id: string, enabled: boolean) => Promise<void>;

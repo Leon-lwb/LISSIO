@@ -22,6 +22,7 @@ describe('SettingsModal AI prompt folder', () => {
       isOpen: true,
       activeCategory: 'ai',
       searchQuery: '',
+      aiSection: 'main',
     });
   });
 
@@ -75,6 +76,14 @@ describe('SettingsModal AI prompt folder', () => {
     const breadcrumb = screen.getByRole('navigation', { name: '设置导航' });
     fireEvent.click(within(breadcrumb).getByRole('button', { name: 'AI' }));
     fireEvent.click(screen.getByRole('button', { name: '打开 MCP 设置' }));
+    expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('MCP');
+  });
+
+  it('lands on the MCP second level when the store already targets it', () => {
+    // 端口冲突提示走 openMcpSettings: 打开即停在 MCP 页
+    useSettingsStore.setState({ aiSection: 'mcp' });
+    renderWithI18n(<SettingsModal />);
+
     expect(screen.getByRole('navigation', { name: '设置导航' })).toHaveTextContent('MCP');
   });
 

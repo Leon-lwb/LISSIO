@@ -30,9 +30,15 @@ export function currentLanguage(): Lang {
     : 'zh';
 }
 
-/** 非 React 代码的命令式翻译入口；React 组件优先使用 useTranslation。 */
-export function translate(key: TranslationKey, lang: Lang = currentLanguage()): string {
-  return i18n.t(key, { lng: lang, defaultValue: key });
+/** 非 React 代码的命令式翻译入口；React 组件优先使用 useTranslation。
+ *
+ * `vars` 供带占位符的文案使用 (如 `端口 {{port}} 被占用`)。 */
+export function translate(
+  key: TranslationKey,
+  lang: Lang = currentLanguage(),
+  vars?: Record<string, unknown>
+): string {
+  return i18n.t(key, { lng: lang, defaultValue: key, ...vars });
 }
 
 /** 同步 i18next 当前语言，并同步 HTML lang，设置存储仍是产品配置来源。 */

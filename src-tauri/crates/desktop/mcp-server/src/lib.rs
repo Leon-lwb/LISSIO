@@ -17,6 +17,6 @@
 pub mod server;
 
 pub use server::{
-    DEFAULT_MCP_PORT, MCP_ENDPOINT_PATH, MCP_PORT_ENV, McpServerHandle, VofaMcpServer,
-    resolve_port, start,
+    DEFAULT_MCP_PORT, MCP_ENDPOINT_PATH, MCP_PORT_ENV, McpServerHandle, PortCheck, VofaMcpServer,
+    check_port, resolve_port, start,
 };

@@ -158,6 +158,7 @@ pub const SUPPORTED: &[&str] = &[
     "mcp_server_status",
     "mcp_server_start",
     "mcp_server_stop",
+    "mcp_port_check",
 ];
 
 /// 尚未接入网络出口的命令。

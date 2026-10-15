@@ -80,6 +80,22 @@ describe('settingsStore', () => {
     expect(useSettingsStore.getState().isOpen).toBe(false);
   });
 
+  it('opens 设置 → AI → MCP directly, while a plain open returns to the first level', () => {
+    useSettingsStore.getState().openMcpSettings();
+    expect(useSettingsStore.getState()).toMatchObject({
+      isOpen: true,
+      activeCategory: 'ai',
+      searchQuery: '',
+      aiSection: 'mcp',
+    });
+
+    useSettingsStore.getState().setAiSection('plugins');
+    expect(useSettingsStore.getState().aiSection).toBe('plugins');
+
+    useSettingsStore.getState().open('ai');
+    expect(useSettingsStore.getState().aiSection).toBe('main');
+  });
+
   it('pushes pipeline config on load (backend does not persist it)', async () => {
     await useSettingsStore.getState().load();
 

@@ -4,9 +4,11 @@
 //! (见 [`router`]);工具实现与状态切片在 [`control_api`],本模块只做协议适配、
 //! HTTP 宿主与监听端口配置。
 
+mod ports;
 mod router;
 mod runtime;
 
+pub use ports::{PortCheck, check_port};
 pub use runtime::{DEFAULT_MCP_PORT, MCP_PORT_ENV, McpServerHandle, resolve_port, start};
 
 use std::sync::Arc;

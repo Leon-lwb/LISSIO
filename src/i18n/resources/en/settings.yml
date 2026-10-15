@@ -303,7 +303,7 @@ settingAiMcpDesc: Manage the local MCP service and external MCP servers
 settingAiMcpTools: Enable MCP Tools
 settingAiMcpToolsDesc: Expose tools from enabled external MCP servers to the model during chat
 settingAiMcpServerPort: Local MCP Port
-settingAiMcpServerPortDesc: Port of the MCP server exposing this app's capabilities (listens on 127.0.0.1 only)
+settingAiMcpServerPortDesc: Port of the MCP server exposing this app's capabilities (listens on 127.0.0.1 only); changing it restarts the listener on the new port
 settingAiOrcaHint: OrcaRouter gateway — model names need a vendor prefix, e.g. openai/gpt-4o-mini or anthropic/claude-sonnet-4
 settingAiOrcaGetKey: Get an API Key · support the project
 settingAiOrcaFreeModels: "Free models: available once you have an API key"

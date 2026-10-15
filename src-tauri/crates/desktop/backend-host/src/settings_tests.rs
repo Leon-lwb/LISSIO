@@ -66,6 +66,38 @@ fn unreadable_file_returns_an_error() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// MCP 端口是用户配置: 读得到就用, 缺失 / 类型不对 / `0` 一律视为未配置。
+#[test]
+fn mcp_server_port_reads_only_a_usable_persisted_value() {
+    let dir = temp_dir("mcp-port");
+    std::fs::create_dir_all(&dir).expect("目录应可创建");
+    let store = SettingsStore::new(&dir);
+
+    assert_eq!(store.mcp_server_port(), None, "缺文件视为未配置");
+
+    let mut document = Map::new();
+    for (value, expected) in [
+        (json!(9001), Some(9001)),
+        (json!(0), None),
+        (json!(70000), None),
+        (json!("8765"), None),
+        (json!(null), None),
+    ] {
+        document.insert(
+            SETTINGS_KEY.to_string(),
+            json!({ "ai": { "mcpServerPort": value } }),
+        );
+        store.write(&document).expect("写入应成功");
+        assert_eq!(
+            store.mcp_server_port(),
+            expected,
+            "mcpServerPort = {value} 的解析结果不符"
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// 总开关默认关闭; 显式 true 才开启; 类型不对或文件缺失一律回落默认。
 #[test]
 fn recording_switch_defaults_to_off_and_reads_the_persisted_value() {

@@ -83,10 +83,11 @@ impl ServerState {
 /// 启动服务直至收到退出信号 (Ctrl-C / SIGTERM)。
 ///
 /// 顺序与其它宿主一致: 装配 (含工作区恢复与录制启动) → 可选进程内 MCP →
-/// HTTP/WS 监听 → 信号 → 优雅收尾 (停录制 + flush 工作区)。
+/// HTTP/WS 监听 → 信号 → 优雅收尾 (停录制 + flush 工作区)。MCP 端口被占用只
+/// 记录并回传冲突诊断, 不阻止 Web 出口启动。
 ///
 /// # Errors
-/// 装配失败、端口占用或 MCP 启动失败时返回原因。
+/// 装配失败或 HTTP 端口占用时返回原因。
 pub async fn serve(config: ServerConfig) -> Result<(), String> {
     serve_inner(config, false).await
 }
@@ -110,10 +111,13 @@ async fn serve_inner(config: ServerConfig, supervised_stdio: bool) -> Result<(),
     let host = Arc::new(host);
 
     if let Some(port) = config.mcp_port {
-        let bound = ai_host::mcp_server_start(&host.ai, Some(port))
-            .await
-            .map_err(|error| error.to_string())?;
-        log::info!("MCP server 已随 Web 出口启动: 端口 {bound}");
+        // MCP 端口冲突不带走整个 Web 出口: 应用照常可用, 冲突诊断 (占用者与
+        // 建议端口) 留在 AiHost 里, 前端经 `mcp_server_status` 取到并提示用户
+        // 改端口或关闭 MCP。
+        match ai_host::mcp_server_start(&host.ai, Some(port)).await {
+            Ok(bound) => log::info!("MCP server 已随 Web 出口启动: 端口 {bound}"),
+            Err(error) => log::error!("MCP server 未能启动 (端口 {port}): {error}"),
+        }
     }
 
     let listener = tokio::net::TcpListener::bind((config.bind, config.http_port))

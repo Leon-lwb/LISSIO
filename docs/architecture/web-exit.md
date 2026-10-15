@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-14
+last-reviewed: 2026-10-15
 applies-to: lissio.web.v2 HTTP/WebSocket protocol and Web delivery boundary
 -->
 Desktop and browser business calls enter the same `lissio-server` through
@@ -89,8 +89,18 @@ WWB1, VNDP, and VENV therefore require no host-specific recoding.
 | `--token`, `--token-file` | `LISSIO_TOKEN` | Generated config-dir token |
 | `--static-dir` | `LISSIO_STATIC_DIR` | empty |
 | `--cors-origin` | `LISSIO_CORS_ORIGINS` | empty, same-origin |
-| `--mcp-port`, `--no-mcp` | `LISSIO_MCP_PORT` | `8765`, MCP enabled |
+| `--mcp-port`, `--no-mcp` | `LISSIO_MCP_PORT` | `app.ai.mcpServerPort`, else `8765`, MCP enabled |
 | — | `LISSIO_CONFIG_DIR` | shared host resolution |
+
+The MCP listener port resolves as explicit flag > `LISSIO_MCP_PORT` >
+`settings.json` (`app.ai.mcpServerPort`, the "Local MCP Port" field in the AI
+settings) > `8765`. The settings layer is why the Desktop sidecar listens on the
+configured port instead of an OS-assigned one: the Tauri shell passes no
+`--mcp-port`, and `lissio-server` reads the same `settings.json` it was given as
+its config directory. `mcp_port_check` reports whether a candidate port is
+bindable, who holds it, and a free alternative; a port that cannot be bound stops
+only the MCP listener — the Web exit still starts and `mcp_server_status` carries
+the conflict so the UI can offer changing the port or stopping MCP.
 
 ## Settings and onboarding
 

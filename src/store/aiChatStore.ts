@@ -8,6 +8,7 @@ import { useAppStore } from './appStore';
 import { translate } from '../i18n';
 import type { AiAttachment, AiViewItem } from '../types';
 import type { AiChatState } from './aiChatStoreTypes';
+import { createMcpServerActions } from './aiChatStoreMcp';
 import {
   appendTextEvent,
   errorItemFromRejection,
@@ -196,6 +197,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
     servers: [],
     serverRunning: false,
     serverPort: null,
+    serverConflict: null,
 
     refreshSessions: async () => {
       try {
@@ -399,32 +401,7 @@ export const useAiChatStore = create<AiChatState>()((set, get) => {
       }
     },
 
-    refreshServerStatus: async () => {
-      try {
-        const st = await api.mcpServerStatus();
-        set({ serverRunning: st.running, serverPort: st.port });
-      } catch {
-        /* ignore */
-      }
-    },
-
-    startLocalServer: async () => {
-      const port = useSettingsStore.getState().settings.ai.mcpServerPort;
-      try {
-        const bound = await api.mcpServerStart(port);
-        set({ serverRunning: true, serverPort: bound });
-      } catch {
-        set({ serverRunning: false });
-      }
-    },
-
-    stopLocalServer: async () => {
-      try {
-        await api.mcpServerStop();
-      } finally {
-        set({ serverRunning: false, serverPort: null });
-      }
-    },
+    ...createMcpServerActions(set, get),
 
     addServer: async (config) => {
       await api.mcpAddServer(config);

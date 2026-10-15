@@ -86,6 +86,26 @@ impl SettingsStore {
             .unwrap_or(RECORDING_ENABLED_DEFAULT)
     }
 
+    /// 本地 MCP 监听端口 — 读 `app.ai.mcpServerPort`, 未配置 / 非法值 (含 `0`) 返回
+    /// `None`, 由调用方回落到 MCP 默认端口 (8765)。
+    ///
+    /// 端口是"用户配置"而非"后端猜测": 桌面侧车与 Web 出口启动期都要按它监听,
+    /// 否则设置里写的端口与实际监听端口就会不一致。`0` 在 CLI 里表示"任意端口",
+    /// 但前端端口字段不接受它, 这里按"未配置"处理, 不引入第二种随机端口来源。
+    #[must_use]
+    pub fn mcp_server_port(&self) -> Option<u16> {
+        let port = u16::try_from(
+            self.read()
+                .ok()?
+                .get(SETTINGS_KEY)?
+                .get("ai")?
+                .get("mcpServerPort")?
+                .as_u64()?,
+        )
+        .ok()?;
+        (port != 0).then_some(port)
+    }
+
     /// 原子写入整个文档 (临时文件 + rename)。
     ///
     /// # Errors

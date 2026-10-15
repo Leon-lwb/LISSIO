@@ -303,7 +303,7 @@ settingAiMcpDesc: 管理本地 MCP 服务与外部 MCP 服务器
 settingAiMcpTools: 启用 MCP 工具
 settingAiMcpToolsDesc: 对话时自动把已启用外部 MCP server 的工具提供给模型
 settingAiMcpServerPort: 本地 MCP 端口
-settingAiMcpServerPortDesc: 对外暴露本应用能力的 MCP 服务端口 (仅监听 127.0.0.1)
+settingAiMcpServerPortDesc: 对外暴露本应用能力的 MCP 服务端口 (仅监听 127.0.0.1); 改动后立即按新端口重启监听
 settingAiOrcaHint: OrcaRouter 聚合网关 — 模型名需带厂商前缀, 如 openai/gpt-4o-mini、anthropic/claude-sonnet-4
 settingAiOrcaGetKey: 获取 API Key · 支持项目
 settingAiOrcaFreeModels: 免费模型:获取 API Key 即可访问

@@ -82,6 +82,31 @@ export interface McpToolInfo {
 export interface McpServerStatus {
   running: boolean;
   port: number | null;
+  /// 最近一次启动失败的端口冲突 (启动成功后为 null)。
+  conflict: McpPortConflict | null;
+}
+
+/// 启动失败时的端口冲突诊断 — 界面据此给出改端口 / 关闭 MCP 的建议。
+export interface McpPortConflict {
+  /// 冲突端口 (设置里配置的那个)。
+  port: number;
+  /// 后端 bind 失败的原始原因。
+  reason: string;
+  /// 占用该端口的进程 (识别不到为 null)。
+  occupant: string | null;
+  /// 未识别到占用进程 — 多为系统保留区间 (Hyper-V / WSL2 / Docker) 或权限限制。
+  reserved_hint: boolean;
+  /// 建议改用的可用端口。
+  suggested_port: number | null;
+}
+
+/// 候选 MCP 端口的检查结果 (设置页即时反馈)。
+export interface McpPortCheck {
+  port: number;
+  available: boolean;
+  occupant: string | null;
+  reserved_hint: boolean;
+  suggested_port: number | null;
 }
 
 /// 聊天面板中的工具调用记录 (UI 状态)。

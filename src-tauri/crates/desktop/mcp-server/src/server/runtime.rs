@@ -19,6 +19,10 @@ pub const MCP_PORT_ENV: &str = "LISSIO_MCP_PORT";
 /// 解析监听端口 — 优先级: 显式参数 > 环境变量 > [`DEFAULT_MCP_PORT`]。
 ///
 /// `0` 表示由操作系统分配空闲端口 (启动后 [`McpServerHandle::port`] 回填真实值)。
+///
+/// 组合根在启动期会在环境变量与默认值之间插一层设置文件
+/// (`app.ai.mcpServerPort`, 见 `lissio-server` 的端口决策与 `web-exit.md`),
+/// 因此这里传进来的一般已是最终值; 本函数保留为"没有配置来源时"的兜底。
 pub fn resolve_port(explicit: Option<u16>) -> u16 {
     explicit
         .or_else(|| {

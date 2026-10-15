@@ -21,6 +21,7 @@ import { canFrameBuffer } from '../lib/buffers/canBuffer';
 import { logicSampleBuffer } from '../lib/buffers/logicBuffer';
 import { transitionStore } from '../lib/utils/transitionStore';
 import { useAppStore } from './appStore';
+import { createSettingsModalSlice, type SettingsModalSlice } from './settingsModalSlice';
 import { translate, type Lang } from '../i18n';
 import { notify, formatError } from '../lib/tauri/notifications';
 
@@ -97,12 +98,10 @@ async function hydrateApiKey(settings: AppSettings): Promise<HydrateApiKeyResult
   }
 }
 
-interface SettingsStore {
+export type { AiSettingsSection } from './settingsModalSlice';
+
+interface SettingsStore extends SettingsModalSlice {
   settings: AppSettings;
-  isOpen: boolean;
-  isAboutOpen: boolean;
-  activeCategory: keyof AppSettings;
-  searchQuery: string;
   /// 配置引导的取值来源与文档存在性 (基于最近一次读取的持久化文档判定,
   /// 见 settings/configGuideSources)。
   configGuideSources: ConfigGuideSources;
@@ -115,14 +114,8 @@ interface SettingsStore {
   keychainPermissionRetrying: boolean;
   keychainPermissionRetryError: KeychainPermissionRetryError;
 
-  open: (category?: keyof AppSettings) => void;
-  close: () => void;
-  openAbout: () => void;
-  closeAbout: () => void;
   dismissKeychainPermissionPrompt: (dontRemind: boolean) => void;
   retryKeychainPermission: () => Promise<void>;
-  setActiveCategory: (c: keyof AppSettings) => void;
-  setSearchQuery: (q: string) => void;
 
   load: () => Promise<void>;
   save: () => Promise<boolean>;
@@ -239,11 +232,8 @@ function scheduleRecordingApply(settings: AppSettings) {
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
+  ...createSettingsModalSlice(set, get),
   settings: DEFAULT_SETTINGS,
-  isOpen: false,
-  isAboutOpen: false,
-  activeCategory: 'general',
-  searchQuery: '',
   configGuideSources: DEFAULT_CONFIG_GUIDE_SOURCES,
   loaded: false,
   loadError: null,
@@ -253,15 +243,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   keychainPermissionRetrying: false,
   keychainPermissionRetryError: null,
 
-  open: (category) =>
-    set({
-      isOpen: true,
-      activeCategory: category ?? get().activeCategory,
-      searchQuery: '',
-    }),
-  close: () => set({ isOpen: false }),
-  openAbout: () => set({ isAboutOpen: true }),
-  closeAbout: () => set({ isAboutOpen: false }),
   dismissKeychainPermissionPrompt: (dontRemind) => {
     if (dontRemind) {
       get().update('general', 'suppressKeychainPermissionReminder', true);
@@ -295,9 +276,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       });
     }
   },
-  setActiveCategory: (c) => set({ activeCategory: c }),
-  setSearchQuery: (q) => set({ searchQuery: q }),
-
   load: async () => {
     const sequence = ++loadSequence;
     if (saveTimer) clearTimeout(saveTimer);

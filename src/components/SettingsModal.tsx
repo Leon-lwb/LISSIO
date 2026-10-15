@@ -18,6 +18,8 @@ import {
 import { platform } from '../lib/platform';
 import { hasTauriRuntime } from '../lib/rpc';
 import { useSettingsStore } from '../store/settingsStore';
+import type { AiSettingsSection } from '../store/settingsStore';
+import { useAiChatStore } from '../store/aiChatStore';
 import { useAppStore } from '../store/appStore';
 import { translate } from '../i18n';
 import type { AppSettings } from '../settings/defaults';
@@ -41,9 +43,7 @@ import {
   SettingsSidebarNavigation,
 } from './SettingsSidebarSections';
 
-type AiSection = 'main' | 'plugins' | 'mcp';
-
-const AI_SECTION_FIELDS: Record<Exclude<AiSection, 'main'>, ReadonlySet<string>> = {
+const AI_SECTION_FIELDS: Record<Exclude<AiSettingsSection, 'main'>, ReadonlySet<string>> = {
   plugins: new Set(['builtinToolsEnabled', 'webToolsEnabled']),
   mcp: new Set(['mcpServerPort']),
 };
@@ -63,9 +63,11 @@ export function SettingsModal() {
   const update = useSettingsStore((s) => s.update);
   const reset = useSettingsStore((s) => s.reset);
   const resetCategory = useSettingsStore((s) => s.resetCategory);
+  // AI 二级页在 store 里 — 端口冲突提示可以直达 MCP 页
+  const aiSection = useSettingsStore((s) => s.aiSection);
+  const setAiSection = useSettingsStore((s) => s.setAiSection);
   const [themeEditorOpen, setThemeEditorOpen] = useState(false);
   const [backupModalOpen, setBackupModalOpen] = useState(false);
-  const [aiSection, setAiSection] = useState<AiSection>('main');
   const [appVersion, setAppVersion] = useState('');
   /// 更新状态 — 与状态栏/更新弹窗共享 updateStore
   const updateStatus = useUpdateStore((s) => s.status);
@@ -324,13 +326,8 @@ export function SettingsModal() {
             ) : activeCategory === 'ai' && !searchQuery.trim() && aiSection === 'mcp' ? (
               <AiMcpSettings
                 port={settings.ai.mcpServerPort}
-                onPortChange={(value) =>
-                  (update as (c: keyof AppSettings, f: string, v: unknown) => void)(
-                    'ai',
-                    'mcpServerPort',
-                    value
-                  )
-                }
+                // 端口改动经 AI store: 写入设置, 并在服务已监听时立即切到新端口
+                onPortChange={(value) => void useAiChatStore.getState().changeServerPort(value)}
               />
             ) : (Object.keys(groupedFields) as (keyof AppSettings)[]).map((cat) => {
               const fields = groupedFields[cat]!;

@@ -166,3 +166,7 @@ pub fn server_stop(host: &BackendHost) -> Result<Value, RpcError> {
     ai_host::mcp_server_stop(&host.ai);
     ok()
 }
+/// 检查候选 MCP 端口 — 设置页在改动端口时即时反馈"可用 / 被占用"。
+pub fn port_check(cmd: &str, args: &Value) -> Result<Value, RpcError> {
+    encode(&ai_host::mcp_port_check(required(args, cmd, "port")?))
+}

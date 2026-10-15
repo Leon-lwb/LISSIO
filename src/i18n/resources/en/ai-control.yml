@@ -48,6 +48,16 @@ aiDeleteServer: Delete server
 aiServerStopped: local MCP not running
 aiServerStart: Start local MCP
 aiServerStop: Stop local MCP
+aiMcpPortAvailable: "Port {{port}} is available"
+aiMcpPortBusyBy: "Port {{port}} is busy ({{occupant}})"
+aiMcpPortBusyUnknown: "Port {{port}} is busy"
+aiMcpPortConflictTitle: "Local MCP port {{port}} is busy"
+aiMcpPortConflictOccupiedBy: "Held by: {{occupant}}"
+aiMcpPortConflictUnidentified: No process holding this port was identified — it may be reserved by the system (Hyper-V / WSL2 / Docker) or blocked by permissions.
+aiMcpPortConflictSuggest: "Try port {{port}} instead."
+aiMcpPortUseSuggestion: "Use {{port}}"
+aiMcpPortRetry: Retry
+aiMcpPortStop: Stop MCP
 aiSessionSwitch: Switch session
 aiSessionNew: New chat
 aiSessionRename: Rename session

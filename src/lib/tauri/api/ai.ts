@@ -9,6 +9,7 @@ import type {
   AiSecretStatus,
   AiSessionMeta,
   AiWebFetchPage,
+  McpPortCheck,
   McpServerConfig,
   McpServerStatus,
   McpToolInfo,
@@ -105,6 +106,9 @@ export const aiApi = {
   /// 启动本地 MCP server (返回实际端口; 已运行则直接返回)
   mcpServerStart: (port: number) =>
     transport.call<number>('mcp_server_start', { port }),
+
+  /// 检查候选 MCP 端口 (可用性 / 占用者 / 替代端口)
+  mcpPortCheck: (port: number) => transport.call<McpPortCheck>('mcp_port_check', { port }),
 
   /// 停止本地 MCP server (未运行时静默)
   mcpServerStop: () => transport.call<void>('mcp_server_stop'),

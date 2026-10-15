@@ -4,6 +4,7 @@ import { useAppStore } from '../../store/appStore';
 import { useAiChatStore } from '../../store/aiChatStore';
 import { translate } from '../../i18n';
 import { DraftNumberInput } from '../ui/fields';
+import type { McpPortCheck } from '../../types';
 
 interface AiMcpSettingsProps {
   port: number;
@@ -14,18 +15,48 @@ interface AiMcpSettingsProps {
 export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
   const lang = useAppStore((s) => s.lang);
   const {
-    servers, tools, serverRunning, serverPort, addServer, removeServer, setServerEnabled,
-    refreshTools, refreshServerStatus, startLocalServer, stopLocalServer,
+    servers, tools, serverRunning, serverPort, serverConflict, addServer, removeServer, setServerEnabled,
+    refreshTools, refreshServerStatus, startLocalServer, stopLocalServer, probePort, applyPortSuggestion,
   } = useAiChatStore();
   const [name, setName] = useState('');
   const [command, setCommand] = useState('');
   const [url, setUrl] = useState('');
   const [kind, setKind] = useState<'stdio' | 'http'>('stdio');
+  const [check, setCheck] = useState<McpPortCheck | null>(null);
 
   useEffect(() => {
     void refreshTools();
     void refreshServerStatus();
   }, [refreshTools, refreshServerStatus]);
+
+  // 端口可用性检查: 设置页打开与改动端口时各查一次。服务已在监听该端口时
+  // "被占用"的就是自己 — 不探测, 由运行状态那一行说明。
+  useEffect(() => {
+    if (serverRunning) {
+      setCheck(null);
+      return;
+    }
+    let cancelled = false;
+    void probePort(port).then((result) => {
+      if (!cancelled) setCheck(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [port, probePort, serverRunning]);
+
+  const suggested = serverConflict?.suggested_port ?? null;
+  const portStatus =
+    check === null
+      ? null
+      : check.available
+        ? { ok: true, text: translate('aiMcpPortAvailable', lang, { port }) }
+        : {
+            ok: false,
+            text: check.occupant
+              ? translate('aiMcpPortBusyBy', lang, { port, occupant: check.occupant })
+              : translate('aiMcpPortBusyUnknown', lang, { port }),
+          };
 
   const canAdd =
     name.trim().length > 0 &&
@@ -58,6 +89,11 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
         <div className="min-w-0">
           <div className="text-text-primary">{translate('settingAiMcpServerPort', lang)}</div>
           <div className="mt-0.5 text-text-secondary">{translate('settingAiMcpServerPortDesc', lang)}</div>
+          {portStatus && (
+            <div className={`mt-0.5 ${portStatus.ok ? 'text-text-success' : 'text-text-danger'}`}>
+              {portStatus.text}
+            </div>
+          )}
         </div>
         <DraftNumberInput
           className="w-[120px] rounded border border-border bg-bg-input px-2 py-1 text-text-primary focus:border-accent focus:outline-none"
@@ -68,6 +104,49 @@ export function AiMcpSettings({ port, onPortChange }: AiMcpSettingsProps) {
           onCommit={onPortChange}
         />
       </div>
+      {serverConflict && (
+        <div role="alert" className="state-danger space-y-1.5 rounded px-2.5 py-2">
+          <div className="font-medium">
+            {translate('aiMcpPortConflictTitle', lang, { port: serverConflict.port })}
+          </div>
+          <div className="text-text-secondary">
+            {serverConflict.occupant
+              ? translate('aiMcpPortConflictOccupiedBy', lang, { occupant: serverConflict.occupant })
+              : translate('aiMcpPortConflictUnidentified', lang)}
+            {serverConflict.reason ? ` ${serverConflict.reason}` : ''}
+          </div>
+          {suggested !== null && (
+            <div className="text-text-secondary">
+              {translate('aiMcpPortConflictSuggest', lang, { port: suggested })}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {suggested !== null && (
+              <button
+                type="button"
+                className="rounded bg-bg-button px-2 py-1 text-text-inverse hover:bg-bg-button-hover"
+                onClick={() => void applyPortSuggestion(suggested)}
+              >
+                {translate('aiMcpPortUseSuggestion', lang, { port: suggested })}
+              </button>
+            )}
+            <button
+              type="button"
+              className="rounded px-2 py-1 text-text-primary hover:bg-bg-hover"
+              onClick={() => void startLocalServer()}
+            >
+              {translate('aiMcpPortRetry', lang)}
+            </button>
+            <button
+              type="button"
+              className="rounded px-2 py-1 text-text-primary hover:bg-bg-hover"
+              onClick={() => void stopLocalServer()}
+            >
+              {translate('aiMcpPortStop', lang)}
+            </button>
+          </div>
+        </div>
+      )}
       <div className="space-y-0.5">
         <h3 className="text-sm font-medium text-text-primary">{translate('aiMcpServers', lang)}</h3>
         <p className="text-xs text-text-secondary">{translate('aiMcpServersHint', lang)}</p>

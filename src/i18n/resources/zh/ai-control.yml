@@ -48,6 +48,16 @@ aiDeleteServer: 删除服务器
 aiServerStopped: 本地 MCP 未运行
 aiServerStart: 启动本地 MCP
 aiServerStop: 停止本地 MCP
+aiMcpPortAvailable: "端口 {{port}} 可用"
+aiMcpPortBusyBy: "端口 {{port}} 被占用 ({{occupant}})"
+aiMcpPortBusyUnknown: "端口 {{port}} 被占用"
+aiMcpPortConflictTitle: "本地 MCP 端口 {{port}} 被占用"
+aiMcpPortConflictOccupiedBy: "占用进程: {{occupant}}"
+aiMcpPortConflictUnidentified: 未识别到占用该端口的进程 — 可能是系统保留端口 (Hyper-V / WSL2 / Docker) 或权限限制。
+aiMcpPortConflictSuggest: "建议改用 {{port}}。"
+aiMcpPortUseSuggestion: "改用 {{port}}"
+aiMcpPortRetry: 重试
+aiMcpPortStop: 关闭 MCP
 aiSessionSwitch: 切换会话
 aiSessionNew: 新会话
 aiSessionRename: 重命名会话

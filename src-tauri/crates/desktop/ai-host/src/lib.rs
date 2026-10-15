@@ -1,5 +1,6 @@
 //! Exit-independent AI/MCP host.
 
+mod local_server;
 mod native_executor;
 mod prompt;
 #[cfg(test)]
@@ -33,9 +34,12 @@ use llm::{AdapterInfo, AiProviderConfig, validate_config};
 use mcp_client::{McpManager, McpServerConfig, McpToolInfo};
 use mcp_server::McpServerHandle;
 use parking_lot::Mutex;
-use serde::Serialize;
 use serde_json::Value;
 
+pub use local_server::{
+    McpPortConflict, McpServerStatus, mcp_port_check, mcp_server_start, mcp_server_status,
+    mcp_server_stop,
+};
 #[cfg(debug_assertions)]
 use secret::DevEnvSecretStore;
 pub use secret::{SecretSource, SecretStatus, SecretStore, SystemSecretStore};
@@ -73,6 +77,8 @@ pub struct AiHost {
     tool_cache: Mutex<Vec<McpToolInfo>>,
     /// 本地 MCP server 句柄。
     server: Mutex<Option<McpServerHandle>>,
+    /// 最近一次本地 MCP server 启动失败的端口冲突 (成功后清空)。
+    mcp_conflict: Mutex<Option<McpPortConflict>>,
     /// 前端托管工具调用注册表 (call_id → 回执发送端)。
     pending_frontend: PendingCalls,
     secrets: Arc<dyn SecretStore>,
@@ -117,6 +123,7 @@ impl AiHost {
             mcp: Arc::new(mcp),
             tool_cache: Mutex::new(Vec::new()),
             server: Mutex::new(None),
+            mcp_conflict: Mutex::new(None),
             pending_frontend: Arc::new(Mutex::new(std::collections::HashMap::new())),
             secrets,
         }
@@ -430,68 +437,4 @@ pub fn mcp_connection_states(state: &AiHost) -> Vec<(String, bool)> {
 /// 工具未注册或远端调用失败。
 pub async fn mcp_call_tool(state: &AiHost, name: String, arguments: Value) -> Result<String> {
     state.mcp.call_by_prefixed(&name, arguments).await
-}
-
-// ============ MCP server (本应用能力暴露) ============
-
-/// 本地 MCP server 状态。
-#[derive(Debug, Serialize)]
-pub struct McpServerStatus {
-    /// 是否在运行。
-    pub running: bool,
-    /// 运行端口 (未运行为 null)。
-    pub port: Option<u16>,
-}
-
-/// 查询本地 MCP server 状态。
-pub fn mcp_server_status(state: &AiHost) -> McpServerStatus {
-    let mut guard = state.server.lock();
-    if let Some(handle) = guard.as_mut()
-        && matches!(handle.check_running(), Ok(true))
-    {
-        return McpServerStatus {
-            running: true,
-            port: Some(handle.port),
-        };
-    }
-    McpServerStatus {
-        running: false,
-        port: None,
-    }
-}
-
-/// 启动本地 MCP server (已运行则直接返回当前端口)。
-///
-/// # Errors
-/// 端口被占用 ([`McpError::ServerStart`])。
-pub async fn mcp_server_start(state: &AiHost, port: Option<u16>) -> Result<u16> {
-    {
-        let mut guard = state.server.lock();
-        if let Some(handle) = guard.as_mut()
-            && matches!(handle.check_running(), Ok(true))
-        {
-            return Ok(handle.port);
-        }
-        *guard = None;
-    }
-
-    // 端口配置归后端: 显式设置 > LISSIO_MCP_PORT > DEFAULT_MCP_PORT
-    let handle = mcp_server::start(
-        Arc::clone(&state.registry),
-        state.toolbox.clone(),
-        state.sink.clone(),
-        mcp_server::resolve_port(port),
-    )
-    .await?;
-    let bound = handle.port;
-    *state.server.lock() = Some(handle);
-    Ok(bound)
-}
-
-/// 停止本地 MCP server (未运行时静默)。
-pub fn mcp_server_stop(state: &AiHost) {
-    let taken = state.server.lock().take();
-    if let Some(mut handle) = taken {
-        handle.stop();
-    }
 }

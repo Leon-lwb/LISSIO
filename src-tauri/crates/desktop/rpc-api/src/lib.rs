@@ -105,6 +105,7 @@ pub async fn dispatch_with_context(
         "mcp_server_status" => ai::server_status(host),
         "mcp_server_start" => ai::server_start(host, cmd, &args).await,
         "mcp_server_stop" => ai::server_stop(host),
+        "mcp_port_check" => ai::port_check(cmd, &args),
         // ===== 设备与采集 =====
         "list_ports" => devices::list_ports(host),
         "list_candle_devices" => devices::list_candle_devices(),
