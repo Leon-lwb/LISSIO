@@ -222,19 +222,30 @@ function checkMeta(file, expected) {
   return meta;
 }
 
+// A translated document declares its language, refuses authority, and names the
+// English file it translates. Product localization derives the source from the
+// parallel en/ directory; a repository translation derives it from the file name.
+const TRANSLATION_SUFFIX = '.zh-CN.md';
+const translationSource = (file) => rel(file).slice(0, -TRANSLATION_SUFFIX.length) + '.md';
+
+function checkTranslation(file, expectedSource) {
+  const meta = checkMeta(file, { locale: 'zh-CN', authoritative: false });
+  if (meta?.get('translation-of') !== expectedSource) {
+    fail(`${rel(file)}: translation-of must be ${expectedSource}`);
+  }
+  if (!existsSync(resolve(repoRoot, expectedSource))) {
+    fail(`${rel(file)}: translation-of target does not exist → ${expectedSource}`);
+  }
+  if (!/English|authoritative|controls/i.test(readText(file))) {
+    fail(`${rel(file)} must state that the English source is authoritative`);
+  }
+}
+
 for (const file of canonicalDocs) {
   if (rel(file).startsWith(RUNTIME_LOCALIZATION_DIR)) {
-    const meta = checkMeta(file, { locale: 'zh-CN', authoritative: false });
-    const expectedSource = rel(file).replace('/docs/zh/', '/docs/en/');
-    if (meta?.get('translation-of') !== expectedSource) {
-      fail(`${rel(file)}: translation-of must be ${expectedSource}`);
-    }
-    if (!existsSync(resolve(repoRoot, expectedSource))) {
-      fail(`${rel(file)}: translation-of target does not exist → ${expectedSource}`);
-    }
-    if (!/English|authoritative|controls/i.test(readText(file))) {
-      fail(`${rel(file)} must state that the English source is authoritative`);
-    }
+    checkTranslation(file, rel(file).replace('/docs/zh/', '/docs/en/'));
+  } else if (rel(file).endsWith(TRANSLATION_SUFFIX)) {
+    checkTranslation(file, translationSource(file));
   } else {
     checkMeta(file, {});
   }
@@ -296,7 +307,9 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
+const translations = canonicalDocs.filter((file) => rel(file).endsWith(TRANSLATION_SUFFIX)).length;
 console.log(
-  `Documentation and license gate passed — ${members.length} workspace packages use ${PROJECT_LICENSE} ` +
-    `and ${canonicalDocs.length} authoritative documents are indexed.`,
+  `Documentation and license gate passed — ${members.length} workspace packages use ${PROJECT_LICENSE}, ` +
+    `${canonicalDocs.length} documents are checked, and ${translations} translation(s) declare ` +
+    'their English source.',
 );

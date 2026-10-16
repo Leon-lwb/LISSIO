@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-16
 applies-to: Triggers, verification, decisions, and review records
 -->
 
@@ -20,10 +20,12 @@ human judgment recorded in `docs/reviews/records/`.
 | Add, upgrade, or remove a dependency | Update the third-party inventory and review obligations |
 | Change packaging or release delivery | Verify notices and artifact contents |
 | Change product localization | Update every language directory and keep the English source authoritative |
+| Add or update a translated document | Declare its source in metadata and keep it in step with the authoritative English file |
 
 ## Process
 
-1. The author updates the authoritative English document.
+1. The author updates the authoritative English document, and its translation
+   when the change touches translated facts.
 2. `pnpm check:docs` passes.
 3. A reviewer walks through `../reviews/checklist.md`. A single maintainer must
    record an explicit checklist review when no second maintainer is available.

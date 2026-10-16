@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-16
 applies-to: Historical records under docs/reviews/records
 -->
 
@@ -74,6 +74,7 @@ verdict: passed | passed-with-conditions | failed
 | 2026-10-11 | Workspace quality recovery | passed | [records/2026-10-11-workspace-quality-recovery.md](records/2026-10-11-workspace-quality-recovery.md) |
 | 2026-10-11 | Rust flat test layout | passed with conditions | [records/2026-10-11-rust-flat-test-layout.md](records/2026-10-11-rust-flat-test-layout.md) |
 | 2026-10-11 | Abstraction unification batches | passed with conditions | [records/2026-10-11-unification-batches.md](records/2026-10-11-unification-batches.md) |
+| 2026-10-16 | Bilingual README policy and translation metadata | passed with conditions | [records/2026-10-16-bilingual-readme-policy.md](records/2026-10-16-bilingual-readme-policy.md) |
 
 ## Retention
 

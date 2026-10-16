@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-16
 applies-to: Repository documentation, metadata, language, and maintenance rules
 -->
 
@@ -12,9 +12,19 @@ authoritative, and when it must be reviewed.
 
 ## Language
 
-- Repository prose is written in English: documentation, tooling scripts, e2e
-  specs, and CI/build configuration text. This is a repository convention that
-  authors follow and reviewers confirm; it is not enforced by a gate.
+- Repository prose is written in English, and the English document stays
+  authoritative: documentation, tooling scripts, e2e specs, and CI/build
+  configuration text. This is a repository convention that authors follow and
+  reviewers confirm; it is not enforced by a gate.
+- A document may ship a translation beside its English source when the
+  translation is a reader aid rather than a second authority. The product README
+  is the one such pair today: [`../../README.md`](../../README.md) and
+  [`../../README.zh-CN.md`](../../README.zh-CN.md). A translated document uses
+  `<name>.zh-CN.md`, declares `language: zh-CN`, `authoritative: false`, and a
+  `translation-of` path naming its English source, states in the body that the
+  English source is authoritative, and is updated in the same change as any
+  source edit that changes translated facts. `pnpm check:docs` verifies the
+  metadata, the source path, and the authority statement.
 - Historical review records and historical release logs preserve their original
   language. They are never rewritten or translated.
 - Product localization is not documentation. `src/i18n/resources/zh/` and the
@@ -27,7 +37,7 @@ authoritative, and when it must be reviewed.
 
 | Directory | Content |
 | --- | --- |
-| root | External entry points, legal texts, governance, support, roadmap, changelog |
+| root | External entry points (including the product README and its `zh-CN` translation), legal texts, governance, support, roadmap, changelog |
 | `docs/architecture/` | Current technical facts and architectural contracts |
 | `docs/governance/` | Licensing, dependencies, documentation, and review policy |
 | `docs/performance/` | Performance budgets and measurement policy |
@@ -39,7 +49,8 @@ New documents must be indexed in `docs/README.md`.
 ## Naming
 
 Use lowercase kebab-case names. Historical review records use
-`YYYY-MM-DD-<scope>.md`.
+`YYYY-MM-DD-<scope>.md`. A translated document is `<name>.zh-CN.md` beside its
+English source (`README.md` → `README.zh-CN.md`).
 
 ## Metadata
 
@@ -54,12 +65,12 @@ applies-to: one sentence describing scope
 -->
 ```
 
-`language` and `authoritative` are not part of the contract: repository
-documents are English and authoritative. The product localization under
-`capabilities/docs/zh/` is the one exception, and it keeps `language: zh-CN`,
-`authoritative: false`, and a `translation-of` path naming its English source.
-Historical review records use `<!-- lissio-review -->` and carry no language
-metadata.
+`language` and `authoritative` are required only on a translated document: it
+declares `language: zh-CN`, `authoritative: false`, and a `translation-of` path
+naming its English source. The product localization under
+`capabilities/docs/zh/` and the repository `README.zh-CN.md` are the two such
+surfaces, and `pnpm check:docs` verifies both. Historical review records use
+`<!-- lissio-review -->` and carry no language metadata.
 
 ## Structure
 

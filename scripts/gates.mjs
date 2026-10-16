@@ -172,7 +172,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:docs'],
     tier: 'pr',
-    why: 'LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, and review-record metadata; see `docs/governance/`',
+    why: 'LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, translation metadata, and review-record metadata; see `docs/governance/`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {

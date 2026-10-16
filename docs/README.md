@@ -3,12 +3,13 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-16
 applies-to: Repository documentation index and language policy
 -->
 
 This is the entry point for Lissio documentation. Repository prose is written in
-English; the translated documentation backups were removed.
+English and the English file stays authoritative. The product README ships a
+Simplified Chinese translation at [`../README.zh-CN.md`](../README.zh-CN.md).
 
 Historical review records preserve their original language and facts.
 

@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-16
 applies-to: Substantive repository documentation and governance changes
 -->
 
@@ -39,7 +39,8 @@ the intended change.
 - [ ] 3.3 Metadata is complete and `last-reviewed` is current.
 - [ ] 3.4 There is one clear H1 and no heading level beyond four.
 - [ ] 3.5 Code blocks are labeled and relative links resolve.
-- [ ] 3.6 Documentation, tooling, and CI text are written in English.
+- [ ] 3.6 Documentation, tooling, and CI text are written in English; any
+  `zh-CN` translation declares its source and stays a reader aid.
 - [ ] 3.7 No development-process markers remain.
 
 ## Maintainability

@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-16
 applies-to: Documentation-area development and review instructions
 -->
 
@@ -13,11 +13,14 @@ project documents.
 
 ## Documentation authority
 
-Repository prose is written in English; the translated documentation backups
-were removed. Historical review records are immutable and retain their original
-language. Product localization (`src/i18n/resources/zh/` and the runtime
-capability help under `capabilities/docs/zh/`) is a shipped surface, not
-documentation.
+Repository prose is written in English and the English document stays
+authoritative. A document may ship a `<name>.zh-CN.md` translation when it
+declares `language: zh-CN`, `authoritative: false`, and its `translation-of`
+source; the product README is the only such pair today
+([`../README.zh-CN.md`](../README.zh-CN.md)). Historical review records are
+immutable and retain their original language. Product localization
+(`src/i18n/resources/zh/` and the runtime capability help under
+`capabilities/docs/zh/`) is a shipped surface, not documentation.
 
 Do not change implementation facts without checking the owning code,
 configuration, generated contracts, or tests. Every document names its
@@ -31,7 +34,8 @@ Update Rust owners, generated TypeScript, callers, and fixtures together.
 
 ## Documentation workflow
 
-1. Update the authoritative English document.
+1. Update the authoritative English document, and its translation when the
+   change touches translated facts.
 2. Register new documents in [`README.md`](README.md).
 3. Update `last-reviewed`.
 4. Run `pnpm check:docs`.
@@ -47,7 +51,8 @@ link, contract, architecture, and release checks must also pass.
 
 ## Writing rules
 
-- Use clear English prose and stable technical identifiers.
+- Use clear English prose and stable technical identifiers. A translation is a
+  reader aid: it declares its English source and never overrides it.
 - Do not include process markers, task numbers, phase numbers, or future-work
   narration in current documentation.
 - Use tables for comparisons and labeled code blocks.
