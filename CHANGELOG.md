@@ -11,6 +11,160 @@ All notable Lissio changes are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and releases use
 semantic versioning.
 
+## [0.9.0] - 2026-10-16
+
+### Added
+
+- Added a configuration guide as the first screen of a fresh installation: one card
+    with three steps (interface language, color theme, motion and glass) and a live
+    preview beside each step, including the looping brand mark on the language step.
+    The workbench is not mounted until the guide is confirmed, so the card is what a
+    new installation shows first, and each choice applies immediately. An upgrading
+    installation keeps its existing settings document and never meets the guide. A new
+    `general.showConfigGuide` switch forces the guide on every launch so its appearance
+    can be previewed without reinstalling, and the desktop `check_update` response
+    reserves a `configGuide` field for a future publishing-side override. The guide
+    inherits values the settings document already carries, otherwise preselects English
+    for the language and follows the system appearance preference for the theme, and
+    labels every value with the source it came from. Confirming records the current app
+    version in `general.lastSeenVersion` and saves immediately; that field had no writer
+    before this change. No workspace-level configuration layer is introduced.
+
+### Changed
+
+- Removed the `jobs = 2` cap from `.cargo/config.toml`. Cargo has no unlimited
+    setting — a negative value is still a cap ("CPUs plus the value") — so omitting
+    the key is the only way to let Rust builds use the default, which is the logical
+    CPU count and therefore the maximum this machine offers. The `CARGO_BUILD_JOBS`
+    cap in the CI workflow and the `RUST_TEST_THREADS` pin are unchanged: the first
+    keeps cargo from competing with the browser probes, and the second is a test
+    thread limit rather than compile parallelism. Machines with little memory can
+    still opt back in per invocation with `cargo -j N` or `CARGO_BUILD_JOBS=N`.
+
+### Fixed
+
+- Keep discovered-device connection methods, device-tree adapters, and child-driver choices readable on Linux/Wayland with app-themed option lists. Give closed native selects an opaque theme surface and CSS arrow. Prevent content-switch flashes by keeping ancestor opacity stable and tying transform completion to the animation engine; retain the active CSS theme until its replacement loads and reuse unchanged stylesheets. Preserve keyboard selection and document native Linux rendering checks and host-specific build commands.
+- Reduce Linux deb and AppImage sizes by disabling release debug information and
+    stripping symbols from the desktop shell and bundled backend sidecar. Keep full
+    symbols available in an opt-in `profiling` Cargo profile for performance analysis.
+- The desktop shell no longer refuses to start when the log file cannot be
+    created. `tauri-plugin-log` resolves the log directory, creates it, and opens the
+    file inside its plugin initialization, so any failure there surfaces as
+    `PluginInitialization("log", …)` from `tauri::Builder::build()`: on Windows this
+    aborted startup with "拒绝访问。 (os error 5)" before a single window or the server
+    sidecar existed, and no log line could record why. The shell now probes the same
+    path before registering the plugin — create the directory, reject a directory
+    where the log file belongs, and open the file the way the plugin will — and hands
+    the plugin an explicit `TargetKind::Folder`. When the conventional directory
+    (`%LOCALAPPDATA%\top.pengheng.lissio\logs` on Windows, `~/Library/Logs/<id>` on
+    macOS) is not usable, logging continues in `<temp>/lissio-logs` and the reason,
+    with both paths, is printed to stderr and written through the logger; if neither
+    directory works, the file target is dropped and stdout/webview logging keeps the
+    application usable. `lissio-server.log` follows the same resolved directory, so a
+    blocked log directory can no longer take the backend sidecar down with it. The
+    file name, log directory, and rotation behavior are unchanged when the directory
+    is writable.
+- Make the MCP port in the AI settings the port the server actually listens on.
+    The Desktop sidecar was launched with a hard-coded `--mcp-port 0`, so the local
+    MCP server always bound an OS-assigned high port, and `mcp_server_start` returned
+    the already-running listener's port without ever looking at the requested one —
+    `app.ai.mcpServerPort` was silently ignored on Desktop. `lissio-server` now
+    resolves the port as explicit flag > `LISSIO_MCP_PORT` > `settings.json`
+    (`app.ai.mcpServerPort`) > `8765`, and an explicit port switches the listener
+    (the old listener is closed first). Changing the port in the settings stops and
+    rebinds immediately, so the address shown in the UI and the port written in
+    external MCP client configurations stay in sync.
+    
+    A port that cannot be bound turns into a diagnosis instead of a dead app: MCP
+    startup failure no longer aborts the Web exit, the failure is recorded as
+    `McpServerStatus.conflict` (requested port, bind error, the process holding the
+    port, and a free alternative port), and a new read-only `mcp_port_check` command
+    reports whether a candidate port is bindable, who holds it, or whether it looks
+    reserved by the system (Hyper-V / WSL2 / Docker on Windows). The MCP settings
+    page probes the configured port on open and on every change, shows an inline
+    conflict banner with "use the suggested port", "retry", and "stop MCP", and a
+    deduplicated toast carries the same diagnosis. Holder identification shells out
+    to `netstat`/`tasklist` on Windows and `lsof` on Unix, and degrades to "port
+    unavailable" when neither is available; the probe itself is advisory, since the
+    bind performed by the server remains the authority.
+- Restore `pnpm dev:desktop`, which aborted before building anything with "Found
+    version mismatched Tauri packages": `src-tauri/Cargo.lock` now resolves `tauri`
+    2.12 and `tauri-plugin-opener` 2.7, matching the `@tauri-apps/api` 2.12 and
+    `@tauri-apps/plugin-opener` 2.7 already declared in `package.json`. A new
+    `pnpm check:tauri-versions` gate compares the Tauri npm packages installed under
+    `node_modules` with the crates resolved in `src-tauri/Cargo.lock` and fails on
+    any major/minor drift, so this failure class can no longer pass every gate while
+    the desktop development command refuses to start.
+- Make the Windows acrylic backplate follow the application theme. DWM owns the
+    Windows 11 system material, so its light/dark variant tracks the *system* app
+    mode and cannot be tinted by the application — with the shipped dark theme and a
+    light-mode Windows the backplate turned into a bright plate under semi-transparent
+    dark panels. Lissio now tells the native side which polarity the application
+    theme uses (`set_window_acrylic` sets the immersive dark mode, so the title bar and
+    frame match too), hands the theme's window background to DWM as the material tint
+    on the Windows 10 composition-attribute path, and raises the acrylic background
+    token alphas when the system material is the opposite polarity of the theme. The
+    workspace also moves `window-vibrancy` from 0.6 to the 0.8 line that `tauri`
+    already resolves, so one copy is compiled and a failed system backdrop is reported
+    and falls back to blur instead of leaving a bare transparent window.
+- Use a persistent checkout-local WebView2 profile for `pnpm dev:desktop` on
+    Windows, avoiding startup failures caused by an unavailable installed-app
+    profile. Development browser data stays in `output/desktop-webview` between
+    restarts. An explicit `WEBVIEW2_USER_DATA_FOLDER` still takes precedence, and
+    existing application data is preserved.
+    
+    Fix `pnpm check:ci-gates` falsely reporting generated documentation drift in
+    CRLF and mixed-line-ending checkouts. Line endings are normalized before
+    surrounding blank lines are removed; command and content changes still fail
+    the gate.
+- Finish `pnpm build:all` by repairing Low-integrity Windows NSIS/MSI installer
+    labels in the existing project bundle directory and verifying unchanged SHA256
+    and native integrity SIDs. This prevents NSIS from failing before its welcome
+    screen with "Error writing temporary file". No separate export command or
+    external output directory is needed. macOS and Linux retain their normal bundle
+    outputs and skip the Windows check; checkout-local build temp handling remains.
+- Update the locked rustls dependency to 0.23.46, resolving RUSTSEC-2026-0346
+    through RUSTSEC-2026-0349 without relaxing dependency audit policy.
+    
+    Keep the window and node-editor backgrounds on one surface each so translucent
+    layers do not repeatedly obscure the native Windows desktop backdrop. Preserve
+    acrylic appearance when creating, activating, importing, or editing a theme.
+    Windows desktop Acrylic requires the system transparency effects to be enabled;
+    its system-controlled solid fallback remains available when effects are disabled.
+    
+    Exclude generated checkout-local output and temporary test caches from ESLint,
+    so running browser tests does not cause later lint checks to fail on compiled
+    artifacts.
+    
+    Remove Tauri's exact empty MSVC library placeholder after generation so Windows
+    workspace documentation tests use the real CRT import library, while retaining
+    the desktop's static runtime link arguments.
+
+### CI
+
+- Make four checks independent of the platform and of where the checkout is allowed
+    to write. `pnpm check:docs` normalizes line endings before hashing `LICENSE`, and
+    `pnpm check:ci-gates` reads the runner registration with a CRLF-tolerant fence
+    pattern and compares generated gate blocks ignoring line endings, so a Windows
+    checkout with `core.autocrlf=true` no longer fails either gate over its line
+    endings. `pnpm check:tokens` compares file paths with forward slashes, so the
+    `theme.css` and `component-tokens.css` exemptions apply on Windows instead of
+    reporting 17 violations inside the exempt files. `pnpm check:contracts` exports
+    into `src-tauri/target` instead of the OS temp directory, because the exporter is
+    a child process and a confined environment can deny it writes outside the
+    checkout while allowing the build tree.
+- Make the local quality surface and the build commands run on Windows. The tier
+    driver is now `scripts/check-all.mjs` — one implementation for the Linux CI
+    checkout and for Windows, where `pnpm check:all` previously failed on the missing
+    `bash` — with `scripts/check-all.sh` forwarding to it so the tier commands and the
+    workflows stay unchanged. On Windows the driver, and every build or development
+    script, first apply `scripts/local-env.mjs`: `TMP`/`TEMP`/`TMPDIR` move to
+    `output/local-tmp` inside the checkout, and the stale `msvcrt.lib` stub an older
+    `tauri-build` left behind is removed. That fixes MSVC's `cl.exe` D8050, esbuild's
+    `Access is denied` during `vite build` — so `pnpm build:all` and `pnpm build:web`
+    work again — and the contract exporter's IO failure, all of which are symptoms of
+    a confined session denying child processes the OS temp directory.
+
 ## [0.8.0] - 2026-10-12
 
 ### Added
