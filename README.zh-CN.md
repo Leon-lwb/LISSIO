@@ -1,4 +1,4 @@
-# Lissio
+# Lissio 玲思助手
 
 <!-- lissio-doc
 status: maintained
@@ -57,7 +57,7 @@ translation-of: README.md
 
 ## 简介
 
-Lissio 是面向嵌入式调试场景的桌面串口助手。前端基于 React 19 + TypeScript + Vite 构建，后端由 Rust + Tauri 2 驱动，提供高性能的传输层 I/O、协议解析、节点图 DAG 引擎、DSP（FIR/IIR 滤波器、FFT 频谱）以及汽车诊断协议（ISO-TP / UDS / OBD-II / J1939）。
+玲思助手（LISSIO）是面向嵌入式调试场景的桌面串口助手。前端基于 React 19 + TypeScript + Vite 构建，后端由 Rust + Tauri 2 驱动，提供高性能的传输层 I/O、协议解析、节点图 DAG 引擎、DSP（FIR/IIR 滤波器、FFT 频谱）以及汽车诊断协议（ISO-TP / UDS / OBD-II / J1939）。
 
 应用支持 7 种传输方式、7 种协议引擎、基于 React Flow 的节点编辑器（用于数据流编排）、示波器风格波形显示、CAN 帧 / 负载分析、支持 UART/I2C/SPI 解码的逻辑分析仪，以及运行在沙箱 iframe 中的自定义 JS 控件系统。
 
