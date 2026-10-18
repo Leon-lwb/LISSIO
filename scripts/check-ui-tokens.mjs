@@ -28,7 +28,7 @@
 //
 // Explicitly out of this layer (surface/border/shadow layer, handled separately): rgba in
 // box-shadow, canvas ctx.fillStyle, terminal ANSI colors. See the layering notes in
-// docs/architecture/ui-color-tokens.md.
+// client/docs/architecture/ui-color-tokens.md.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -391,7 +391,7 @@ if (surfaceCss.includes('.frost-content')) {
 // not evidence that "blur is cheap" but measurement saturation: a headless BeginFrame is locked
 // to 60Hz and both sides are quantized onto the same 16.7ms grid. More fundamentally,
 // backdrop-filter is done in the compositor while the browser probe measures the main-thread
-// prototype. See docs/performance/frontend-render-budget.md.
+// prototype. See client/docs/performance/frontend-render-budget.md.
 //
 // So instead we catch waste that is **deterministically derivable from the source**. None of
 // these need a browser, and they do not drift with runner load; they guard against "paying for
@@ -559,7 +559,7 @@ const OPAQUE_ENOUGH = 85;
 if (errors.length > 0) {
   console.error(`check:tokens failed — ${errors.length} violations:\n`);
   for (const e of errors) console.error(`  ${e}`);
-  console.error('\nSpec: docs/architecture/ui-color-tokens.md | single source for tiers: src/styles/theme.css');
+  console.error('\nSpec: client/docs/architecture/ui-color-tokens.md | single source for tiers: client/src/styles/theme.css');
   process.exit(1);
 }
 console.log(`check:tokens passed — ${tierNames.length} opacity tiers (${tierNames.join('/')}), semantic tokens, and frontend structure rules are in sync.`);

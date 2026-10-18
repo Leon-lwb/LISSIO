@@ -2,7 +2,7 @@
 /**
  * check-deps.mjs — mechanical check that third-party dependency versions are unified
  *
- * Rules (docs/architecture/crate-layers.md, "Unified third-party dependency versions" section):
+ * Rules (server/docs/architecture/crates.md, "Unified third-party dependency versions" section):
  *   1. every workspace member's dependencies (including the root package lissio) must inherit
  *      from the root [workspace.dependencies] via `X = { workspace = true }`; inlining
  *      `version` or `path` in a member manifest is forbidden;
@@ -208,7 +208,7 @@ if (memberCount === 0) {
 if (errors.length > 0) {
   console.error(`✗ Dependency version unification check failed (${errors.length} issues):\n`);
   for (const e of errors) console.error(`  - ${e}`);
-  console.error("\nSee the \"Unified third-party dependency versions\" section of docs/architecture/crate-layers.md");
+  console.error("\nSee the \"Unified third-party dependency versions\" section of server/docs/architecture/crates.md");
   process.exit(1);
 }
 

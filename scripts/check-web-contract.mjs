@@ -25,8 +25,8 @@
 //      silent defect: the backend drops the argument (or falls back to a default) and the Web
 //      exit keeps reporting success.
 //
-// F is the check the docs already claimed: `docs/architecture/exits.md` and
-// `docs/architecture/web-exit.md` state that parameter names are machine-checked and identical
+// F is the check the docs already claimed: `server/docs/architecture/exits.md` and
+// `server/docs/architecture/web-exit.md` state that parameter names are machine-checked and identical
 // across exits. Command names alone were never enough — `catalog.rs:181-191` records the
 // `requestRevision` → `request_revision` defect that shipped because of exactly that gap.
 //

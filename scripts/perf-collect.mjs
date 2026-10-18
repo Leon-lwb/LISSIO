@@ -67,7 +67,7 @@ const defaultBaseline = join(repoRoot, 'docs', 'performance', 'frontend-perf.jso
  * never passing through JS, so this probe is completely blind to "per-frame layout animation".
  * `transition: flex-grow` measures as 0 here, yet costs a re-layout of the whole panel subtree
  * every frame. Such defects are caught statically by `pnpm check:motion` and are not this gate's
- * business — see docs/performance/frontend-render-budget.md.
+ * business — see client/docs/performance/frontend-render-budget.md.
  *
  * Budgets tightened with measurement (2026-10-05):
  *
@@ -77,7 +77,7 @@ const defaultBaseline = join(repoRoot, 'docs', 'performance', 'frontend-perf.jso
  *   palette-scroll           33                    5.1                        1.0
  *
  * panel-drawer dropped from 94 to 72 because the drawer width no longer re-lays-out the whole
- * panel group every frame (see docs/performance/frontend-render-budget.md). The setAttribute
+ * panel group every frame (see client/docs/performance/frontend-render-budget.md). The setAttribute
  * ceiling followed from 120 down to 90, so this improvement is locked in by the gate instead of
  * quietly creeping back up with the next change.
  *

@@ -5,7 +5,7 @@ import { declaresInlineTestModule, parseLayerTable } from './check-crate-archite
 /**
  * Self-test for the inline-`#[cfg(test)]` matcher.
  *
- * The rule (`docs/architecture/crates.md`, "Test layout") is that no production
+ * The rule (`server/docs/architecture/crates.md`, "Test layout") is that no production
  * file may keep `#[cfg(test)] mod x { ... }`. The matcher used to require a line
  * whose trimmed text was exactly `#[cfg(test)]`, so the one-line and
  * trailing-comment forms passed the gate while violating it — a latent bypass

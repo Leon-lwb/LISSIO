@@ -7,7 +7,7 @@
  *     where the crate roots are `crates/` plus the nested `core/`, `physical/`, and `data/`
  *     submodule roots of the umbrella's `server/` workspace;
  *   - metadata is complete and the responsibility is not the placeholder;
- *   - the documented domain/layer matrix in `docs/architecture/crates.md` matches the metadata;
+ *   - the documented domain/layer matrix in `server/docs/architecture/crates.md` matches the metadata;
  *   - dependencies follow the domain DAG and never point at a higher layer;
  *   - L0-L3 crates depend only on reviewed external (crates.io) packages
  *     (`scripts/lower-layer-external-dependencies.json`);
@@ -18,7 +18,7 @@
  * the script runs in — `server/` inside the umbrella, the repository itself inside a copy —
  * and `--root=<path>` selects another checkout. The two files this gate reads do not live
  * below the same root, because they belong to different repositories: the documented layer
- * matrix `docs/architecture/crates.md` is owned by the Rust repository, so it is resolved
+ * matrix `server/docs/architecture/crates.md` is owned by the Rust repository, so it is resolved
  * below the workspace root, while the reviewed external-dependency baseline
  * `scripts/lower-layer-external-dependencies.json` belongs to the repository that owns this
  * gate and stays below the repository root.
@@ -82,7 +82,7 @@ const bannedTargetNames = /^(?:core|runtime|types|common)$|^(?:lissio|vofa)-/;
 // created to hold them: unit tests that need private access go in a flat
 // `<module>_tests.rs` file beside `<module>.rs`, and a `tests/`/`benches/`
 // directory is reserved for grouped suites and public-API integration tests.
-// See docs/architecture/crates.md.
+// See server/docs/architecture/crates.md.
 const inlineTestModule = /^(?:pub\s+)?mod\s+\w+\s*\{/;
 /** The `#[cfg(test)]` attribute, wherever it starts once the line is trimmed. */
 const CFG_TEST_ATTRIBUTE = /^#\[cfg\(test\)\]/;
@@ -120,7 +120,7 @@ export function declaresInlineTestModule(lines, index) {
 }
 
 /**
- * Parse the `| Domain | Layers present |` matrix from `docs/architecture/crates.md`.
+ * Parse the `| Domain | Layers present |` matrix from `server/docs/architecture/crates.md`.
  *
  * Returns `{ crates: Map<name, { domain, layer }>, domains: Map<domain, Set<layer>> }`
  * or null when the table cannot be found. The table names each domain-grouped
@@ -267,7 +267,7 @@ function checkPackages(packages, byName, errors) {
 }
 
 /**
- * The per-crate layer table in docs/architecture/crates.md is the documented
+ * The per-crate layer table in server/docs/architecture/crates.md is the documented
  * expectation the metadata is checked against.
  *
  * The document claimed `check:architecture` enforced the matrix, but nothing
@@ -280,7 +280,7 @@ function checkLayerTable(packages, errors) {
   const table = existsSync(LAYER_TABLE_DOC) ? parseLayerTable(readFileSync(LAYER_TABLE_DOC, 'utf8')) : null;
   if (table === null) {
     errors.push(
-      'docs/architecture/crates.md: cannot find the "| Domain | Layers present |" table — the documented crate-to-layer matrix must exist so it can be enforced',
+      'server/docs/architecture/crates.md: cannot find the "| Domain | Layers present |" table — the documented crate-to-layer matrix must exist so it can be enforced',
     );
     return 0;
   }
@@ -294,7 +294,7 @@ function checkLayerTable(packages, errors) {
       // table does not name it; its domain/layer pair must still be documented.
       if (!table.domains.get(architecture.domain)?.has(architecture.layer)) {
         errors.push(
-          `${pkg.name}: L${architecture.layer} is not a documented layer of the ${architecture.domain} domain in docs/architecture/crates.md`,
+          `${pkg.name}: L${architecture.layer} is not a documented layer of the ${architecture.domain} domain in server/docs/architecture/crates.md`,
         );
       }
       continue;
@@ -304,24 +304,24 @@ function checkLayerTable(packages, errors) {
     const entry = table.crates.get(key);
     if (entry === undefined) {
       errors.push(
-        `docs/architecture/crates.md: no "| Domain | Layers present |" entry names ${key} — every workspace member must appear in the documented matrix`,
+        `server/docs/architecture/crates.md: no "| Domain | Layers present |" entry names ${key} — every workspace member must appear in the documented matrix`,
       );
       continue;
     }
     if (entry.layer !== architecture.layer) {
       errors.push(
-        `${pkg.name}: metadata declares L${architecture.layer} but docs/architecture/crates.md documents L${entry.layer}; make the document match the authoritative metadata`,
+        `${pkg.name}: metadata declares L${architecture.layer} but server/docs/architecture/crates.md documents L${entry.layer}; make the document match the authoritative metadata`,
       );
     }
     if (entry.domain !== architecture.domain) {
       errors.push(
-        `${pkg.name}: metadata declares domain ${architecture.domain} but docs/architecture/crates.md lists it under ${entry.domain}`,
+        `${pkg.name}: metadata declares domain ${architecture.domain} but server/docs/architecture/crates.md lists it under ${entry.domain}`,
       );
     }
   }
   for (const key of table.crates.keys()) {
     if (!documented.has(key)) {
-      errors.push(`docs/architecture/crates.md: documented crate "${key}" is not a workspace member — remove or rename the stale row`);
+      errors.push(`server/docs/architecture/crates.md: documented crate "${key}" is not a workspace member — remove or rename the stale row`);
     }
   }
   return table.crates.size;
@@ -330,7 +330,7 @@ function checkLayerTable(packages, errors) {
 /**
  * L0-L3 external dependencies are a reviewed inventory, not a denylist.
  *
- * docs/architecture/crates.md states the general rule "L0-L3 must not depend on
+ * server/docs/architecture/crates.md states the general rule "L0-L3 must not depend on
  * Tauri or adapter SDKs / OS facilities", but the enforcement used to be a
  * hardcoded seven-name denylist — so any other adapter SDK or OS API reached
  * from a lower layer passed silently. One does: `lissio-control-api` (L3)

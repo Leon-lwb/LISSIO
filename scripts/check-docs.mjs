@@ -91,7 +91,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'target', 'dist', 'output', '
  * that repository's own `scripts/check-docs.mjs` (`pnpm check:docs` in `client/`,
  * `node scripts/check-docs.mjs` elsewhere), under its own root. Descending here
  * would judge the same files a second time under a different root and re-create
- * the root mismatch that a moved `docs/architecture/crates.md` already caused once.
+ * the root mismatch that a moved `server/docs/architecture/crates.md` already caused once.
  */
 function trackedRelativePaths() {
   try {

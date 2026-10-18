@@ -6,7 +6,7 @@
 // Why this gate exists:
 //
 //   1. Frontend layering has only ever been held up by comments and review.
-//      `docs/architecture/architecture-review-2026-09.md` names "the frontend still has large
+//      `server/docs/architecture/architecture-review-2026-09.md` names "the frontend still has large
 //      files" as the only frontend architecture debt and contains no layering model at all;
 //      `pnpm check:architecture` / `check:deps` only cover Rust, so the frontend structure has
 //      no machine constraint.
@@ -48,7 +48,7 @@ const errors = [];
  * directories that must not be depended on.
  *
  * There is only one direction: view → effects → interaction → implementation. Each rule
- * corresponds to a line in `docs/architecture/ui-layers.md`, with the same rule number.
+ * corresponds to a line in `client/docs/architecture/ui-layers.md`, with the same rule number.
  */
 const RULES = [
   {

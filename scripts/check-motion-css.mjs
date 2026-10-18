@@ -7,7 +7,7 @@
 //   1. The frontend performance probe cannot see layout transitions. The per-frame flex reflow
 //      caused by `transition: flex-grow` happens in browser C++ without going through any JS, so
 //      main-thread counters like setAttribute / getBoundingClientRect are completely blind to it
-//      (see docs/performance/frontend-render-budget.md). In other words: a green performance gate
+//      (see client/docs/performance/frontend-render-budget.md). In other words: a green performance gate
 //      does not mean there is no per-frame layout.
 //   2. This kind of defect looks like one harmless line of code, shows no cost in review, and
 //      turns no existing test red. Only making "which properties may transition" an executable

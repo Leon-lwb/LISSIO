@@ -1,7 +1,7 @@
 /**
  * architecture.mjs — crate / domain / layer / responsibility / dependency inventory.
  *
- * Why it exists: `docs/architecture/crates.md` tells a reader which crate owns a
+ * Why it exists: `server/docs/architecture/crates.md` tells a reader which crate owns a
  * type and which layers a change may reach. This prints the same inventory from
  * `cargo metadata`, so the documented table can be compared against the real
  * workspace instead of being trusted.
