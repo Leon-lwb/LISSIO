@@ -7,9 +7,9 @@
   "description": "Umbrella repository: orchestrates the server and client repositories without owning their code",
   "scripts": {
     "dev": "pnpm --dir client dev",
-    "dev:web": "pnpm --dir client dev:web",
+    "dev:web": "pnpm dev",
     "dev:server": "node scripts/local-env.mjs cargo run --manifest-path server/Cargo.toml -p lissio-backend-server --",
-    "dev:desktop": "pnpm --dir client dev:desktop",
+    "dev:desktop": "node scripts/local-env.mjs desktop \"pnpm prepare:sidecar && pnpm --dir client exec tauri dev\"",
     "server": "pnpm dev:server",
     "prepare:sidecar": "node scripts/local-env.mjs node scripts/prepare-sidecar.mjs",
     "prepare:sidecar:release": "node scripts/local-env.mjs node scripts/prepare-sidecar.mjs --release",
