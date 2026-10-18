@@ -86,7 +86,7 @@ export function frontendRoot(root = repositoryRoot()) {
 
 /**
  * The Rust member directories that hold crates, relative to the Rust workspace
- * root. The umbrella's `server/` workspace spans four checkouts: its own
+ * root. The umbrella's `server/` repository spans four checkouts: its own
  * `crates/`, the nested `core/`, `physical/`, and `data/` submodules, plus the
  * `src/` roots that existed before the split.
  */
@@ -109,11 +109,10 @@ export function rustSourceRoots(workspace) {
  * Every Cargo workspace in a Rust repository, as manifest directories.
  *
  * The repository's own workspace comes first (`server/`, or the repository root
- * in a copy). A nested submodule is added only when it declares a `[workspace]`
- * table of its own: `core/` and `data/` do, so their members are excluded from
- * the server workspace and can only be read from their own metadata;
- * `physical/` does not, because its crates are member globs of the server
- * workspace.
+ * in a copy). A nested submodule is added when it declares a `[workspace]`
+ * table of its own: `core/`, `physical/`, and `data/` each own one and are
+ * excluded from the server workspace, so their members can only be read from
+ * the metadata of the workspace that owns them.
  */
 export function rustWorkspaceRoots(root = repositoryRoot()) {
   const primary = rustWorkspaceRoot(root);

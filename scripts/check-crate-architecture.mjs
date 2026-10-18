@@ -41,9 +41,9 @@ const root = repositoryRoot();
 const workspaceRoot = rustWorkspaceRoot(root);
 /**
  * Every Cargo workspace the gate covers: the repository's own workspace plus the
- * nested `core/` and `data/` submodules, which declare `[workspace]` roots of
- * their own and are excluded from the server workspace's member globs. A crate
- * can only be judged from the metadata of the workspace that owns it.
+ * nested `core/`, `physical/`, and `data/` submodules, which declare `[workspace]`
+ * roots of their own and are excluded from the server workspace's member globs. A
+ * crate can only be judged from the metadata of the workspace that owns it.
  */
 const WORKSPACE_ROOTS = rustWorkspaceRoots(root);
 const WORKSPACE_MANIFESTS = new Set(WORKSPACE_ROOTS.map((workspace) => path.join(workspace, 'Cargo.toml')));
@@ -440,12 +440,12 @@ function checkTestLayout(errors) {
 /**
  * Every workspace member across every Cargo workspace in the checkout.
  *
- * `server/`'s workspace lists its own members and the `physical/` glob, while
- * `core/` and `data/` are excluded from it (they declare `[workspace]` roots of
- * their own). Reading one manifest therefore saw roughly half the crates and
- * reported the rest as undocumented. Merging the metadata of each workspace is
- * also what makes the dependency rules meaningful again: a server crate that
- * depends on a core crate is an internal edge, not an external one.
+ * `server/`'s workspace lists only its own members, while `core/`, `physical/`, and
+ * `data/` are excluded from it (they declare `[workspace]` roots of their own).
+ * Reading one manifest therefore saw roughly half the crates and reported the rest
+ * as undocumented. Merging the metadata of each workspace is also what makes the
+ * dependency rules meaningful again: a server crate that depends on a core crate is
+ * an internal edge, not an external one.
  */
 function workspacePackages() {
   const byId = new Map();
@@ -478,9 +478,9 @@ function main() {
     process.exit(1);
   }
   // A workspace root manifest may or may not carry a package: `server/`,
-  // `server/core/`, and `server/data/` are virtual today, but a root package is
-  // allowed and is not a `<crate root>/<domain>/<crate>` member. Count whatever
-  // is actually there rather than assuming the pre-split root package.
+  // `server/core/`, `server/physical/`, and `server/data/` are virtual today, but a
+  // root package is allowed and is not a `<crate root>/<domain>/<crate>` member.
+  // Count whatever is actually there rather than assuming the pre-split root package.
   const rootPackages = packages.filter((pkg) => WORKSPACE_MANIFESTS.has(path.resolve(pkg.manifest_path)));
   const roots = rootPackages.length > 0
     ? ` + ${rootPackages.map((pkg) => pkg.name).join(', ')} composition root${rootPackages.length === 1 ? '' : 's'}`

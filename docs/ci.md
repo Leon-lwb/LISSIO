@@ -23,10 +23,12 @@ The workflows live in `.forgejo/workflows/`:
 
 ### Repository composition and checkout
 
-The umbrella repository is a composition of five repositories: `server/` (the Rust Cargo
-workspace root) and `client/` (the React frontend plus the Tauri shell) are submodules, and
-`server/core`, `server/physical`, and `server/data` are submodules of the server workspace.
-Every gate that reads Rust or frontend code therefore depends on those checkouts.
+The umbrella repository is a composition of five repositories: `server/` and `client/` (the
+React frontend plus the Tauri shell) are submodules of this one, and `server/core`,
+`server/physical`, and `server/data` are submodules of the server repository. The four Rust
+repositories are four Cargo workspaces: each owns its manifest, its lockfile, and its CI, so no
+one of them needs another to be checked out beside it to build. Every gate that reads Rust or
+frontend code therefore depends on those checkouts.
 
 - Each job checks the submodules out **recursively**. The checkout step carries
   `with: submodules: recursive`, and an explicit
@@ -270,6 +272,34 @@ The cross-repository gates in the table above are a different matter: they read
 several repositories at once through `scripts/repo-root.mjs`, so they run here, in
 the only checkout where all five are present.
 
+### Per-repository CI
+
+Each Rust repository owns a workflow with a single gate step, plus the script that
+step runs:
+
+| Repository | Workflow | Gate step |
+| --- | --- | --- |
+| `server/` | `.forgejo/workflows/ci.yml` | `bash scripts/ci.sh` |
+| `server/physical/` | `.forgejo/workflows/ci.yml` | `bash scripts/ci.sh` |
+
+The script is that repository's complete check set — formatting, clippy, tests,
+`cargo deny check`, and its own documentation gate — and the workflow names no
+gate, for the same reason the umbrella's does not: a listed gate can be defanged
+while its command stays in the file. Three properties differ from the umbrella's
+jobs:
+
+- `server/`'s job checks its submodules out recursively (`with: submodules:
+  recursive` plus an explicit `git submodule update --init --recursive`), because
+  its workspace path-depends on `core/`, `physical/`, and `data/`.
+- `physical/`'s job clones `core/` as a **sibling** before building, because
+  `physical/Cargo.toml` reaches it through the same `../core` shape that
+  `data/Cargo.toml` uses, and `core/` is not one of `physical/`'s submodules.
+- Both cache `~/.cargo/registry` and `~/.cargo/git` keyed on that repository's own
+  `Cargo.lock`, so the cache follows the lockfile rather than a path.
+
+`pnpm check:ci-gates` reaches the umbrella's own workflows; a repository's workflow
+is validated in that repository's checkout, by that repository's reviewers.
+
 ## Local equivalents
 
 | Purpose | Command |
@@ -285,7 +315,8 @@ A full local run needs Playwright browsers
 It also needs both sides installed: `pnpm install --frozen-lockfile` for the
 umbrella and `pnpm --dir client install --frozen-lockfile` for the frontend scripts
 the registry delegates to. The Rust gates run in `server/`, so `cargo` resolves the
-server workspace and its `core/`, `physical/`, and `data/` submodules.
+server workspace; its `core/`, `physical/`, and `data/` submodules each root a
+workspace of their own, and each runs its tests in its own checkout.
 
 The tier driver is Node (`scripts/check-all.mjs`; `scripts/check-all.sh` forwards
 to it), so these commands run on Windows too, where no shell is required. On

@@ -9,9 +9,14 @@
  * It is informational: there is no exit-code path, and `check:architecture`
  * (`scripts/check-crate-architecture.mjs`) is the gate that enforces the rules.
  *
- * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the
- * repository the script runs in — `server/` inside the umbrella, the repository
- * itself inside a copy — and `--root=<path>` selects another checkout.
+ * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspaces of the
+ * repository the script runs in — `server/`, `server/core/`, `server/physical/`, and
+ * `server/data/` inside the umbrella, the repository itself inside a copy — and
+ * `--root=<path>` selects another checkout.
+ *
+ * The inventory is the union of every Cargo workspace in the checkout. Each of the
+ * four owns a `[workspace]` root and its own lockfile, so reading one manifest sees
+ * only its crates and reports the internal edges into the other three as unknown.
  *
  * Usage:
  *   pnpm architecture [--format=table|json|dot] [--root=<path>]
@@ -19,15 +24,24 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-import { repositoryRoot, rustWorkspaceRoot } from './repo-root.mjs';
+import { repositoryRoot, rustWorkspaceRoots } from './repo-root.mjs';
 
 const root = repositoryRoot();
-const manifest = path.join(rustWorkspaceRoot(root), 'Cargo.toml');
-const metadata = JSON.parse(execFileSync('cargo', [
-  'metadata', '--format-version', '1', '--no-deps', '--manifest-path', manifest,
-], { encoding: 'utf8' }));
-const workspace = new Set(metadata.workspace_members);
-const packages = metadata.packages.filter((pkg) => workspace.has(pkg.id));
+/** Every Cargo workspace: the server's own plus the nested `core/`, `physical/`, `data/`. */
+const WORKSPACES = rustWorkspaceRoots(root);
+const packages = [];
+const seen = new Set();
+for (const workspace of WORKSPACES) {
+  const metadata = JSON.parse(execFileSync('cargo', [
+    'metadata', '--format-version', '1', '--no-deps', '--manifest-path', path.join(workspace, 'Cargo.toml'),
+  ], { encoding: 'utf8' }));
+  const members = new Set(metadata.workspace_members);
+  for (const pkg of metadata.packages) {
+    if (!members.has(pkg.id) || seen.has(pkg.id)) continue;
+    seen.add(pkg.id);
+    packages.push(pkg);
+  }
+}
 const names = new Set(packages.map((pkg) => pkg.name));
 
 /** Workspace-internal dependency names: production (normal + build) or dev-only. */

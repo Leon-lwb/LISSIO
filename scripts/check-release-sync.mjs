@@ -13,11 +13,11 @@
  * What it checks:
  *   1. the umbrella `package.json`, `client/package.json`,
  *      `client/src-tauri/tauri.conf.json`, one root manifest per Cargo workspace
- *      (`server/`, `server/core/`, `server/data/`, `client/src-tauri/` — the
- *      version sits in `[package]` or, for a virtual workspace manifest, in
- *      `[workspace.package]`, plus the internal `[workspace.dependencies]` pins),
- *      and the lockfile each of those workspaces resolves through agree on one
- *      version;
+ *      (`server/`, `server/core/`, `server/physical/`, `server/data/`,
+ *      `client/src-tauri/` — the version sits in `[package]` or, for a virtual
+ *      workspace manifest, in `[workspace.package]`, plus the internal
+ *      `[workspace.dependencies]` pins), and the lockfile each of those workspaces
+ *      resolves through agree on one version;
  *   2. the CHANGELOG.md metadata block sits above the entries, the newest entry
  *      carries the right version and date, and versions strictly decrease
  *      without duplicates.
@@ -93,20 +93,22 @@ const base = version.split('-')[0];
  * `package.json` keeps the full semver; every other file carries the base
  * version, because MSI rejects prerelease identifiers. Each Cargo workspace has
  * its own manifest and lockfile now — `server/` is a virtual workspace manifest
- * (the version sits in `[workspace.package]`), `core/` and `data/` are
- * workspaces of their own, and the Tauri shell is a root package with a path
+ * (the version sits in `[workspace.package]`), `core/`, `physical/`, and `data/`
+ * are workspaces of their own, and the Tauri shell is a root package with a path
  * dependency on the services it embeds. A manifest that is not checked out is
  * skipped, but at least one must be present.
  */
 const RUST_MANIFESTS = [
   ['server', 'Cargo.toml'],
   ['server', 'core', 'Cargo.toml'],
+  ['server', 'physical', 'Cargo.toml'],
   ['server', 'data', 'Cargo.toml'],
   ['client', 'src-tauri', 'Cargo.toml'],
 ];
 const RUST_LOCKFILES = [
   ['server', 'Cargo.lock'],
   ['server', 'core', 'Cargo.lock'],
+  ['server', 'physical', 'Cargo.lock'],
   ['server', 'data', 'Cargo.lock'],
   ['client', 'src-tauri', 'Cargo.lock'],
 ];

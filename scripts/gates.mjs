@@ -88,7 +88,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:architecture'],
     tier: 'pr',
-    why: 'layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, and `server/data/`)',
+    why: 'layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, `server/physical/`, and `server/data/`)',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -98,7 +98,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:deps'],
     tier: 'pr',
-    why: 'centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, and `server/data/`',
+    why: 'centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, `server/physical/`, and `server/data/`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -277,7 +277,7 @@ export const GATES = [
     cwd: 'server',
     cmd: ['cargo', 'test', '--workspace'],
     tier: 'pr',
-    why: 'every test target of the `server/` workspace, including test-target compilation; `server/core` and `server/data` are separate Cargo workspaces whose own repository CI runs their tests',
+    why: 'every test target of the `server/` workspace, including test-target compilation; `server/core`, `server/physical`, and `server/data` are separate Cargo workspaces whose own repository CI runs their tests',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 
@@ -299,7 +299,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:release-sync'],
     tier: 'pr',
-    why: 'the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`',
+    why: 'the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/physical/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 
@@ -411,19 +411,19 @@ export const NON_GATE_SCRIPTS = [
 /**
  * Cargo workspaces the registry's cargo gates deliberately do not run in.
  *
- * `server/Cargo.toml` is a virtual workspace manifest: it owns `crates/**` and the
- * `physical/` member glob, and it excludes `core/` and `data/`, which declare
- * `[workspace]` roots of their own. `cargo fmt` / `cargo clippy` / `cargo test` run
- * from `server/`, so they cannot see those two workspaces — each of those
- * repositories runs its own CI for its own crates. The umbrella still reads them
- * through `check:architecture`, `check:deps`, `check:docs`, and `check:rust-size`,
- * which walk every crate root rather than one workspace.
+ * `server/Cargo.toml` is a virtual workspace manifest: it owns `crates/**` and
+ * excludes `core/`, `physical/`, and `data/`, each of which declares a `[workspace]`
+ * root and its own lockfile. `cargo fmt` / `cargo clippy` / `cargo test` run from
+ * `server/`, so they cannot see those three workspaces — each of those repositories
+ * runs its own CI for its own crates. The umbrella still reads them through
+ * `check:architecture`, `check:deps`, `check:docs`, and `check:rust-size`, which walk
+ * every crate root rather than one workspace.
  *
  * `check-ci-gates` verifies that each entry really is a separate Cargo workspace:
  * if one of them becomes a member of the server workspace, the exclusion above
  * would silently leave its crates to no gate at all.
  */
-export const EXTERNAL_RUST_WORKSPACES = ['server/core', 'server/data'];
+export const EXTERNAL_RUST_WORKSPACES = ['server/core', 'server/physical', 'server/data'];
 
 /**
  * The runner label, read from the registration command in docs/ci.md so the

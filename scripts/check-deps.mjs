@@ -10,10 +10,12 @@
  *   3. one-off dependencies must also be registered in the root [workspace.dependencies] first,
  *      keeping the version a single source of truth.
  *
- * Scope: the workspace root manifest (root package) + every member
+ * Scope: every workspace root manifest of the repository (a root package, or a virtual
+ * workspace manifest carrying only `[workspace.dependencies]`) + every member
  * `<crate root>/<domain>/<crate>/Cargo.toml`, where the crate roots are `crates/` plus the
  * nested `core/`, `physical/`, and `data/` submodule roots of the umbrella's `server/`
- * workspace.
+ * repository. Each of those submodules declares a `[workspace]` root of its own, so the
+ * root manifest is checked once per workspace rather than once per repository.
  *
  * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the repository
  * the script runs in — `server/` inside the umbrella, the repository itself inside a copy —
@@ -24,7 +26,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { repositoryRoot, rustSourceRoots, rustWorkspaceRoot } from "./repo-root.mjs";
+import { repositoryRoot, rustSourceRoots, rustWorkspaceRoot, rustWorkspaceRoots } from "./repo-root.mjs";
 
 const repoRoot = repositoryRoot();
 /** The Rust workspace: `<repo>/server` inside the umbrella, `<repo>` in a copy. */
@@ -173,9 +175,14 @@ function checkManifest(label, text) {
   }
 }
 
-// ---- Root manifest (workspace + root package combined) ----
-const rootLabel = "lissio (root)";
-checkManifest(rootLabel, readFileSync(join(workspaceRoot, "Cargo.toml"), "utf8"));
+// ---- Every workspace root manifest: the root package, or the registry a virtual
+// ---- workspace manifest carries. `server/`, `server/core/`, `server/physical/`, and
+// ---- `server/data/` each own a `[workspace]` root, so each root manifest is checked.
+const workspaceRoots = rustWorkspaceRoots(repoRoot);
+for (const workspace of workspaceRoots) {
+  const label = join(workspace, "Cargo.toml").slice(repoRoot.length + 1) || "Cargo.toml";
+  checkManifest(label, readFileSync(join(workspace, "Cargo.toml"), "utf8"));
+}
 
 // ---- All member crates ----
 let memberCount = 0;
@@ -212,4 +219,4 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`✓ Dependency version unification passed — ${memberCount} members + root package, all dependencies inherit from [workspace.dependencies]`);
+console.log(`✓ Dependency version unification passed — ${memberCount} members across ${workspaceRoots.length} Cargo workspace root manifest(s), all dependencies inherit from [workspace.dependencies]`);

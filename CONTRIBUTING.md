@@ -71,8 +71,8 @@ verifies that this file, `AGENTS.md`, the pull-request template, and the
 
 **Architecture and contracts**
 
-- `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, and `server/data/`)
-- `pnpm check:deps` — centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, and `server/data/`
+- `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, `server/physical/`, and `server/data/`)
+- `pnpm check:deps` — centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, `server/physical/`, and `server/data/`
 - `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `client/src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
@@ -95,12 +95,12 @@ verifies that this file, `AGENTS.md`, the pull-request template, and the
 - `pnpm check:rust-size` — production Rust files in every `server/` crate root stay within 500 lines; test files and benches are exempt
 - `(cd server && cargo fmt --check)` — formatting of the `server/` workspace has no diff
 - `(cd server && cargo clippy --workspace --all-targets)` — the `server/` workspace lints deny all/pedantic/nursery/cargo
-- `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core` and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
+- `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core`, `server/physical`, and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
 
 **Release**
 
 - `pnpm check:changes` — every change file declares a known package, a valid bump, and a declared tag, so covector cannot drop a release note silently; see `.changes/README.md`
-- `pnpm check:release-sync` — the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
+- `pnpm check:release-sync` — the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/physical/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
 
 **Frontend (slow: complete flow only)**
 

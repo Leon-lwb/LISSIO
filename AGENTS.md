@@ -20,10 +20,10 @@ repositories. This umbrella checkout owns the cross-repository infrastructure �
 this guide, the gate registry, the Dockerfile, Playwright, the packaging, and
 the release scripts — and no product code. The frontend repository is `client/`:
 React/TypeScript in `client/src/` and the Tauri shell in `client/src-tauri/`,
-with its own `package.json`. The Rust repository is `server/`: the Cargo
-workspace root `server/Cargo.toml`, its own members under
-`server/crates/<domain>/<crate>`, and the nested `core/`, `physical/`, and
-`data/` submodules, whose members live under `<submodule>/crates/<domain>/<crate>`.
+with its own `package.json`. The Rust repository is `server/`, which composes four
+Cargo workspaces: its own `server/Cargo.toml` and the nested `core/`, `physical/`,
+and `data/` submodules, each with a workspace root and a lockfile of its own.
+Members live under `<workspace>/crates/<domain>/<crate>`.
 The product integration tests live with the composition root they exercise:
 `server/crates/desktop/backend-host/tests/`. The domain directory is visual
 organization only; `[package.metadata.lissio]` records both domain and
@@ -103,8 +103,8 @@ Change the registry, then run `pnpm check:ci-gates --fix`.
 **Architecture and contracts**
 
 - `pnpm architecture` — crate/domain/layer/responsibility/dependency inventory for finding the type owner; prints a report and never fails, so it is informational — `check:architecture` is the gate that enforces these rules
-- `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, and `server/data/`)
-- `pnpm check:deps` — centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, and `server/data/`
+- `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, `server/physical/`, and `server/data/`)
+- `pnpm check:deps` — centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, `server/physical/`, and `server/data/`
 - `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `client/src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
@@ -127,12 +127,12 @@ Change the registry, then run `pnpm check:ci-gates --fix`.
 - `pnpm check:rust-size` — production Rust files in every `server/` crate root stay within 500 lines; test files and benches are exempt
 - `(cd server && cargo fmt --check)` — formatting of the `server/` workspace has no diff
 - `(cd server && cargo clippy --workspace --all-targets)` — the `server/` workspace lints deny all/pedantic/nursery/cargo
-- `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core` and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
+- `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core`, `server/physical`, and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
 
 **Release**
 
 - `pnpm check:changes` — every change file declares a known package, a valid bump, and a declared tag, so covector cannot drop a release note silently; see `.changes/README.md`
-- `pnpm check:release-sync` — the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
+- `pnpm check:release-sync` — the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/physical/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
 
 **Frontend (slow: complete flow only)**
 

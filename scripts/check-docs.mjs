@@ -178,8 +178,9 @@ if (existsSync(frontendPkgPath)) {
 }
 
 // Every Cargo workspace in the checkout is checked, not only the server's:
-// `core/` and `data/` carry their own licenses and are excluded from the server
-// workspace's member list, so reading one manifest would leave them unverified.
+// `core/`, `physical/`, and `data/` carry their own licenses and are excluded from
+// the server workspace's member list, so reading one manifest would leave them
+// unverified.
 let members = [];
 try {
   for (const workspace of rustWorkspaceRoots(repoRoot)) {

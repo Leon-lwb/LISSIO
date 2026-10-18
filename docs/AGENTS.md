@@ -58,7 +58,10 @@ across them, because it is the only place where all of them are present.
 ## Before changing Rust or wire contracts
 
 Read [`../server/docs/architecture/crates.md`](../server/docs/architecture/crates.md)
-and run `pnpm architecture`. Identify the defining crate and reverse dependencies.
+and run `pnpm architecture`. It merges the four Cargo workspaces of the `server/`
+repository — `server/`, `server/core/`, `server/physical/`, and `server/data/` —
+because dependencies cross them, and one workspace's metadata alone sees only part
+of the graph. Identify the defining crate and reverse dependencies.
 Update Rust owners, generated TypeScript, callers, and fixtures together.
 
 ## Documentation workflow
