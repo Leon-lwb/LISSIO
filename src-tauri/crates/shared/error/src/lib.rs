@@ -156,7 +156,9 @@ impl Error for AppError {
             Self::PortAlreadyOpen(_) => "PortAlreadyOpen",
             Self::PortNotOpen(_) => "PortNotOpen",
             Self::Io(_) => "Io",
-            Self::Config(_) => "Config",
+            // 配置错误透传内层种类 — 图版本冲突有独立 kind (GraphVersionConflict),
+            // 其余配置错误仍为 "Config"
+            Self::Config(inner) => inner.kind(),
             Self::Serde(_) => "Serde",
             Self::Automotive(_) => "Automotive",
             Self::Graph(_) => "Graph",

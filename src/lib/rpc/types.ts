@@ -5,13 +5,24 @@
 //! 命令名、参数、错误 `kind`、事件名与 payload 形状因此在两个出口完全一致,
 //! 组件不需要按宿主分支。
 
-/// 命令失败的结构化错误 — 与后端 `error::Error` 的序列化形状 `{ kind, message }`
-/// 一致, 因此 `parseNodeError` / `errorGuidance` 对两个出口同样有效。
+/// 域错误的结构化字段 — 后端 `error::AppError::data_fields()` 的单层平铺
+/// (`port` / `host` / `current` …)。键值都是标量; 信封里不存在嵌套 `data.data`。
+/// 值类型放宽到 JSON 标量, 便于后端未来把数值字段直接下发而不改契约。
+export type RpcErrorData = Record<string, string | number | boolean | null>;
+
+/// 命令失败的结构化错误 — 与后端 `rpc_api::RpcError` 的序列化形状
+/// `{ kind, message, data? }` 一致, 因此 `parseNodeError` / `errorGuidance`
+/// 对两个出口同样有效。`kind` 是稳定标识 (按它分支), `message` 只用于展示。
 export interface RpcError {
   kind: string;
   message: string;
-  data?: Record<string, string>;
+  data?: RpcErrorData;
 }
+
+/// 图版本冲突的稳定 `kind` — 与后端 `error::ConfigError::GraphVersionConflict`
+/// 的 `Error::kind()` 一致 (见 `rpc-api/src/args.rs` 的域错误信封)。
+/// 前端按它判定重试, 绝不匹配本地化文案。
+export const GRAPH_VERSION_CONFLICT_KIND = 'GraphVersionConflict';
 
 /// 事件通道 — `ai_chat_send` 这类"命令内联回调流"的参数形状。
 /// 桌面出口传 Tauri `Channel`; Web 出口传 v2 WebSocket channel marker。

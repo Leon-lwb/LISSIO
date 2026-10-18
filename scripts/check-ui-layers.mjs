@@ -28,9 +28,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(import.meta.dirname, '..');
 const SRC = path.join(root, 'src');
+/** The only generated directory: TS contract output, not application source. */
+const GENERATED_TYPES = path.join(SRC, 'types', 'generated');
 const errors = [];
 
 /**
@@ -136,18 +139,37 @@ const EXEMPTIONS = [
 /**
  * Compositing-layer / transition control properties forbidden to write by hand on the JS side (L7).
  *
- * All three forms must be covered, or the gate only stops the most honest one:
+ * All three documented forms must be covered, or the gate only stops the most honest one:
  *   - `el.style.willChange = 'transform'`  (assignment)
  *   - `{ willChange: 'transform' }`        (object literal)
  *   - `el.style.setProperty('will-change', …)`  (string argument)
+ *   - `el.style['will-change'] = …`        (bracket access)
+ * A property name written as a bare string literal IS the property, whatever follows the
+ * literal: matching only `name:` / `name =` missed the `setProperty('will-change', …)`
+ * and `style['will-change']` spellings while the comment above claimed they were covered.
  * The camelCase spelling `transitionProperty` matters especially — the inline regex in
- * `check:motion` only recognizes `transition` / `transition-property` followed by a colon, so
- * it once missed this spelling entirely.
+ * `check:motion` only recognizes `transition` / `transition-property` followed by a colon,
+ * so it once missed this spelling entirely.
  */
 const FORBIDDEN_MOTION_WRITES = [
-  { pattern: /(?<![\w-])will-?[Cc]hange['"]?\s*[:=]/g, name: 'will-change / willChange' },
-  { pattern: /(?<![\w-])transition-?[Pp]roperty['"]?\s*[:=]/g, name: 'transition-property / transitionProperty' },
+  {
+    name: 'will-change / willChange',
+    pattern: /(?:['"]will-?[Cc]hange['"]|(?<![\w-])will-?[Cc]hange\s*[:=])/g,
+  },
+  {
+    name: 'transition-property / transitionProperty',
+    pattern: /(?:['"]transition-?[Pp]roperty['"]|(?<![\w-])transition-?[Pp]roperty\s*[:=])/g,
+  },
 ];
+
+/** Every forbidden hand-written compositing-layer property in `source`. */
+export function findMotionWrites(source) {
+  const found = [];
+  for (const { pattern, name } of FORBIDDEN_MOTION_WRITES) {
+    for (const match of source.matchAll(pattern)) found.push({ name, index: match.index });
+  }
+  return found;
+}
 
 /** Module specifiers: static import / export from / dynamic import() / require(). */
 const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)['"]([^'"]+)['"]/g;
@@ -155,10 +177,14 @@ const IMPORT_RE = /(?:\bfrom\s*|\bimport\s*\(\s*|\brequire\s*\(\s*|\bimport\s+)[
 /** Recursively collect files under src with the given extensions (skipping generated output). */
 function collect(dir, extensions, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'generated') continue;
     const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(p, extensions, out);
-    else if (extensions.some((ext) => entry.name.endsWith(ext))) out.push(p);
+    if (entry.isDirectory()) {
+      // Only the generated TypeScript contract output is excluded. Skipping any
+      // directory *named* `generated` at any depth made a real source directory
+      // with that name invisible to all rules; anchor the skip to the exact path.
+      if (p === GENERATED_TYPES) continue;
+      collect(p, extensions, out);
+    } else if (extensions.some((ext) => entry.name.endsWith(ext))) out.push(p);
   }
   return out;
 }
@@ -234,14 +260,12 @@ function checkMotionWrites(file, source) {
   const rule = RULES.find((entry) => entry.id === 'L7');
   if (!rule.files.test(rel) || isExempt(rel, 'L7')) return;
 
-  for (const { pattern, name } of FORBIDDEN_MOTION_WRITES) {
-    for (const match of source.matchAll(pattern)) {
-      report(
-        rel,
-        lineOf(source, match.index),
-        `[L7] hand-written ${name} — ${rule.why} (compositing-layer promotion goes through src/lib/motion's promote()/release())`
-      );
-    }
+  for (const { name, index } of findMotionWrites(source)) {
+    report(
+      rel,
+      lineOf(source, index),
+      `[L7] hand-written ${name} — ${rule.why} (compositing-layer promotion goes through src/lib/motion's promote()/release())`
+    );
   }
 }
 
@@ -274,31 +298,38 @@ function checkOverlayZIndex() {
   }
 }
 
-for (const file of collect(SRC, ['.ts', '.tsx'])) {
-  const rel = relative(file);
-  // Tests may cross layers: fixtures and assertions need to see both sides at once, and what is
-  // constrained is the direction of production code. Same treatment as the 500-line limit in
-  // check-ui-tokens.mjs.
-  if (rel.includes('__tests__') || /\.(?:test|spec)\.tsx?$/.test(rel)) continue;
-  const source = stripComments(fs.readFileSync(file, 'utf8'));
-  checkImports(file, source);
-  checkMotionWrites(file, source);
-}
+function main() {
+  for (const file of collect(SRC, ['.ts', '.tsx'])) {
+    const rel = relative(file);
+    // Tests may cross layers: fixtures and assertions need to see both sides at once, and what is
+    // constrained is the direction of production code. Same treatment as the 500-line limit in
+    // check-ui-tokens.mjs.
+    if (rel.includes('__tests__') || /\.(?:test|spec)\.tsx?$/.test(rel)) continue;
+    const source = stripComments(fs.readFileSync(file, 'utf8'));
+    checkImports(file, source);
+    checkMotionWrites(file, source);
+  }
 
-checkOverlayZIndex();
+  checkOverlayZIndex();
 
-if (errors.length > 0) {
-  console.error(`frontend layering gate failed (${errors.length} items):\n`);
-  for (const line of errors) console.error(`  ${line}`);
-  console.error(
-    '\nA reverse dependency turns no existing test red, it only adds one more surprise to the next change; it has to be stopped here.\n' +
-      'The fix is to change the dependency, not to add an exemption — register the reason in EXEMPTIONS only for a genuinely bounded exception.'
+  if (errors.length > 0) {
+    console.error(`frontend layering gate failed (${errors.length} items):\n`);
+    for (const line of errors) console.error(`  ${line}`);
+    console.error(
+      '\nA reverse dependency turns no existing test red, it only adds one more surprise to the next change; it has to be stopped here.\n' +
+        'The fix is to change the dependency, not to add an exemption — register the reason in EXEMPTIONS only for a genuinely bounded exception.'
+    );
+    process.exit(1);
+  }
+
+  const movable = EXEMPTIONS.filter((entry) => entry.movable).length;
+  console.log(
+    `frontend layering gate passed: no violation of ${RULES.length} rules; ` +
+      `${EXEMPTIONS.length} exemptions (${movable} of them misplaced and removable by moving the target).`
   );
-  process.exit(1);
 }
 
-const movable = EXEMPTIONS.filter((entry) => entry.movable).length;
-console.log(
-  `frontend layering gate passed: no violation of ${RULES.length} rules; ` +
-    `${EXEMPTIONS.length} exemptions (${movable} of them misplaced and removable by moving the target).`
-);
+// Importing this module for its helpers (the self-test) must not run the gate.
+const invokedPath = process.argv[1] === undefined ? null : path.resolve(process.argv[1]);
+if (invokedPath !== null && invokedPath === fileURLToPath(import.meta.url)) main();
+

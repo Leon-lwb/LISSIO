@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-17
 applies-to: CI platform, runner setup, gate execution, and the release pipeline
 -->
 
@@ -82,10 +82,20 @@ silently stops running, so it needs anchors outside the registry:
   a type check, a unit-test gate, a production build gate, a browser gate, and a
   render-budget gate. These are statements about required capabilities, not a
   second copy of the gate list: they do not care which gate id satisfies them.
+- **Gate tiers.** Pull requests are the merge gate, so an enforcing gate runs in
+  the `pr` tier unless `scripts/check-ci-gates.mjs` declares it
+  complete-flow-only in `FULL_ONLY_GATES` with the reason it cannot run on every
+  change — `build-web`, `e2e`, `perf-check`, and `cargo-deny` today. The rule is
+  bidirectional: a gate that leaves the `pr` tier without that declaration
+  fails, and so does a stale declaration for a gate that has returned. Without
+  this anchor, demoting a gate kept every other check green: the documents are
+  rendered *from* the registry, so `--fix` regenerated them with no trace of the
+  move.
 
-Verified directly: deleting any of the 22 gates and then running
+Verified directly: deleting any of the 25 registry entries (24 enforcing gates
+plus the informational `architecture-inventory`) and then running
 `pnpm check:ci-gates --fix` — which regenerates the documentation from the
-registry and would otherwise erase the evidence — fails in all 22 cases.
+registry and would otherwise erase the evidence — fails in all 25 cases.
 
 `informational` is likewise constrained. It excludes a command from the gate
 count, so it is limited to commands shown to have no failure path; marking gates
@@ -161,9 +171,10 @@ Notes:
 - Desktop packaging does not run in CI at all, so no job needs a macOS or
   Windows runner. Keep it that way unless you also add per-platform runner
   labels; a Linux container cannot produce the signed macOS/Windows bundles.
-- **The runner image must carry the Tauri system libraries**, because the `rust`
-  job runs `cargo clippy --all-targets` and `cargo test --workspace`, which link
-  `webkit2gtk` and GTK. The workflows install none of them, on purpose: doing so
+- **The runner image must carry the Tauri system libraries**, because the `pr`
+  job runs `cargo clippy --workspace --all-targets` and
+  `cargo test --workspace` (through the tier command), which link `webkit2gtk`
+  and GTK. The workflows install none of them, on purpose: doing so
   would need root and a package manager the images may not share. Expect to
   provide at least `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`,
   `libayatana-appindicator3-dev`, `librsvg2-dev`, `libxdo-dev`, `libssl-dev`,

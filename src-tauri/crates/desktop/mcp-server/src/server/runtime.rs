@@ -20,16 +20,48 @@ pub const MCP_PORT_ENV: &str = "LISSIO_MCP_PORT";
 ///
 /// `0` 表示由操作系统分配空闲端口 (启动后 [`McpServerHandle::port`] 回填真实值)。
 ///
-/// 组合根在启动期会在环境变量与默认值之间插一层设置文件
-/// (`app.ai.mcpServerPort`, 见 `lissio-server` 的端口决策与 `web-exit.md`),
-/// 因此这里传进来的一般已是最终值; 本函数保留为"没有配置来源时"的兜底。
+/// 这是"没有设置文件来源"时的兜底 (Tauri AI 宿主的运行期重启走这条路径);
+/// 启动期必须用 [`resolve_mcp_port`], 因为它在环境变量与默认值之间还有
+/// `settings.json` 的 `app.ai.mcpServerPort` 一层。
 pub fn resolve_port(explicit: Option<u16>) -> u16 {
+    explicit.or_else(port_from_env).unwrap_or(DEFAULT_MCP_PORT)
+}
+
+/// `LISSIO_MCP_PORT` 的有效端口 — 未设置 / 空白 / 非法值都视为未配置。
+fn port_from_env() -> Option<u16> {
+    std::env::var(MCP_PORT_ENV)
+        .ok()
+        .and_then(|value| value.trim().parse().ok())
+}
+
+/// 启动期 MCP 端口决策 — 全部出口的唯一实现。
+///
+/// 优先级 (与 `docs/architecture/web-exit.md` 一致):
+/// 显式参数 > `LISSIO_MCP_PORT` > 设置文件 `app.ai.mcpServerPort` >
+/// [`DEFAULT_MCP_PORT`]。`disabled` (各根的 `--no-mcp`) 时返回 `None` — 调用方
+/// 不得启动 MCP。
+///
+/// 设置文件由调用方以闭包注入: `settings.json` 的读写归 `backend-host`, 本适配器
+/// 不反向依赖它 (那会形成 `mcp-server → backend-host → ai-host → mcp-server` 环)。
+/// 两个组合根 (`lissio-server` 与 `backend-cli serve`) 因此共享同一份优先级,
+/// 只有"读取设置"的那一行留在各自根里。
+#[must_use]
+pub fn resolve_mcp_port(
+    explicit: Option<u16>,
+    disabled: bool,
+    settings_port: impl FnOnce() -> Option<u16>,
+) -> Option<u16> {
+    if disabled {
+        return None;
+    }
+    Some(decide(explicit, port_from_env(), settings_port))
+}
+
+/// 纯优先级决策 — 只在前面的层都缺省时才调用设置层闭包 (短路), 便于穷举测试。
+fn decide(explicit: Option<u16>, env: Option<u16>, settings: impl FnOnce() -> Option<u16>) -> u16 {
     explicit
-        .or_else(|| {
-            std::env::var(MCP_PORT_ENV)
-                .ok()
-                .and_then(|v| v.trim().parse().ok())
-        })
+        .or(env)
+        .or_else(settings)
         .unwrap_or(DEFAULT_MCP_PORT)
 }
 
@@ -122,3 +154,7 @@ pub async fn start(
         done_rx,
     })
 }
+
+#[cfg(test)]
+#[path = "runtime_tests.rs"]
+mod tests;

@@ -3,9 +3,12 @@
 //! 从 `apply.rs` 内嵌测试模块外移 (源文件行数约定 ≤500), 断言语义零变化。
 
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::sync::atomic::Ordering;
 
 use app::AppState;
 use buffer_graph::Edge;
+use error::{AppError, ConfigError};
 use kind::document::{NodeBusiness, NodeDocument, NodeLayout};
 use kind::{NodeDef, NodeKind};
 use serde_json::json;
@@ -17,6 +20,186 @@ use crate::{
 
 fn input_node(id: &str, tab_id: &str) -> NodeDef {
     NodeDef::new(id.into(), tab_id.into(), NodeKind::Input)
+}
+
+/// 提交一个 tab 图, 与另一个任务在同一起跑线上 (栅栏) 抢同一把提交锁,
+/// `base_version` 固定为 0 (与初始版本一致)。
+async fn racing_commit(
+    state: Arc<AppState>,
+    barrier: Arc<tokio::sync::Barrier>,
+    tab_id: &'static str,
+    node_id: &'static str,
+) -> error::Result<crate::GraphDerived> {
+    barrier.wait().await;
+    apply_tab_graph(
+        &state,
+        None,
+        tab_id.into(),
+        vec![input_node(node_id, tab_id)],
+        vec![],
+        HashMap::new(),
+        None,
+        Some(0),
+    )
+    .await
+}
+
+/// 回归 (审计 M1 — 提交不是原子的读-改-写): 两个提交共享同一 `base_version` 时,
+/// 版本检查与全部状态写入必须在**同一个临界区**内, 于是恰好一个成功、一个报
+/// `GraphVersionConflict`, 运行时节点索引只含胜者。
+///
+/// 反例 (修复前): 两次检查都是普通 `load`, 写入各自持锁且版本号最后才 +1 —
+/// 两个提交都能通过检查, 后写者用同一份旧快照覆盖 `global_nodes`, 先写者的页签
+/// 节点被静默丢弃 (不再被路由/录制), 版本号却变成 2。
+///
+/// 确定性: 测试**自己先持有提交锁**, 两个提交因此都停在版本检查之前 —— 这正是
+/// 「两个提交带着同一 base_version 同时在场」的确定性构造, 不靠 sleep 撞调度。
+/// 持锁期间版本号与三处状态必须一动不动; 放锁后两者在锁上竞争, 结果只有一种:
+/// 成功者版本 1、失败者 `current == 1`、索引只含胜者。修复前这个测试必然失败
+/// (提交不取这把锁, 两个提交都会在持锁期间跑完并把版本推到 2)。
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_commits_with_the_same_base_version_serialize() {
+    let state = Arc::new(AppState::new());
+    let barrier = Arc::new(tokio::sync::Barrier::new(2));
+
+    // 先持锁: 两个提交都到不了版本检查 (临界区从取锁开始)。
+    let held = state.data_plane.commit_lock().lock().await;
+    let first = tokio::spawn(racing_commit(
+        Arc::clone(&state),
+        Arc::clone(&barrier),
+        "tab-a",
+        "in-a",
+    ));
+    let second = tokio::spawn(racing_commit(
+        Arc::clone(&state),
+        Arc::clone(&barrier),
+        "tab-b",
+        "in-b",
+    ));
+    // 有界等两个任务抵达提交入口; 断言与它们是否已抵达无关 (未抵达时版本号
+    // 同样是 0), 但已抵达者必须被挡在版本检查之前。
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert_eq!(
+        state.graphs_version.load(Ordering::Relaxed),
+        0,
+        "持锁期间任何提交都不得通过版本检查或推进版本"
+    );
+    assert!(
+        state.graphs.lock().is_empty() && state.source_graphs.lock().is_empty(),
+        "持锁期间不得写入任何提交状态"
+    );
+
+    drop(held);
+    let outcomes = [
+        first.await.expect("提交任务不得 panic"),
+        second.await.expect("提交任务不得 panic"),
+    ];
+
+    let mut wins = Vec::new();
+    let mut conflicts = Vec::new();
+    for outcome in outcomes {
+        match outcome {
+            Ok(derived) => wins.push(derived),
+            Err(AppError::Config(ConfigError::GraphVersionConflict { current })) => {
+                conflicts.push(current);
+            }
+            Err(other) => panic!("共享 base_version 的提交只允许成功或版本冲突: {other}"),
+        }
+    }
+    assert_eq!(wins.len(), 1, "必须恰好一个提交成功 (两个都成功即节点丢失)");
+    assert_eq!(
+        conflicts,
+        vec![1],
+        "另一个提交必须报 current == 1 的 GraphVersionConflict"
+    );
+    assert_eq!(wins[0].version, 1, "成功提交把版本恰好推进 1");
+    assert_eq!(
+        state.graphs_version.load(Ordering::Relaxed),
+        1,
+        "版本号只允许推进一次 (两个都写就是 2)"
+    );
+
+    // 运行时节点索引只含胜者 — 没有丢节点, 也没有两个提交的混合结果。
+    let winner = {
+        let nodes = state.data_plane.global_nodes.lock();
+        assert_eq!(
+            nodes.len(),
+            1,
+            "索引里必须只有胜者的节点: {:?}",
+            nodes.keys().collect::<Vec<_>>()
+        );
+        let (node_id, node) = nodes.iter().next().expect("已断言恰好一个节点");
+        (node.tab_id.clone(), node_id.clone())
+    };
+    assert!(
+        matches!(winner.1.as_str(), "in-a" | "in-b"),
+        "胜者节点必须是其中一个提交的: {winner:?}"
+    );
+    assert_eq!(
+        state.graphs.lock().keys().collect::<Vec<_>>(),
+        vec![&winner.0],
+        "页签图只应存在胜者的那张"
+    );
+    let source_graphs = state.source_graphs.lock();
+    assert_eq!(
+        source_graphs.keys().collect::<Vec<_>>(),
+        vec![&winner.0],
+        "源图存储同样只应存在胜者的那张"
+    );
+    assert_eq!(
+        source_graphs.get(&winner.0).map(|graph| graph.nodes.len()),
+        Some(1),
+        "胜者的源图应完整保留"
+    );
+}
+
+/// [`apply_remove_tab_graph`] 必须走同一把提交锁 — 它同样是「读运行时索引 →
+/// 重建合并字节平面 → 写回」的读-改-写, 而且**没有**版本检查 (审计 M1):
+/// 不与提交互斥时, 它会把另一个提交刚写进去的节点连同字节平面一起抹掉。
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn remove_tab_graph_takes_the_same_commit_lock() {
+    let state = Arc::new(AppState::new());
+    apply_tab_graph(
+        &state,
+        None,
+        "tab1".into(),
+        vec![input_node("in1", "tab1")],
+        vec![],
+        HashMap::new(),
+        None,
+        None,
+    )
+    .await
+    .expect("提交图应成功");
+
+    let held = state.data_plane.commit_lock().lock().await;
+    let remover = tokio::spawn({
+        let state = Arc::clone(&state);
+        async move { apply_remove_tab_graph(&state, None, "tab1").await }
+    });
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    assert!(
+        state.graphs.lock().contains_key("tab1"),
+        "持锁期间移除必须被挡在临界区之外"
+    );
+    assert!(
+        state.data_plane.global_nodes.lock().contains_key("in1"),
+        "持锁期间运行时节点索引不得被改写"
+    );
+
+    drop(held);
+    remover
+        .await
+        .expect("移除任务不得 panic")
+        .expect("移除应成功");
+    assert!(
+        state.graphs.lock().is_empty() && state.source_graphs.lock().is_empty(),
+        "移除后页签图与源图都应清除"
+    );
+    assert!(
+        state.data_plane.global_nodes.lock().is_empty(),
+        "移除后运行时节点索引应清空"
+    );
 }
 
 /// update_tab_graph 提交后必须立即快照评估: 无 transport 数据流时,

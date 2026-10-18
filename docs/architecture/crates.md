@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-11
+last-reviewed: 2026-10-17
 applies-to: Rust workspace ownership, domains, layers, and dependency direction
 -->
 
@@ -37,7 +37,10 @@ groups crates by the capability they serve, `layer` ranks who may depend on
 whom. A domain may therefore span several layers, while a crate always belongs
 to exactly one. The layer in `[package.metadata.lissio]` is authoritative;
 directory order and comments are navigation only. `pnpm architecture` prints
-the matrix below from that metadata, and `pnpm check:architecture` enforces it.
+the matrix below from that metadata, and `pnpm check:architecture` enforces it:
+it parses this table and fails when a member's declared domain or layer
+disagrees with the row that names it, so a crate cannot change layers by
+editing metadata alone.
 
 | Domain | Layers present |
 |---|---|
@@ -57,6 +60,16 @@ that implement its ports. Do not split a domain into layer subdirectories — a
 crate path is exactly `crates/<domain>/<crate>` — and do not split a
 multi-layer domain into one domain per layer; that encodes the same fact twice
 and moves paths without changing a single dependency edge.
+
+The rule above ("L0-L3 must not depend on an adapter SDK or OS facility") is
+enforced as a reviewed inventory, not a name denylist: `pnpm check:architecture`
+allows a lower-layer crate to depend only on the external (crates.io) packages
+recorded in `scripts/lower-layer-external-dependencies.json`. That file is
+generated from the workspace and committed, so the list cannot be silently
+incomplete — the one live case, `control-api` (L3) reaching `windows-sys` for
+file-time conversion, is recorded there for review. A new external dependency
+in L0-L3 fails until the baseline is regenerated deliberately with
+`node scripts/check-crate-architecture.mjs --update-baseline`.
 
 Decide a crate's layer from what it does, not from where it sits:
 
@@ -135,6 +148,7 @@ flowchart TD
   transport --> vehicle
   transport --> shared
   ai --> shared
+  data --> shared
   desktop --> ai
   desktop --> data
   desktop --> graph
@@ -185,8 +199,13 @@ port names an engine. The boundary that matters for the whole product:
   keeps acquiring in every one of those cases.
 - Only **accepted batches that cannot be persisted** (database / IO / corrupt /
   writer-failed / writer-closed) may stop the run, and only those set
-  `RecordingHub::fault`. A successful write clears it again, so a transient
-  fault cannot stick for the rest of the session.
+  `RecordingHub::fault`. A successful write clears the hub flag again, so a
+  transient fault cannot stick for the rest of the session. A writer that dies
+  before accepting any batch is *unavailable*, not failed: the reason is recorded
+  on the non-fault channel and stays visible in `RecordingHealth.failed`, while
+  the hub detaches the dead recorder instead of faulting. The recorder-level flag
+  is written once, when a writer that had already accepted batches dies; a dead
+  writer cannot perform the successful write that would clear it.
 - `AppSettings.data.recordingEnabled` (default off) disables the database
   entirely and is hot-swappable at any run state; `backend-host` replays it for
   desktop, server, and CLI from the same `settings.json`.

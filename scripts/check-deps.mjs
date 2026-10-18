@@ -179,6 +179,18 @@ for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
   }
 }
 
+// ---- Zero-floor guard ----
+// Iterating a fixed depth and skipping directories without a manifest means a
+// layout change or a renamed crates directory can collapse the scan set to
+// zero; the summary would still print "0 members" and exit 0, which looks like
+// a pass. `scripts/check-crate-size.mjs` refuses the same vacuous success.
+if (memberCount === 0) {
+  errors.push(
+    "scanned 0 member crates under src-tauri/crates/<domain>/<crate> — wrong path or a " +
+      "layout change, so the dependency rule could not be evaluated",
+  );
+}
+
 if (errors.length > 0) {
   console.error(`✗ Dependency version unification check failed (${errors.length} issues):\n`);
   for (const e of errors) console.error(`  - ${e}`);

@@ -20,6 +20,8 @@ s7 = ["dep:s7-adapter"]
 
 [dependencies]
 serde_json = { workspace = true }
+# CSPRNG 熵源 — 令牌生成 (`token::random_hex`) 必须来自操作系统, 不用时间播种哈希
+getrandom = { workspace = true }
 llm = { workspace = true }
 ai-host = { workspace = true }
 app = { workspace = true }

@@ -55,6 +55,13 @@ struct HealthState {
     queued_batches: AtomicU64,
     dropped_batches: AtomicU64,
     rejected_batches: AtomicU64,
+    /// 写入线程在**受理任何批次之前**失败的原因 (连接 / 首批序号)。
+    ///
+    /// 与 `failed` 互斥: 写线程只在死在哪一个阶段上二选一 (见
+    /// [`worker::run_writer`])。这一段录制从未建立、没有任何已受理批次,
+    /// 所以它**不是**契约故障 — hub 只当「录制不可用」(可见但不停采集)。
+    unavailable: Mutex<Option<String>>,
+    /// 写入线程在**受理批次之后**失败的原因 — 已受理批次落不了盘, 契约被破坏。
     failed: Mutex<Option<String>>,
 }
 
@@ -175,10 +182,25 @@ impl Recorder {
         &self.store
     }
 
+    /// 写入线程在**受理任何批次之前**失败的原因 (连接 / 首批序号)。
+    ///
+    /// `Some` 表示这段录制从未建立: 没有任何已受理批次, 因此它是「没有录制」
+    /// 而不是「录制失败」— 采集不得为此停止 (见 `hub::fault`)。
+    #[must_use]
+    pub(crate) fn unavailable(&self) -> Option<String> {
+        self.health.unavailable.lock().clone()
+    }
+
     pub fn append(&self, batch: RecordBatch) -> Result<(), RecordingError> {
         let failure = self.health.failed.lock().clone();
         if let Some(error) = failure {
             return Err(RecordingError::Failed(error));
+        }
+        // 受理任何批次之前就死掉的写入线程: 整段录制从未建立, 报「不可用」
+        // 而不是「失败」— hub 的分类据此只登记 `unavailable` 并让采集照常继续
+        // (契约: docs/architecture/crates.md 录制契约边界)。
+        if let Some(reason) = self.unavailable() {
+            return Err(RecordingError::Unavailable(reason));
         }
         let expected = self.bindings.read().get(&batch.binding_id).copied();
         if expected != Some(batch.payload.domain()) {
@@ -345,6 +367,26 @@ impl Recorder {
             bindings: Arc::new(RwLock::new(binding_domains)),
             thread: Mutex::new(Some(thread)),
         }
+    }
+
+    /// 造一个**受理任何批次之前就失败**的 writer: 它跑的是真实写入循环, 但
+    /// `store` 的连接永远失败, 于是循环死在 bootstrap (`WriterStorage::open` /
+    /// `next_row_id`), 一个批次都没取到。
+    ///
+    /// 用来复现「数据库打不开」在该阶段的表现: 不得升级成录制契约故障
+    /// (否则读任务每批字节后都把工作区停回 Stopped)。
+    pub fn bootstrap_failing_for_test(
+        store: RecordingStore,
+        bindings: Vec<DisplayBinding>,
+    ) -> Self {
+        let session = SessionInfo {
+            id: "bootstrap-failing-session".into(),
+            started_at_us: 0,
+            ended_at_us: None,
+            state: SessionState::Running,
+        };
+        Self::spawn(store, session, bindings, RecordingLimits::default())
+            .expect("测试 writer 应可启动")
     }
 }
 

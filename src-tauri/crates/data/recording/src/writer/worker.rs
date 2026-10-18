@@ -21,12 +21,24 @@ pub(super) async fn run_writer(
     store: &RecordingStore,
     session_id: &str,
     limits: RecordingLimits,
-    receiver: mpsc::Receiver<Command>,
+    mut receiver: mpsc::Receiver<Command>,
     health: &HealthState,
 ) {
-    let result = run_writer_inner(store, session_id, limits, receiver, health).await;
+    // 批次是否曾经被写线程**取到**. 这个事实决定失败的性质:
+    // 受理之前死 = 这段录制从未建立 (「没有录制」), 受理之后死 = 已受理批次
+    // 落不了盘 (「录制失败」, 契约被破坏)。
+    let mut accepted_any = false;
+    let result = run_writer_inner(
+        store,
+        session_id,
+        limits,
+        &mut receiver,
+        health,
+        &mut accepted_any,
+    )
+    .await;
     if let Err(error) = result {
-        *health.failed.lock() = Some(error.to_string());
+        record_writer_failure(health, accepted_any, &error);
         // The writer failed: mark the session failed on a fresh handle when one
         // can still be opened.
         if let Ok(mut session) = store.connect_async().await {
@@ -35,6 +47,24 @@ pub(super) async fn run_writer(
                 .await;
         }
     }
+    // 原因必须先于通道关闭可见: 生产者与 hub 是经 `Closed` 才知道 writer 没了的,
+    // 若先关通道, 那一瞬间的失败会被误判成「已受理批次落不了盘」(契约故障)。
+    drop(receiver);
+}
+
+/// 登记写入循环的失败 — 处置取决于它死在哪个阶段。
+///
+/// **受理任何批次之前**失败 (连接 / 首批序号): 整段录制从未建立, 这是
+/// 「没有录制」而不是「录制失败」— 写进非故障的 `unavailable` 通道, hub 据此
+/// 不置 fault、不停止采集。**受理之后**失败: 已受理批次落不了盘 = 契约破坏,
+/// 写进粘性的 `failed` (见 `docs/architecture/crates.md` 录制契约边界)。
+fn record_writer_failure(health: &HealthState, accepted_any: bool, error: &RecordingError) {
+    let slot = if accepted_any {
+        &health.failed
+    } else {
+        &health.unavailable
+    };
+    *slot.lock() = Some(error.to_string());
 }
 
 /// The writer task's single database handle.
@@ -105,8 +135,9 @@ async fn run_writer_inner(
     store: &RecordingStore,
     session_id: &str,
     limits: RecordingLimits,
-    mut receiver: mpsc::Receiver<Command>,
+    receiver: &mut mpsc::Receiver<Command>,
     health: &HealthState,
+    accepted_any: &mut bool,
 ) -> Result<(), RecordingError> {
     let mut storage = WriterStorage::open(store).await?;
     let mut row_id = storage.session_mut()?.next_row_id().await?;
@@ -123,6 +154,8 @@ async fn run_writer_inner(
         .await;
         match waited {
             Ok(Some(Command::Append(batch))) => {
+                // 从这里起, 任何失败都意味着已受理批次可能落不了盘。
+                *accepted_any = true;
                 if !transaction_open {
                     storage.session_mut()?.begin().await?;
                     transaction_open = true;
@@ -350,3 +383,7 @@ async fn commit(
     *pending_bytes = 0;
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "worker_tests.rs"]
+mod worker_tests;

@@ -46,7 +46,12 @@ describe('authoritative tab documents', () => {
 
   it('adopts remote documents on a version conflict before retrying', async () => {
     const remote = protocolDocument('remote');
-    const update = vi.spyOn(api, 'updateTabGraph').mockRejectedValueOnce({ data: { current: 2 } }).mockResolvedValueOnce({ version: 3, nodes: [] });
+    const conflict = {
+      kind: 'GraphVersionConflict',
+      message: '图版本冲突: 基线过期 (后端当前 v2)',
+      data: { current: 2 },
+    };
+    const update = vi.spyOn(api, 'updateTabGraph').mockRejectedValueOnce(conflict).mockResolvedValueOnce({ version: 3, nodes: [] });
     const source = vi.spyOn(api, 'getSourceGraph').mockResolvedValueOnce({ tab_id: 'default', version: 2, documents: [remote], edges: [] });
     expect(await syncTabGraphToBackend('default')).toBeUndefined();
     expect(update.mock.calls[1][1]).toEqual([remote]);

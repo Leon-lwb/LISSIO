@@ -7,11 +7,13 @@ import { memo } from 'react';
 import { Send } from 'lucide-react';
 import type { WidgetConfig } from '../../../types';
 import { useAppStore } from '../../../store/appStore';
-import { api } from '../../../lib/tauri/tauri';
 import { translate } from '../../../i18n';
 
 interface TextOutWidgetProps {
   widget: Extract<WidgetConfig, { kind: 'TextOut' }>;
+  /// 立即下发一次的命令 — 由宿主 (WidgetNode) 注入, 控件自身不持有后端调用。
+  /// 缺省 = 宿主未接线 (仅可能的预览/测试场景), 按钮不触发命令。
+  onSendNow?: (nodeId: string) => void;
 }
 
 /// 文本下发控件 (TextOut) — 动态发送回传
@@ -22,7 +24,10 @@ interface TextOutWidgetProps {
 ///   变化限速发往目标 Transport.tx; Send 按钮强制立即发送一次 (send_text_out_now)。
 ///
 /// 卡片内只保留目标只读提示、待发文本实时预览与手动发送。
-export const TextOutWidget = memo(function TextOutWidget({ widget }: TextOutWidgetProps) {
+export const TextOutWidget = memo(function TextOutWidget({
+  widget,
+  onSendNow,
+}: TextOutWidgetProps) {
   const { id, targetTransport } = widget.params;
   const lang = useAppStore((s) => s.lang);
   const rfNodes = useAppStore((s) => s.rfNodes);
@@ -58,7 +63,7 @@ export const TextOutWidget = memo(function TextOutWidget({ widget }: TextOutWidg
         <button
           type="button"
           disabled={!targetTransport}
-          onClick={() => void api.sendTextOutNow(id).catch(() => { return undefined; })}
+          onClick={() => onSendNow?.(id)}
           title={
             targetTransport
               ? translate('textOutSendNow', lang)

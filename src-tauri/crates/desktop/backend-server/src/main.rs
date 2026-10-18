@@ -4,7 +4,7 @@
 //! argv 子命令; 二者共享 `backend-host` 装配与 `rpc-api` 派发表。
 
 use std::net::IpAddr;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::Parser;
 
@@ -62,12 +62,15 @@ fn main() {
         .format_timestamp_millis()
         .init();
     let cli = Cli::parse();
-    // 配置目录先解析一次: MCP 端口要读其中的 `settings.json` (前端"本地 MCP 端口"),
-    // `ServerConfig::resolve` 也拿到同一个目录。
+    // 配置目录先解析一次: MCP 端口决策要读其中的 `settings.json` (前端"本地 MCP
+    // 端口"), `ServerConfig::resolve` 也拿到同一个目录。
     let config_dir = cli
         .config_dir
         .clone()
-        .or_else(|| Some(backend_host::resolve_config_dir(None)));
+        .unwrap_or_else(|| backend_host::resolve_config_dir(None));
+    let mcp_port = mcp_server::resolve_mcp_port(cli.mcp_port, cli.no_mcp, || {
+        backend_host::SettingsStore::new(&config_dir).mcp_server_port()
+    });
     let config = match backend_server::ServerConfig::resolve(
         cli.bind,
         cli.http_port,
@@ -75,9 +78,9 @@ fn main() {
         cli.token_file,
         cli.static_dir,
         cli.cors_origins,
-        resolve_mcp_port(cli.mcp_port, cli.no_mcp, config_dir.as_deref()),
+        mcp_port,
         !cli.no_restore,
-        config_dir,
+        Some(config_dir),
     ) {
         Ok(config) => config,
         Err(error) => {
@@ -104,35 +107,4 @@ fn main() {
         eprintln!("error: {error}");
         std::process::exit(1);
     }
-}
-
-/// MCP 端口决策: `--no-mcp` 关闭; 未显式给出时按 环境变量 > 设置文件 > 默认值启用。
-fn resolve_mcp_port(
-    explicit: Option<u16>,
-    disabled: bool,
-    config_dir: Option<&Path>,
-) -> Option<u16> {
-    if disabled {
-        return None;
-    }
-    Some(mcp_port(explicit, config_dir))
-}
-
-/// 端口优先级: 显式参数 > `LISSIO_MCP_PORT` > 设置文件 `ai.mcpServerPort` > 默认。
-///
-/// 设置文件这一层是"前端配置的端口必须被后端采用"的落地处: 桌面侧车由界面
-/// 配置的端口监听, 不再由后端自选随机端口。环境变量读取与 `mcp-server` 的
-/// [`mcp_server::resolve_port`] 同义 — 这里只是因为中间多插了一层设置文件,
-/// 而显式层归调用方, 所以按同一顺序显式写出。
-fn mcp_port(explicit: Option<u16>, config_dir: Option<&Path>) -> u16 {
-    explicit
-        .or_else(|| {
-            std::env::var(mcp_server::MCP_PORT_ENV)
-                .ok()
-                .and_then(|value| value.trim().parse().ok())
-        })
-        .or_else(|| {
-            config_dir.and_then(|dir| backend_host::SettingsStore::new(dir).mcp_server_port())
-        })
-        .unwrap_or(mcp_server::DEFAULT_MCP_PORT)
 }

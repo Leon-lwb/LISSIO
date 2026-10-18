@@ -10,6 +10,8 @@ use crate::{
     RecordingLimits, SessionInfo, SessionState,
 };
 
+#[cfg(test)]
+mod bootstrap_tests;
 mod fault;
 mod guard;
 mod ingest;
@@ -318,7 +320,15 @@ impl RecordingHub {
         let state = self.state.read();
         // 关闭、打不开、被别的实例占住时生产者都看到未绑定, 于是所有热路径自然
         // 停录 (连批次载荷都不必构造) — 不需要改任何写入方。
-        state.enabled && state.recorder.is_some() && state.active.contains_key(port)
+        if !state.enabled || !state.active.contains_key(port) {
+            return false;
+        }
+        // writer 死在受理任何批次之前 (连接 / 首批序号): 这一段录制从未建立,
+        // 生产者同样必须看到未绑定, 而不是逐批去撞一条死路。
+        state
+            .recorder
+            .as_ref()
+            .is_some_and(|recorder| recorder.unavailable().is_none())
     }
 }
 

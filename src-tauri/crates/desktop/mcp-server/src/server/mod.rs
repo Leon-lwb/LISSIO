@@ -9,7 +9,9 @@ mod router;
 mod runtime;
 
 pub use ports::{PortCheck, check_port};
-pub use runtime::{DEFAULT_MCP_PORT, MCP_PORT_ENV, McpServerHandle, resolve_port, start};
+pub use runtime::{
+    DEFAULT_MCP_PORT, MCP_PORT_ENV, McpServerHandle, resolve_mcp_port, resolve_port, start,
+};
 
 use std::sync::Arc;
 

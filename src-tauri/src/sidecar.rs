@@ -106,6 +106,10 @@ impl SidecarManager {
     }
 
     fn spawn(app: &AppHandle) -> Result<(RunningChild, SidecarInfo), String> {
+        // 桌面壳的 sidecar 环境令牌 (第二个令牌生成点, 与 `backend_server` 的
+        // bearer token 同强): 直接取 OS CSPRNG, 与 `backend_host::random_hex`
+        // 同源同强度。壳刻意不依赖 `backend-host` (组合根只走 Tauri 命令/
+        // 生命周期), 因此这里保留 8 行就地实现而不是新增依赖。
         let mut bytes = [0_u8; 32];
         getrandom::fill(&mut bytes).map_err(|error| format!("无法生成访问令牌: {error}"))?;
         let mut token = String::with_capacity(bytes.len() * 2);

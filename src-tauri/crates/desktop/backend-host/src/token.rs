@@ -1,27 +1,32 @@
-//! 令牌生成 — 全工作区唯一实现 (导出下载 token 与 Web 出口访问令牌同法)。
+//! 令牌生成 — `backend-host` 侧唯一实现 (导出下载 token 与 Web 出口访问令牌同法)。
 
-/// 由操作系统熵源播种的哈希输出拼装 `rounds * 16` 位十六进制串。
+/// 由操作系统 CSPRNG 生成 `rounds` 个 8 字节随机块, 拼装为小写十六进制串。
 ///
-/// `RandomState` 每个实例使用独立的随机密钥 (来自操作系统), 因此反复取样可得
-/// 不可预测的十六进制串。它不是密码学级 CSPRNG: 需要长期暴露到局域网时, 应通过
-/// `LISSIO_TOKEN` 显式提供强令牌。
+/// 长度语义: `rounds` 是块数, 输出长度 = `rounds * 16` 个 hex 字符
+/// (`rounds = 4` → 64 字符 = 256 位熵)。熵直接来自 [`getrandom`]
+/// (操作系统 CSPRNG), 不是 `RandomState` 时间/进程播种的哈希输出。
+///
+/// # Panics
+///
+/// 操作系统熵源不可用时 panic — 令牌生成是安全边界, 宁可失败也不返回弱令牌。
 pub fn random_hex(rounds: u128) -> String {
-    use std::collections::hash_map::RandomState;
     use std::fmt::Write as _;
-    use std::hash::{BuildHasher, Hasher};
-    use std::time::{SystemTime, UNIX_EPOCH};
 
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0, |duration| duration.as_nanos());
-    let mut token = String::with_capacity(rounds as usize * 16);
-    for round in 0_u128..rounds {
-        let mut hasher = RandomState::new().build_hasher();
-        hasher.write_u128(nanos);
-        hasher.write_u128(round);
-        hasher.write_u32(std::process::id());
-        // 写入 String 不会失败 (fmt::Write for String 恒为 Ok)
-        let _ = write!(token, "{:016x}", hasher.finish());
+    /// 每个 round 消耗的熵字节数 — 8 字节 = 16 个 hex 字符。
+    const BYTES_PER_ROUND: usize = 8;
+
+    let mut token = String::new();
+    for _ in 0..rounds {
+        let mut bytes = [0_u8; BYTES_PER_ROUND];
+        getrandom::fill(&mut bytes).expect("操作系统 CSPRNG 不可用, 无法生成安全令牌");
+        for byte in bytes {
+            // 写入 String 不会失败 (fmt::Write for String 恒为 Ok)
+            let _ = write!(token, "{byte:02x}");
+        }
     }
     token
 }
+
+#[cfg(test)]
+#[path = "token_tests.rs"]
+mod tests;

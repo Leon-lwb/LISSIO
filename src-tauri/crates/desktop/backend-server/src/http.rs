@@ -3,16 +3,19 @@
 //! 鉴权: HTTP 用 `Authorization: Bearer <token>`; 浏览器 WebSocket API 无法设置
 //! 请求头, 因此升级请求用 `Sec-WebSocket-Protocol: lissio.v2, bearer.<token>`
 //! 携带令牌 — 令牌不出现在 URL 里, 不会被写进访问日志。
+//!
+//! 只有 `/api/v1/health` 与静态站点无需令牌; 能力清单与 handshake 一样在令牌后,
+//! 未鉴权调用者不能枚举命令面。未知 API 路径回 JSON 404, 不落进 SPA 回落。
 
 use std::sync::Arc;
 
 use axum::body::Bytes;
 use axum::extract::ws::WebSocketUpgrade;
 use axum::extract::{Path, Request, State};
-use axum::http::{HeaderMap, StatusCode, header};
+use axum::http::{HeaderMap, StatusCode, Uri, header};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
-use axum::routing::{get, post};
+use axum::routing::{any, get, post};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -35,6 +38,9 @@ pub fn router(state: Arc<ServerState>) -> Router {
     let protected = Router::new()
         .route("/api/v1/rpc", post(rpc_handler))
         .route("/api/v1/handshake", get(handshake))
+        // 能力清单与 handshake 同属已鉴权面: 命令列表是侦察信息, 且 handshake
+        // 已经携带同一份 capabilities, 前端不需要未鉴权的第二个来源。
+        .route("/api/v1/capabilities", get(capabilities))
         .route("/api/v1/ws", get(ws_handler))
         .route("/api/v1/download/{token}", get(download_handler))
         .route("/api/v1/settings", get(get_settings).put(put_settings))
@@ -45,11 +51,15 @@ pub fn router(state: Arc<ServerState>) -> Router {
 
     let mut app = Router::new()
         .route("/api/v1/health", get(health))
-        .route("/api/v1/capabilities", get(capabilities))
-        .merge(protected);
+        .merge(protected)
+        // 未知 API 路径必须回 JSON 404 — 静态站点的 SPA 回落只服务前端路由,
+        // 否则打错的 API 会拿到 `200 text/html`, 只检查 response.ok 的客户端
+        // 会把它误当成功再以形状错误失败。显式路由优先于这两条兜底。
+        .route("/api", any(api_not_found))
+        .route("/api/{*rest}", any(api_not_found));
 
     if let Some(dir) = state.config.static_dir.clone() {
-        // SPA: 未命中的路径回落到 index.html (前端路由)
+        // SPA: 未命中的 **非 API** 路径回落到 index.html (前端路由)
         app = app.fallback_service(
             ServeDir::new(dir.clone()).not_found_service(ServeFile::new(dir.join("index.html"))),
         );
@@ -87,9 +97,19 @@ async fn health() -> Json<Value> {
     Json(json!({ "status": "ok", "protocol": PROTOCOL_VERSION }))
 }
 
-/// 能力清单 — 前端据此隐藏本出口不支持的 UI。
+/// 能力清单 — 前端据此隐藏本出口不支持的 UI。**已鉴权**: 命令面是侦察信息,
+/// 未经令牌不得读取; 已鉴权的 `handshake` 也携带同一份数据。
 async fn capabilities(State(state): State<Arc<ServerState>>) -> Json<Value> {
     Json(serde_json::to_value(state.capabilities()).unwrap_or(Value::Null))
+}
+
+/// 未知 API 路径 — 回与其他出口同形的 JSON 错误信封, 而不是静态站点的 index.html。
+async fn api_not_found(uri: Uri) -> Response {
+    error_response(
+        StatusCode::NOT_FOUND,
+        "NotFound",
+        &format!("未知的 API 路径: {}", uri.path()),
+    )
 }
 
 /// Authenticated handshake used before the React application mounts.

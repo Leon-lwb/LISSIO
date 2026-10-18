@@ -2,18 +2,21 @@
 import type { TriggerMatchType } from "./TriggerMatchType";
 
 /**
- * 单条匹配规则 — 与前端 `TriggerRule` 对齐
+ * 单条匹配规则 — 前端 `TriggerRule` 的图侧形状 (`NodeKind::Trigger.rules`)。
+ *
+ * camelCase 与其余 wire DTO 一致; 控件参数 (`kind::widgets::TriggerRule`) 经
+ * `TryFrom<&TriggerRule>` 直接转换成本类型, 不再走 `serde_json` 往返。
  */
-export type TriggerRuleDef = { id: string, pattern: string, match_type: TriggerMatchType, flags: string | null, 
+export type TriggerRuleDef = { id: string, pattern: string, matchType: TriggerMatchType, flags: string | null, 
 /**
  * 输出值类型: 'number' | 'string' (默认 'number')
  */
-output_type: string, 
+outputType: string, 
 /**
  * 数字输出值 (output_type='number' 时使用)
  */
-output_value: number, 
+outputValue: number, 
 /**
  * 字符串输出值 (output_type='string' 时使用)
  */
-output_text: string, enabled: boolean, };
+outputText: string, enabled: boolean, };

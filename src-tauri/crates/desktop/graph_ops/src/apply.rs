@@ -105,6 +105,10 @@ pub async fn apply_tab_graph(
 ///
 /// 成功后把 `(nodes, edges, hints, widgets)` 写入源图存储，
 /// 并 emit `graph:source`; 编译失败所有存储不变。
+///
+/// 提交串行化取自 `data_plane` 的提交锁 ([`DataPlaneState::commit_lock`]) — 五件套
+/// 之外的第六个部件, 无需调用方额外传参, 于是 axum server 与 MCP router 这两条
+/// 入口天然共用同一把锁。
 // 参数类型与 AppState.graphs 字段完全一致 (std hasher), 不做 hasher 泛型化
 #[allow(clippy::implicit_hasher)]
 #[allow(clippy::too_many_arguments)]
@@ -123,6 +127,14 @@ pub async fn apply_tab_graph_parts(
     base_version: Option<u64>,
     documents: Option<Vec<kind::document::NodeDocument>>,
 ) -> Result<GraphDerived> {
+    // 提交串行化 — **整个提交**在同一把 guard 内: 版本检查、候选构建与全部状态
+    // 写入 (graphs / global_nodes / byte_plan / source_graphs / workspace / 版本号)
+    // 必须原子。审计 M1: 这三个写入曾经各自持锁且版本号最后才 +1, 于是共享同一
+    // base_version 的两个提交都能通过检查, 后写的那个把先写者的节点从工作区运行时
+    // 索引里抹掉 (字节平面还是从各自的旧快照重算的) — 被丢掉的页签从此不再被路由
+    // 与录制, 且没有任何地方报错。
+    let _commit = data_plane.commit_lock().lock().await;
+
     // 0. 乐观并发检查 — base_version 过期说明期间有其他写入方推进了图,
     //    整图替换会覆盖掉那批变更, 必须拒绝 (前端据此拉取权威源图合并重试)
     if let Some(base) = base_version {
@@ -378,11 +390,16 @@ fn recording_domain(source: &NodeDef, handle: &str) -> Option<recording::Domain>
 
 /// 移除指定 tab 的节点图 (tab 删除时调用) — Tauri 命令入口在
 /// `graph::remove_tab_graph`, 本体抽出以便复用与测试
+///
+/// 与 [`apply_tab_graph_parts`] 共用同一把提交锁: 删除同样是「读运行时索引 →
+/// 重建字节平面 → 写回」的读-改-写, 且**没有**版本检查, 因此它必须与提交互斥
+/// (审计 M1: 曾经完全无锁)。
 pub async fn apply_remove_tab_graph(
     state: &AppState,
     sink: Option<&dyn BackendEventSink>,
     tab_id: &str,
 ) -> Result<GraphDerived> {
+    let _commit = state.data_plane.commit_lock().lock().await;
     state.graphs.lock().remove(tab_id);
     // 源图存储同步清除 — tab 已不存在, 权威拓扑与 widget 记录随之失效
     state.source_graphs.lock().remove(tab_id);

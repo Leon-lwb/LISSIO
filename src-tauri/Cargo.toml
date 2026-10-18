@@ -198,6 +198,16 @@ unused_async_trait_impl = "allow"
 # infeasible for custom collections
 assert_is_empty = "allow"
 
+[workspace.lints.cargo]
+# Cargo's own lint namespace (`cargo::*`) is separate from the `clippy::cargo`
+# lint group above: denying `clippy::cargo` does NOT deny
+# `cargo::unused_dependencies`, which is `warn` by default, so an unused
+# dependency could survive `cargo clippy` while the gate claimed cargo lints
+# were denied. Deny it here; `cargo clippy --workspace --all-targets` reports
+# these at manifest finalization. The `cargo::` lints are a nightly feature,
+# which is this workspace's default toolchain channel.
+unused_dependencies = "deny"
+
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

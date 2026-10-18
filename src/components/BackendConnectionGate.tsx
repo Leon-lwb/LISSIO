@@ -13,6 +13,7 @@ import {
   transport,
 } from '../lib/rpc';
 import { errorText } from '../types/errors';
+import { PROTOCOL_VERSION } from '../lib/rpc/httpTransportProtocol';
 
 type ConnectionState =
   | 'starting' | 'checking' | 'connected' | 'unreachable'
@@ -32,7 +33,9 @@ interface Handshake {
   protocol: string;
 }
 
-const EXPECTED_PROTOCOL = 'lissio.web.v2';
+/// 出口协议版本 — 与后端 `backend_server::frames::PROTOCOL_VERSION` 同源 (生成契约),
+/// 本文件不重复字面量。
+const EXPECTED_PROTOCOL = PROTOCOL_VERSION;
 
 export function BackendConnectionGate({ children }: { children: ReactNode }) {
   const desktop = hasTauriRuntime();

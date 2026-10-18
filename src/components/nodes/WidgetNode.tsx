@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, type ComponentType } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import { useAppStore } from '../../store/appStore';
 import { useDockStore } from '../../store/dockStore';
@@ -10,8 +10,14 @@ import type { WidgetConfig } from '../../types';
 import { getWidgetCategory, WIDGET_CATEGORY_COLORS } from '../../types';
 import { widgetToTab } from '../../lib/utils/widgetTab';
 import { WIDGET_REGISTRY, widgetComponent } from '../widgets/registry';
+import type { WidgetComponentProps } from '../widgets/registryTypes';
+import { api } from '../../lib/tauri/tauri';
 import { NodeFrame } from './NodeFrame';
 import { UnsupportedNode } from './UnsupportedNode';
+
+/// 宿主注入给内容组件的命令 — 叶子控件不直接持有后端调用。
+/// 目前仅 TextOut 的「立即发送」消费; 其余 kind 不声明该 prop。
+type WidgetHostProps = WidgetComponentProps & { onSendNow?: (nodeId: string) => void };
 
 /// 端口表 → 画布端口视图 (id/label/domain 由节点描述提供, 无本地业务 switch)
 function toUiPorts(ports: { handle: string; label: string; domain: NodePortDomain }[]): WidgetPort[] {
@@ -27,6 +33,10 @@ export const WidgetNode = memo(function WidgetNode({ id, data, selected }: NodeP
   const remove = useAppStore((s) => s.removeWidget);
   const update = useAppStore((s) => s.updateWidget);
   const description = useDescribeEntry(id).description;
+  // 文本下发「立即发送」命令由宿主持有 — 内容组件只拿回调
+  const sendNow = useCallback((nodeId: string) => {
+    void api.sendTextOutNow(nodeId).catch(() => { return undefined; });
+  }, []);
   const onOpen = useCallback(() => {
     if (!widget) return;
     const tab = widgetToTab(widget);
@@ -50,13 +60,13 @@ export const WidgetNode = memo(function WidgetNode({ id, data, selected }: NodeP
     outputs: toUiPorts(description?.outputs ?? []),
   };
   const limits = widgetMinSize(widget.kind);
-  const Content = widgetComponent(widget.kind);
+  const Content: ComponentType<WidgetHostProps> = widgetComponent(widget.kind);
   return <NodeFrame id={id} tabId={data.tabId as string} label={widget.params.label || widget.kind} selected={selected}
     color={WIDGET_CATEGORY_COLORS[getWidgetCategory(widget.kind)]} inputs={ports.inputs} outputs={ports.outputs}
     minWidth={limits.minW} minHeight={limits.minH} onRemove={() => remove(id)}
     onRename={(label) => update(id, { ...widget, params: { ...widget.params, label } } as WidgetConfig)}
     onOpen={widgetToTab(widget) ? onOpen : undefined}
 >
-    <Content widget={widget} />
+    <Content widget={widget} onSendNow={sendNow} />
   </NodeFrame>;
 });

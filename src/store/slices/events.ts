@@ -67,6 +67,25 @@ function makeRafCoalescer<T>(apply: (value: T) => void): RafCoalescer<T> {
   };
 }
 
+/// 字符串输出快照等价判定 (逐键, 不比较身份) — 快照对象每帧重建,
+/// 引用比较永远不等; 只有某个 widget/port 的文本真正变化才写 store。
+function sameStringOutputs(
+  current: GraphStateSlice['customTextOutputs'],
+  next: GraphStateSlice['customTextOutputs'],
+): boolean {
+  const currentNodes = Object.keys(current);
+  if (currentNodes.length !== Object.keys(next).length) return false;
+  return currentNodes.every((nodeId) => {
+    const currentPorts = current[nodeId];
+    const nextPorts = next[nodeId];
+    if (currentPorts === nextPorts) return true;
+    if (nextPorts === undefined) return false;
+    const portIds = Object.keys(currentPorts);
+    if (portIds.length !== Object.keys(nextPorts).length) return false;
+    return portIds.every((portId) => currentPorts[portId] === nextPorts[portId]);
+  });
+}
+
 /// protocol:channels-detected payload 解析 — 契约为 { node_id, channels };
 /// 后端由 feed_protocol 在检测值变化时 (None→Some(n) 或 Some(a)→Some(b)) 主动推送
 function parseChannelsDetectedEvent(
@@ -259,8 +278,13 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
       const spectrumCoalescer = makeRafCoalescer<GraphStateSlice['spectrumResults']>(
         (v) => set({ spectrumResults: v })
       );
+      // 字符串输出每帧重建对象 (身份必变) — 逐键比较文本, 等价快照跳过 set:
+      // 空闲工作区不再以 30/s 唤醒全部 store 订阅者。
       const textOutputCoalescer = makeRafCoalescer<GraphStateSlice['customTextOutputs']>(
-        (v) => set({ customTextOutputs: v })
+        (v) => {
+          if (sameStringOutputs(get().customTextOutputs, v)) return;
+          set({ customTextOutputs: v });
+        }
       );
 
       if (textOutputSub) textOutputSub.cancel();
@@ -299,8 +323,15 @@ export const createEventSlice: AppSlice<EventSlice> = (set, get) => {
       const metaKeyOf = (s: { controlTabs: unknown; dataTabs: unknown }) =>
         JSON.stringify([s.controlTabs, s.dataTabs]);
       let prevMetaKey = '';
+      // 序列化前的身份短路: 绝大多数通知 (运行态 / 节点 / 订阅推送) 两个切片
+      // 引用都没变, 直接返回 — 不再对整表做 JSON.stringify (每帧固定成本)。
+      let prevControlTabs: unknown = null;
+      let prevDataTabs: unknown = null;
       if (metaStoreUnsub) metaStoreUnsub();
       metaStoreUnsub = useAppStore.subscribe((s) => {
+        if (s.controlTabs === prevControlTabs && s.dataTabs === prevDataTabs) return;
+        prevControlTabs = s.controlTabs;
+        prevDataTabs = s.dataTabs;
         const key = metaKeyOf(s);
         if (key === prevMetaKey) return;
         prevMetaKey = key;

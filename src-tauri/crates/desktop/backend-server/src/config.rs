@@ -101,7 +101,12 @@ impl ServerConfig {
         })
     }
 
-    /// 是否允许免令牌访问 (仅 loopback 且显式开启)。
+    /// 监听地址是否为 loopback — 仅用于启动日志 (提示非 loopback 绑定需要客户端
+    /// 携带访问令牌)。
+    ///
+    /// 令牌校验对 loopback 与非 loopback 一视同仁: 没有任何"免令牌"开关,
+    /// [`crate::http`] 的 `require_token` 对全部受保护路由无条件执行。loopback
+    /// 绑定只是默认值 (`--bind` / `LISSIO_BIND` 之外不暴露到网络), 不是鉴权豁免。
     pub const fn is_loopback(&self) -> bool {
         self.bind.is_loopback()
     }

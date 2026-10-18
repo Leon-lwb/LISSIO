@@ -149,7 +149,9 @@ pub use params::{
     InputBinding,
 };
 pub use params::{Model3DSource, Model3DSourceKind};
-pub use trigger::{TriggerEdge, TriggerMatchType, TriggerOutputType, TriggerParams, TriggerRule};
+pub use trigger::{
+    TriggerEdge, TriggerMatchType, TriggerOutputType, TriggerParams, TriggerRule, TriggerRuleError,
+};
 
 pub fn definitions() -> impl Iterator<Item = &'static WidgetDefinition> {
     DEFINITIONS.iter().copied()

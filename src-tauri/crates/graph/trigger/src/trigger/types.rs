@@ -2,10 +2,14 @@
 
 use serde::{Deserialize, Serialize};
 
-/// 匹配类型 — 与前端 `TriggerMatchType` 对齐
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, ts_rs::TS)]
+/// 匹配类型 — 与前端 `TriggerMatchType` 对齐。
+///
+/// 全仓唯一的 Rust 声明: `kind::widgets::TriggerMatchType` 只是本类型的转发
+/// (`kind` 依赖 `trigger`), 不再各自定义一份。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize, ts_rs::TS)]
 #[serde(rename_all = "lowercase")]
 pub enum TriggerMatchType {
+    #[default]
     Exact,
     Prefix,
     Contains,
@@ -14,8 +18,12 @@ pub enum TriggerMatchType {
     Glob,
 }
 
-/// 单条匹配规则 — 与前端 `TriggerRule` 对齐
+/// 单条匹配规则 — 前端 `TriggerRule` 的图侧形状 (`NodeKind::Trigger.rules`)。
+///
+/// camelCase 与其余 wire DTO 一致; 控件参数 (`kind::widgets::TriggerRule`) 经
+/// `TryFrom<&TriggerRule>` 直接转换成本类型, 不再走 `serde_json` 往返。
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize, ts_rs::TS)]
+#[serde(rename_all = "camelCase")]
 pub struct TriggerRuleDef {
     pub id: String,
     pub pattern: String,

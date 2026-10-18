@@ -90,6 +90,20 @@ impl RecordingStore {
         self
     }
 
+    /// 回归测试专用构造 — 注入一个连接必然失败的 engine (**仅 `cfg(test)`
+    /// 编译**): 用来把写入线程逼死在 bootstrap 阶段, 而 `open` 早已成功。
+    #[cfg(test)]
+    pub(crate) fn with_engine_for_test(
+        path: impl AsRef<Path>,
+        engine: Arc<dyn StoreEngine>,
+    ) -> Self {
+        Self {
+            path: path.as_ref().to_path_buf(),
+            engine,
+            reader: None,
+        }
+    }
+
     /// The writer task's own copy: no read-path handle, so a read issued on the
     /// writer thread can never route back to itself.
     pub(crate) fn without_reader(&self) -> Self {

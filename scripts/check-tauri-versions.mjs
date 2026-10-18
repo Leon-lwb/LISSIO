@@ -114,6 +114,19 @@ for (const pair of pairs) {
   );
 }
 
+// ---- Zero-floor guard ----
+// A pair is skipped when its crate is absent from Cargo.lock, so a lockfile or
+// manifest edit can leave zero comparable pairs and still print "0 package(s)
+// share a major/minor" as a pass. Declared Tauri packages with nothing to
+// compare is a broken pairing check, not a clean one.
+if (checked === 0) {
+  errors.push(
+    `no Tauri npm/crate pair could be compared — ${pairs.length} Tauri npm package(s) are ` +
+      'declared, but none resolved to a crate in src-tauri/Cargo.lock. A lockfile rename or a ' +
+      'missing install must not turn this gate into a vacuous pass',
+  );
+}
+
 if (errors.length > 0) {
   console.error(`✗ Tauri npm/crate version check failed (${errors.length} issue(s)):\n`);
   for (const error of errors) console.error(`  - ${error}`);

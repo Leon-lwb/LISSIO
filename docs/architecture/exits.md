@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-17
 applies-to: Unified UI, Web, MCP, and CLI software exits
 -->
 
@@ -99,6 +99,9 @@ command files are not business exits.
   in `control-api`. MCP and built-in AI derive from them. CLI and IPC provide
   transport mapping.
 - Contract names, event payloads, and persisted formats are machine-checked.
+  Web exit frames and the protocol constants they carry are generated from
+  `backend-server` into `src/types/generated` and imported by the frontend, so
+  the one wire the Web exit cannot work without has a single definition.
   Business messages remain in `control-api`. There is no legacy-format fallback.
 - Every IPC command is classified in `rpc-api::catalog`; tool and skill IDs are
   globally unique.

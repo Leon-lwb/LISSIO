@@ -8,7 +8,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Map, Value, json};
 
-/// 出口无关的 RPC 错误 — 线上形状与 IPC 错误契约对齐 (`kind` / `message`)。
+/// 出口无关的 RPC 错误 — 线上形状与 IPC 错误契约对齐 (`kind` / `message` / `data`)。
 ///
 /// 前端 `errorGuidance` 按 `kind` 分支, 因此域错误必须保留
 /// [`error::Error::kind`] 原文, 不得改写为泛化字符串。
@@ -18,7 +18,8 @@ pub struct RpcError {
     pub kind: String,
     /// 面向用户的错误文案 (与 IPC 路径逐字一致)。
     pub message: String,
-    /// 域错误的完整序列化形状 (`source` / `data`), 便于诊断。
+    /// 域错误的结构化字段 ([`error::AppError::data_fields`]) — 单层键值,
+    /// 绝不嵌套 (此前把整枚举序列化进来, 前端只能读到 `data.data`); 无字段时省略。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub data: Option<Value>,
 }
@@ -42,13 +43,20 @@ impl RpcError {
         }
     }
 
-    /// 域错误 — 保留 `kind` 与文案原文。
+    /// 域错误 — 保留 `kind` 与文案原文, 并把域错误的 `data_fields()` 平铺到
+    /// 信封的 `data` (单层): 线形状 = `{ kind, message, data }`,
+    /// 不再是 `AppError` 的整体序列化 (`data.data` 嵌套)。
     pub fn domain(error: &error::AppError) -> Self {
         use error::Error as _;
+        let fields = error.data_fields();
         Self {
             kind: error.kind().to_string(),
             message: error.to_string(),
-            data: serde_json::to_value(error).ok(),
+            data: if fields.is_empty() {
+                None
+            } else {
+                serde_json::to_value(fields).ok()
+            },
         }
     }
 

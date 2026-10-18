@@ -12,6 +12,13 @@
 //!
 //! Output must be deterministic; `pnpm check:contracts` re-runs this into a
 //! temp directory and diffs against the committed files.
+//!
+//! Every exported type prints one machine-readable manifest line —
+//! `ts-rs-export\t<Rust type path>\t<relative output file>\t<role>` — which
+//! `scripts/check-contracts.mjs` uses to fail when two distinct Rust types
+//! would write the same `<TypeName>.ts` (the last one silently wins otherwise).
+//! The Web exit frames are exported by `backend-server/examples/export_frames.rs`
+//! into the same directory; `rpc-api` (L4) must not dev-depend `backend-server` (L5).
 
 use ts_rs::{Config, TS};
 
@@ -22,6 +29,14 @@ macro_rules! export {
     ($cfg:expr, $($t:ty),+ $(,)?) => {{
         let mut failures: Vec<String> = Vec::new();
         $(
+            match <$t as TS>::output_path() {
+                Some(path) => println!(
+                    "ts-rs-export\t{}\t{}\tcontract",
+                    std::any::type_name::<$t>(),
+                    path.display()
+                ),
+                None => failures.push(format!("{}: not exportable", stringify!($t))),
+            }
             if let Err(err) = <$t as TS>::export($cfg) {
                 failures.push(format!("{}: {err}", stringify!($t)));
             }
@@ -233,7 +248,6 @@ fn main() {
         kind::widgets::FrameDecoderParams,
         kind::widgets::TriggerParams,
         kind::widgets::TriggerRule,
-        kind::widgets::TriggerMatchType,
         kind::widgets::TriggerOutputType,
         kind::widgets::TriggerEdge,
         // ---- 模型目录/准备/描述 RPC 合同 (rpc-api::models + app::models) ----
@@ -251,6 +265,7 @@ fn main() {
         filter::FilterConfig,
         spectrum::WindowType,
         spectrum::SpectrumOutput,
+        // ---- 触发器: 唯一声明在 trigger crate (`kind` 只转发, 不再各导一份) ----
         trigger::TriggerRuleDef,
         trigger::TriggerMatchType,
     };

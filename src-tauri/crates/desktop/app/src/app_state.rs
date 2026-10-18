@@ -98,6 +98,18 @@ pub struct AppState {
     /// 串口发现服务 — 端口注入点 (L4 `serial` crate 的实现由组合根注入,
     /// 见 [`SerialDiscovery`]); 未注入时能力调用返回明确错误
     serial_discovery: std::sync::OnceLock<std::sync::Arc<dyn SerialDiscovery>>,
+    /// 图提交串行化门 — **图提交的唯一所有者** (审计 M1)。
+    ///
+    /// 版本检查、候选构建与全部状态写入必须在同一把 guard 内完成, 否则共享同一
+    /// `base_version` 的两个提交都会通过检查, 后写的那个把先写者的节点从
+    /// `data_plane.global_nodes` 里静默抹掉。
+    ///
+    /// 装配期把**同一个** `Arc` 注入 [`pipeline::DataPlaneState`]: 提交入口
+    /// (`graph_ops` 的 `apply_tab_graph_parts` / `apply_remove_tab_graph`, 被 axum
+    /// server 与 MCP router 共用) 只拿得到数据平面, 锁必须随它到达, 两条入口才
+    /// 天然共用同一把锁。`AppState::commit_lock` 与
+    /// `DataPlaneState::commit_lock` 是同一把锁的两个句柄, 不是两把锁。
+    pub commit_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 /// 串口发现端口 — 列举系统串口 (依赖倒置: L3 以下不依赖 `serialport` 等
@@ -196,6 +208,9 @@ impl AppState {
             spectrum_snapshot,
             ifft_states,
         );
+        // 图提交的唯一所有者 (审计 M1): 装配期构造一次, 同一个 Arc 交给数据平面,
+        // 于是 AppState 与 data_plane 持有的是**同一把**锁。
+        let commit_lock = Arc::new(tokio::sync::Mutex::new(()));
         let data_plane = pipeline::DataPlaneState::new(
             transport.clone(),
             eval,
@@ -206,6 +221,7 @@ impl AppState {
             logic_buffer.clone(),
             decoded_buffer.clone(),
             pipeline_config.clone(),
+            commit_lock.clone(),
         );
 
         Self {
@@ -234,6 +250,7 @@ impl AppState {
             restore_done_tx,
             envelope_engine: std::sync::OnceLock::new(),
             serial_discovery: std::sync::OnceLock::new(),
+            commit_lock,
         }
     }
 

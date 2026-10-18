@@ -285,6 +285,54 @@ for (const anchor of CAPABILITY_ANCHORS) {
 }
 
 /**
+ * Gate tiers are anchored: every enforcing gate runs on pull requests unless it
+ * is deliberately declared complete-flow-only below.
+ *
+ * The rest of this file verifies that the registry, the generated documents and
+ * the workflows agree with each other — but the documents are rendered *from*
+ * the registry and the workflows run the tier commands, so all of them move
+ * together when a gate's `tier` changes. That is exactly the gap an audit
+ * reproduced: demoting `check-layers` from `pr` to `full` kept
+ * `node scripts/check-ci-gates.mjs` green (exit 0), and `--fix` regenerated the
+ * documents with no trace that a gate had left every pull request.
+ *
+ * The PR tier is the merge gate, so running there is the default for an
+ * enforcing gate, not an accident. The four complete-flow gates are the
+ * reviewed exceptions, and each states why it cannot run on every change.
+ * Because the rule is enforced in both directions, promoting one of them is
+ * also a deliberate edit: the stale declaration fails until it is removed.
+ */
+const FULL_ONLY_GATES = new Map([
+  ['build-web', 'a production bundling run is a complete-flow cost, not a per-change one'],
+  ['e2e', 'the browser suite starts a real backend and a Vite server'],
+  ['perf-check', 'the render-budget probe drives a real browser and is timing-sensitive'],
+  ['cargo-deny', 'the advisory/license audit needs a writable advisory cache and is slow'],
+]);
+for (const gate of GATES) {
+  // An informational entry cannot fail, so its tier cannot weaken a merge gate.
+  if (gate.informational) continue;
+  const why = FULL_ONLY_GATES.get(gate.id);
+  if (gate.tier === 'pr') {
+    if (why !== undefined) {
+      fail(
+        `gates.mjs: gate ${gate.id} is declared complete-flow-only in check-ci-gates.mjs ` +
+          `("${why}") but runs in the pr tier — the declaration is stale; remove it from ` +
+          'FULL_ONLY_GATES, or leave the gate in "full"',
+      );
+    }
+    continue;
+  }
+  if (why === undefined) {
+    fail(
+      `gates.mjs: gate ${gate.id} runs in the "${gate.tier}" tier but is not declared ` +
+        'complete-flow-only in check-ci-gates.mjs. Pull requests are the merge gate, so an ' +
+        'enforcing gate must run there unless it is listed in FULL_ONLY_GATES with the reason ' +
+        'it cannot. Without this anchor a demotion changes nothing any other check looks at',
+    );
+  }
+}
+
+/**
  * `informational` must stay an exception, not an escape hatch.
  *
  * The flag excludes a command from the gate count, and a command that cannot

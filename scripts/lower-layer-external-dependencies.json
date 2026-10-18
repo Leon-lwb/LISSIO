@@ -1,0 +1,213 @@
+{
+  "description": "Reviewed external (crates.io) dependencies of L0-L3 crates. Lower layers may depend only on packages listed here, so a new adapter SDK or OS facility has to be reviewed rather than slip in. Regenerate with `node scripts/check-crate-architecture.mjs --update-baseline` after a deliberate change. Dev-dependencies are not listed: they do not ship.",
+  "crates": {
+    "lissio-acquisition": [
+      "async-trait",
+      "log",
+      "parking_lot",
+      "serde",
+      "serde_json",
+      "thiserror",
+      "tokio",
+      "ts-rs"
+    ],
+    "lissio-app": [
+      "async-trait",
+      "log",
+      "parking_lot",
+      "rustc-hash",
+      "serde",
+      "serde_json",
+      "tokio",
+      "ts-rs"
+    ],
+    "lissio-automotive-diag": [
+      "async-trait",
+      "libautomotive",
+      "parking_lot",
+      "serde",
+      "serde_json"
+    ],
+    "lissio-buffer-graph": [
+      "serde"
+    ],
+    "lissio-bus": [
+      "log",
+      "parking_lot",
+      "serde",
+      "tokio"
+    ],
+    "lissio-can": [
+      "serde",
+      "serde_json"
+    ],
+    "lissio-control-api": [
+      "parking_lot",
+      "petgraph",
+      "schemars",
+      "serde",
+      "serde_json",
+      "tokio",
+      "windows-sys"
+    ],
+    "lissio-data-model": [
+      "serde",
+      "serde_json",
+      "thiserror",
+      "ts-rs"
+    ],
+    "lissio-device-tree": [
+      "async-trait",
+      "log",
+      "parking_lot",
+      "serde",
+      "serde_json",
+      "thiserror",
+      "tokio",
+      "ts-rs"
+    ],
+    "lissio-diagnostic": [
+      "serde",
+      "serde_json",
+      "ts-rs"
+    ],
+    "lissio-error": [
+      "serde",
+      "serde_json",
+      "thiserror"
+    ],
+    "lissio-eval": [
+      "rustc-hash"
+    ],
+    "lissio-evaluator": [
+      "log",
+      "parking_lot",
+      "serde"
+    ],
+    "lissio-events": [
+      "serde",
+      "serde_json"
+    ],
+    "lissio-filter": [
+      "serde",
+      "ts-rs"
+    ],
+    "lissio-flow": [
+      "bytes",
+      "serde",
+      "ts-rs"
+    ],
+    "lissio-frame-decoder": [
+      "serde"
+    ],
+    "lissio-graph": [
+      "petgraph"
+    ],
+    "lissio-graph-ops": [
+      "log",
+      "parking_lot",
+      "serde",
+      "serde_json",
+      "tokio"
+    ],
+    "lissio-hir": [
+      "petgraph",
+      "rustc-hash"
+    ],
+    "lissio-kind": [
+      "serde",
+      "serde_json",
+      "ts-rs"
+    ],
+    "lissio-logic": [
+      "serde",
+      "serde_json",
+      "ts-rs"
+    ],
+    "lissio-lower": [
+      "rustc-hash"
+    ],
+    "lissio-measurement": [
+      "serde"
+    ],
+    "lissio-pipeline": [
+      "log",
+      "parking_lot",
+      "rustc-hash",
+      "scirs2-core",
+      "serde",
+      "serde_json",
+      "tokio"
+    ],
+    "lissio-plane": [
+      "petgraph",
+      "rustc-hash"
+    ],
+    "lissio-points": [
+      "serde",
+      "serde_json",
+      "ts-rs"
+    ],
+    "lissio-protocol": [
+      "serde"
+    ],
+    "lissio-raw-data": [
+      "base64",
+      "serde"
+    ],
+    "lissio-recording": [
+      "async-trait",
+      "duckdb",
+      "parking_lot",
+      "sea-orm",
+      "serde",
+      "serde_json",
+      "thiserror",
+      "tokio"
+    ],
+    "lissio-schema": [
+      "serde",
+      "serde_json"
+    ],
+    "lissio-schema-types": [
+      "serde",
+      "serde_json",
+      "ts-rs"
+    ],
+    "lissio-spectrum": [
+      "realfft",
+      "rustfft",
+      "serde",
+      "ts-rs"
+    ],
+    "lissio-stream": [
+      "log",
+      "parking_lot",
+      "serde",
+      "serde_json",
+      "tokio"
+    ],
+    "lissio-subscription": [
+      "parking_lot",
+      "tokio"
+    ],
+    "lissio-transport": [
+      "async-trait",
+      "log",
+      "parking_lot",
+      "serde_json",
+      "tokio"
+    ],
+    "lissio-trigger": [
+      "glob",
+      "log",
+      "regex",
+      "serde",
+      "ts-rs"
+    ],
+    "lissio-waveform": [
+      "parking_lot",
+      "serde"
+    ]
+  }
+}

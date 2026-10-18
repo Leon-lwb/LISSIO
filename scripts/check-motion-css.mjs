@@ -29,7 +29,25 @@ import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
 const SRC = path.join(root, 'src');
+/** The only generated directory: TS contract output, not application source. */
+const GENERATED_TYPES = path.join(SRC, 'types', 'generated');
+const THEME_CSS = path.join(SRC, 'styles/theme.css');
 const errors = [];
+
+/**
+ * Custom-property values defined in the theme stylesheet, keyed by name.
+ *
+ * `transition: var(--some-token)` cannot be judged from the declaring file alone:
+ * the value the token carries lives in `@theme`. Parsing it here is what lets the
+ * gate see a layout property routed through a custom property.
+ */
+const THEME_VALUES = (() => {
+  if (!fs.existsSync(THEME_CSS)) return new Map();
+  const source = fs.readFileSync(THEME_CSS, 'utf8');
+  return new Map(
+    [...source.matchAll(/^\s*(--[\w-]+)\s*:\s*([^;]+);/gm)].map((match) => [match[1], match[2].trim()])
+  );
+})();
 
 /**
  * Properties allowed in transitions / keyframes: all of them trigger only paint or compositing
@@ -114,10 +132,14 @@ const EXEMPTIONS = [
 /** Recursively collect files under src with the given extensions (skipping generated output). */
 function collect(dir, extensions, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'generated') continue;
     const p = path.join(dir, entry.name);
-    if (entry.isDirectory()) collect(p, extensions, out);
-    else if (extensions.some((ext) => entry.name.endsWith(ext))) out.push(p);
+    if (entry.isDirectory()) {
+      // Only the generated TypeScript contract output is excluded. Skipping any
+      // directory *named* `generated` at any depth made a real source directory
+      // with that name invisible to this scan; anchor the skip to the exact path.
+      if (p === GENERATED_TYPES) continue;
+      collect(p, extensions, out);
+    } else if (extensions.some((ext) => entry.name.endsWith(ext))) out.push(p);
   }
   return out;
 }
@@ -145,25 +167,70 @@ function splitTopLevel(value) {
   return parts.map((part) => part.trim()).filter(Boolean);
 }
 
+/** Split a transition value on top-level whitespace; a function's arguments stay together. */
+function splitValueTokens(value) {
+  const tokens = [];
+  let depth = 0;
+  let buffer = '';
+  for (const char of value) {
+    if (char === '(') depth += 1;
+    else if (char === ')') depth = Math.max(0, depth - 1);
+    if (/\s/.test(char) && depth === 0) {
+      if (buffer !== '') tokens.push(buffer);
+      buffer = '';
+      continue;
+    }
+    buffer += char;
+  }
+  if (buffer !== '') tokens.push(buffer);
+  return tokens;
+}
+
+/** Resolve one `var(--name[, fallback])` token through the theme, or null when it has no value. */
+function resolveCustomProperty(token) {
+  const match = /^var\(\s*(--[\w-]+)\s*(?:,\s*([\s\S]*))?\)$/.exec(token);
+  if (!match) return null;
+  const [, name, fallback] = match;
+  if (THEME_VALUES.has(name)) return THEME_VALUES.get(name);
+  if (fallback !== undefined) return fallback.trim();
+  return null;
+}
+
 /**
  * Extract the property name from a transition value.
  *
- * Skip time, multiplier, easing keywords, and functions (var/cubic-bezier/steps) token by token;
- * the first bare identifier that remains is the property name — exactly the syntactic position of
- * the CSS transition shorthand. A custom property is returned as-is and left to the caller to
- * report: an unregistered custom property cannot transition at all, so writing it is as good as
- * not writing it.
+ * Skip time, multiplier, easing keywords, and timing functions (cubic-bezier/steps) token by
+ * token; the first bare identifier that remains is the property name — exactly the syntactic
+ * position of the CSS transition shorthand. A custom property is returned as-is and left to the
+ * caller to report: an unregistered custom property cannot transition at all, so writing it is
+ * as good as not writing it.
+ *
+ * `var()` used to be skipped like any other function, so `transition: var(--token)` produced
+ * `null` and the caller's `if (property === null) continue` marked it clean — a layout
+ * transition routed through a custom property was invisible to the gate. It is resolved through
+ * the parsed theme instead, and reported as `unresolved` (not skipped) when no value can be
+ * found, matching how an unresolvable inline transition in TS is already a failure.
  */
 function propertyOf(part) {
-  for (const token of part.split(/\s+/)) {
+  const pending = splitValueTokens(part);
+  let expansions = 0;
+  while (pending.length > 0) {
+    const token = pending.shift();
     if (!token || token === '!important') continue;
     if (/^-?[\d.]+(?:m?s)?$/.test(token)) continue;
-    if (token.startsWith('--')) return token;
+    if (token.startsWith('--')) return { property: token, unresolved: null };
+    if (/^var\(/i.test(token)) {
+      const resolved = resolveCustomProperty(token);
+      if (resolved === null || expansions >= 8) return { property: null, unresolved: token };
+      expansions += 1;
+      pending.unshift(...splitValueTokens(resolved));
+      continue;
+    }
     if (/^[a-z-]+\(/i.test(token)) continue;
     if (TIMING_KEYWORDS.has(token.toLowerCase())) continue;
-    return token;
+    return { property: token, unresolved: null };
   }
-  return null;
+  return { property: null, unresolved: null };
 }
 
 function isExempt(file, property) {
@@ -241,7 +308,16 @@ function checkCss(file) {
     const declarationStart = match.index + match[0].indexOf(match[2]);
     for (const part of splitTopLevel(match[2])) {
       if (part === 'none' || part === 'initial' || part === 'unset') continue;
-      const property = propertyOf(part);
+      const { property, unresolved } = propertyOf(part);
+      if (unresolved !== null) {
+        report(
+          file,
+          lineOf(stripped, declarationStart),
+          unresolved,
+          'a transition routed through var() cannot be resolved through styles/theme.css, so the animated property cannot be confirmed; define the token there, give it a fallback, or write the property literally'
+        );
+        continue;
+      }
       if (property === null) continue;
       if (COMPOSITOR_SAFE.has(property) || isExempt(file, property)) continue;
       report(
@@ -299,7 +375,6 @@ function geometryRoles() {
 }
 
 const GEOMETRY_ROLES = geometryRoles();
-const THEME_CSS = path.join(SRC, 'styles/theme.css');
 
 function checkGeometryTokens(file, css) {
   const refs = [...css.matchAll(/var\(\s*--motion-(travel|scale)-([a-z0-9-]+)\s*\)/g)];
@@ -428,7 +503,16 @@ function checkScript(file) {
     if (value === '' || value === 'none' || value === 'initial' || value === 'unset') continue;
     for (const part of splitTopLevel(value)) {
       if (part === 'none' || part === 'initial' || part === 'unset') continue;
-      const property = propertyOf(part);
+      const { property, unresolved } = propertyOf(part);
+      if (unresolved !== null) {
+        report(
+          file,
+          lineOf(source, match.index),
+          unresolved,
+          'an inline transition routed through var() cannot be resolved through styles/theme.css, so the animated property cannot be confirmed; make it a literal or a module-level string constant'
+        );
+        continue;
+      }
       if (property === null) continue;
       if (COMPOSITOR_SAFE.has(property) || isExempt(file, property)) continue;
       report(file, lineOf(source, match.index), property, 'inline transition per-frame transitions trigger layout; use transform/opacity, or register an exemption');

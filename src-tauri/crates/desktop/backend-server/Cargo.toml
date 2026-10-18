@@ -38,6 +38,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 tower-http = { workspace = true }
+# 帧类型 (src/frames.rs) 与 examples/export_frames.rs 的 TypeScript 契约导出。
+# 前端投影由本出口自己拥有: rpc-api (L4) 不得反向 dev-depend 本 crate (L5)。
+ts-rs = { workspace = true }
 
 [package.metadata.lissio]
 domain = "desktop"

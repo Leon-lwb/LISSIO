@@ -62,8 +62,51 @@ const readText = (path) => readFileSync(path, 'utf8');
 const rel = (path) => relative(repoRoot, path).split(/[\\/]/).join('/');
 const SKIP_DIRS = new Set(['node_modules', '.git', 'target', 'dist', 'output', 'test-results', '.pnpm-store']);
 
+/**
+ * The documentation walk must judge the *tracked* tree.
+ *
+ * `git status` is clean but local scratch space is not: `docs/experiments/` is
+ * gitignored, and a filesystem walk judged the maintainer's untracked files
+ * there as project documentation. The gate was red on that machine and green in
+ * a fresh clone or CI — the same gate meant different things in the two places.
+ * `git ls-files` is the honest list of what the repository actually contains.
+ *
+ * An exported archive or tarball has no `.git`: the command fails and the
+ * original filesystem walk is used instead, with a printed note, so the gate
+ * still runs there instead of crashing.
+ */
+function trackedRelativePaths() {
+  try {
+    return new Set(execFileSync('git', ['-C', repoRoot, 'ls-files', '-z'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+      maxBuffer: 16 * 1024 * 1024,
+    }).split('\0').filter(Boolean));
+  } catch {
+    return null;
+  }
+}
+const TRACKED = trackedRelativePaths();
+if (TRACKED === null) {
+  console.warn(
+    'note: git ls-files failed (not a git checkout); falling back to a filesystem walk, so untracked files are judged too',
+  );
+}
+
 function walk(dir, filter, out = []) {
   if (!existsSync(dir)) return out;
+  if (TRACKED !== null) {
+    const dirRel = rel(dir);
+    const prefix = dirRel === '' ? '' : `${dirRel}/`;
+    for (const trackedPath of TRACKED) {
+      if (!trackedPath.startsWith(prefix)) continue;
+      const full = join(repoRoot, trackedPath);
+      // A tracked file deleted in the working tree is not documentation to read.
+      if (!existsSync(full)) continue;
+      if (filter(trackedPath.slice(prefix.length).split('/').pop(), full)) out.push(full);
+    }
+    return out.sort();
+  }
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isDirectory() && SKIP_DIRS.has(entry.name)) continue;
     const full = join(dir, entry.name);

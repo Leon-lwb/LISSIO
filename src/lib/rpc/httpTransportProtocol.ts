@@ -1,18 +1,22 @@
 //! Web transport wire types and protocol helpers.
+//!
+//! The frame types and protocol constants are generated from the Rust wire
+//! (`backend_server::frames` + `examples/export_frames.rs`) by
+//! `pnpm generate:contracts`; this module only forwards them so the frontend has
+//! exactly one definition. `check:contracts` fails both on drift and on a local
+//! re-declaration of a frame type name.
 
-import type {
-  EventChannel,
-  RpcError,
-  SubscribeOptions,
-} from './types';
+import type { ServerMessage } from '../../types/generated/ServerMessage';
+import type { EventChannel, RpcError, SubscribeOptions } from './types';
 
-/// Binary stream frame header: `[u8 version][u8 format][u32 BE subscription id][u32 BE payload length]`.
-export const BINARY_FRAME_VERSION = 1;
-export const BINARY_FRAME_HEADER = 10;
-
-/// WebSocket subprotocol and bearer-token prefix.
-export const WS_PROTOCOL = 'lissio.v2';
-export const WS_TOKEN_PREFIX = 'bearer.';
+export type { ServerMessage };
+export {
+  BINARY_FRAME_HEADER,
+  BINARY_FRAME_VERSION,
+  PROTOCOL_VERSION,
+  WS_SUBPROTOCOL as WS_PROTOCOL,
+  WS_TOKEN_PREFIX,
+} from '../../types/generated/WebProtocol';
 
 /// Reconnect backoff bounds.
 export const RECONNECT_BASE_MS = 500;
@@ -41,33 +45,14 @@ export function triggerBrowserDownload(blob: Blob, fileName: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-export interface SubscribedMessage { type: 'subscribed'; id: number }
-export interface StreamMessage { type: 'stream'; id: number; payload: unknown }
-export interface EventMessage { type: 'event'; event: string; payload: unknown }
-export interface NotifyMessage {
-  type: 'notify';
-  level: string;
-  message: string;
-  url?: string | null;
-}
-export interface FaultMessage { type: 'fault'; message: string; id?: number | null }
-export interface ChannelMessage { type: 'channel'; id: number; payload: unknown }
-export interface ResponseMessage {
-  type: 'response';
-  id: number;
-  ok: boolean;
-  result?: unknown;
-  error?: unknown;
-}
-export type ServerMessage =
-  | SubscribedMessage
-  | StreamMessage
-  | EventMessage
-  | NotifyMessage
-  | FaultMessage
-  | ChannelMessage
-  | ResponseMessage
-  | { type: string };
+// ---- `ServerMessage` members ----
+//
+// The generated union is the single source of the frame shape; the decoder
+// switches on its `type` discriminants and keeps a `default` branch, so an
+// unknown `type` tag is ignored exactly as before.
+
+/// Fault member — the decoder passes it to `handleFault`.
+export type FaultMessage = Extract<ServerMessage, { type: 'fault' }>;
 
 export interface WebEventChannel<T> extends EventChannel<T> { $channel: number }
 

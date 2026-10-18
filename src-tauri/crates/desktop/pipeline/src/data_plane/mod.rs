@@ -66,6 +66,13 @@ pub(crate) const MAX_RAW_POINTS: usize = 16_000_000;
 /// 数据平面共享状态 (Arc 共享, 仿 GraphEvalState 模式)
 ///
 /// 由 AppState::new 构建, 各字段为 Arc 克隆; 读任务/命令通过 clone 持有。
+// TODO(architecture): 下面这些 `pub` 可变锁字段 (`global_nodes` / `byte_plan` /
+// `protocol_states` / `source_frames` / `source_texts` / `buffers` /
+// `raw_collectors` / `can_buffer` / `can_load_stats` / `logic_buffer` /
+// `decoded_buffer` / `pipeline_config`) 违反 `AGENTS.md:39` 的 "public mutable
+// lock" 规则, 且被其它 crate 直接读取 90 处。审计 M1 (backend B1) 的后续切片是把
+// 它们私有化到意图方法之后; 本次修复只收敛**提交**路径 (见 `commit_lock`), 不做
+// 那次大改造。见 `output/audit-2026-10/ARCHITECTURE-AUDIT.md` 的 M1。
 #[derive(Clone)]
 pub struct DataPlaneState {
     /// 统一设备会话运行时 (node_id → 会话实例)
@@ -117,9 +124,33 @@ pub struct DataPlaneState {
     pub pipeline_config: Arc<RwLock<PipelineConfig>>,
     /// 流水线诊断指标 (2s 窗口)
     metrics: Arc<DataPlaneMetrics>,
+    /// 图提交串行化门 — 由 L3 组合根 (`AppState`) 构造并拥有, 这里只是把它带到
+    /// 每个提交入口 (审计 M1 要求唯一所有者是 `AppState`)。私有 + 访问器: 调用方
+    /// 只能借它, 不能换掉它。
+    commit_lock: Arc<tokio::sync::Mutex<()>>,
 }
 
 impl DataPlaneState {
+    /// 图提交串行化门 — **所有提交入口共用的唯一临界区**。
+    ///
+    /// 版本检查、候选构建与全部状态写入 (`graphs` 由调用方持有,
+    /// `global_nodes` / `byte_plan` / `source_graphs` / `workspace` / 版本号) 必须在
+    /// 同一把 guard 内完成, 两个提交才不可能交错。审计 M1: 提交曾经是跨 guard 的
+    /// 读-改-写, 共享同一 `base_version` 的两个提交都能通过版本检查, 后写的那个会
+    /// 把先写者的节点从工作区运行时索引里抹掉, 而字节平面又是从各自的旧快照重算的。
+    ///
+    /// 所有者是 [`AppState`](app::AppState) (`AppState::commit_lock`), 由它在装配期
+    /// 注入同一把锁 — 提交入口 ([`crate::DataPlaneState`] 的各个消费者) 只拿得到
+    /// 数据平面, 所以锁必须随它一起到达, 两条入口 (axum server / MCP router) 才
+    /// 天然共用。
+    ///
+    /// 用 `tokio::sync::Mutex` 而非 `parking_lot`: 临界区里有 `.await`
+    /// (reconcile / 解码器同步), 同步锁的 guard 跨 await 会让整个提交 future 失去
+    /// `Send`。
+    pub fn commit_lock(&self) -> &tokio::sync::Mutex<()> {
+        self.commit_lock.as_ref()
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         transport: Arc<AcquisitionRuntime>,
@@ -131,6 +162,7 @@ impl DataPlaneState {
         logic_buffer: Arc<Mutex<LogicBuffer>>,
         decoded_buffer: Arc<Mutex<DecodedBuffer>>,
         pipeline_config: Arc<RwLock<PipelineConfig>>,
+        commit_lock: Arc<tokio::sync::Mutex<()>>,
     ) -> Self {
         Self {
             transport,
@@ -158,6 +190,7 @@ impl DataPlaneState {
             decoded_buffer,
             pipeline_config,
             metrics: Arc::new(DataPlaneMetrics::default()),
+            commit_lock,
         }
     }
 

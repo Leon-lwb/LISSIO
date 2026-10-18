@@ -7,6 +7,10 @@
 //! 二进制流帧 (波形 / 包络 / 原始数据) 用独立头部 + 原样 payload:
 //! `[u8 version][u8 format][u32 BE subscription_id][u32 BE payload_len][payload]`,
 //! payload 与桌面 IPC `Channel` 的 `Raw` 逐字节相同, 前端解码器无需分支。
+//!
+//! 帧类型由 `examples/export_frames.rs` 导出到 `src/types/generated`; 前端
+//! (`src/lib/rpc/httpTransportProtocol.ts`) 只导入生成类型, 不再手写第二份。
+//! `pnpm check:contracts` 逐字节比对, 并拒绝前端重新声明同名帧类型。
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -17,7 +21,7 @@ pub const BINARY_FRAME_VERSION: u8 = 1;
 pub const BINARY_FRAME_HEADER: usize = 10;
 
 /// 服务端 → 客户端消息。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ServerMessage {
     /// 后端事件 (`events::BackendEventSink::emit_event`)。
@@ -31,6 +35,7 @@ pub enum ServerMessage {
         /// 产物下载 / 打开链接 (相对当前服务源)。只有导出类通知携带 —
         /// 浏览器无法落盘, 只能靠链接把文件交给用户。
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
         url: Option<String>,
     },
     /// JSON 显示流推送 (`StreamPayload::Json` 的解析结果)。
@@ -46,8 +51,10 @@ pub enum ServerMessage {
         id: Value,
         ok: bool,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
         result: Option<Value>,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
         error: Option<Value>,
     },
     /// 协议级错误 (帧无法解析 / 订阅命令非法)。
@@ -57,6 +64,7 @@ pub enum ServerMessage {
     Fault {
         message: String,
         #[serde(skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
         id: Option<u32>,
     },
 }
@@ -84,7 +92,7 @@ impl ServerMessage {
 /// 订阅 **不带 id**: id 由服务端在进程级命名空间分配并通过
 /// [`ServerMessage::Subscribed`] 回执下发。`app::display` 的订阅表是全局的,
 /// 让客户端自选 id 会在多连接间互相踢掉订阅。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ts_rs::TS)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum ClientMessage {
     /// 建立显示订阅 — `args` 为 `subscribe_data` 的帧内参数。
@@ -104,7 +112,7 @@ pub enum ClientMessage {
 }
 
 /// 单条 HTTP-RPC 请求 (支持数组批量提交)。
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, ts_rs::TS)]
 pub struct RpcRequest {
     /// 调用方自定义关联 id (回显)。
     #[serde(default)]
@@ -115,13 +123,15 @@ pub struct RpcRequest {
 }
 
 /// 单条 HTTP-RPC 响应。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 pub struct RpcResponse {
     pub id: Value,
     pub ok: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub result: Option<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
     pub error: Option<Value>,
 }
 
@@ -148,7 +158,7 @@ impl RpcResponse {
 }
 
 /// `/api/v1/capabilities` 响应 — 前端据此隐藏本出口不支持的 UI。
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ts_rs::TS)]
 pub struct Capabilities {
     /// 本出口已实现的命令名。
     pub supported: Vec<String>,

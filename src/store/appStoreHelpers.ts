@@ -17,7 +17,7 @@ import type {
 } from '../lib/tauri/tauri';
 import { notify } from '../lib/tauri/notifications';
 import { nodeError } from '../lib/tauri/errorGuidance';
-import { parseNodeError } from '../types/errors';
+import { GRAPH_VERSION_CONFLICT_KIND, type RpcErrorData } from '../lib/rpc/types';
 import { translate } from '../i18n';
 import { widgetInputValue } from '../lib/utils/widgetValue';
 import type {
@@ -116,7 +116,7 @@ async function doSyncTabGraphOnce(
     return undefined;
   } catch (err) {
     // 版本冲突: 期间有其他写入方 (拓扑 op / MCP) — 拉权威源图采纳合并后重试一次
-    if (allowConflictRetry && isVersionConflictError(err)) {
+    if (allowConflictRetry && parseGraphVersionConflict(err) !== null) {
       const source = await api.getSourceGraph(tabId).catch(() => null);
       if (source) {
         adoptSourceGraph(source);
@@ -134,14 +134,22 @@ async function doSyncTabGraphOnce(
   }
 }
 
-/// 后端 IPC 错误是否为图版本冲突 (GraphVersionConflict)
-function isVersionConflictError(err: unknown): boolean {
-  const data =
-    err !== null && typeof err === 'object'
-      ? ((err as Record<string, unknown>).data as { current?: unknown } | null)
-      : null;
-  if (data?.current != null) return true;
-  return parseNodeError(err).message.includes('版本冲突');
+/// 图版本冲突判定结果 — `current` = 后端信封 `data.current` (后端权威版本,
+/// 缺失或非标量时为 null), 仅用于诊断; 重试本身以权威源图收敛。
+export interface GraphVersionConflictInfo {
+  current: string | number | null;
+}
+
+/// 把后端 RPC 错误解析为图版本冲突 — 按稳定 `kind`
+/// (`ConfigError::GraphVersionConflict` 的 `Error::kind()`) 判定, 不再匹配
+/// 本地化文案: 文案改写或翻译不得改变重试语义。缺失 `data` 时仍判定为冲突
+/// (`current` 退化为 null), 因为该 kind 专用于冲突。
+export function parseGraphVersionConflict(err: unknown): GraphVersionConflictInfo | null {
+  if (err === null || typeof err !== 'object') return null;
+  const { kind, data } = err as { kind?: unknown; data?: RpcErrorData };
+  if (kind !== GRAPH_VERSION_CONFLICT_KIND) return null;
+  const current = data?.current;
+  return { current: typeof current === 'string' || typeof current === 'number' ? current : null };
 }
 
 // ---- graph:source 事件采纳 (画布 = 投影) ----

@@ -132,12 +132,16 @@ fn settle_ok(state: &mut super::HubState) -> bool {
     true
 }
 
-/// 处置一次写入错误: 丢弃类返回 `Ok(false)`, 只有契约类才返回 `Err`。
+/// 处置一次写入错误: 丢弃类与「不可用」类都返回 `Ok(false)`, 只有契约类才
+/// 返回 `Err`。
+///
+/// 「不可用」必须返回 `Ok(false)`: 字节路由把 `Err` 读成「契约已破, 停止处理
+/// 本批」并提前返回 — 对一个从未建立起来的录制来说那是错的, 采集侧的字节
+/// 路由必须照常走完 (只是没有录制)。
 fn settle_err(state: &mut super::HubState, error: RecordingError) -> Result<bool, RecordingError> {
     apply(state, &error);
-    if classify(&error) == FailureClass::Dropped {
-        Ok(false)
-    } else {
-        Err(error)
+    match classify(&error) {
+        FailureClass::Dropped | FailureClass::Unavailable => Ok(false),
+        FailureClass::Contract => Err(error),
     }
 }

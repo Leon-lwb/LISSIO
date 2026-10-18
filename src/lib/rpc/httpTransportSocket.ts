@@ -11,15 +11,9 @@ import {
   isTerminalChannelPayload,
   rpcFailure,
   toError,
-  type ChannelMessage,
-  type EventMessage,
   type FaultMessage,
-  type NotifyMessage,
   type PendingCall,
-  type ResponseMessage,
   type ServerMessage,
-  type StreamMessage,
-  type SubscribedMessage,
   type SubscriptionRecord,
   type WebEndpoint,
   type WebEventChannel,
@@ -187,6 +181,8 @@ export class HttpTransportConnection {
     }
   }
 
+  /// 帧解码 — `ServerMessage` 是生成的判别联合, 每个 `case` 已按 `type` 收窄;
+  /// 线上出现本版本不认识的新帧时落到 `default` 静默忽略 (与旧的手写联合一致)。
   protected handleText(text: string): void {
     let message: ServerMessage;
     try {
@@ -197,52 +193,49 @@ export class HttpTransportConnection {
     }
     switch (message.type) {
       case 'subscribed':
-        this.handleSubscribed((message as SubscribedMessage).id);
+        this.handleSubscribed(message.id);
         break;
-      case 'stream': {
-        const stream = message as StreamMessage;
-        this.established.get(stream.id)?.sink(stream.payload);
+      case 'stream':
+        this.established.get(message.id)?.sink(message.payload);
         break;
-      }
       case 'event': {
-        const event = message as EventMessage;
-        const handlers = this.listeners.get(event.event);
+        const handlers = this.listeners.get(message.event);
         if (!handlers) break;
-        for (const handler of [...handlers]) handler(event.payload);
+        for (const handler of [...handlers]) handler(message.payload);
         break;
       }
-      case 'channel': {
-        const channel = message as ChannelMessage;
-        this.eventChannels.get(channel.id)?.onmessage?.(channel.payload);
-        if (isTerminalChannelPayload(channel.payload)) this.eventChannels.delete(channel.id);
+      case 'channel':
+        this.eventChannels.get(message.id)?.onmessage?.(message.payload);
+        if (isTerminalChannelPayload(message.payload)) this.eventChannels.delete(message.id);
         break;
-      }
       case 'response': {
-        const response = message as ResponseMessage;
-        const call = this.socketCalls.get(response.id);
+        // 服务端回显调用方 id (`JsonValue`); 本 transport 只发数值 id,
+        // 非数值回显不可能对应任何在途调用, 直接丢弃。
+        const id = message.id;
+        if (typeof id !== 'number') break;
+        const call = this.socketCalls.get(id);
         if (!call) break;
-        this.socketCalls.delete(response.id);
-        if (response.ok) call.resolve(response.result);
-        else call.reject(response.error ?? rpcFailure('Unknown', 'WebSocket RPC 调用失败'));
+        this.socketCalls.delete(id);
+        if (message.ok) call.resolve(message.result);
+        else call.reject(message.error ?? rpcFailure('Unknown', 'WebSocket RPC 调用失败'));
         break;
       }
       case 'notify': {
-        const notify = message as NotifyMessage;
         // 应用内提示 (含导出下载链接) 由订阅方渲染 — transport 不认识 UI。
         const notification: ServerNotification = {
-          level: notify.level,
-          message: notify.message,
-          url: notify.url ?? null,
+          level: message.level,
+          message: message.message,
+          url: message.url ?? null,
         };
         if (this.serverNotifyHandlers.size === 0) {
-          console.warn(`[web] 后端通知 (${notify.level}): ${notify.message}`);
+          console.warn(`[web] 后端通知 (${message.level}): ${message.message}`);
           break;
         }
         for (const handler of [...this.serverNotifyHandlers]) handler(notification);
         break;
       }
       case 'fault':
-        this.handleFault(message as FaultMessage);
+        this.handleFault(message);
         break;
       default:
         // `unsubscribed` / `response` 不需要处理: 取消是本地登记, 命令走 HTTP。

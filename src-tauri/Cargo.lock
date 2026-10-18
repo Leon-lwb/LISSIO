@@ -3741,6 +3741,7 @@ dependencies = [
 name = "lissio-backend-host"
 version = "0.9.0"
 dependencies = [
+ "getrandom 0.3.4",
  "lissio-acquisition",
  "lissio-ai-host",
  "lissio-app",
@@ -3793,13 +3794,13 @@ dependencies = [
  "serde_json",
  "tokio",
  "tower-http",
+ "ts-rs",
 ]
 
 [[package]]
 name = "lissio-buffer-graph"
 version = "0.9.0"
 dependencies = [
- "lissio-data-model",
  "serde",
  "serde_json",
 ]

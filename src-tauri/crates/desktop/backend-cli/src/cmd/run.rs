@@ -52,16 +52,15 @@ pub async fn run_control(host: &Host, action: &CliRunAction) -> Result<Value, St
 /// 事件端口由各出口自行注入: Web 出口用广播端口 (推给所有连接), 纯 MCP 模式
 /// 沿用 stderr JSON-lines。装配本体与 GUI 组合根同源 (`backend-host`)。
 pub async fn serve(options: ServeOptions) -> Result<(), String> {
+    // 与 `lissio-server` 同一份端口决策: 显式参数 > `LISSIO_MCP_PORT` >
+    // `settings.json` 的 `app.ai.mcpServerPort` > 默认端口。配置目录先解析一次,
+    // 端口决策与 `ServerConfig::resolve` 使用同一个目录。
+    let config_dir = backend_host::resolve_config_dir(None);
+    let mcp_port = mcp_server::resolve_mcp_port(options.mcp_port, options.no_mcp, || {
+        backend_host::SettingsStore::new(&config_dir).mcp_server_port()
+    });
+
     if !options.no_http {
-        let mcp_port = if options.no_mcp {
-            None
-        } else {
-            Some(
-                options
-                    .mcp_port
-                    .unwrap_or_else(|| mcp_server::resolve_port(None)),
-            )
-        };
         let config = backend_server::ServerConfig::resolve(
             options.bind,
             options.http_port,
@@ -71,14 +70,17 @@ pub async fn serve(options: ServeOptions) -> Result<(), String> {
             options.cors_origins,
             mcp_port,
             !options.no_restore,
-            None,
+            Some(config_dir),
         )?;
         return backend_server::serve(config).await;
     }
 
-    // 旧行为: 仅 MCP (事件走 stderr JSON-lines)
+    // 仅 MCP (事件走 stderr JSON-lines)。`--no-mcp` 在这里同样生效: 两个出口都
+    // 被关掉时明确报错, 而不是静默启动 MCP。
+    let Some(port) = mcp_port else {
+        return Err("--no-http 与 --no-mcp 同时给出: 没有可启动的出口".to_string());
+    };
     let host = crate::assemble(!options.no_restore).await?;
-    let port = mcp_server::resolve_port(options.mcp_port);
     let handle = mcp_server::start(
         std::sync::Arc::new(control_api::capabilities::CapabilityRegistry::builtin()),
         host.state.clone(),

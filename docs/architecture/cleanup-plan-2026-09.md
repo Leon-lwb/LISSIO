@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-11
+last-reviewed: 2026-10-17
 applies-to: Open structural debt inherited from the September 2026 architecture review
 -->
 
@@ -64,7 +64,11 @@ port-domain defects that the abstraction survey ranked highest.
 - `data_model::{now_us, now_ms, now_ns}` are the only time helpers.
 - `pipeline::runtime::AdaptiveRate` is the only adaptive-rate implementation;
   `stream` re-exports it.
-- `backend_host::random_hex` is the only token generator.
+- Token minting has two call sites, both drawing from the OS CSPRNG
+  (`getrandom`): `backend_host::random_hex` backs the standalone server bearer
+  token, and `src-tauri/src/sidecar.rs` mints the desktop shell's sidecar
+  environment token inline because the shell does not depend on
+  `backend-host`. No third generator exists.
 - `RuntimeLimits` derives from `PipelineConfig` instead of copying four fields.
 - `control-api::Toolbox` is a handle alias for `Arc<AppState>`; the 17-field
   mirror, its `from_state` copies, and `BackendHost::toolbox` are gone, so every

@@ -53,6 +53,22 @@ fn app_error_kind_for_each_variant() {
     );
 }
 
+/// 图版本冲突必须带独立稳定 kind (前端乐观并发重试据此分支, 不匹配文案),
+/// 其余配置错误保持 "Config"。
+#[test]
+fn graph_version_conflict_has_dedicated_kind_and_current_field() {
+    let conflict = AppError::Config(ConfigError::GraphVersionConflict { current: 9 });
+    assert_eq!(conflict.kind(), "GraphVersionConflict");
+    assert_eq!(
+        conflict.data_fields().get("current").map(String::as_str),
+        Some("9")
+    );
+    assert_eq!(
+        AppError::Config(ConfigError::AutoBindingMissingProtocolNode).kind(),
+        "Config"
+    );
+}
+
 #[test]
 fn app_error_status_codes() {
     let port_err = PortNotFoundError { port: "x".into() };

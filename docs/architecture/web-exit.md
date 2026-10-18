@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-17
 applies-to: lissio.web.v2 HTTP/WebSocket protocol and Web delivery boundary
 -->
 Desktop and browser business calls enter the same `lissio-server` through
@@ -42,12 +42,16 @@ MCP, built-in tools, and write-only secret ports.
 ```jsonc
 { "id": 1, "cmd": "update_tab_graph", "args": { "tabId": "t1", "documents": [], "edges": [], "baseVersion": 7 } }
 { "id": 1, "ok": true, "result": { "nodes": [] } }
-{ "id": 1, "ok": false, "error": { "kind": "GraphVersionConflict", "message": "..." } }
+{ "id": 1, "ok": false, "error": { "kind": "GraphVersionConflict", "message": "图版本冲突: 基线过期 (后端当前 v8)", "data": { "current": "8" } } }
 ```
 
 Command names match the existing invoke surface. Top-level camelCase arguments
 are normalized to snake_case; nested serde DTOs own their field names. Errors
-preserve stable `kind` and message.
+preserve the stable `kind` and message of the domain error and flatten its
+structured fields into one `data` object (`data.current` for the version
+conflict); the payload never nests `data.data`. A whole-graph commit whose
+`baseVersion` is stale answers with the dedicated `GraphVersionConflict` kind,
+which the frontend uses to fetch the authoritative source graph and retry.
 
 ### WebSocket
 
@@ -79,8 +83,17 @@ WWB1, VNDP, and VENV therefore require no host-specific recoding.
 | `GET/PUT /api/v1/settings` | Current settings file and shape |
 | `GET /api/v1/health` | Unauthenticated health check |
 | `GET /api/v1/handshake` | Version, protocol, instance, and capabilities |
-| `GET /api/v1/capabilities` | Supported, pending, desktop-only, and protocol |
-| `--static-dir` | Host the Web bundle with SPA fallback |
+| `GET /api/v1/capabilities` | Supported, pending, desktop-only, and protocol (authenticated) |
+| other `/api/*` | JSON error envelope with a 404 — never the SPA bundle |
+| `--static-dir` | Host the Web bundle with SPA fallback for non-API paths |
+
+Every route above except `GET /api/v1/health` requires the access token, including
+`/api/v1/capabilities`: the command lists are reconnaissance, and the
+authenticated `handshake` already carries the same `capabilities` object, so the
+unauthenticated route has no caller. A path under `/api/` that matches no route
+answers the JSON error envelope (`{ "ok": false, "error": { "kind": "NotFound",
+… } }`) with a 404 instead of falling through to the SPA `index.html`; the SPA
+fallback still serves non-API deep links.
 
 | Option | Environment | Default |
 | --- | --- | --- |
@@ -94,13 +107,15 @@ WWB1, VNDP, and VENV therefore require no host-specific recoding.
 
 The MCP listener port resolves as explicit flag > `LISSIO_MCP_PORT` >
 `settings.json` (`app.ai.mcpServerPort`, the "Local MCP Port" field in the AI
-settings) > `8765`. The settings layer is why the Desktop sidecar listens on the
-configured port instead of an OS-assigned one: the Tauri shell passes no
-`--mcp-port`, and `lissio-server` reads the same `settings.json` it was given as
-its config directory. `mcp_port_check` reports whether a candidate port is
-bindable, who holds it, and a free alternative; a port that cannot be bound stops
-only the MCP listener — the Web exit still starts and `mcp_server_status` carries
-the conflict so the UI can offer changing the port or stopping MCP.
+settings) > `8765`. Both roots call the same resolver
+(`mcp_server::resolve_mcp_port`), so `backend-cli serve` honours the settings
+layer exactly like `lissio-server`. The settings layer is why the Desktop sidecar
+listens on the configured port instead of an OS-assigned one: the Tauri shell
+passes no `--mcp-port`, and `lissio-server` reads the same `settings.json` it was
+given as its config directory. `mcp_port_check` reports whether a candidate port
+is bindable, who holds it, and a free alternative; a port that cannot be bound
+stops only the MCP listener — the Web exit still starts and `mcp_server_status`
+carries the conflict so the UI can offer changing the port or stopping MCP.
 
 ## Settings and onboarding
 
@@ -199,8 +214,8 @@ backend-cli devices|send|inject|endpoint|graph|data|snapshot|frame|run|record
   resubscription.
 - Playwright runs against a real `lissio-server` and covers diagnostics,
   handshake, wrong tokens, unreachable network, and query-token cleanup.
-- Manual smoke commands use `/api/v1/health`, `/api/v1/capabilities`, and
-  `/api/v1/rpc`, plus the equivalent `backend-cli rpc` path.
+- Manual smoke commands use `/api/v1/health`, `/api/v1/capabilities` (with the
+  bearer token), and `/api/v1/rpc`, plus the equivalent `backend-cli rpc` path.
 
 ## Current boundaries
 

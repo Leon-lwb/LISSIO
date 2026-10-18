@@ -85,20 +85,41 @@ impl RecordingHub {
     /// 卡住的 writer (应答超时) 会被摘除并报「不可用」— 继续持有它只会把
     /// 换库与运行控制一起拖死, 而采集本身不该为磁盘陪葬。
     pub(super) fn note_failure(&self, error: &RecordingError) {
+        // 死在受理任何批次之前的 writer: 没有任何已受理批次, 契约完好。
+        // 控制往返看到的 `Closed` / 超时都只是那个事实的副产品, 一律按
+        // 「不可用」处置, 并保留 bootstrap 阶段的真实原因。
+        if let Some(reason) = self.writer_bootstrap_failure() {
+            self.detach_unavailable(reason);
+            return;
+        }
         match classify(error) {
             FailureClass::Contract => {
                 self.state.write().fault = contract_fault(error);
             }
             FailureClass::Unavailable => {
-                // 摘除在锁外进行: Arc 的 Drop 会跑有界 shutdown, 不能持锁。
-                let wedged = self.state.write().recorder.take();
-                drop(wedged);
-                let mut state = self.state.write();
-                state.fault = None;
-                state.unavailable = Some(error.to_string());
+                self.detach_unavailable(error.to_string());
             }
             FailureClass::Dropped => {}
         }
+    }
+
+    /// 受理任何批次之前就失败的 writer 的真实原因 (没有则为 `None`)。
+    fn writer_bootstrap_failure(&self) -> Option<String> {
+        self.state
+            .read()
+            .recorder
+            .as_ref()
+            .and_then(|recorder| recorder.unavailable())
+    }
+
+    /// 摘除在册 writer 并登记「录制不可用」原因 — 采集照常, 但用户必须看得见
+    /// 没有录制。摘除在锁外进行: `Arc` 的 `Drop` 会跑有界 shutdown, 不能持锁。
+    fn detach_unavailable(&self, reason: String) {
+        let detached = self.state.write().recorder.take();
+        drop(detached);
+        let mut state = self.state.write();
+        state.fault = None;
+        state.unavailable = Some(reason);
     }
 
     #[must_use]
@@ -122,6 +143,14 @@ impl RecordingHub {
         if health.failed.is_none() {
             health.failed.clone_from(&state.unavailable);
         }
+        // writer 死在受理任何批次之前: 那一段录制从未建立, 原因只在 recorder 的
+        // 非故障通道里 — 仍然必须可见 (它**不是** `fault`, 不停采集)。
+        if health.failed.is_none() {
+            health.failed = state
+                .recorder
+                .as_ref()
+                .and_then(|recorder| recorder.unavailable());
+        }
         health
     }
 
@@ -134,6 +163,13 @@ impl RecordingHub {
     pub(super) fn unavailable_error(&self) -> RecordingError {
         let state = self.state.read();
         if let Some(reason) = state.unavailable.clone() {
+            return RecordingError::Unavailable(reason);
+        }
+        if let Some(reason) = state
+            .recorder
+            .as_ref()
+            .and_then(|recorder| recorder.unavailable())
+        {
             return RecordingError::Unavailable(reason);
         }
         if !state.enabled {
@@ -150,6 +186,13 @@ impl RecordingHub {
         }
         let state = self.state.read();
         if let Some(reason) = state.unavailable.clone() {
+            return RecordingError::Unavailable(reason);
+        }
+        if let Some(reason) = state
+            .recorder
+            .as_ref()
+            .and_then(|recorder| recorder.unavailable())
+        {
             return RecordingError::Unavailable(reason);
         }
         if let Some(reason) = state

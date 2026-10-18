@@ -113,6 +113,11 @@ pub enum PanelResolveReason {
 
 impl Error for ConfigError {
     fn kind(&self) -> &'static str {
-        "Config"
+        match self {
+            // 图版本冲突是唯一携带乐观并发重试语义的配置错误 — 独立稳定 kind,
+            // 前端据此重试 (不依赖文案); 其余配置错误共用 "Config"。
+            Self::GraphVersionConflict { .. } => "GraphVersionConflict",
+            _ => "Config",
+        }
     }
 }

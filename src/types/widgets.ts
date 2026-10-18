@@ -4,6 +4,8 @@ import type {
   MathConfig, FilterConfig, FFTConfig, IFFTConfig, SpectrumConfig, Model3DConfig, WidgetBinding, StrOp,
 } from './common';
 import type { CommandConfig, FrameDecoderConfig, TableViewConfig } from './frameDecoder';
+import type { TriggerMatchType } from './generated/TriggerMatchType';
+import type { TriggerRule } from './generated/TriggerRule';
 
 export interface WidgetBaseConfig {
   id: string;
@@ -199,23 +201,10 @@ export interface StrConfig {
   tmpl?: string;
 }
 
-/// 触发器匹配类型 — 与后端 TriggerMatchType 对齐
-export type TriggerMatchType = 'exact' | 'prefix' | 'contains' | 'regex' | 'range' | 'glob';
-
-/// 触发器单条规则
-export interface TriggerRule {
-  id: string;                        // nanoid(6), 前端 React key 用
-  pattern: string;                   // 命令模板 (字符串 / 正则 / 范围 / glob)
-  matchType: TriggerMatchType;
-  /// 输出值类型: 'number' (写入 value 端口) | 'string' (写入 text 端口)
-  outputType: 'number' | 'string';
-  /// 数字输出值 (outputType='number' 时使用)
-  outputValue: number;
-  /// 字符串输出值 (outputType='string' 时使用)
-  outputText: string;
-  flags?: string;                    // 正则 flags, 如 'i' / 'im'
-  enabled: boolean;
-}
+/// 触发器匹配类型与单条规则 — 唯一来源是 Rust wire 生成的类型
+/// (`src/types/generated/TriggerMatchType.ts` / `TriggerRule.ts`,
+/// `check:contracts` 阻止漂移); 这里只转发, 前端不再手写第二份声明。
+export type { TriggerMatchType, TriggerRule };
 
 /// 触发器控件 — 命令字符串 → 输出通道数据
 ///
