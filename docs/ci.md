@@ -247,6 +247,29 @@ pnpm check:ci-gates
 `pnpm gates --list --set pr` prints the PR surface; `--set full` prints
 everything; `--json` is available for tooling.
 
+### Gates the registry does not own
+
+The registry describes this repository's gates. The split also gave every repository
+its own documentation gate, because a document is checked where it is written:
+
+| Repository | Command |
+| --- | --- |
+| umbrella (this checkout) | `pnpm check:docs` |
+| `server/`, `server/core/`, `server/physical/`, `server/data/` | `node scripts/check-docs.mjs` |
+| `client/` | `pnpm check:docs` |
+
+The five copies are byte-identical and each judges only the tree it lives in, so
+none of them needs another repository to be present. That is also why the umbrella's
+copy does not descend into `server/` or `client/`: in a superproject `git ls-files`
+reports a submodule as a single entry rather than as the paths inside it, and the
+ownership rule is one repository, one document gate. Each copy checks the
+`<!-- lissio-doc -->` metadata, the `docs/README.md` index, every relative link, and
+the license fields of the Cargo workspaces rooted in its own repository.
+
+The cross-repository gates in the table above are a different matter: they read
+several repositories at once through `scripts/repo-root.mjs`, so they run here, in
+the only checkout where all five are present.
+
 ## Local equivalents
 
 | Purpose | Command |

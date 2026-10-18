@@ -11,9 +11,9 @@ verdict: passed-with-conditions
 
 Reviewed the documentation outcome of the database backend investigation and the
 recording store port extraction: the new authoritative document
-[`architecture/database-backend-plan.md`](../../architecture/database-backend-plan.md),
+[`server/docs/architecture/database-backend-plan.md`](../../../server/docs/architecture/database-backend-plan.md),
 its registration in [`../README.md`](../README.md), the recording-boundary
-statement in [`architecture/crates.md`](../../architecture/crates.md), and the
+statement in [`server/docs/architecture/crates.md`](../../../server/docs/architecture/crates.md), and the
 benchmark and build-cost measurements the plan cites. The port extraction itself
 changed Rust source under `src-tauri/crates/data/recording`; it is recorded here
 only as the fact the architecture statement describes.

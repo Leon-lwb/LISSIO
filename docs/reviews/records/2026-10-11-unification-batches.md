@@ -110,7 +110,7 @@ survey:
 
 - The two L4 adapters, the double decoder-block parser, the duplicate trigger and
   command-frame DTOs, the byte pump, `Toolbox`, and the parallel stream sinks
-  remain open in [`../../architecture/cleanup-plan-2026-09.md`](../../architecture/cleanup-plan-2026-09.md);
+  remain open in [`server/docs/architecture/cleanup-plan-2026-09.md`](../../../server/docs/architecture/cleanup-plan-2026-09.md);
   each needs its own contract decision before implementation.
 - The `AiError` unused import and the `TestRuntime` dead-code warning predate
   this change and stay outside it.

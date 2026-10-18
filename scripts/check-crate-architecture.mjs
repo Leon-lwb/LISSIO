@@ -16,8 +16,12 @@
  *
  * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the repository
  * the script runs in — `server/` inside the umbrella, the repository itself inside a copy —
- * and `--root=<path>` selects another checkout. `docs/architecture/crates.md` and
- * `scripts/lower-layer-external-dependencies.json` are read below that same root.
+ * and `--root=<path>` selects another checkout. The two files this gate reads do not live
+ * below the same root, because they belong to different repositories: the documented layer
+ * matrix `docs/architecture/crates.md` is owned by the Rust repository, so it is resolved
+ * below the workspace root, while the reviewed external-dependency baseline
+ * `scripts/lower-layer-external-dependencies.json` belongs to the repository that owns this
+ * gate and stays below the repository root.
  *
  * Usage:
  *   pnpm check:architecture [--root=<path>]
@@ -45,7 +49,14 @@ const WORKSPACE_ROOTS = rustWorkspaceRoots(root);
 const WORKSPACE_MANIFESTS = new Set(WORKSPACE_ROOTS.map((workspace) => path.join(workspace, 'Cargo.toml')));
 /** Every directory a member crate may sit under, `<domain>/<crate>` deep. */
 const CRATE_ROOTS = rustSourceRoots(workspaceRoot).map((scanRoot) => path.join(workspaceRoot, scanRoot));
-const LAYER_TABLE_DOC = path.join(root, 'docs', 'architecture', 'crates.md');
+/**
+ * The documented layer matrix is owned by the Rust repository, not by the umbrella: inside
+ * the umbrella it lives at `server/docs/architecture/crates.md`, and inside a copy of this
+ * gate in the `server` repository the workspace root *is* the repository root, so the suffix
+ * below is the same. Hard-coding the umbrella-relative path here would break the moment the
+ * document moves to the repository that owns it — which is what happened.
+ */
+const LAYER_TABLE_DOC = path.join(workspaceRoot, 'docs', 'architecture', 'crates.md');
 const EXTERNAL_DEPENDENCY_BASELINE = path.join(root, 'scripts', 'lower-layer-external-dependencies.json');
 const BASELINE_DESCRIPTION =
   'Reviewed external (crates.io) dependencies of L0-L3 crates. Lower layers may depend only on ' +

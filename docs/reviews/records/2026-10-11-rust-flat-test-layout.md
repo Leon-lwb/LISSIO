@@ -25,7 +25,7 @@ adding directories:
   `#[cfg(test)] #[path = "<file>"] mod <name>;`; the `#[path]` attribute keeps
   the `use super::*` chain, so no test needed a visibility change;
 - the rewritten Test layout section of
-  [`../../architecture/crates.md`](../../architecture/crates.md), and the
+  [`server/docs/architecture/crates.md`](../../../server/docs/architecture/crates.md), and the
   test-only-directory rule in
   [`../../../scripts/check-crate-architecture.mjs`](../../../scripts/check-crate-architecture.mjs).
 

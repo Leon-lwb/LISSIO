@@ -163,7 +163,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:tokens'],
     tier: 'pr',
-    why: 'color/opacity token unification plus the frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`',
+    why: 'color/opacity token unification plus the frosted-glass structural budget; see `client/docs/architecture/ui-color-tokens.md`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -334,7 +334,7 @@ export const GATES = [
     // of them in a workflow or a document.
     aliases: [['pnpm', 'perf:check']],
     tier: 'full',
-    why: 'measures per-frame cost in a real browser, then compares against the committed baseline; counts per frame, never wall-clock fps. `pnpm perf:baseline` overwrites the baseline and is only for an intended change; see `docs/performance/frontend-render-budget.md`',
+    why: 'measures per-frame cost in a real browser, then compares against the committed baseline; counts per frame, never wall-clock fps. `pnpm perf:baseline` overwrites the baseline and is only for an intended change; see `client/docs/performance/frontend-render-budget.md`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {

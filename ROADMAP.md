@@ -27,7 +27,7 @@ Lissio currently provides:
   documentation, performance, and license gates.
 
 Validated boundaries, including real PLC and multi-vendor hardware coverage,
-are documented in `docs/architecture/industrial-protocol-integration.md` and
+are documented in `server/docs/architecture/industrial-protocol-integration.md` and
 review records.
 
 ## Release and compliance work
@@ -54,7 +54,7 @@ sell a separate commercial license.
 ## Industrial protocols
 
 Current adapters and evidence are listed in
-`docs/architecture/industrial-protocol-integration.md`. Candidate protocols must
+`server/docs/architecture/industrial-protocol-integration.md`. Candidate protocols must
 pass licensing, dependency health, cross-platform, interoperability, and
 failure-recovery review before becoming supported features.
 

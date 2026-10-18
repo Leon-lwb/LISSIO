@@ -46,7 +46,7 @@ stays in sync with the registry, CI, and the other documents.
 - [ ] `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
 - [ ] `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
 - [ ] `pnpm test` — the gate scripts and packaging helpers the umbrella owns keep their own unit tests, so a gate regression is caught by the suite that covers it
-- [ ] `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
+- [ ] `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `client/docs/architecture/ui-color-tokens.md`
 - [ ] `pnpm check:motion` — every `transition`/`@keyframes` property stays on the paint layer; layout animations run in C++ and are invisible to the browser probe, so only a static check can catch them
 - [ ] `pnpm check:layers` — frontend implementation/interaction/effects/view layers must not cross their boundaries
 - [ ] `pnpm check:docs` — LICENSE/NOTICE integrity, license fields across the workspace, documentation index and links, translation metadata, and review-record metadata; see `docs/governance/`
@@ -74,7 +74,7 @@ stays in sync with the registry, CI, and the other documents.
 
 - [ ] `pnpm build:web` — production frontend build; catches bundling errors that type checking cannot see
 - [ ] `pnpm test:e2e` — browser smoke tests; install with `pnpm exec playwright install --with-deps chromium`
-- [ ] `bash scripts/perf-gate.sh` — measures per-frame cost in a real browser, then compares against the committed baseline; counts per frame, never wall-clock fps. `pnpm perf:baseline` overwrites the baseline and is only for an intended change; see `docs/performance/frontend-render-budget.md`
+- [ ] `bash scripts/perf-gate.sh` — measures per-frame cost in a real browser, then compares against the committed baseline; counts per frame, never wall-clock fps. `pnpm perf:baseline` overwrites the baseline and is only for an intended change; see `client/docs/performance/frontend-render-budget.md`
 
 **Rust (slow: complete flow only)**
 

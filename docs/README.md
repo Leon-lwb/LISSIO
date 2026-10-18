@@ -13,6 +13,20 @@ Simplified Chinese translation at [`../README.zh-CN.md`](../README.zh-CN.md).
 
 Historical review records preserve their original language and facts.
 
+Documentation is owned by the repository that owns the facts. This index covers what
+the umbrella repository owns — the project surface, the licensing and documentation
+policy, the review archive, and the cross-repository CI. Each other repository
+indexes its own tree:
+
+| Repository | Index | What it documents |
+| --- | --- | --- |
+| umbrella (this checkout) | this file | project surface, governance, reviews, cross-repository CI |
+| `server/` | [`../server/docs/README.md`](../server/docs/README.md) | crate ownership and dependency direction, exits and wire protocol, storage backend, shared model catalog |
+| `server/core/` | [`../server/core/docs/README.md`](../server/core/docs/README.md) | the L0 contract and L1 protocol crate boundary |
+| `server/physical/` | [`../server/physical/docs/README.md`](../server/physical/docs/README.md) | device topology, industrial protocol integration, Modbus capability cards |
+| `server/data/` | [`../server/data/docs/README.md`](../server/data/docs/README.md) | the published data suite's API and its byte, record, evaluation, and storage planes |
+| `client/` | [`../client/docs/README.md`](../client/docs/README.md) | frontend layers, color and motion tokens, Linux and Windows rendering, render budget |
+
 ## Project and governance
 
 | Document | Purpose |
@@ -41,37 +55,6 @@ Historical review records preserve their original language and facts.
 | [governance/documentation-standards.md](governance/documentation-standards.md) | Language, placement, metadata, and maintenance |
 | [governance/document-review.md](governance/document-review.md) | Review triggers, process, and records |
 
-## Architecture
-
-| Document | Purpose |
-| --- | --- |
-| [architecture/crates.md](architecture/crates.md) | Domains, layers, ownership, and dependencies |
-| [architecture/architecture-review-2026-09.md](architecture/architecture-review-2026-09.md) | September 2026 architecture conclusions |
-| [architecture/cleanup-plan-2026-09.md](architecture/cleanup-plan-2026-09.md) | Remaining structural debt |
-| [architecture/data-plane.md](architecture/data-plane.md) | Byte, record, evaluation, and storage planes |
-| [architecture/database-backend-plan.md](architecture/database-backend-plan.md) | Recording storage engine selection and backend adapters |
-| [architecture/device-tree.md](architecture/device-tree.md) | Device topology and driver/runtime contracts |
-| [architecture/exits.md](architecture/exits.md) | UI, Web, MCP, and CLI exits |
-| [architecture/web-exit.md](architecture/web-exit.md) | HTTP/WebSocket wire protocol |
-| [architecture/backend-model-catalog-plan.md](architecture/backend-model-catalog-plan.md) | Shared model catalog and wire generation |
-| [architecture/shared-model-inventory.md](architecture/shared-model-inventory.md) | Shared model ownership inventory |
-| [architecture/shared-model-catalog-progress.md](architecture/shared-model-catalog-progress.md) | Current catalog implementation |
-| [architecture/industrial-protocol-integration.md](architecture/industrial-protocol-integration.md) | Industrial adapters and evidence |
-| [architecture/modbus-capability-cards.md](architecture/modbus-capability-cards.md) | Modbus capability projection |
-| [architecture/ui-layers.md](architecture/ui-layers.md) | Frontend dependency layers |
-| [architecture/ui-color-tokens.md](architecture/ui-color-tokens.md) | Color, opacity, frost, and glass tokens |
-| [architecture/linux-rendering.md](architecture/linux-rendering.md) | Linux/Wayland controls, content switching, CSS theme lifetime, and platform-safe validation |
-| [architecture/windows-rendering.md](architecture/windows-rendering.md) | Windows transparency policy, background ownership, theme editing, and native rendering verification |
-| [architecture/ui-motion.md](architecture/ui-motion.md) | Motion modules and rules |
-| [architecture/motion-tokens.md](architecture/motion-tokens.md) | Generated spring tokens |
-| [architecture/motion-spatial-plan.md](architecture/motion-spatial-plan.md) | Spatial motion decisions |
-
-## Performance
-
-| Document | Purpose |
-| --- | --- |
-| [performance/frontend-render-budget.md](performance/frontend-render-budget.md) | Per-frame frontend performance budget |
-
 ## Reviews
 
 | Document | Purpose |
@@ -80,29 +63,48 @@ Historical review records preserve their original language and facts.
 | [reviews/checklist.md](reviews/checklist.md) | Documentation review checklist |
 | [reviews/records/](reviews/records/) | Immutable historical records |
 
+## Release history
+
+| Document | Purpose |
+| --- | --- |
+| [releaselog/release-notes-v0.7.2-beta.md](releaselog/release-notes-v0.7.2-beta.md) | Archived release notes |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Current release history |
+
 ## Development and source documentation
 
 | Document | Purpose |
 | --- | --- |
 | [`../AGENTS.md`](../AGENTS.md) | Repository development instructions |
-| [AGENTS.md](AGENTS.md) | Documentation-specific development guidance |
-| [`../src-tauri/crates/README.md`](../server/crates/README.md) | Rust crate domain layout |
-| [`../src-tauri/crates/desktop/performance/README.md`](../server/crates/desktop/performance/README.md) | Backend performance ownership |
-| [`../src-tauri/crates/transport/device-tree/README.md`](../server/physical/crates/transport/device-tree/README.md) | Device-tree crate summary |
+| [AGENTS.md](AGENTS.md) | Documentation-area development and review instructions |
+| [`../server/AGENTS.md`](../server/AGENTS.md) | Server repository development instructions |
+| [`../client/AGENTS.md`](../client/AGENTS.md) | Client repository development instructions |
 | [`../packaging/server/README.md`](../packaging/server/README.md) | Server and CLI package |
-| [`../src/i18n/README.md`](../client/src/i18n/README.md) | i18n runtime |
-| [`../src/i18n/resources/README.md`](../client/src/i18n/resources/README.md) | Translation resource rules |
 
-Runtime capability help is authoritative in
-[`../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/`](../server/crates/desktop/control-api/src/capabilities/docs/en/).
-The `zh/` files are product translations. The built-in AI prompt is
-[`../src-tauri/crates/desktop/ai-host/default-system-prompt.md`](../server/crates/desktop/ai-host/default-system-prompt.md).
+Runtime capability help is authoritative in the server repository, at
+`server/crates/desktop/control-api/src/capabilities/docs/en/`; the `zh/` files are
+product translations. The built-in AI prompt is
+`server/crates/desktop/ai-host/default-system-prompt.md`. Both are named rather than
+linked because they belong to the `server/` repository, which indexes them.
+
+## Performance
+
+| Document | Purpose |
+| --- | --- |
+| [performance/frontend-perf.json](performance/frontend-perf.json) | The committed render baseline `pnpm perf:check` compares against |
+
+The budget that baseline is measured against is the client repository's
+[`../client/docs/performance/frontend-render-budget.md`](../client/docs/performance/frontend-render-budget.md).
+The baseline itself stays here because the gate that reads it — `scripts/perf-collect.mjs`,
+through `bash scripts/perf-gate.sh` — is an umbrella script, and a data file belongs
+with the code that consumes it.
 
 ## Gates
 
 | Command | Coverage |
 | --- | --- |
-| `pnpm check:docs` | License text and SPDX, notices, metadata, document index, links, and review records |
+| `pnpm check:docs` | License text and SPDX, notices, metadata, document index, links, and review records of this repository |
+| `node server/scripts/check-docs.mjs` | The same gate over the server repository's own tree |
+| `node client/scripts/check-docs.mjs` | The same gate over the client repository's own tree |
 | `pnpm check:architecture` | Crate layout, metadata, domain DAG, layers, and adapter isolation |
 | `pnpm check:web-contract` | Public command, dispatch, and frontend call consistency |
 | `pnpm check:contracts` | Rust wire types and generated TypeScript |

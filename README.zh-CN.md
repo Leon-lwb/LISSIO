@@ -241,7 +241,7 @@ Rust 工作区按职责领域分组，并受声明的依赖分层约束。组合
 | `ai` | LLM 客户端、对话 / 会话状态、MCP 客户端 |
 | `desktop` | 管线 / 应用状态、能力核心、RPC 分发、后端 host / server / CLI、AI host、平台外壳 |
 
-完整的 crate 清单、依赖分层、领域 DAG 与架构检查见 [`docs/architecture/crates.md`](docs/architecture/crates.md)。
+完整的 crate 清单、依赖分层、领域 DAG 与架构检查见 [`server/docs/architecture/crates.md`](server/docs/architecture/crates.md)。
 
 ## 项目结构
 
@@ -318,7 +318,7 @@ pnpm build:desktop  # 打包安装包 → client/src-tauri/target/release/bundle
 
 桌面端的业务调用一律使用 HTTP/WebSocket。Tauri IPC 仅限窗口、菜单、更新、文件对话框与 sidecar 监管。当 sidecar 缺失、未授权、版本不兼容或已经崩溃时，会在应用 store 挂载之前显示连接诊断页。
 
-Linux/Wayland 渲染检查、设备选择器行为，以及可保留其他平台构建缓存的命令，见 [Linux 桌面渲染](docs/architecture/linux-rendering.md)。
+Linux/Wayland 渲染检查、设备选择器行为，以及可保留其他平台构建缓存的命令，见 [Linux 桌面渲染](client/docs/architecture/linux-rendering.md)。
 
 ### 独立 Web 服务器（`lissio-server`）
 

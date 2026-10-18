@@ -246,7 +246,7 @@ dependency layers. The composition roots are the Tauri shell (`lissio`),
 | `ai` | LLM clients, chat/session state, MCP client |
 | `desktop` | Pipeline/application state, capability core, RPC dispatch, backend host/server/CLI, AI host, platform shell |
 
-See [`docs/architecture/crates.md`](docs/architecture/crates.md) for the complete
+See [`server/docs/architecture/crates.md`](server/docs/architecture/crates.md) for the complete
 crate inventory, dependency layers, domain DAG, and architecture checks.
 
 ## Project Structure
@@ -331,7 +331,7 @@ incompatible, or has crashed.
 
 For Linux/Wayland rendering checks, device-selector behavior, and commands that
 preserve other platform build caches, see
-[Linux desktop rendering](docs/architecture/linux-rendering.md).
+[Linux desktop rendering](client/docs/architecture/linux-rendering.md).
 
 ### Standalone web server (`lissio-server`)
 

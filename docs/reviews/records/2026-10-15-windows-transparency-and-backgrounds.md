@@ -11,7 +11,7 @@ verdict: passed-with-conditions
 
 Reviewed the root and documentation-area guides, documentation standards,
 review checklist, and the implementation sources named in
-[Windows desktop rendering](../../architecture/windows-rendering.md).
+[Windows desktop rendering](../../../client/docs/architecture/windows-rendering.md).
 This record supplements the
 [previous acrylic review](2026-10-14-windows-acrylic-backdrop.md),
 [development-gate review](2026-10-14-windows-development-gates.md), and

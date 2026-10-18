@@ -81,6 +81,17 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'target', 'dist', 'output', '
  * An exported archive or tarball has no `.git`: the command fails and the
  * original filesystem walk is used instead, with a printed note, so the gate
  * still runs there instead of crashing.
+ *
+ * Submodule markdown is invisible here, and that is deliberate — do not "fix" it
+ * by walking `server/`, `server/core/`, `server/physical/`, `server/data/`, or
+ * `client/`. In a superproject, `git ls-files` lists a submodule as one gitlink
+ * entry (`server`), not as the paths inside it, so this walk judges exactly the
+ * umbrella's own markdown. The ownership rule of the split is that each repository
+ * judges its own tree: every document that moved into a submodule is checked by
+ * that repository's own `scripts/check-docs.mjs` (`pnpm check:docs` in `client/`,
+ * `node scripts/check-docs.mjs` elsewhere), under its own root. Descending here
+ * would judge the same files a second time under a different root and re-create
+ * the root mismatch that a moved `docs/architecture/crates.md` already caused once.
  */
 function trackedRelativePaths() {
   try {
