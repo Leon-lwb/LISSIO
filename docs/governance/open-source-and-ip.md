@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-18
 applies-to: Licensing, copyright, contributions, patents, notices, and public claims
 -->
 
@@ -36,7 +36,7 @@ those artifacts.
 | `AUTHORS.md` | Authorship summary; Git history is authoritative |
 | `CONTRIBUTING.md` | Contribution and verification rules |
 | `SECURITY.md` | Vulnerability and rights reporting |
-| `src-tauri/deny.toml` | Machine-enforced dependency license allow-list |
+| `server/deny.toml` | Machine-enforced dependency license allow-list |
 | `docs/governance/third-party-licenses.md` | Dependency and asset obligations |
 
 ## SPDX fields

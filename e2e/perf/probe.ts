@@ -35,7 +35,7 @@
  *       1. `backdrop-filter` runs in the **compositor**. It is invisible to every counter here,
  *          so the "acrylic on vs off" difference is not "the cost of blur", only noise after grid
  *          quantization (measured at 2.27e-13 ms). The frosting cost is instead governed by a
- *          structural budget, see docs/performance/frontend-render-budget.md.
+ *          structural budget, see client/docs/performance/frontend-render-budget.md.
  *       2. **Layout reflows triggered by CSS transitions** go through no JS at all and happen in
  *          the browser's C++. `transition: flex-grow` measures 0 here while the cost is a reflow
  *          of the whole panel subtree on every frame. Such defects are caught statically by

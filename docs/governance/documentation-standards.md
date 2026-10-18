@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-16
+last-reviewed: 2026-10-18
 applies-to: Repository documentation, metadata, language, and maintenance rules
 -->
 
@@ -38,7 +38,7 @@ authoritative, and when it must be reviewed.
 | Directory | Content |
 | --- | --- |
 | root | External entry points (including the product README and its `zh-CN` translation), legal texts, governance, support, roadmap, changelog |
-| `docs/architecture/` | Current technical facts and architectural contracts |
+| `server/docs/architecture/`, `client/docs/architecture/` | Current technical facts and architectural contracts, held by the repository that owns them |
 | `docs/governance/` | Licensing, dependencies, documentation, and review policy |
 | `docs/performance/` | Performance budgets and measurement policy |
 | `docs/reviews/` | Review checklist, indexes, and immutable historical records |
@@ -88,11 +88,11 @@ decisions belong in review records.
 | --- | --- |
 | Project license | `LICENSE` and SPDX manifest fields |
 | Copyright and notices | `NOTICE` |
-| Dependency allow-list | `src-tauri/deny.toml` |
+| Dependency allow-list | `server/deny.toml` |
 | Third-party inventory | `docs/governance/third-party-licenses.md` |
-| Crate layers and dependencies | `docs/architecture/crates.md` and crate metadata |
-| User-visible strings | `src/i18n/resources/` |
-| Runtime capability help | `src-tauri/crates/desktop/control-api/src/capabilities/docs/en/` |
+| Crate layers and dependencies | `server/docs/architecture/crates.md` and crate metadata |
+| User-visible strings | `client/src/i18n/resources/` |
+| Runtime capability help | `server/crates/desktop/control-api/src/capabilities/docs/en/` |
 
 Do not maintain competing hand-written copies of machine-checkable facts.
 

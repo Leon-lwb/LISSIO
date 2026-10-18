@@ -19,14 +19,14 @@ Closes #
 
 | Area | Changed |
 | --- | --- |
-| Rust crate (`src-tauri/crates/<domain>/`) | |
+| Rust crate (`server/crates/<domain>/<crate>`, or `server/<core\|physical\|data>/crates/<domain>/<crate>`) | |
 | Frontend (`src/`) | |
 | IPC, event contract, or wire type | |
 | Protocol or transport adapter | |
 | Documentation | |
 | Dependency or third-party resource | |
 
-Before changing Rust, read `docs/architecture/crates.md` and run
+Before changing Rust, read `server/docs/architecture/crates.md` and run
 `pnpm architecture` to identify the owner and reverse dependencies.
 
 ## Verification
@@ -99,7 +99,7 @@ Write "not run" and the reason here if a required toolchain is unavailable.
 
 - [ ] No UI change
 - [ ] UI screenshots cover light/dark themes and text scaling
-- [ ] Motion follows `docs/architecture/ui-motion.md` and reduced-motion behavior
+- [ ] Motion follows `client/docs/architecture/ui-motion.md` and reduced-motion behavior
 - [ ] User-visible strings were added to both i18n language directories
 
 ## Licensing and third parties

@@ -3,17 +3,17 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-18
 applies-to: Dependency policy, current snapshot, special obligations, and review workflow
 -->
 
 This document records third-party license facts and manual obligations. The
-machine allow-list is `src-tauri/deny.toml`; this file explains and audits it.
+machine allow-list is `server/deny.toml`; this file explains and audits it.
 
 ## Reproduction
 
 ```bash
-cargo metadata --format-version 1 --manifest-path src-tauri/Cargo.toml
+cargo metadata --format-version 1 --manifest-path server/Cargo.toml
 pnpm licenses list --json --prod
 pnpm licenses list --json
 cargo deny check
@@ -48,7 +48,7 @@ Special selections:
 | `dompurify` | `MPL-2.0 OR Apache-2.0` | Use Apache-2.0 |
 | `rustls` 0.23.46 | `Apache-2.0 OR ISC OR MIT` | Use Apache-2.0; preserve the upstream license text |
 
-`src-tauri/Cargo.lock` resolves `rustls` to 0.23.46, the patch release fixing
+`server/Cargo.lock` resolves `rustls` to 0.23.46, the patch release fixing
 `RUSTSEC-2026-0346` through `RUSTSEC-2026-0349`. Its package metadata and
 `LICENSE-APACHE`, `LICENSE-ISC`, and `LICENSE-MIT` files retain the same terms
 as 0.23.45. The existing dependency allow-list and advisory exceptions remain
@@ -118,5 +118,5 @@ existing backend HTTP client. No new third-party dependency is required.
 5. Run `cargo deny check`, `pnpm check:deps`, and `pnpm check:docs`.
 6. Update this inventory and the review record.
 
-Do not weaken `src-tauri/deny.toml` merely to pass a gate. New identifiers
+Do not weaken `server/deny.toml` merely to pass a gate. New identifiers
 require an explicit policy decision and review record.

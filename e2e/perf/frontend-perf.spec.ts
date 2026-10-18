@@ -27,7 +27,7 @@
  * this probe patches main-thread prototypes, so the two are not even on the same thread. The cost
  * of frosting therefore became a **structural budget**: blur radius, tint opacity, and nesting
  * depth, enforced statically by `pnpm check:tokens`. For the rationale and the data, see
- * docs/performance/frontend-render-budget.md.
+ * client/docs/performance/frontend-render-budget.md.
  *
  * On timing metrics: fps / frame-time percentiles are **recorded but not judged** here. Headless
  * Chromium has no real vsync, so these numbers drift with runner load; using them as a hard gate
