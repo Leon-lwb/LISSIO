@@ -48,8 +48,17 @@ duplicate of the frontend's.
   `server/`, and `docs/architecture/crates.md` records the new physical layout and
   the three-workspace split.
 
-Trade-off: the umbrella's own script self-tests (`scripts/*.test.mjs`) still use
-Vitest, which now lives with the frontend; they move with the gates that own them.
+- The umbrella keeps its own test suite: `vitest` is a devDependency again, a root
+  `vitest.config.ts` scopes the run to `scripts/**/*.test.mjs`, and `test` is a
+  real gate (`test-scripts`) rather than a delegation. The five self-tests
+  (`gates`, `check-crate-architecture`, `check-ui-layers`, `finalize-bundles`,
+  `local-env` — 65 cases) cover the gate machinery the umbrella owns, which is
+  what catches a gate regression like the ones this change fixes; the frontend
+  suite runs separately as `test:client` and stays registered as the
+  `test-frontend` gate. The registry anchors the split in both directions: the
+  root `vitest.config.ts` requires an umbrella test gate, and
+  `client/vitest.config.ts` requires the delegated one. The `local-env` suite also
+  pins both `target/` trees the stale-stub cleanup now scans, since that path moved.
 
 Files: package.json,
        pnpm-lock.yaml,
@@ -61,6 +70,7 @@ Files: package.json,
        .forgejo/,
        e2e/,
        playwright.config.ts,
+       vitest.config.ts,
        docs/ci.md,
        AGENTS.md,
        CONTRIBUTING.md,

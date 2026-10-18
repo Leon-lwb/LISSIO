@@ -261,9 +261,18 @@ const CAPABILITY_ANCHORS = [
     ],
   },
   {
-    // A frontend unit-test setup requires a unit-test gate.
+    // A frontend unit-test setup requires a unit-test gate. The frontend's Vitest
+    // project lives in `client/`, so the gate reaches it through the umbrella's
+    // `test:client` delegation.
     present: ['client/vitest.config.ts'],
-    require: [{ match: (gate) => gate.cmd.join(' ') === 'pnpm test', what: 'a frontend unit-test gate', tier: 'pr' }],
+    require: [{ match: (gate) => gate.cmd.join(' ') === 'pnpm test:client', what: 'a frontend unit-test gate', tier: 'pr' }],
+  },
+  {
+    // The umbrella's own suite (gate scripts and packaging helpers) has its own
+    // Vitest project; a root config that nothing runs is a silent coverage hole,
+    // which is exactly how these tests were lost once already.
+    present: ['vitest.config.ts'],
+    require: [{ match: (gate) => gate.cmd.join(' ') === 'pnpm test', what: "a gate for the umbrella's own script self-tests", tier: 'pr' }],
   },
 ];
 

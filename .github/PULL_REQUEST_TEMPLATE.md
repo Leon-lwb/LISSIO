@@ -45,6 +45,7 @@ stays in sync with the registry, CI, and the other documents.
 - [ ] `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - [ ] `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
 - [ ] `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
+- [ ] `pnpm test` — the gate scripts and packaging helpers the umbrella owns keep their own unit tests, so a gate regression is caught by the suite that covers it
 - [ ] `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `docs/architecture/ui-color-tokens.md`
 - [ ] `pnpm check:motion` — every `transition`/`@keyframes` property stays on the paint layer; layout animations run in C++ and are invisible to the browser probe, so only a static check can catch them
 - [ ] `pnpm check:layers` — frontend implementation/interaction/effects/view layers must not cross their boundaries
@@ -55,7 +56,7 @@ stays in sync with the registry, CI, and the other documents.
 
 - [ ] `pnpm typecheck` — TypeScript compiles under strict mode
 - [ ] `pnpm lint:ci` — lint with zero warnings tolerated
-- [ ] `pnpm test` — frontend unit tests, colocated with the code they cover
+- [ ] `pnpm test:client` — frontend unit tests, colocated with the code they cover; the umbrella delegates with `test:client`
 
 **Rust**
 

@@ -73,15 +73,26 @@ function subdirectories(dir) {
 }
 
 /**
+ * The `target/` trees that can hold a cached Tauri build-script output: the Rust
+ * workspace (`server/`) and the Tauri shell (`client/src-tauri/`). Exported so the
+ * self-test can pin both roots — the split moved them out of the repository root,
+ * and a path that silently stopped being scanned would let the placeholder shadow
+ * the real library again.
+ */
+export const MSVCRT_STUB_TARGET_ROOTS = [
+  join(repoRoot, 'server', 'target'),
+  join(repoRoot, 'client', 'src-tauri', 'target'),
+];
+
+/**
  * Delete the stale Tauri `msvcrt.lib` stubs. Returns the removed paths so the
  * caller can report them; a checkout without a cached placeholder has nothing
- * to remove and nothing is printed.
+ * to remove and nothing is printed. `targetRoots` is parameterisable for the
+ * self-test; production callers use the two real trees.
  */
-function removeStaleMsvcrtStubs() {
-  // The Rust workspace is `server/` and the Tauri shell is `client/src-tauri/`;
-  // both keep a `target/` tree that can hold a cached Tauri build script output.
+export function removeStaleMsvcrtStubs(targetRoots = MSVCRT_STUB_TARGET_ROOTS) {
   const removed = [];
-  for (const targetRoot of [join(repoRoot, 'server', 'target'), join(repoRoot, 'client', 'src-tauri', 'target')]) {
+  for (const targetRoot of targetRoots) {
     if (!existsSync(targetRoot)) continue;
     for (const profile of subdirectories(targetRoot)) {
       const buildDir = join(targetRoot, profile, 'build');

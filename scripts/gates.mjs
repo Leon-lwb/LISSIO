@@ -142,6 +142,21 @@ export const GATES = [
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
+    id: 'test-scripts',
+    label: 'Umbrella script self-tests',
+    group: 'Architecture',
+    cwd: 'root',
+    cmd: ['pnpm', 'test'],
+    tier: 'pr',
+    // The umbrella owns the gate registry, its drivers, and the packaging helpers.
+    // Their self-tests are the ones that catch a gate regression — a matcher that
+    // stopped matching, a plan that stopped being emitted, a generated block that
+    // stopped round-tripping — so they must run in the repository that owns the
+    // scripts rather than only where the code under test happened to move.
+    why: 'the gate scripts and packaging helpers the umbrella owns keep their own unit tests, so a gate regression is caught by the suite that covers it',
+    docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
+  },
+  {
     id: 'check-tokens',
     label: 'UI color tokens',
     group: 'Architecture',
@@ -215,12 +230,12 @@ export const GATES = [
   },
   {
     id: 'test-frontend',
-    label: 'Vitest unit tests',
+    label: 'Frontend unit tests (client)',
     group: 'Frontend',
     cwd: 'root',
-    cmd: ['pnpm', 'test'],
+    cmd: ['pnpm', 'test:client'],
     tier: 'pr',
-    why: 'frontend unit tests, colocated with the code they cover',
+    why: 'frontend unit tests, colocated with the code they cover; the umbrella delegates with `test:client`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 

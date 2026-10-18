@@ -20,9 +20,10 @@
     "build:all": "pnpm build:server && pnpm build:desktop && node scripts/local-env.mjs node scripts/finalize-bundles.mjs",
     "build": "pnpm build:web",
     "preview": "pnpm --dir client preview",
-    "test": "pnpm --dir client test",
+    "test": "vitest run",
+    "test:client": "pnpm --dir client test",
     "test:e2e": "node scripts/local-env.mjs playwright test",
-    "test:watch": "pnpm --dir client test:watch",
+    "test:watch": "vitest",
     "typecheck": "pnpm --dir client typecheck",
     "lint": "pnpm --dir client lint",
     "lint:fix": "pnpm --dir client lint:fix",
@@ -70,7 +71,8 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
-    "covector": "0.13.2"
+    "covector": "0.13.2",
+    "vitest": "^4.1.11"
   },
   "repository": {
     "type": "git",
