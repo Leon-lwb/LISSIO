@@ -78,20 +78,23 @@ function subdirectories(dir) {
  * to remove and nothing is printed.
  */
 function removeStaleMsvcrtStubs() {
-  const targetRoot = join(repoRoot, 'src-tauri', 'target');
-  if (!existsSync(targetRoot)) return [];
+  // The Rust workspace is `server/` and the Tauri shell is `client/src-tauri/`;
+  // both keep a `target/` tree that can hold a cached Tauri build script output.
   const removed = [];
-  for (const profile of subdirectories(targetRoot)) {
-    const buildDir = join(targetRoot, profile, 'build');
-    if (!existsSync(buildDir)) continue;
-    for (const crate of subdirectories(buildDir)) {
-      if (!crate.startsWith('lissio-')) continue;
-      const stub = join(buildDir, crate, 'out', 'msvcrt.lib');
-      if (!existsSync(stub)) continue;
-      if (statSync(stub).size > STUB_MAX_BYTES) continue;
-      if (readFileSync(stub).includes(CXX_FRAME_HANDLER)) continue;
-      rmSync(stub, { force: true });
-      removed.push(stub);
+  for (const targetRoot of [join(repoRoot, 'server', 'target'), join(repoRoot, 'client', 'src-tauri', 'target')]) {
+    if (!existsSync(targetRoot)) continue;
+    for (const profile of subdirectories(targetRoot)) {
+      const buildDir = join(targetRoot, profile, 'build');
+      if (!existsSync(buildDir)) continue;
+      for (const crate of subdirectories(buildDir)) {
+        if (!crate.startsWith('lissio-')) continue;
+        const stub = join(buildDir, crate, 'out', 'msvcrt.lib');
+        if (!existsSync(stub)) continue;
+        if (statSync(stub).size > STUB_MAX_BYTES) continue;
+        if (readFileSync(stub).includes(CXX_FRAME_HANDLER)) continue;
+        rmSync(stub, { force: true });
+        removed.push(stub);
+      }
     }
   }
   return removed;
@@ -122,7 +125,7 @@ export function applyLocalEnv({ quiet = false } = {}) {
 function run(argv, { shell }) {
   // The caller's directory, not the repository root: pnpm already runs package
   // scripts from the root, and an ad-hoc `node scripts/local-env.mjs cargo …` from
-  // `src-tauri` must stay there.
+  // `server` must stay there.
   const options = { stdio: 'inherit' };
   if (process.platform === 'win32') {
     return spawnSync(argv.join(' '), { ...options, shell: true });

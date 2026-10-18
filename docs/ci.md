@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-17
+last-reviewed: 2026-10-18
 applies-to: CI platform, runner setup, gate execution, and the release pipeline
 -->
 
@@ -20,6 +20,26 @@ The workflows live in `.forgejo/workflows/`:
 | `ci.yml` | pull request, push to `main`/`develop`, manual | quality gates |
 | `release.yml` | manual dispatch | pre-publish gate preflight |
 | `release-verify.yml` | manual dispatch | post-publish verification of a released version |
+
+### Repository composition and checkout
+
+The umbrella repository is a composition of five repositories: `server/` (the Rust Cargo
+workspace root) and `client/` (the React frontend plus the Tauri shell) are submodules, and
+`server/core`, `server/physical`, and `server/data` are submodules of the server workspace.
+Every gate that reads Rust or frontend code therefore depends on those checkouts.
+
+- Each job checks the submodules out **recursively**. The checkout step carries
+  `with: submodules: recursive`, and an explicit
+  `git submodule update --init --recursive` step follows it: the explicit form works on any
+  runner version and is a no-op once the submodules are present. A job that skips either one
+  would scan empty directories, and the gates that walk the workspace would report the wrong
+  thing rather than fail.
+- Dependencies are installed on both sides. The umbrella is a single package with no
+  workspace members, so `pnpm install --frozen-lockfile` at the root is paired with
+  `pnpm --dir client install --frozen-lockfile`; the frontend gate scripts delegate through
+  `pnpm --dir client` and need the client's own `node_modules`.
+- `release-verify.yml` needs neither: it inspects a published release over HTTP and reads
+  only the umbrella's own scripts and `.changes/`.
 
 ### The workflows do not list gates
 
@@ -75,11 +95,11 @@ silently stops running, so it needs anchors outside the registry:
   that are deliberately not gates (the tier drivers `check:all`,
   `check:all:quick`, the writable `lint`/`lint:fix`, the interactive
   `test:watch`) are listed with their reason.
-- **Repository structure.** The presence of `src-tauri/Cargo.toml`, `deny.toml`,
-  `tsconfig.json`, `vitest.config.ts`, `vite.config.ts`, `playwright.config.ts`,
-  and `docs/performance/frontend-perf.json` each *require* a corresponding
-  capability in the registry — a Rust format/lint/test gate, a dependency audit,
-  a type check, a unit-test gate, a production build gate, a browser gate, and a
+- **Repository structure.** The presence of `server/Cargo.toml`, `server/deny.toml`,
+  `client/tsconfig.json`, `client/vitest.config.ts`, `client/vite.config.ts`,
+  `playwright.config.ts`, and `docs/performance/frontend-perf.json` each *require* a
+  corresponding capability in the registry — a Rust format/lint/test gate, a dependency
+  audit, a type check, a unit-test gate, a production build gate, a browser gate, and a
   render-budget gate. These are statements about required capabilities, not a
   second copy of the gate list: they do not care which gate id satisfies them.
 - **Gate tiers.** Pull requests are the merge gate, so an enforcing gate runs in
@@ -239,6 +259,10 @@ everything; `--json` is available for tooling.
 
 A full local run needs Playwright browsers
 (`pnpm exec playwright install --with-deps chromium`) and `cargo-deny` 0.20.2.
+It also needs both sides installed: `pnpm install --frozen-lockfile` for the
+umbrella and `pnpm --dir client install --frozen-lockfile` for the frontend scripts
+the registry delegates to. The Rust gates run in `server/`, so `cargo` resolves the
+server workspace and its `core/`, `physical/`, and `data/` submodules.
 
 The tier driver is Node (`scripts/check-all.mjs`; `scripts/check-all.sh` forwards
 to it), so these commands run on Windows too, where no shell is required. On
@@ -255,7 +279,7 @@ render-budget gate still needs bash (Git Bash) on Windows, because it runs
 
 The build temp environment does not make a Windows installer ready to deliver.
 `pnpm build:all` finishes with `scripts/finalize-bundles.mjs`, which raises Low
-installer labels to Medium in the original `src-tauri/target/release/bundle/`
+installer labels to Medium in the original `client/src-tauri/target/release/bundle/`
 subfolders and verifies that the bytes are unchanged. Native SID checks in
 `scripts/windows-integrity.ps1` avoid localized permission text. A failed check
 fails `build:all` and directs the user to run it from an ordinary Windows
@@ -264,7 +288,7 @@ terminal. Other platforms skip this step. See
 This is a native packaging check; Linux CI still does not build desktop installers.
 
 `tauri-build` 2.7.2 also generates the empty MSVC library during a fresh build.
-[`src-tauri/build.rs`](../src-tauri/build.rs) removes only the exact upstream
+[`client/src-tauri/build.rs`](../client/src-tauri/build.rs) removes only the exact upstream
 82-byte COFF placeholder from its own output after Tauri emits its static CRT
 link arguments. This prevents the placeholder from shadowing the SDK's real
 library in other workspace crates' documentation tests. The runtime link
@@ -276,8 +300,9 @@ contents are excluded by the global `output/**` ignore alongside build and
 coverage output. Application code, repository scripts, and browser-test sources
 remain subject to their existing lint rules.
 
-Both gate jobs cache `~/.cargo/{registry,git}` and `src-tauri/target`, keyed on
-`src-tauri/Cargo.lock`. Clippy and the test suite across the Rust workspace do not fit
+Both gate jobs cache `~/.cargo/{registry,git}`, `server/target`, and
+`client/src-tauri/target`, keyed on `server/Cargo.lock` and
+`client/src-tauri/Cargo.lock`. Clippy and the test suite across the Rust workspace do not fit
 comfortably in the job's 60-minute budget on a cold cache, and a timeout there
 would fail every pull request with no useful signal. The cache step carries
 step-level `continue-on-error: true` — a form Forgejo honours, unlike the
@@ -409,7 +434,7 @@ every release so the client URL never changes:
 | beta | `beta-latest.json` | `https://codeberg.org/Horldsence/Lissio/releases/download/beta/beta-latest.json` |
 
 Both are asserted in
-`src-tauri/crates/desktop/update_flow/src/update.rs`.
+`client/src-tauri/crates/update_flow/src/update.rs`.
 
 **Why rolling tags rather than a "latest" URL.** Codeberg does not implement
 GitHub's `releases/latest/download/<file>` pseudo-path. Measured against an asset

@@ -22,7 +22,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 
 <p align="center">
   <a href="https://codeberg.org/Horldsence/Lissio">
-    <img src="src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
+    <img src="client/src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Lissio</h3>
@@ -252,39 +252,42 @@ crate inventory, dependency layers, domain DAG, and architecture checks.
 ## Project Structure
 
 ```text
-lissio/
-├── docs/architecture/             # Architecture contracts and design references
-├── scripts/                       # Architecture, contract, build, and release tooling
-├── src/                           # React/TypeScript frontend
-│   ├── components/                # Controls, displays, layout, nodes, panels, AI UI
-│   ├── lib/
-│   │   ├── acquisition/           # Device tree and capability projections
-│   │   ├── ai/                    # Chat/tool frontend integration
-│   │   ├── models/                # Model catalog creation/describe consumers
-│   │   ├── platform/              # Desktop/Web platform-service shim
-│   │   ├── rpc/                   # Transport contract and reconnect/rehydration
-│   │   └── ...                    # Buffers, graph, quickstart, protocol utilities
-│   ├── store/                     # Zustand stores and state slices
-│   ├── types/
-│   │   └── generated/             # Rust-owned wire contracts exported by ts-rs
-│   ├── i18n/locales/              # English and Chinese user-facing copy
-│   ├── App.tsx
-│   └── main.tsx
-├── src-tauri/
-│   ├── crates/<domain>/<crate>    # Rust workspace members
-│   ├── src/
-│   │   ├── shell.rs               # Desktop-only window/splash/settings shell commands
-│   │   ├── sidecar.rs             # Supervised lissio-server lifecycle and diagnostics
-│   │   ├── lib.rs                 # Tauri composition root
-│   │   └── main.rs
-│   ├── Cargo.toml                 # Workspace and dependency authority
-│   └── tauri.conf.json
+lissio/                            # umbrella: cross-repository infrastructure only
+├── .changes/                      # Release change files consumed by pnpm release:prepare
+├── .forgejo/workflows/            # CI and release workflows (submodules checked out recursively)
+├── docs/                          # Architecture, governance, performance, and review records
+├── e2e/                           # Playwright suites driving the web bundle and a real server
 ├── packaging/                     # Server startup and container packaging
-├── public/                        # Static application assets
+├── scripts/                       # Architecture, contract, build, and release tooling
+├── client/                        # frontend repository (submodule)
+│   ├── src/                       # React/TypeScript frontend
+│   │   ├── components/            # Controls, displays, layout, nodes, panels, AI UI
+│   │   ├── lib/                   # Acquisition, AI, models, platform, rpc, utilities
+│   │   ├── store/                 # Zustand stores and state slices
+│   │   ├── types/generated/       # Rust-owned wire contracts exported by ts-rs
+│   │   ├── i18n/locales/          # English and Chinese user-facing copy
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── public/                    # Static application assets
+│   ├── src-tauri/                 # Tauri 2 desktop shell
+│   │   ├── src/                   # shell.rs, sidecar.rs, lib.rs, main.rs
+│   │   ├── crates/                # Shell-only crates (menu shell, update flow)
+│   │   └── tauri.conf.json
+│   ├── vite.config.ts
+│   └── package.json               # Frontend dependencies and scripts
+├── server/                        # Rust repository (submodule): Cargo workspace root
+│   ├── crates/<domain>/<crate>    # Crates owned by the server repository
+│   ├── core/                      # core submodule: shared, vehicle, protocol crates
+│   ├── physical/                  # physical submodule: transport and protocol adapters
+│   ├── data/                      # data submodule: graph, signal, and data crates
+│   ├── tests/                     # Integration tests
+│   ├── Cargo.toml                 # Workspace and dependency authority
+│   └── deny.toml
 ├── images/                        # README assets
-├── package.json
+├── package.json                   # Umbrella orchestration manifest
 ├── pnpm-workspace.yaml
-└── vite.config.ts
+├── playwright.config.ts
+└── Dockerfile
 ```
 
 ## Prerequisites
@@ -318,7 +321,7 @@ and a Desktop installer whose Tauri shell supervises a bundled, same-version
 
 ```sh
 pnpm dev:desktop    # prepares and starts the sidecar, Vite, and native shell
-pnpm build:desktop  # packaged installers → src-tauri/target/release/bundle/
+pnpm build:desktop  # packaged installers → client/src-tauri/target/release/bundle/
 ```
 
 Desktop business calls always use HTTP/WebSocket. Tauri IPC is limited to windows,
@@ -355,7 +358,7 @@ explicitly.
 | `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / MCP enabled |
 
 Exposing beyond loopback requires `--bind 0.0.0.0` plus a strong `LISSIO_TOKEN`.
-`pnpm server` is equivalent to `cd src-tauri && cargo run -p lissio-backend-server`; the CLI
+`pnpm server` is equivalent to `cargo run --manifest-path server/Cargo.toml -p lissio-backend-server`; the CLI
 form `cargo run -p lissio-backend-cli -- serve` shares the same code path. Health check:
 `curl http://127.0.0.1:8790/api/v1/health`.
 
@@ -397,7 +400,7 @@ Build server, CLI, desktop, and web for the current platform:
 pnpm build:all
 ```
 
-This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once, and finally checks native Windows installer integrity. The build stops if any step fails. Local desktop builds disable updater artifacts using `src-tauri/tauri.local.conf.json`, so `TAURI_SIGNING_PRIVATE_KEY` is not required. Release packaging retains updater signing through the default Tauri configuration.
+This runs `build:server` (server + CLI), then `build:desktop`, whose Tauri hook builds the web assets once, and finally checks native Windows installer integrity. The build stops if any step fails. Local desktop builds disable updater artifacts using `client/src-tauri/tauri.local.conf.json`, so `TAURI_SIGNING_PRIVATE_KEY` is not required. Release packaging retains updater signing through the default Tauri configuration.
 
 Individual build commands:
 
@@ -408,7 +411,7 @@ pnpm build:cli
 pnpm build:desktop
 ```
 
-Web assets are output to `dist/`, server and CLI binaries to `src-tauri/target/release/`, and desktop installers to `src-tauri/target/release/bundle/`.
+Web assets are output to `client/dist/`, server and CLI binaries to `server/target/release/`, and desktop installers to `client/src-tauri/target/release/bundle/`.
 
 On Windows, `build:all` finishes with `scripts/finalize-bundles.mjs`. It checks
 the current-version installers in the existing `bundle/nsis/` and `bundle/msi/`

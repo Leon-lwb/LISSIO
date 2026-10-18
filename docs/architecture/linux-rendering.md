@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-13
+last-reviewed: 2026-10-18
 applies-to: Linux WebKitGTK controls, content switching, and platform-safe verification
 -->
 
@@ -12,14 +12,14 @@ and the default Playwright suite use Chromium, so a passing browser test alone
 does not establish that GTK native popups render correctly on Wayland.
 
 Authoritative sources are
-[`tauri.conf.json`](../../src-tauri/tauri.conf.json),
-[`DevicePanel.tsx`](../../src/components/acquisition/DevicePanel.tsx),
-[`DeviceTreePanel.tsx`](../../src/components/acquisition/DeviceTreePanel.tsx),
-[`Select.tsx`](../../src/components/ui/Select.tsx),
-[`useSelect.ts`](../../src/lib/interaction/useSelect.ts), and
-[`form-control.css`](../../src/styles/components/form-control.css),
-[`useContentSwitch.ts`](../../src/lib/motion/useContentSwitch.ts), and
-[`css-theme-loader.ts`](../../src/settings/css-theme-loader.ts).
+[`tauri.conf.json`](../../client/src-tauri/tauri.conf.json),
+[`DevicePanel.tsx`](../../client/src/components/acquisition/DevicePanel.tsx),
+[`DeviceTreePanel.tsx`](../../client/src/components/acquisition/DeviceTreePanel.tsx),
+[`Select.tsx`](../../client/src/components/ui/Select.tsx),
+[`useSelect.ts`](../../client/src/lib/interaction/useSelect.ts), and
+[`form-control.css`](../../client/src/styles/components/form-control.css),
+[`useContentSwitch.ts`](../../client/src/lib/motion/useContentSwitch.ts), and
+[`css-theme-loader.ts`](../../client/src/settings/css-theme-loader.ts).
 
 ## Device selection and native popups
 
@@ -34,7 +34,7 @@ Slcan, Modbus, and the other
 available adapters retain their capability-catalog values and creation paths.
 The list is portaled to the document body to avoid clipping by dock panels.
 It uses the active theme's text color and opaque `--color-float-surface`, which
-[`applyAppearance`](../../src/settings/applyTheme.ts) preserves before acrylic
+[`applyAppearance`](../../client/src/settings/applyTheme.ts) preserves before acrylic
 backgrounds are made translucent.
 
 The trigger keeps keyboard focus. Arrow keys, Home/End, and typing navigate

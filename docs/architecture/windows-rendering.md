@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-15
+last-reviewed: 2026-10-18
 applies-to: Windows desktop transparency, acrylic backgrounds, theme application, and native rendering verification
 -->
 
@@ -14,13 +14,13 @@ compose over its native backdrop. The implementation sources are:
 
 | Concern | Authoritative source |
 | --- | --- |
-| Transparent native window and WebView | [`src-tauri/tauri.conf.json`](../../src-tauri/tauri.conf.json) |
-| Native material, frame theme, tint, and clearing | [`src-tauri/src/shell.rs`](../../src-tauri/src/shell.rs), `set_window_acrylic` |
-| Appearance settings and background alpha | [`src/settings/applyTheme.ts`](../../src/settings/applyTheme.ts) and [`acrylicMaterial.ts`](../../src/settings/acrylicMaterial.ts) |
-| Window background and theme tokens | [`src/styles/theme.css`](../../src/styles/theme.css) |
-| Application and setup wrappers | [`src/App.tsx`](../../src/App.tsx) and [`ConfigGuide.tsx`](../../src/components/onboarding/ConfigGuide.tsx) |
-| Node-editor background and grid | [`NodeEditor.tsx`](../../src/components/layout/NodeEditor.tsx), [`node-editor.css`](../../src/styles/components/node-editor.css), and [`react-flow.css`](../../src/styles/components/react-flow.css) |
-| Theme editing and settings application | [`ThemeEditor.tsx`](../../src/components/ThemeEditor.tsx), [`ThemeEditorColorPanel.tsx`](../../src/components/ThemeEditorColorPanel.tsx), and [`settingsStore.ts`](../../src/store/settingsStore.ts) |
+| Transparent native window and WebView | [`src-tauri/tauri.conf.json`](../../client/src-tauri/tauri.conf.json) |
+| Native material, frame theme, tint, and clearing | [`src-tauri/src/shell.rs`](../../client/src-tauri/src/shell.rs), `set_window_acrylic` |
+| Appearance settings and background alpha | [`src/settings/applyTheme.ts`](../../client/src/settings/applyTheme.ts) and [`acrylicMaterial.ts`](../../client/src/settings/acrylicMaterial.ts) |
+| Window background and theme tokens | [`src/styles/theme.css`](../../client/src/styles/theme.css) |
+| Application and setup wrappers | [`src/App.tsx`](../../client/src/App.tsx) and [`ConfigGuide.tsx`](../../client/src/components/onboarding/ConfigGuide.tsx) |
+| Node-editor background and grid | [`NodeEditor.tsx`](../../client/src/components/layout/NodeEditor.tsx), [`node-editor.css`](../../client/src/styles/components/node-editor.css), and [`react-flow.css`](../../client/src/styles/components/react-flow.css) |
+| Theme editing and settings application | [`ThemeEditor.tsx`](../../client/src/components/ThemeEditor.tsx), [`ThemeEditorColorPanel.tsx`](../../client/src/components/ThemeEditorColorPanel.tsx), and [`settingsStore.ts`](../../client/src/store/settingsStore.ts) |
 
 The [color-token contract](ui-color-tokens.md) owns shared surface colors and
 frost rules. The [render-budget policy](../performance/frontend-render-budget.md)

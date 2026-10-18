@@ -22,7 +22,7 @@ case "$audit_mode" in
   full) audit_seconds=300; audit_storage_bytes=67108864 ;;
   *) echo 'usage: bash scripts/bench-audit.sh [quick|full]' >&2; exit 2 ;;
 esac
-audit_out="$audit_root/src-tauri/target/bench-audit/$(date +%Y%m%d-%H%M%S)"
+audit_out="$audit_root/server/target/bench-audit/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$audit_out"
 echo "benchmark output: $audit_out"
 # Collect the remaining independent scenarios even if one fails, then report failure at the end
@@ -46,7 +46,7 @@ audit_run() {
   # Failures are reported together at the end via audit_failures.
   return 0
 }
-cd "$audit_root/src-tauri"
+cd "$audit_root/server"
 
 # Package and bench names follow `cargo metadata`; after a crate rename this must be updated,
 # or cargo fails outright with "package ID specification did not match".
@@ -130,7 +130,8 @@ if [[ "$audit_mode" == 'full' ]]; then
 fi
 
 cd "$audit_root"
-audit_run frontend pnpm exec vitest bench --run --outputJson "$audit_out/frontend.json"
+# The frontend benchmarks live with the frontend; vitest is installed there.
+audit_run frontend pnpm --dir client exec vitest bench --run --outputJson "$audit_out/frontend.json"
 
 # Normalize the artifacts: run this whether or not a scenario failed above, so partial results
 # remain usable for diagnosis.

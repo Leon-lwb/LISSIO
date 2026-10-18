@@ -36,9 +36,13 @@ node_modules/
 # Frontend build output
 dist/
 dist-ssr/
-src-tauri/binaries/
+client/src-tauri/binaries/
 test-results/
 playwright-report/
+
+# Rust build output
+server/target/
+client/src-tauri/target/
 
 # Generated reports and promotional media
 /output/
@@ -48,8 +52,8 @@ playwright-report/
 /promo_cover_vertical.html
 
 # Profiling artifacts
-/src-tauri/flamegraph.svg
-/src-tauri/perf.data*
+/client/src-tauri/flamegraph.svg
+/client/src-tauri/perf.data*
 *.profraw
 media/
 

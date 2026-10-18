@@ -18,21 +18,34 @@
  *      major/minor with the `tauri-plugin-<name>` crate.
  *
  * Both sides are read the way `tauri dev` reads them: the npm side from the
- * version installed under `node_modules` (what the CLI resolves with
- * `pnpm list <name> --depth 0`), the Rust side from the version resolved in
- * `src-tauri/Cargo.lock`. A declared package whose Rust crate is absent from the
- * lockfile is skipped, exactly as the CLI skips an unpaired plugin, and
- * `@tauri-apps/cli` is not a pair because no crate in the application's
- * dependency tree corresponds to it.
+ * version installed under the application's `node_modules` (what the CLI
+ * resolves with `pnpm list <name> --depth 0`), the Rust side from the version
+ * resolved in `client/src-tauri/Cargo.lock`. A declared package whose Rust crate
+ * is absent from the lockfile is skipped, exactly as the CLI skips an unpaired
+ * plugin, and `@tauri-apps/cli` is not a pair because no crate in the
+ * application's dependency tree corresponds to it.
+ *
+ * The Tauri application is the `client/` submodule, so `--root=<path>` may name
+ * the checkout to inspect; with no argument the repository that owns this script
+ * is used and `client/` is resolved inside it (`scripts/repo-root.mjs`), which
+ * keeps the gate working both from the umbrella and from a copy inside
+ * `client/`.
  *
  * Usage: pnpm check:tauri-versions
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+import { frontendRoot, repositoryRoot } from './repo-root.mjs';
+
+const repoRoot = repositoryRoot();
+/** The Tauri application: the `client/` submodule, or the repository itself when copied there. */
+const clientRoot = frontendRoot(repoRoot);
 const errors = [];
+
+/** Repository-relative display path, so a message names the same file a reader sees. */
+const label = (path) => relative(repoRoot, path).split(sep).join('/') || path;
 
 /** The `major.minor` release of a semver string. */
 function majorMinor(version) {
@@ -51,8 +64,18 @@ function compareVersions(left, right) {
   return 0;
 }
 
-// ---- The Rust side: versions resolved in src-tauri/Cargo.lock ----
-const lockText = readFileSync(join(repoRoot, 'src-tauri', 'Cargo.lock'), 'utf8');
+// ---- The Rust side: versions resolved in client/src-tauri/Cargo.lock ----
+const lockPath = join(clientRoot, 'src-tauri', 'Cargo.lock');
+if (!existsSync(lockPath)) {
+  console.error(
+    `✗ Tauri npm/crate version check cannot run: ${label(lockPath)} is missing. The gate compares\n` +
+      '  the npm packages against the crates `tauri dev` resolves, so it needs that lockfile; a\n' +
+      '  checkout without it must fail here rather than pass vacuously.',
+  );
+  process.exit(1);
+}
+const lockLabel = label(lockPath);
+const lockText = readFileSync(lockPath, 'utf8');
 
 /** Every version of `name` the lockfile records, newest first. */
 function lockedVersions(name) {
@@ -66,8 +89,8 @@ function lockedVersions(name) {
   return versions.sort(compareVersions).reverse();
 }
 
-// ---- The npm side: the Tauri packages this project declares ----
-const pkg = JSON.parse(readFileSync(join(repoRoot, 'package.json'), 'utf8'));
+// ---- The npm side: the Tauri packages the application declares ----
+const pkg = JSON.parse(readFileSync(join(clientRoot, 'package.json'), 'utf8'));
 const declared = { ...(pkg.dependencies ?? {}), ...(pkg.devDependencies ?? {}) };
 
 /** Each entry pairs a Tauri npm package with the crate the CLI compares it to. */
@@ -80,7 +103,7 @@ for (const name of Object.keys(declared)) {
 
 /** The version installed under node_modules, or null when it is not installed. */
 function installedVersion(name) {
-  const manifest = join(repoRoot, 'node_modules', ...name.split('/'), 'package.json');
+  const manifest = join(clientRoot, 'node_modules', ...name.split('/'), 'package.json');
   if (!existsSync(manifest)) return null;
   return JSON.parse(readFileSync(manifest, 'utf8')).version;
 }
@@ -96,7 +119,7 @@ for (const pair of pairs) {
   if (npmVersion === null) {
     errors.push(
       `${pair.npm} is declared in package.json but not installed under node_modules — run ` +
-        `\`pnpm install\` so its pairing with ${pair.crate} can be checked`,
+        `\`pnpm install\` in ${label(clientRoot)} so its pairing with ${pair.crate} can be checked`,
     );
     continue;
   }
@@ -110,7 +133,7 @@ for (const pair of pairs) {
   errors.push(
     `${pair.npm} ${npmVersion} and ${pair.crate} ${crateVersion} are on different releases ` +
       `(${npmRelease} vs ${crateRelease}); update whichever side is behind, in package.json or ` +
-      `src-tauri/Cargo.lock, so both share a major/minor`,
+      `${lockLabel}, so both share a major/minor`,
   );
 }
 
@@ -122,7 +145,7 @@ for (const pair of pairs) {
 if (checked === 0) {
   errors.push(
     `no Tauri npm/crate pair could be compared — ${pairs.length} Tauri npm package(s) are ` +
-      'declared, but none resolved to a crate in src-tauri/Cargo.lock. A lockfile rename or a ' +
+      `declared, but none resolved to a crate in ${lockLabel}. A lockfile rename or a ` +
       'missing install must not turn this gate into a vacuous pass',
   );
 }
@@ -137,5 +160,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `✓ Tauri npm/crate versions aligned — ${checked} package(s) share a major/minor with src-tauri/Cargo.lock`,
+  `✓ Tauri npm/crate versions aligned — ${checked} package(s) share a major/minor with ${lockLabel}`,
 );

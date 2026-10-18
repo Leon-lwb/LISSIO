@@ -161,14 +161,29 @@ if [ -n "$VERSION" ]; then
   echo "--- set version: $VERSION ---"
   run pnpm set-version "$VERSION"
   if [ "$COMMIT" = true ] && [ "$DRY_RUN" = false ]; then
-    git add package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+    # `client/` and `server/` are submodules: the version files live in those repositories, and
+    # the umbrella cannot stage a path inside a submodule. Commit each side there, then stage the
+    # umbrella's own manifest and the updated submodule pointers.
+    # (A `case`, not an associative array: macOS still ships bash 3.2.)
+    for side in client server; do
+      case "$side" in
+        client) side_files="src-tauri/tauri.conf.json" ;;
+        server) side_files="Cargo.toml Cargo.lock" ;;
+      esac
+      # shellcheck disable=SC2086 # side_files is a deliberate two-path list for server
+      git -C "$side" add -- $side_files
+      if ! git -C "$side" diff --cached --quiet; then
+        git -C "$side" commit -m "chore: bump version to v$VERSION [skip ci]"
+      fi
+    done
+    git add package.json client server
     if git diff --cached --quiet; then
       echo "already v$VERSION, nothing to commit"
     else
       git commit -m "chore: bump version to v$VERSION [skip ci]"
     fi
   elif [ "$COMMIT" = true ]; then
-    echo "  [dry-run] git add ... && git commit -m 'chore: bump version to v$VERSION [skip ci]'"
+    echo "  [dry-run] commit package.json, client/src-tauri/tauri.conf.json, and server/{Cargo.toml,Cargo.lock} at v$VERSION"
   fi
 fi
 
@@ -192,8 +207,9 @@ done
 if [ "$SKIP_INSTALL" = true ] || [ "$NEEDS_HOST_INSTALL" = false ]; then
   echo "--- skipping native dependency install ---"
 else
-  echo "--- installing frontend dependencies (pnpm install --frozen-lockfile) ---"
+  echo "--- installing dependencies (pnpm install --frozen-lockfile, umbrella and client/) ---"
   run pnpm install --frozen-lockfile
+  run pnpm --dir client install --frozen-lockfile
 fi
 
 # ── Ensure the Rust std target is installed before cross-compiling ──────────────────────
@@ -261,6 +277,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 echo "[container] pnpm install"
 pnpm install --frozen-lockfile
+pnpm --dir client install --frozen-lockfile
 
 echo "[container] pnpm tauri build"
 pnpm tauri build ${EXTRA_BUNDLES:+--bundles "$EXTRA_BUNDLES"}
@@ -274,7 +291,7 @@ rename_macos_artifacts() {
     echo "  [dry-run] rename .app.tar.gz(.sig) → *_$arch.*"
     return 0
   fi
-  find src-tauri/target -type f -name "*.app.tar.gz*" -path "*/bundle/*" | while read -r f; do
+  find client/src-tauri/target -type f -name "*.app.tar.gz*" -path "*/bundle/*" | while read -r f; do
     case "$f" in
       *_aarch64.app.tar.gz|*_x64.app.tar.gz) continue ;;  # already suffixed, idempotent skip
       *.app.tar.gz)     mv -v "$f" "${f%.app.tar.gz}_$arch.app.tar.gz" ;;
@@ -287,7 +304,7 @@ rename_macos_artifacts() {
 collect_artifacts() {
   local t="$1" dest="$2"
   mkdir -p "$dest"
-  find src-tauri/target -type f -path "*/bundle/*" \( \
+  find client/src-tauri/target -type f -path "*/bundle/*" \( \
     -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" \
     -o -name "*.exe" -o -name "*.app.tar.gz" -o -name "*.nsis.zip" -o -name "*.sig" \
   \) -exec cp -v {} "$dest/" \;

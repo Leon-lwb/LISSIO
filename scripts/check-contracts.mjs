@@ -20,10 +20,10 @@ import { basename, join, relative } from 'node:path';
 // import.meta.dirname is a platform-native path; on Windows new URL(...).pathname yields
 // a "/C:/..." form that existsSync treats as missing, making this check always fail there
 const root = join(import.meta.dirname, '..');
-const committedDir = join(root, 'src', 'types', 'generated');
+const committedDir = join(root, 'client', 'src', 'types', 'generated');
 
 if (!existsSync(committedDir)) {
-  console.error('missing src/types/generated — run pnpm generate:contracts first');
+  console.error('missing client/src/types/generated — run pnpm generate:contracts first');
   process.exit(1);
 }
 
@@ -64,16 +64,16 @@ export function findDuplicateOutputs(entries) {
 
 // Export inside the workspace rather than the OS temp directory: the exporter is
 // a child process, and a confined environment can deny it writes outside the
-// checkout while still allowing the build tree. src-tauri/target is gitignored,
+// checkout while still allowing the build tree. server/target is gitignored,
 // so nothing written here can be committed.
-const scratchRoot = join(root, 'src-tauri', 'target');
+const scratchRoot = join(root, 'server', 'target');
 mkdirSync(scratchRoot, { recursive: true });
 const tempDir = mkdtempSync(join(scratchRoot, 'contracts-check-'));
 
 const manifest = [];
 for (const { package: pkg, example } of EXPORTERS) {
   const result = spawnSync('cargo', ['run', '-p', pkg, '--example', example], {
-    cwd: join(root, 'src-tauri'),
+    cwd: join(root, 'server'),
     encoding: 'utf8',
     env: {
       ...process.env,
@@ -112,11 +112,12 @@ function snapshot(dir) {
 
 /** Every frontend source file outside the generated directory. */
 function frontendSources() {
+  const sourceRoot = join(root, 'client', 'src');
   const files = [];
-  for (const entry of readdirSync(join(root, 'src'), { recursive: true, withFileTypes: true })) {
+  for (const entry of readdirSync(sourceRoot, { recursive: true, withFileTypes: true })) {
     if (!entry.isFile()) continue;
     if (!entry.name.endsWith('.ts') && !entry.name.endsWith('.tsx')) continue;
-    const absolute = join(entry.parentPath ?? root, entry.name);
+    const absolute = join(entry.parentPath ?? sourceRoot, entry.name);
     if (absolute.startsWith(committedDir)) continue;
     files.push({ absolute, rel: relative(root, absolute) });
   }
@@ -169,7 +170,7 @@ for (const [name, outputPath] of frameNames) {
   for (const { absolute, rel } of sources) {
     if (declaresType(readFileSync(absolute, 'utf8'), name)) {
       problems.push(
-        `frontend re-declares exported frame type ${name}: ${rel} — import it from src/types/generated/${outputPath} instead`,
+        `frontend re-declares exported frame type ${name}: ${rel} — import it from client/src/types/generated/${outputPath} instead`,
       );
     }
   }

@@ -3,11 +3,28 @@
 //! Run via `pnpm docs:motion`. The table is derived from the same functions the
 //! app calls at runtime, so it cannot drift from the code the way a hand-written
 //! table does.
+//!
+//! Repository-root convention (`scripts/repo-root.mjs`): the solver is loaded from the
+//! frontend repository — `client/` inside the umbrella, the repository itself in a copy —
+//! and the document is written under the repository that owns this script. Vite is resolved
+//! from the frontend's `node_modules`, because that is where the frontend's bundler lives
+//! after the split; `--root=<path>` selects another checkout.
 
 import { writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
-import { createServer } from 'vite';
+import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+
+import { frontendRoot, repositoryRoot } from './repo-root.mjs';
+
+const repoRoot = repositoryRoot();
+const webRoot = frontendRoot(repoRoot);
+
+// Resolve the frontend's own bundler: the umbrella no longer depends on vite, and the
+// copy that runs inside `client/` resolves the same way there.
+const { createServer } = await import(
+  pathToFileURL(createRequire(join(webRoot, 'package.json')).resolve('vite')).href
+);
 
 // Load the solver through the project's own bundler rather than plain Node: the
 // motion modules use extensionless relative imports (the TS/Vite convention), so
@@ -15,6 +32,7 @@ import { createServer } from 'vite';
 // table honest. `vite-node` would do the same job but is not a dependency.
 const vite = await createServer({
   configFile: false,
+  root: webRoot,
   appType: 'custom',
   logLevel: 'error',
   server: { middlewareMode: true },
@@ -30,8 +48,7 @@ function peak(spring, settle) {
   return max;
 }
 
-const here = dirname(fileURLToPath(import.meta.url));
-const out = resolve(here, '../docs/architecture/motion-tokens.md');
+const out = join(repoRoot, 'docs', 'architecture', 'motion-tokens.md');
 
 const rows = allMotionTokens().map(({ family, phase, speed }) => {
   const timing = timingAt(family, phase, speed);

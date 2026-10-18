@@ -20,9 +20,9 @@ const ok = (message) => console.log(`✓ ${message}`);
 
 // ---- 1. golden fixtures ----
 
-const fixtureDir = join(root, 'src', 'test', 'fixtures');
+const fixtureDir = join(root, 'client', 'src', 'test', 'fixtures');
 const fixtures = readdirSync(fixtureDir).filter((name) => name.endsWith('.json'));
-if (fixtures.length === 0) fail('no exported fixtures under src/test/fixtures');
+if (fixtures.length === 0) fail('no exported fixtures under client/src/test/fixtures');
 const VALID_KINDS = new Set(['device', 'protocol', 'pointSelector', 'widget']);
 const seenDocIds = new Map();
 for (const name of fixtures) {
@@ -56,9 +56,9 @@ ok(`golden fixtures parsed (${fixtures.length} files)`);
 // ---- 2. Catalog contract version agreement (Rust ↔ frontend store constant) ----
 
 const modelDescriptorRs = readFileSync(
-  join(root, 'src-tauri', 'crates', 'shared', 'data-model', 'src', 'model_descriptor.rs'), 'utf8');
+  join(root, 'server', 'core', 'crates', 'shared', 'data-model', 'src', 'model_descriptor.rs'), 'utf8');
 const rustVersion = /MODEL_CATALOG_CONTRACT_VERSION(?:[^;=]*?)?=[ \t]*(\d+)/.exec(modelDescriptorRs)?.[1];
-const storeTs = readFileSync(join(root, 'src', 'store', 'modelCatalogStore.ts'), 'utf8');
+const storeTs = readFileSync(join(root, 'client', 'src', 'store', 'modelCatalogStore.ts'), 'utf8');
 const tsVersion = /MODEL_CATALOG_CONTRACT_VERSION\s*=\s*(\d+)/.exec(storeTs)?.[1];
 if (!rustVersion || !tsVersion) {
   fail(`failed to parse the contract version (rust=${rustVersion}, ts=${tsVersion})`);
@@ -70,18 +70,18 @@ if (!rustVersion || !tsVersion) {
 
 // ---- 3. Test-catalog fixture ↔ UI registry kind set ----
 
-const registryTs = readFileSync(join(root, 'src', 'components', 'widgets', 'registry.ts'), 'utf8');
+const registryTs = readFileSync(join(root, 'client', 'src', 'components', 'widgets', 'registry.ts'), 'utf8');
 const registryKinds = [...registryTs.matchAll(/^(?:\s){2}([A-Za-z0-9]+): \w+Def,$/gm)].map((m) => m[1]);
-if (registryKinds.length === 0) fail('could not parse the widget kind table from widgets/registry.ts');
+if (registryKinds.length === 0) fail('could not parse the widget kind table from client/src/components/widgets/registry.ts');
 
-const catalogTs = readFileSync(join(root, 'src', 'test', 'modelCatalog.ts'), 'utf8');
+const catalogTs = readFileSync(join(root, 'client', 'src', 'test', 'modelCatalog.ts'), 'utf8');
 const listStart = catalogTs.indexOf('WIDGET_TEST_KINDS = [');
 const listEnd = catalogTs.indexOf('] as const', listStart);
 const kindsFromList = listStart >= 0 && listEnd > listStart
   ? [...catalogTs.slice(listStart, listEnd).matchAll(/'([A-Za-z0-9]+)'/g)].map((m) => m[1])
   : [];
 if (kindsFromList.length === 0) {
-  fail('could not parse WIDGET_TEST_KINDS from test/modelCatalog.ts');
+  fail('could not parse WIDGET_TEST_KINDS from client/src/test/modelCatalog.ts');
 } else {
   const registry = new Set(registryKinds);
   const fixture = new Set(kindsFromList);

@@ -10,15 +10,27 @@
  *   3. one-off dependencies must also be registered in the root [workspace.dependencies] first,
  *      keeping the version a single source of truth.
  *
- * Scope: src-tauri/Cargo.toml (root package) + every member crates/<layer>/<crate>/Cargo.toml.
- * Usage: pnpm check:deps
+ * Scope: the workspace root manifest (root package) + every member
+ * `<crate root>/<domain>/<crate>/Cargo.toml`, where the crate roots are `crates/` plus the
+ * nested `core/`, `physical/`, and `data/` submodule roots of the umbrella's `server/`
+ * workspace.
+ *
+ * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the repository
+ * the script runs in — `server/` inside the umbrella, the repository itself inside a copy —
+ * and `--root=<path>` selects another checkout.
+ *
+ * Usage: pnpm check:deps [--root=<path>]
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const workspaceRoot = join(repoRoot, "src-tauri");
+import { repositoryRoot, rustSourceRoots, rustWorkspaceRoot } from "./repo-root.mjs";
+
+const repoRoot = repositoryRoot();
+/** The Rust workspace: `<repo>/server` inside the umbrella, `<repo>` in a copy. */
+const workspaceRoot = rustWorkspaceRoot(repoRoot);
+/** Every directory that holds `<domain>/<crate>` member crates. */
+const CRATE_ROOTS = rustSourceRoots(workspaceRoot);
 const errors = [];
 
 // ---- Minimal TOML line handling: join multi-line entries split by inline tables, skip comments/blank lines ----
@@ -166,16 +178,18 @@ const rootLabel = "lissio (root)";
 checkManifest(rootLabel, readFileSync(join(workspaceRoot, "Cargo.toml"), "utf8"));
 
 // ---- All member crates ----
-const cratesDir = join(workspaceRoot, "crates");
 let memberCount = 0;
-for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
-  if (!layer.isDirectory()) continue;
-  for (const crate of readdirSync(join(cratesDir, layer.name), { withFileTypes: true })) {
-    if (!crate.isDirectory()) continue;
-    const manifest = join(cratesDir, layer.name, crate.name, "Cargo.toml");
-    if (!existsSync(manifest)) continue;
-    checkManifest(`${layer.name}/${crate.name}`, readFileSync(manifest, "utf8"));
-    memberCount++;
+for (const scanRoot of CRATE_ROOTS) {
+  const cratesDir = join(workspaceRoot, scanRoot);
+  for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
+    if (!layer.isDirectory()) continue;
+    for (const crate of readdirSync(join(cratesDir, layer.name), { withFileTypes: true })) {
+      if (!crate.isDirectory()) continue;
+      const manifest = join(cratesDir, layer.name, crate.name, "Cargo.toml");
+      if (!existsSync(manifest)) continue;
+      checkManifest(`${scanRoot}/${layer.name}/${crate.name}`, readFileSync(manifest, "utf8"));
+      memberCount++;
+    }
   }
 }
 
@@ -186,7 +200,7 @@ for (const layer of readdirSync(cratesDir, { withFileTypes: true })) {
 // a pass. `scripts/check-crate-size.mjs` refuses the same vacuous success.
 if (memberCount === 0) {
   errors.push(
-    "scanned 0 member crates under src-tauri/crates/<domain>/<crate> — wrong path or a " +
+    `scanned 0 member crates under ${CRATE_ROOTS.join(", ")}/<domain>/<crate> — wrong path or a ` +
       "layout change, so the dependency rule could not be evaluated",
   );
 }

@@ -6,8 +6,10 @@ import { join, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 
 // Each test owns its backend and directory; it never changes the shared E2E state.
+// The server is built from the `server/` submodule (`pnpm build:server`), so its debug
+// binary lives in that workspace's target directory.
 async function startBackend(configDir: string) {
-  const child = spawn(resolve('src-tauri/target/debug/lissio-server'), [
+  const child = spawn(resolve('server/target/debug/lissio-server'), [
     '--http-port', '0', '--token', 'e2e-token', '--no-mcp', '--no-restore',
     '--cors-origin', 'http://localhost:1420', '--config-dir', configDir, '--supervised-stdio',
   ], { stdio: ['pipe', 'pipe', 'pipe'] });

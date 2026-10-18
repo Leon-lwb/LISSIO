@@ -6,8 +6,10 @@ import { seedSharedEndToEndConfig } from './e2e/seedSharedConfig';
 // checkout would otherwise start with no settings document, which the first-launch page
 // reads as "never set up" — every spec would meet that modal before its own subject.
 // The relative form is shared with the webServer command below, so the seed and the
-// backend provably name the same directory (both resolve against the repo root).
-const SHARED_CONFIG_DIR = 'src-tauri/target/e2e-config';
+// backend provably name the same directory (both resolve against the umbrella root, which
+// is also the working directory the delegated `dev:server` script runs in). It lives
+// under the Tauri shell's ignored build tree, as it did before the split.
+const SHARED_CONFIG_DIR = 'client/src-tauri/target/e2e-config';
 seedSharedEndToEndConfig(resolve(SHARED_CONFIG_DIR));
 
 export default defineConfig({

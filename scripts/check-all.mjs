@@ -144,7 +144,7 @@ function buildPlan({ full, fix }) {
     plan.push({
       group: 'Formatting',
       label: 'cargo fmt (write)',
-      dir: 'src-tauri',
+      dir: 'server',
       argv: ['cargo', 'fmt'],
     });
     plan.push({
@@ -179,7 +179,7 @@ function buildPlan({ full, fix }) {
     plan.push({
       group,
       label,
-      dir: dir === 'tauri' ? 'src-tauri' : 'root',
+      dir: dir === 'server' ? 'server' : 'root',
       argv: command.join('|').split(/\s+/),
     });
   }
@@ -194,7 +194,7 @@ function buildPlan({ full, fix }) {
  * scratch directory and replace the workspace files only on success.
  */
 function guardedGenerateContracts(logPath) {
-  const committed = join(repoRoot, 'src', 'types', 'generated');
+  const committed = join(repoRoot, 'client', 'src', 'types', 'generated');
   const scratch = mkdtempSync(join(logDir, 'contracts-'));
   const result = runCommand(['pnpm', 'generate:contracts'], {
     cwd: repoRoot,
@@ -261,7 +261,7 @@ for (const entry of plan) {
     ? guardedGenerateContracts(logPath)
     : (() => {
         const result = runCommand(entry.argv, {
-          cwd: entry.dir === 'src-tauri' ? join(repoRoot, 'src-tauri') : repoRoot,
+          cwd: entry.dir === 'server' ? join(repoRoot, 'server') : repoRoot,
           env: process.env,
         });
         writeFileSync(logPath, captured(result));
@@ -280,7 +280,7 @@ for (const entry of plan) {
 
 // ── Formatting-change notice ─────────────────────────────────────
 if (options.fix) {
-  const status = spawnSync('git', ['status', '--short', '--', 'src', 'src-tauri'], {
+  const status = spawnSync('git', ['status', '--short', '--', 'client', 'server'], {
     cwd: repoRoot,
     encoding: 'utf8',
   });
@@ -323,7 +323,7 @@ if (failed.length > 0) {
     console.log('');
     console.log(`${C.red}✗ [${entry.group}] ${entry.label}${C.reset}  (exit ${entry.status})`);
     console.log(
-      `  reproduce: (cd ${entry.dir === 'tauri' ? 'src-tauri' : '.'} && ${entry.argv.join(' ')})`,
+      `  reproduce: (cd ${entry.dir === 'server' ? 'server' : '.'} && ${entry.argv.join(' ')})`,
     );
     console.log(`  log: ${entry.logPath}`);
     console.log(`  ${C.dim}----------------------------------------${C.reset}`);

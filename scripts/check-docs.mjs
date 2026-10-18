@@ -10,11 +10,17 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join, dirname, relative, resolve } from 'node:path';
 
-const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const tauriRoot = join(repoRoot, 'src-tauri');
+import { frontendRoot, repositoryRoot, rustSourceRoots, rustWorkspaceRoot, rustWorkspaceRoots } from './repo-root.mjs';
+
+const repoRoot = repositoryRoot();
+/** The Rust workspace: `<repo>/server` inside the umbrella, `<repo>` in a copy. */
+const workspaceRoot = rustWorkspaceRoot(repoRoot);
+/** Every directory that holds member crates, so their markdown is found wherever they are. */
+const CRATE_ROOTS = rustSourceRoots(workspaceRoot);
+/** The frontend: `<repo>/client` inside the umbrella, `<repo>` in a copy. */
+const webRoot = frontendRoot(repoRoot);
 const docsDir = join(repoRoot, 'docs');
 const recordsDir = join(docsDir, 'reviews', 'records');
 const errors = [];
@@ -49,7 +55,8 @@ const REVIEW_VERDICTS = new Set([
 ]);
 const TRACE_MARKERS = /\b(?:Stage \d+|Task #\d+|Phase \d+|iteration\s+\d+|\u8fed\u4ee3\s*\d+|TODO:?\s*\u5f85\u540e\u7eed\u9636\u6bb5)/i;
 
-const RUNTIME_LOCALIZATION_DIR = 'src-tauri/crates/desktop/control-api/src/capabilities/docs/zh/';
+/** `control-api`'s runtime localization directory, relative to the Rust workspace. */
+const RUNTIME_LOCALIZATION_SUFFIX = 'crates/desktop/control-api/src/capabilities/docs/zh/';
 
 let staleDays = 0;
 const argv = process.argv.slice(2);
@@ -151,32 +158,46 @@ if (!existsSync(licensePath)) {
 // 2. SPDX metadata is uniform across JavaScript and Rust packages.
 const pkg = JSON.parse(readText(join(repoRoot, 'package.json')));
 if (pkg.license !== PROJECT_LICENSE) fail(`package.json license must be ${PROJECT_LICENSE}, found ${pkg.license}`);
+const frontendPkgPath = join(webRoot, 'package.json');
+if (existsSync(frontendPkgPath)) {
+  const frontendPkg = JSON.parse(readText(frontendPkgPath));
+  if (frontendPkg.license !== PROJECT_LICENSE) {
+    fail(`${rel(frontendPkgPath)} license must be ${PROJECT_LICENSE}, found ${frontendPkg.license}`);
+  }
+}
 
+// Every Cargo workspace in the checkout is checked, not only the server's:
+// `core/` and `data/` carry their own licenses and are excluded from the server
+// workspace's member list, so reading one manifest would leave them unverified.
 let members = [];
 try {
-  const metadata = JSON.parse(execFileSync('cargo', [
-    'metadata', '--format-version', '1', '--no-deps', '--manifest-path', join(tauriRoot, 'Cargo.toml'),
-  ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
-  members = metadata.packages.filter((item) => new Set(metadata.workspace_members).has(item.id));
-  for (const member of members) {
-    if (member.license !== PROJECT_LICENSE) {
-      fail(`${member.name}: license must be ${PROJECT_LICENSE}, found ${member.license ?? '<missing>'}`);
+  for (const workspace of rustWorkspaceRoots(repoRoot)) {
+    const metadata = JSON.parse(execFileSync('cargo', [
+      'metadata', '--format-version', '1', '--no-deps', '--manifest-path', join(workspace, 'Cargo.toml'),
+    ], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }));
+    const workspaceMembers = metadata.packages.filter((item) => new Set(metadata.workspace_members).has(item.id));
+    members.push(...workspaceMembers);
+    for (const member of workspaceMembers) {
+      if (member.license !== PROJECT_LICENSE) {
+        fail(`${member.name}: license must be ${PROJECT_LICENSE}, found ${member.license ?? '<missing>'}`);
+      }
     }
   }
-} catch {
-  fail('cargo metadata failed; workspace license fields could not be verified');
+  if (members.length === 0) fail('no Cargo workspace member was found; license fields could not be verified');
+} catch (error) {
+  fail(`cargo metadata failed; workspace license fields could not be verified (${error.message.split('\n')[0]})`);
 }
 
 // 3. Dependency allow-list remains deliberately narrow.
-const denyText = readText(join(tauriRoot, 'deny.toml'));
+const denyText = readText(join(workspaceRoot, 'deny.toml'));
 const allowBlock = denyText.match(/\[licenses\][\s\S]*?allow\s*=\s*\[([\s\S]*?)\]/)?.[1] ?? '';
 const allowed = [...allowBlock.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
-if (!allowed.includes(PROJECT_LICENSE)) fail(`src-tauri/deny.toml must allow ${PROJECT_LICENSE}`);
+if (!allowed.includes(PROJECT_LICENSE)) fail(`${rel(join(workspaceRoot, 'deny.toml'))} must allow ${PROJECT_LICENSE}`);
 for (const id of allowed) {
-  if (!KNOWN_COMPATIBLE.has(id)) fail(`src-tauri/deny.toml allows unreviewed license "${id}"`);
+  if (!KNOWN_COMPATIBLE.has(id)) fail(`${rel(join(workspaceRoot, 'deny.toml'))} allows unreviewed license "${id}"`);
 }
 if (allowed.includes('GPL-2.0-only') || allowed.includes('AGPL-3.0-only') || allowed.includes('SSPL-1.0')) {
-  fail('src-tauri/deny.toml must not allow strong copyleft for the Apache-2.0 codebase');
+  fail(`${rel(join(workspaceRoot, 'deny.toml'))} must not allow strong copyleft for the Apache-2.0 codebase`);
 }
 
 // 4. Required root policy and community files.
@@ -223,8 +244,8 @@ const markdown = [
   ...walk(docsDir, (name) => name.endsWith('.md')),
   ...walk(join(repoRoot, '.github'), (name) => name.endsWith('.md')),
   ...walk(join(repoRoot, 'packaging'), (name) => name.endsWith('.md')),
-  ...walk(join(repoRoot, 'src', 'i18n'), (name) => name.endsWith('.md')),
-  ...walk(join(repoRoot, 'src-tauri', 'crates'), (name) => name.endsWith('.md')),
+  ...walk(join(webRoot, 'src', 'i18n'), (name) => name.endsWith('.md')),
+  ...CRATE_ROOTS.flatMap((scanRoot) => walk(join(workspaceRoot, scanRoot), (name) => name.endsWith('.md'))),
 ].filter((file, index, all) => all.indexOf(file) === index);
 
 const historical = (file) => {
@@ -285,7 +306,8 @@ function checkTranslation(file, expectedSource) {
 }
 
 for (const file of canonicalDocs) {
-  if (rel(file).startsWith(RUNTIME_LOCALIZATION_DIR)) {
+  const runtimeLocalizationDir = rel(join(workspaceRoot, RUNTIME_LOCALIZATION_SUFFIX));
+  if (rel(file).startsWith(runtimeLocalizationDir)) {
     checkTranslation(file, rel(file).replace('/docs/zh/', '/docs/en/'));
   } else if (rel(file).endsWith(TRANSLATION_SUFFIX)) {
     checkTranslation(file, translationSource(file));

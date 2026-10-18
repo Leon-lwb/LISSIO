@@ -37,7 +37,7 @@ test('CSS themes retain the active sheet during a delayed replacement', async ({
   await expect(page.locator('[data-tour="data-tabs"][data-dock-card="data-main"]')).toBeVisible();
   await expect.poll(() => page.evaluate(async () => {
     const path = '/src/store/settingsStore.ts';
-    const { useSettingsStore } = await import(/* @vite-ignore */ path) as typeof import('../src/store/settingsStore');
+    const { useSettingsStore } = await import(/* @vite-ignore */ path) as typeof import('../client/src/store/settingsStore');
     return useSettingsStore.getState().loaded;
   })).toBe(true);
   await page.route('**/themes/handoff-a.css', route => route.fulfill({ contentType: 'text/css', body: ':root { --handoff-probe: a; }' }));
@@ -49,7 +49,7 @@ test('CSS themes retain the active sheet during a delayed replacement', async ({
   });
   const load = async (id: string) => page.evaluate(async themeId => {
     const path = '/src/settings/css-theme-loader.ts';
-    const { loadCssTheme } = await import(/* @vite-ignore */ path) as typeof import('../src/settings/css-theme-loader');
+    const { loadCssTheme } = await import(/* @vite-ignore */ path) as typeof import('../client/src/settings/css-theme-loader');
     loadCssTheme({ id: themeId, name: themeId, isBuiltIn: false, url: `/themes/${themeId}.css` });
   }, id);
   await load('handoff-a');

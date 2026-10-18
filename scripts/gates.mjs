@@ -36,10 +36,16 @@ import { fileURLToPath } from 'node:url';
 
 export const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Working-directory aliases, relative to the repository root. */
+/**
+ * Working-directory aliases, relative to the repository root.
+ *
+ * The Rust workspace is the `server/` submodule, so the cargo gates run there;
+ * everything else runs from the umbrella root, including the frontend scripts,
+ * which delegate to `client/` through `pnpm --dir client`.
+ */
 export const CWD = {
   root: '.',
-  'src-tauri': 'src-tauri',
+  server: 'server',
 };
 
 /**
@@ -82,7 +88,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:architecture'],
     tier: 'pr',
-    why: 'layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules',
+    why: 'layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, and `server/data/`)',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -92,7 +98,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:deps'],
     tier: 'pr',
-    why: 'centralized third-party dependency versions inherited from the root workspace',
+    why: 'centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, and `server/data/`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -102,7 +108,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:tauri-versions'],
     tier: 'pr',
-    why: 'the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start',
+    why: 'the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `client/src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
@@ -226,37 +232,37 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:rust-size'],
     tier: 'pr',
-    why: 'production Rust files stay within 500 lines; test files and benches are exempt',
+    why: 'production Rust files in every `server/` crate root stay within 500 lines; test files and benches are exempt',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
     id: 'cargo-fmt',
     label: 'cargo fmt --check',
     group: 'Rust',
-    cwd: 'src-tauri',
+    cwd: 'server',
     cmd: ['cargo', 'fmt', '--check'],
     tier: 'pr',
-    why: 'formatting has no diff',
+    why: 'formatting of the `server/` workspace has no diff',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
     id: 'cargo-clippy',
     label: 'cargo clippy --all-targets',
     group: 'Rust',
-    cwd: 'src-tauri',
+    cwd: 'server',
     cmd: ['cargo', 'clippy', '--workspace', '--all-targets'],
     tier: 'pr',
-    why: 'workspace lints deny all/pedantic/nursery/cargo',
+    why: 'the `server/` workspace lints deny all/pedantic/nursery/cargo',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
     id: 'cargo-test',
     label: 'cargo test --workspace',
     group: 'Rust',
-    cwd: 'src-tauri',
+    cwd: 'server',
     cmd: ['cargo', 'test', '--workspace'],
     tier: 'pr',
-    why: 'every workspace test target, including test-target compilation',
+    why: 'every test target of the `server/` workspace, including test-target compilation; `server/core` and `server/data` are separate Cargo workspaces whose own repository CI runs their tests',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 
@@ -278,7 +284,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:release-sync'],
     tier: 'pr',
-    why: '`package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`',
+    why: 'the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 
@@ -320,10 +326,10 @@ export const GATES = [
     id: 'cargo-deny',
     label: 'cargo deny',
     group: 'Rust (slow)',
-    cwd: 'src-tauri',
+    cwd: 'server',
     cmd: ['cargo', 'deny', 'check'],
     tier: 'full',
-    why: 'advisories, licenses, bans, and sources; requires cargo-deny 0.20.2',
+    why: 'advisories, licenses, bans, and sources for the `server/` workspace; requires cargo-deny 0.20.2',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
 ];
@@ -386,6 +392,23 @@ export const NON_GATE_SCRIPTS = [
   'publish:release',
   'release:verify',
 ];
+
+/**
+ * Cargo workspaces the registry's cargo gates deliberately do not run in.
+ *
+ * `server/Cargo.toml` is a virtual workspace manifest: it owns `crates/**` and the
+ * `physical/` member glob, and it excludes `core/` and `data/`, which declare
+ * `[workspace]` roots of their own. `cargo fmt` / `cargo clippy` / `cargo test` run
+ * from `server/`, so they cannot see those two workspaces — each of those
+ * repositories runs its own CI for its own crates. The umbrella still reads them
+ * through `check:architecture`, `check:deps`, `check:docs`, and `check:rust-size`,
+ * which walk every crate root rather than one workspace.
+ *
+ * `check-ci-gates` verifies that each entry really is a separate Cargo workspace:
+ * if one of them becomes a member of the server workspace, the exclusion above
+ * would silently leave its crates to no gate at all.
+ */
+export const EXTERNAL_RUST_WORKSPACES = ['server/core', 'server/data'];
 
 /**
  * The runner label, read from the registration command in docs/ci.md so the
@@ -543,7 +566,7 @@ function main() {
 
   // `--plan` feeds check-all.sh: "group|label|dir|command"
   if (argv.includes('--plan')) {
-    const dirAlias = { root: 'root', 'src-tauri': 'tauri' };
+    const dirAlias = { root: 'root', server: 'server' };
     for (const gate of gatesFor(tier === 'pr' ? 'pr' : 'full')) {
       console.log([gate.group, gate.label, dirAlias[gate.cwd], gate.cmd.join(' ')].join('|'));
     }

@@ -99,7 +99,7 @@ console.log(
   [
     '',
     '--- Next steps ---',
-    '1. Review git diff: CHANGELOG.md / package.json / src-tauri/{Cargo.toml,tauri.conf.json,Cargo.lock}',
+    '1. Review git diff: CHANGELOG.md / package.json / client/src-tauri/tauri.conf.json / server/{Cargo.toml,Cargo.lock}',
     `2. git commit -m "chore(release): v${version}"`,
     `3. pnpm auto-build --version ${version}`,
     `4. pnpm publish:release --version ${version} --dry-run`,

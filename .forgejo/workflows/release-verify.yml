@@ -33,6 +33,8 @@ jobs:
     runs-on: lissio-ci
     timeout-minutes: 20
     steps:
+      # No submodules: this job inspects the published release over HTTP, and the
+      # umbrella's scripts and `.changes/` are all it reads from the checkout.
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
 

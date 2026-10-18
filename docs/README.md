@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-16
+last-reviewed: 2026-10-18
 applies-to: Repository documentation index and language policy
 -->
 
@@ -86,17 +86,17 @@ Historical review records preserve their original language and facts.
 | --- | --- |
 | [`../AGENTS.md`](../AGENTS.md) | Repository development instructions |
 | [AGENTS.md](AGENTS.md) | Documentation-specific development guidance |
-| [`../src-tauri/crates/README.md`](../src-tauri/crates/README.md) | Rust crate domain layout |
-| [`../src-tauri/crates/desktop/performance/README.md`](../src-tauri/crates/desktop/performance/README.md) | Backend performance ownership |
-| [`../src-tauri/crates/transport/device-tree/README.md`](../src-tauri/crates/transport/device-tree/README.md) | Device-tree crate summary |
+| [`../src-tauri/crates/README.md`](../server/crates/README.md) | Rust crate domain layout |
+| [`../src-tauri/crates/desktop/performance/README.md`](../server/crates/desktop/performance/README.md) | Backend performance ownership |
+| [`../src-tauri/crates/transport/device-tree/README.md`](../server/physical/crates/transport/device-tree/README.md) | Device-tree crate summary |
 | [`../packaging/server/README.md`](../packaging/server/README.md) | Server and CLI package |
-| [`../src/i18n/README.md`](../src/i18n/README.md) | i18n runtime |
-| [`../src/i18n/resources/README.md`](../src/i18n/resources/README.md) | Translation resource rules |
+| [`../src/i18n/README.md`](../client/src/i18n/README.md) | i18n runtime |
+| [`../src/i18n/resources/README.md`](../client/src/i18n/resources/README.md) | Translation resource rules |
 
 Runtime capability help is authoritative in
-[`../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/`](../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/).
+[`../src-tauri/crates/desktop/control-api/src/capabilities/docs/en/`](../server/crates/desktop/control-api/src/capabilities/docs/en/).
 The `zh/` files are product translations. The built-in AI prompt is
-[`../src-tauri/crates/desktop/ai-host/default-system-prompt.md`](../src-tauri/crates/desktop/ai-host/default-system-prompt.md).
+[`../src-tauri/crates/desktop/ai-host/default-system-prompt.md`](../server/crates/desktop/ai-host/default-system-prompt.md).
 
 ## Gates
 

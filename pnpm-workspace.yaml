@@ -1,3 +1,7 @@
+# The umbrella is a single package: `server/`, `server/core/`, `server/physical/`,
+# `server/data/`, and `client/` are separate repositories composed as submodules,
+# and each installs its own dependencies. Nothing under those directories is a
+# workspace member here, so the root install must not reach into them.
 allowBuilds:
   esbuild: true
   puppeteer: true

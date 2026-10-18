@@ -2,9 +2,9 @@
 // Generates the frontend TypeScript contracts from the Rust wire types (ts-rs explicit export programs).
 //
 // Authoritative sources (one export program per exit that defines the types):
-//   - src-tauri/crates/desktop/rpc-api/examples/export_contracts.rs      (RPC + domain contracts)
-//   - src-tauri/crates/desktop/backend-server/examples/export_frames.rs  (Web exit frames + protocol constants)
-// Output directory: src/types/generated/ (one .ts file per Rust type, plus the generated constants module)
+//   - server/crates/desktop/rpc-api/examples/export_contracts.rs      (RPC + domain contracts)
+//   - server/crates/desktop/backend-server/examples/export_frames.rs  (Web exit frames + protocol constants)
+// Output directory: client/src/types/generated/ (one .ts file per Rust type, plus the generated constants module)
 //
 // Both programs write into the same directory on purpose: the generated directory is one
 // projection of the frontend wire contract, and rpc-api (L4) must not dev-depend backend-server (L5).
@@ -20,7 +20,7 @@ import path from 'node:path';
 
 const root = path.resolve(import.meta.dirname, '..');
 const outDir = process.env.LISSIO_CONTRACTS_OUT
-  ?? path.join(root, 'src', 'types', 'generated');
+  ?? path.join(root, 'client', 'src', 'types', 'generated');
 
 const EXPORTERS = [
   { package: 'lissio-rpc-api', example: 'export_contracts' },
@@ -35,7 +35,7 @@ mkdirSync(outDir, { recursive: true });
 
 for (const { package: pkg, example } of EXPORTERS) {
   const result = spawnSync('cargo', ['run', '-p', pkg, '--example', example], {
-    cwd: path.join(root, 'src-tauri'),
+    cwd: path.join(root, 'server'),
     stdio: 'inherit',
     env: {
       ...process.env,

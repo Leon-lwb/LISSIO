@@ -3,7 +3,9 @@
  * check-crate-architecture.mjs — Rust workspace architecture gate.
  *
  * Enforces, from `[package.metadata.lissio]` and the crate layout:
- *   - every member lives at `crates/<domain>/<crate>` and names itself after the directory;
+ *   - every member lives at `<crate root>/<domain>/<crate>` and names itself after the directory,
+ *     where the crate roots are `crates/` plus the nested `core/`, `physical/`, and `data/`
+ *     submodule roots of the umbrella's `server/` workspace;
  *   - metadata is complete and the responsibility is not the placeholder;
  *   - the documented domain/layer matrix in `docs/architecture/crates.md` matches the metadata;
  *   - dependencies follow the domain DAG and never point at a higher layer;
@@ -12,8 +14,13 @@
  *   - tests are flat files, not inline `#[cfg(test)] mod x { ... }` blocks or
  *     test-only directories.
  *
+ * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the repository
+ * the script runs in — `server/` inside the umbrella, the repository itself inside a copy —
+ * and `--root=<path>` selects another checkout. `docs/architecture/crates.md` and
+ * `scripts/lower-layer-external-dependencies.json` are read below that same root.
+ *
  * Usage:
- *   pnpm check:architecture
+ *   pnpm check:architecture [--root=<path>]
  *   node scripts/check-crate-architecture.mjs --update-baseline
  *     Rewrite the reviewed lower-layer external-dependency baseline after a
  *     deliberate, reviewed dependency change. Never a fix for a gate failure.
@@ -23,8 +30,21 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(import.meta.dirname, '..');
-const tauriRoot = path.join(root, 'src-tauri');
+import { repositoryRoot, rustSourceRoots, rustWorkspaceRoot, rustWorkspaceRoots } from './repo-root.mjs';
+
+const root = repositoryRoot();
+/** The Rust workspace: `<repo>/server` inside the umbrella, `<repo>` in a copy. */
+const workspaceRoot = rustWorkspaceRoot(root);
+/**
+ * Every Cargo workspace the gate covers: the repository's own workspace plus the
+ * nested `core/` and `data/` submodules, which declare `[workspace]` roots of
+ * their own and are excluded from the server workspace's member globs. A crate
+ * can only be judged from the metadata of the workspace that owns it.
+ */
+const WORKSPACE_ROOTS = rustWorkspaceRoots(root);
+const WORKSPACE_MANIFESTS = new Set(WORKSPACE_ROOTS.map((workspace) => path.join(workspace, 'Cargo.toml')));
+/** Every directory a member crate may sit under, `<domain>/<crate>` deep. */
+const CRATE_ROOTS = rustSourceRoots(workspaceRoot).map((scanRoot) => path.join(workspaceRoot, scanRoot));
 const LAYER_TABLE_DOC = path.join(root, 'docs', 'architecture', 'crates.md');
 const EXTERNAL_DEPENDENCY_BASELINE = path.join(root, 'scripts', 'lower-layer-external-dependencies.json');
 const BASELINE_DESCRIPTION =
@@ -187,11 +207,20 @@ function walkRust(dir, files = [], dirs = []) {
 function checkPackages(packages, byName, errors) {
   for (const pkg of packages) {
     const manifest = path.resolve(pkg.manifest_path);
-    const isRoot = manifest === path.join(tauriRoot, 'Cargo.toml');
+    const isRoot = WORKSPACE_MANIFESTS.has(manifest);
     if (isRoot) continue;
     const architecture = pkg.metadata?.lissio;
-    const relative = path.relative(path.join(tauriRoot, 'crates'), path.dirname(manifest)).split(path.sep);
-    if (relative.length !== 2) errors.push(`${pkg.name}: expected crates/<domain>/<crate>`);
+    const crateDir = path.dirname(manifest);
+    const crateRoot = CRATE_ROOTS.find((base) => crateDir.startsWith(`${base}${path.sep}`));
+    const relative = crateRoot === undefined
+      ? []
+      : path.relative(crateRoot, crateDir).split(path.sep);
+    if (relative.length !== 2) {
+      errors.push(
+        `${pkg.name}: expected <crate root>/<domain>/<crate> — found ` +
+          `${path.relative(workspaceRoot, crateDir).split(path.sep).join('/') || '<workspace root>'}`,
+      );
+    }
     if (!architecture || !domains.has(architecture.domain) || !Number.isInteger(architecture.layer) || !architecture.responsibility?.trim()) {
       errors.push(`${pkg.name}: incomplete [package.metadata.lissio]`);
       continue;
@@ -199,11 +228,11 @@ function checkPackages(packages, byName, errors) {
     if (architecture.responsibility.trim() === PLACEHOLDER_RESPONSIBILITY) {
       errors.push(`${pkg.name}: responsibility is still the placeholder — state the crate's actual abstraction`);
     }
-    const crateDir = relative[1];
+    const directoryName = relative[1] ?? path.basename(crateDir);
     if (relative[0] !== architecture.domain) errors.push(`${pkg.name}: directory domain and metadata domain differ`);
     const libTarget = pkg.targets.find((target) => target.kind.includes('lib'));
-    if (libTarget?.name !== crateDir.replace(/-/g, '_')) errors.push(`${pkg.name}: lib target must match directory name (${crateDir.replace(/-/g, '_')})`);
-    const expectedPackageName = `lissio-${crateDir.replace(/_/g, '-')}`;
+    if (libTarget?.name !== directoryName.replace(/-/g, '_')) errors.push(`${pkg.name}: lib target must match directory name (${directoryName.replace(/-/g, '_')})`);
+    const expectedPackageName = `lissio-${directoryName.replace(/_/g, '-')}`;
     if (pkg.name !== expectedPackageName) errors.push(`${pkg.name}: package name must be ${expectedPackageName}`);
     if (libTarget && bannedTargetNames.test(libTarget.name)) errors.push(`${pkg.name}: forbidden ambiguous or prefixed crate name`);
     for (const dependency of pkg.dependencies) {
@@ -248,7 +277,7 @@ function checkLayerTable(packages, errors) {
   for (const pkg of packages) {
     const architecture = pkg.metadata?.lissio;
     if (!architecture || !Number.isInteger(architecture.layer)) continue;
-    const isRoot = path.resolve(pkg.manifest_path) === path.join(tauriRoot, 'Cargo.toml');
+    const isRoot = WORKSPACE_MANIFESTS.has(path.resolve(pkg.manifest_path));
     if (isRoot) {
       // The composition root is not a `crates/<domain>/<crate>` member, so the
       // table does not name it; its domain/layer pair must still be documented.
@@ -360,10 +389,10 @@ function checkExternalDependencyBaseline(packages, byName, updateBaseline, error
 function checkTestLayout(errors) {
   let scannedSources = 0;
   let scannedDirectories = 0;
-  for (const scanRoot of ['crates', 'src']) {
-    const { files, dirs } = walkRust(path.join(tauriRoot, scanRoot));
+  for (const scanRoot of CRATE_ROOTS) {
+    const { files, dirs } = walkRust(scanRoot);
     for (const dir of dirs) {
-      const relativeDir = path.relative(tauriRoot, dir).split(path.sep).join('/');
+      const relativeDir = path.relative(workspaceRoot, dir).split(path.sep).join('/');
       if (inTestSuite(relativeDir)) continue;
       let rustFiles;
       try {
@@ -380,7 +409,7 @@ function checkTestLayout(errors) {
       }
     }
     for (const file of files) {
-      const relative = path.relative(tauriRoot, file).split(path.sep).join('/');
+      const relative = path.relative(workspaceRoot, file).split(path.sep).join('/');
       if (isTestPath(relative)) continue;
       scannedSources += 1;
       const lines = readFileSync(file, 'utf8').split('\n');
@@ -397,14 +426,34 @@ function checkTestLayout(errors) {
   return { scannedSources, scannedDirectories };
 }
 
+/**
+ * Every workspace member across every Cargo workspace in the checkout.
+ *
+ * `server/`'s workspace lists its own members and the `physical/` glob, while
+ * `core/` and `data/` are excluded from it (they declare `[workspace]` roots of
+ * their own). Reading one manifest therefore saw roughly half the crates and
+ * reported the rest as undocumented. Merging the metadata of each workspace is
+ * also what makes the dependency rules meaningful again: a server crate that
+ * depends on a core crate is an internal edge, not an external one.
+ */
+function workspacePackages() {
+  const byId = new Map();
+  for (const workspace of WORKSPACE_ROOTS) {
+    const metadata = JSON.parse(execFileSync('cargo', [
+      'metadata', '--format-version', '1', '--no-deps', '--manifest-path', path.join(workspace, 'Cargo.toml'),
+    ], { encoding: 'utf8' }));
+    const members = new Set(metadata.workspace_members);
+    for (const pkg of metadata.packages) {
+      if (members.has(pkg.id)) byId.set(pkg.id, pkg);
+    }
+  }
+  return [...byId.values()];
+}
+
 function main() {
   const argv = process.argv.slice(2);
   const updateBaseline = argv.includes('--update-baseline');
-  const metadata = JSON.parse(execFileSync('cargo', [
-    'metadata', '--format-version', '1', '--no-deps', '--manifest-path', path.join(tauriRoot, 'Cargo.toml'),
-  ], { encoding: 'utf8' }));
-  const members = new Set(metadata.workspace_members);
-  const packages = metadata.packages.filter((pkg) => members.has(pkg.id));
+  const packages = workspacePackages();
   const byName = new Map(packages.map((pkg) => [pkg.name, pkg]));
   const errors = [];
 
@@ -417,11 +466,19 @@ function main() {
     console.error(`Architecture check failed (${errors.length}):\n${errors.map((error) => `- ${error}`).join('\n')}`);
     process.exit(1);
   }
+  // A workspace root manifest may or may not carry a package: `server/`,
+  // `server/core/`, and `server/data/` are virtual today, but a root package is
+  // allowed and is not a `<crate root>/<domain>/<crate>` member. Count whatever
+  // is actually there rather than assuming the pre-split root package.
+  const rootPackages = packages.filter((pkg) => WORKSPACE_MANIFESTS.has(path.resolve(pkg.manifest_path)));
+  const roots = rootPackages.length > 0
+    ? ` + ${rootPackages.map((pkg) => pkg.name).join(', ')} composition root${rootPackages.length === 1 ? '' : 's'}`
+    : '';
   console.log(
-    `Architecture check passed: ${packages.length - 1} domain-grouped crates + lissio composition root, ` +
+    `Architecture check passed: ${packages.length - rootPackages.length} domain-grouped crates${roots} across ` +
+      `${WORKSPACE_ROOTS.length} Cargo workspace(s), ` +
       `${scannedSources} production Rust files and ${scannedDirectories} module directories with flat, non-inline tests; ` +
-      `${packages.length}/${packages.length} workspace packages match the documented layer matrix ` +
-      `(${documentedCrates} named rows plus the composition root), and ${baseline.edges} lower-layer ` +
+      `${documentedCrates} documented crate row(s) match the workspace metadata, and ${baseline.edges} lower-layer ` +
       `external dependency edge(s) across ${baseline.crates} crate(s) are in the reviewed baseline.`,
   );
 }

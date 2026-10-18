@@ -3,17 +3,21 @@
  * check-release-sync.mjs — release sync gate: the version number and the
  * CHANGELOG must agree.
  *
- * Why it exists: the release path has five independent version locations, and
- * missing any one produces an artifact whose filename lies. MSI rejects
- * prerelease identifiers, so `tauri.conf.json` and the Cargo side may only carry
- * the base version while `package.json` keeps the full semver; a stale
- * `Cargo.lock` breaks `--locked` builds outright; a CHANGELOG one version behind
- * shows users the wrong release notes.
+ * Why it exists: the release path has many independent version locations spread
+ * across the submodules, and missing any one produces an artifact whose filename
+ * lies. MSI rejects prerelease identifiers, so `tauri.conf.json` and the Cargo
+ * side may only carry the base version while the npm manifests keep the full
+ * semver; a stale `Cargo.lock` breaks `--locked` builds outright; a CHANGELOG one
+ * version behind shows users the wrong release notes.
  *
  * What it checks:
- *   1. package.json / tauri.conf.json / Cargo.toml ([package],
- *      [workspace.package], and the internal [workspace.dependencies]) /
- *      Cargo.lock agree on one version;
+ *   1. the umbrella `package.json`, `client/package.json`,
+ *      `client/src-tauri/tauri.conf.json`, one root manifest per Cargo workspace
+ *      (`server/`, `server/core/`, `server/data/`, `client/src-tauri/` — the
+ *      version sits in `[package]` or, for a virtual workspace manifest, in
+ *      `[workspace.package]`, plus the internal `[workspace.dependencies]` pins),
+ *      and the lockfile each of those workspaces resolves through agree on one
+ *      version;
  *   2. the CHANGELOG.md metadata block sits above the entries, the newest entry
  *      carries the right version and date, and versions strictly decrease
  *      without duplicates.
@@ -83,68 +87,121 @@ if (typeof version !== 'string' || !VERSION_RE.test(version)) {
 }
 const base = version.split('-')[0];
 
-// ── 2. tauri.conf.json ─────────────────────────────────────────────────────
-const tauriPath = join(repoRoot, 'src-tauri', 'tauri.conf.json');
-if (!existsSync(tauriPath)) {
-  fail('src-tauri/tauri.conf.json is missing');
+/**
+ * Every file that carries the release version, and the repository it lives in.
+ *
+ * `package.json` keeps the full semver; every other file carries the base
+ * version, because MSI rejects prerelease identifiers. Each Cargo workspace has
+ * its own manifest and lockfile now — `server/` is a virtual workspace manifest
+ * (the version sits in `[workspace.package]`), `core/` and `data/` are
+ * workspaces of their own, and the Tauri shell is a root package with a path
+ * dependency on the services it embeds. A manifest that is not checked out is
+ * skipped, but at least one must be present.
+ */
+const RUST_MANIFESTS = [
+  ['server', 'Cargo.toml'],
+  ['server', 'core', 'Cargo.toml'],
+  ['server', 'data', 'Cargo.toml'],
+  ['client', 'src-tauri', 'Cargo.toml'],
+];
+const RUST_LOCKFILES = [
+  ['server', 'Cargo.lock'],
+  ['server', 'core', 'Cargo.lock'],
+  ['server', 'data', 'Cargo.lock'],
+  ['client', 'src-tauri', 'Cargo.lock'],
+];
+
+// ── 2. client/package.json ─────────────────────────────────────────────────
+const frontendPkgPath = join(repoRoot, 'client', 'package.json');
+if (!existsSync(frontendPkgPath)) {
+  fail('client/package.json is missing');
 } else {
-  const tauriVersion = JSON.parse(read(tauriPath)).version;
-  if (tauriVersion !== base) {
+  const frontendVersion = JSON.parse(read(frontendPkgPath)).version;
+  if (frontendVersion !== version) {
     fail(
-      `src-tauri/tauri.conf.json is ${tauriVersion}, expected the base version ${base} (MSI rejects prereleases)`,
+      `client/package.json is ${frontendVersion} while the umbrella package.json is ${version} — ` +
+        'both manifests carry the release version and must agree',
     );
   }
 }
 
-// ── 3. Cargo.toml ─────────────────────────────────────────────────────────
-const cargoPath = join(repoRoot, 'src-tauri', 'Cargo.toml');
-if (!existsSync(cargoPath)) {
-  fail('src-tauri/Cargo.toml is missing');
+// ── 3. tauri.conf.json ─────────────────────────────────────────────────────
+const tauriPath = join(repoRoot, 'client', 'src-tauri', 'tauri.conf.json');
+if (!existsSync(tauriPath)) {
+  fail('client/src-tauri/tauri.conf.json is missing');
 } else {
+  const tauriVersion = JSON.parse(read(tauriPath)).version;
+  if (tauriVersion !== base) {
+    fail(
+      `client/src-tauri/tauri.conf.json is ${tauriVersion}, expected the base version ${base} (MSI rejects prereleases)`,
+    );
+  }
+}
+
+// ── 4. Cargo manifests: one root manifest per workspace ───────────────────
+let manifestsChecked = 0;
+for (const parts of RUST_MANIFESTS) {
+  const label = parts.join('/');
+  const manifest = join(repoRoot, ...parts);
+  if (!existsSync(manifest)) continue;
+  manifestsChecked += 1;
   let section = '';
   const seen = { package: false, 'workspace.package': false };
-  for (const line of read(cargoPath).split('\n')) {
+  for (const line of read(manifest).split('\n')) {
     const header = line.match(/^\s*\[([^\]]+)\]/);
     if (header) section = header[1].trim();
     if ((section === 'package' || section === 'workspace.package') && /^version\s*=\s*"/.test(line)) {
       seen[section] = true;
       const found = line.match(/^version\s*=\s*"([^"]+)"/)[1];
       if (found !== base) {
-        fail(`src-tauri/Cargo.toml [${section}] is ${found}, expected ${base} (63 members inherit it)`);
+        fail(`${label} [${section}] is ${found}, expected ${base}`);
       }
     }
     if (
       section === 'workspace.dependencies' &&
-      /path\s*=\s*"crates\//.test(line) &&
+      /path\s*=\s*"[^"]*crates\//.test(line) &&
       /version\s*=\s*"/.test(line)
     ) {
       const found = line.match(/version\s*=\s*"([^"]+)"/)[1];
       if (found !== base) {
-        fail(`src-tauri/Cargo.toml [workspace.dependencies] pins an internal dependency at ${found}, expected ${base}`);
+        fail(`${label} [workspace.dependencies] pins an internal dependency at ${found}, expected ${base}`);
       }
     }
   }
-  if (!seen.package) fail('src-tauri/Cargo.toml [package] has no version');
-  if (!seen['workspace.package']) fail('src-tauri/Cargo.toml [workspace.package] has no version');
+  // A workspace root states the version either as a package or for its members;
+  // a manifest with neither is a member manifest pointed at by mistake, and
+  // would silently exempt the workspace it names.
+  if (!seen.package && !seen['workspace.package']) {
+    fail(`${label} declares no version in [package] or [workspace.package]`);
+  }
+}
+if (manifestsChecked === 0) {
+  fail('no Rust manifest was found — the server and client submodules are not checked out');
 }
 
-// ── 4. Cargo.lock ─────────────────────────────────────────────────────────
-const lockPath = join(repoRoot, 'src-tauri', 'Cargo.lock');
-if (!existsSync(lockPath)) {
-  fail('src-tauri/Cargo.lock is missing; set-version refreshes it through cargo metadata');
-} else {
+// ── 5. Cargo.lock: every workspace that resolves lissio packages ──────────
+let lockfilesChecked = 0;
+let lockedPackages = 0;
+for (const parts of RUST_LOCKFILES) {
+  const label = parts.join('/');
+  const lockPath = join(repoRoot, ...parts);
+  if (!existsSync(lockPath)) continue;
+  lockfilesChecked += 1;
   let name = null;
   let found = null;
-  let checked = 0;
+  let source = null;
   const flush = () => {
-    if (name && /^lissio(-|$)/.test(name)) {
-      checked += 1;
+    // A registry or git source is a published copy, not the workspace member:
+    // its version is pinned by the dependency requirement, not by this release.
+    if (name && source === null && /^lissio(-|$)/.test(name)) {
+      lockedPackages += 1;
       if (found !== base) {
-        fail(`src-tauri/Cargo.lock has ${name} at ${found}, expected ${base}; re-run pnpm set-version`);
+        fail(`${label} has ${name} at ${found}, expected ${base}; re-run pnpm set-version`);
       }
     }
     name = null;
     found = null;
+    source = null;
   };
   for (const line of read(lockPath).split('\n')) {
     if (line.trim() === '[[package]]') {
@@ -155,10 +212,13 @@ if (!existsSync(lockPath)) {
     if (nameMatch) name = nameMatch[1];
     const versionMatch = line.match(/^version\s*=\s*"([^"]+)"/);
     if (versionMatch) found = versionMatch[1];
+    const sourceMatch = line.match(/^source\s*=\s*"([^"]+)"/);
+    if (sourceMatch) source = sourceMatch[1];
   }
   flush();
-  if (checked === 0) fail('src-tauri/Cargo.lock has no lissio package entry');
 }
+if (lockfilesChecked === 0) fail('no Cargo.lock was found — the workspace lockfiles are not checked out');
+if (lockedPackages === 0) fail('no lockfile records a local lissio package entry');
 
 // ── 5. CHANGELOG.md ───────────────────────────────────────────────────────
 const changelogPath = join(repoRoot, 'CHANGELOG.md');
@@ -218,6 +278,6 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `✓ Release sync gate passed — v${version} (base ${base}) agrees across package.json / tauri.conf.json / ` +
-    'Cargo.toml / Cargo.lock, and CHANGELOG.md carries it',
+  `✓ Release sync gate passed — v${version} (base ${base}) agrees across package.json, client/package.json, ` +
+    `${manifestsChecked} Cargo manifest(s) and ${lockfilesChecked} lockfile(s), and CHANGELOG.md carries it`,
 );

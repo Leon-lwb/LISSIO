@@ -3,15 +3,26 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-17
+last-reviewed: 2026-10-18
 applies-to: Rust workspace ownership, domains, layers, and dependency direction
 -->
 
 ## Physical layout
 
-Every member crate lives at `src-tauri/crates/<domain>/<crate>`. Domain folders
-are navigation aids, not crates and not dependency layers. This keeps related
-capabilities visually adjacent without encoding two concepts in one directory.
+Every member crate lives at `<crate root>/<domain>/<crate>`. The Rust repository
+`server/` composes three Cargo workspaces: its own root (`server/Cargo.toml`) owns
+`crates/<domain>/<crate>` and, through a member glob, the `physical/` submodule's
+`physical/crates/<domain>/<crate>`; `server/core` and `server/data` declare
+workspace roots of their own, so their crates live at `core/crates/<domain>/<crate>`
+and `data/crates/<domain>/<crate>`. Domain folders are navigation aids, not crates
+and not dependency layers. This keeps related capabilities visually adjacent
+without encoding two concepts in one directory.
+
+The Tauri shell crates live with the shell in the frontend repository
+(`client/src-tauri/crates/{menu_shell,update_flow}`). They keep
+`[package.metadata.lissio]` — domain `desktop`, layer 5 — and are checked by that
+repository's own copy of this gate; the umbrella's `check:architecture` reads the
+three `server/` workspaces only.
 
 ## Layers
 
@@ -50,14 +61,14 @@ editing metadata alone.
 | signal | L1: `raw-data`, `waveform`, `filter`, `spectrum`, `measurement`; L4: `gpu` |
 | graph | L1: `kind`, `hir`, `plane`, `lower`, `eval`, `buffer-graph`, `trigger`, `graph-testkit`, `graph` |
 | transport | L2: `device-tree`, `transport`, `automotive-diag`; L4: `serial`, `network`, `can-transport`, `modbus-adapter`, `s7-adapter`, `automotive`, `automotive-isotp` |
-| data | L1: `bus`; L2: `recording` |
+| data | L1: `bus`; L2: `recording`, `dataflow` |
 | ai | L4: `llm`, `chat-session`, `chat`, `mcp-client` |
-| desktop | L1: `events`; L2: `pipeline`, `stream`, `evaluator`; L3: `app`, `graph-ops`, `control-api`; L4: `ai-host`, `rpc-api`, `performance`, `backend-host`, `mcp-server`; L5: `backend-server`, `backend-cli`, `menu-shell`, `update-flow` |
+| desktop | L1: `events`; L2: `pipeline`, `stream`, `evaluator`; L3: `app`, `graph-ops`, `control-api`; L4: `ai-host`, `rpc-api`, `performance`, `backend-host`, `mcp-server`; L5: `backend-server`, `backend-cli` |
 
 A domain that spans layers is expected, not a defect: capability families such
 as `transport` and `signal` pair a deterministic core with the L4 adapters
 that implement its ports. Do not split a domain into layer subdirectories — a
-crate path is exactly `crates/<domain>/<crate>` — and do not split a
+crate path is exactly `<crate root>/<domain>/<crate>` — and do not split a
 multi-layer domain into one domain per layer; that encodes the same fact twice
 and moves paths without changing a single dependency edge.
 
@@ -113,6 +124,13 @@ directory under a crate `src/` that contains only test files.
 - Test files are exempt from the 500-line production limit
   (`scripts/check-crate-size.mjs`), so a `_tests.rs` file may hold the whole
   unit-test surface of its module.
+- The product-level integration suites (`graph_tab_lifecycle.rs`,
+  `justfloat_pipeline.rs`, `workspace_persistence.rs`) live in
+  `server/crates/desktop/backend-host/tests/`, the composition root they
+  exercise. A workspace-root `tests/` directory does not work here: with a
+  virtual manifest, `cargo test --workspace` compiles test targets only where a
+  package owns them, so those suites would be silently skipped rather than
+  reported as missing.
 
 ## Software exits
 
@@ -174,9 +192,13 @@ they also satisfy the layer rule.
 | protocol | `points`, `logic`, `logic-decoder`, `protocol`, `protocol-float`, `protocol-can-bridge`, `schema-types`, `schema`, `frame-decoder`, `acquisition` |
 | graph | `kind`, `hir`, `plane`, `lower`, `eval`, `buffer-graph`, `trigger`, `graph-testkit`, `graph` |
 | transport | `device-tree`, `transport`, `serial`, `network`, `can-transport`, `automotive`, `automotive-isotp`, `automotive-diag`, `modbus-adapter`, `s7-adapter` |
-| data | `bus`, `recording` |
+| data | `bus`, `recording`, `dataflow` |
 | ai | `llm`, `chat-session`, `chat`, `mcp-client` |
-| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph-ops`, `control-api`, `ai-host`, `rpc-api`, `performance`, `backend-host`, `menu-shell`, `update-flow`, `mcp-server`, `backend-server`, `backend-cli`, and the shell-only root package `lissio` |
+| desktop | `events`, `pipeline`, `stream`, `evaluator`, `app`, `graph-ops`, `control-api`, `ai-host`, `rpc-api`, `performance`, `backend-host`, `mcp-server`, `backend-server`, `backend-cli` |
+
+The shell-only root package `lissio` (the Tauri application root) and the
+`menu-shell` / `update-flow` crates live in the frontend repository; they are not
+members of a `server/` workspace and are not listed above.
 
 `graph` owns the compiler as separate responsibility crates:
 `kind` defines node semantics, `hir` builds and classifies the typed graph,

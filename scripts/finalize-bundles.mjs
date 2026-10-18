@@ -87,8 +87,8 @@ export async function finalizeInstallers(sources, inspect = readIntegrity, setMe
 export async function finalizeBundles(platform = process.platform) {
   // Do not inspect Windows paths or invoke Windows tools on macOS/Linux.
   if (platform !== 'win32') { console.log('Windows installer integrity: skipped on this platform.'); return []; }
-  const config = JSON.parse(readFileSync(join(repoRoot, 'src-tauri', 'tauri.conf.json'), 'utf8'));
-  const bundleDir = join(repoRoot, 'src-tauri', 'target', 'release', 'bundle');
+  const config = JSON.parse(readFileSync(join(repoRoot, 'client', 'src-tauri', 'tauri.conf.json'), 'utf8'));
+  const bundleDir = join(repoRoot, 'client', 'src-tauri', 'target', 'release', 'bundle');
   const sources = discoverInstallers(bundleDir, config.productName, config.version);
   for (const source of sources) {
     const rel = relative(realpathSync(repoRoot), realpathSync(source));

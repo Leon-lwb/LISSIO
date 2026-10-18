@@ -12,11 +12,11 @@ test('device choices stay readable across themes and retain keyboard selection',
   for (const theme of ['dark', 'light', 'monet', 'custom-light']) {
     await page.evaluate(async id => {
       const path = '/src/settings/theme.ts';
-      const { DARK_THEME, LIGHT_THEME, MONET_THEME } = await import(/* @vite-ignore */ path) as typeof import('../src/settings/theme');
+      const { DARK_THEME, LIGHT_THEME, MONET_THEME } = await import(/* @vite-ignore */ path) as typeof import('../client/src/settings/theme');
       const appearancePath = '/src/settings/applyTheme.ts';
       const defaultsPath = '/src/settings/defaults.ts';
-      const { applyAppearance } = await import(/* @vite-ignore */ appearancePath) as typeof import('../src/settings/applyTheme');
-      const { DEFAULT_SETTINGS } = await import(/* @vite-ignore */ defaultsPath) as typeof import('../src/settings/defaults');
+      const { applyAppearance } = await import(/* @vite-ignore */ appearancePath) as typeof import('../client/src/settings/applyTheme');
+      const { DEFAULT_SETTINGS } = await import(/* @vite-ignore */ defaultsPath) as typeof import('../client/src/settings/defaults');
       const selected = id === 'light' ? LIGHT_THEME : id === 'monet' ? MONET_THEME
         : id === 'custom-light' ? { ...LIGHT_THEME, id, isBuiltIn: false } : DARK_THEME;
       applyAppearance({ ...DEFAULT_SETTINGS.appearance, theme: selected.id, customThemes: [selected], acrylicBackground: true });

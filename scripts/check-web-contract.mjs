@@ -2,12 +2,12 @@
 // Web exit contract alignment check — prevents "the frontend added a command / the backend
 // added an IPC, but the Web exit missed it".
 //
-// Data sources (all authoritative inventories inside the repository, no second copy):
-//   1. src-tauri/src/lib.rs               desktop-only IPC commands registered by the Tauri shell
-//   2. rpc-api/src/catalog.rs             SUPPORTED / PENDING / DESKTOP_ONLY / CHANNEL / PAYLOAD_ARGS
-//   3. rpc-api/src/lib.rs                 dispatch match arms
-//   4. src/**/*.{ts,tsx}                  command names the frontend actually calls (transport.call / invoke)
-//   5. rpc-api/src/*.rs                   the argument names each dispatch arm reads via required()/optional()
+// Data sources (all authoritative inventories inside the checkout, no second copy):
+//   1. client/src-tauri/src/lib.rs        desktop-only IPC commands registered by the Tauri shell
+//   2. server/crates/desktop/rpc-api/src/catalog.rs  SUPPORTED / PENDING / DESKTOP_ONLY / CHANNEL / PAYLOAD_ARGS
+//   3. server/crates/desktop/rpc-api/src/lib.rs      dispatch match arms
+//   4. client/src/**/*.{ts,tsx}           command names the frontend actually calls (transport.call / invoke)
+//   5. server/crates/desktop/rpc-api/src/*.rs        the argument names each dispatch arm reads via required()/optional()
 //
 // What it checks:
 //   A. the four lists are pairwise disjoint; DESKTOP_ONLY = the shell IPC command set
@@ -178,10 +178,10 @@ function stripComments(source) {
 
 /** All IPC command names registered in generate_handler![...] (order-preserving dedup). */
 function ipcCommands() {
-  const source = read('src-tauri/src/lib.rs');
+  const source = read('client/src-tauri/src/lib.rs');
   const start = source.indexOf('generate_handler![');
   if (start < 0) {
-    errors.push('generate_handler! registry not found in src-tauri/src/lib.rs');
+    errors.push('generate_handler! registry not found in client/src-tauri/src/lib.rs');
     return [];
   }
   const end = source.indexOf('])', start);
@@ -199,7 +199,7 @@ function catalogList(source, name) {
 
 /** Command lists and the payload pass-through set from catalog.rs. */
 function catalog() {
-  const source = read('src-tauri/crates/desktop/rpc-api/src/catalog.rs');
+  const source = read('server/crates/desktop/rpc-api/src/catalog.rs');
   const lists = {};
   for (const name of ['SUPPORTED', 'PENDING', 'DESKTOP_ONLY', 'CHANNEL']) {
     const found = catalogList(source, name);
@@ -225,7 +225,7 @@ function catalog() {
 
 /** Command names of dispatch's match arms. */
 function dispatchedCommands() {
-  const source = read('src-tauri/crates/desktop/rpc-api/src/lib.rs');
+  const source = read('server/crates/desktop/rpc-api/src/lib.rs');
   const start = source.indexOf('pub async fn dispatch');
   const block = source.slice(start);
   return new Set([...block.matchAll(/^\s{8}"([a-z_0-9]+)"\s*=>/gm)].map((m) => m[1]));
@@ -242,7 +242,7 @@ function dispatchedCommands() {
  * command name and are not matched.
  */
 function dispatchTargets() {
-  const source = stripComments(read('src-tauri/crates/desktop/rpc-api/src/lib.rs'));
+  const source = stripComments(read('server/crates/desktop/rpc-api/src/lib.rs'));
   const targets = new Map();
   for (const match of source.matchAll(
     /"([a-z_0-9]+)"\s*=>\s*(?:Ok\()?\s*\{?\s*([a-z_0-9]+)::([a-z_0-9]+)/g,
@@ -271,7 +271,7 @@ function frontendFiles({ includeBridges = false } = {}) {
       files.push(absolute);
     }
   };
-  walk(path.join(root, 'src'));
+  walk(path.join(root, 'client', 'src'));
   return files;
 }
 
@@ -510,7 +510,7 @@ for (const leak of leaks) {
 // delegate identity extraction to helpers such as `acquisition.rs::node_identity`), but an
 // independent dispatch entry point is never merged in: it serves a different command and may
 // legitimately read a different key set.
-const RPC_API_SRC = 'src-tauri/crates/desktop/rpc-api/src';
+const RPC_API_SRC = 'server/crates/desktop/rpc-api/src';
 const KEY_CALL =
   /\b(required|optional)\s*(?:::\s*<(?:[^<>]|<[^<>]*>)*>\s*)?\(\s*&?\s*args\s*,\s*&?\s*cmd\s*,\s*"([a-z_0-9]+)"\s*\)/g;
 

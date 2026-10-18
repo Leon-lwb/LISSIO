@@ -5,7 +5,7 @@ test('window and node editor paint each background once in acrylic and opaque mo
   await expect(page.locator('.node-editor-rf')).toBeVisible();
   await expect.poll(() => page.evaluate(async () => {
     const path = '/src/store/settingsStore.ts';
-    const { useSettingsStore } = await import(/* @vite-ignore */ path) as typeof import('../src/store/settingsStore');
+    const { useSettingsStore } = await import(/* @vite-ignore */ path) as typeof import('../client/src/store/settingsStore');
     return useSettingsStore.getState().loaded;
   })).toBe(true);
 
@@ -13,8 +13,8 @@ test('window and node editor paint each background once in acrylic and opaque mo
     const backgrounds = await page.evaluate(async enabled => {
       const appearancePath = '/src/settings/applyTheme.ts';
       const defaultsPath = '/src/settings/defaults.ts';
-      const { applyAppearance } = await import(/* @vite-ignore */ appearancePath) as typeof import('../src/settings/applyTheme');
-      const { DEFAULT_SETTINGS } = await import(/* @vite-ignore */ defaultsPath) as typeof import('../src/settings/defaults');
+      const { applyAppearance } = await import(/* @vite-ignore */ appearancePath) as typeof import('../client/src/settings/applyTheme');
+      const { DEFAULT_SETTINGS } = await import(/* @vite-ignore */ defaultsPath) as typeof import('../client/src/settings/defaults');
       applyAppearance({ ...DEFAULT_SETTINGS.appearance, acrylicBackground: enabled });
 
       const color = (selector: string) => getComputedStyle(document.querySelector(selector)!).backgroundColor;
@@ -46,7 +46,7 @@ test('window and node editor paint each background once in acrylic and opaque mo
   // likewise leave the body tint visible instead of compositing a second copy.
   await page.evaluate(async () => {
     const path = '/src/store/configGuideStore.ts';
-    const { useConfigGuideStore } = await import(/* @vite-ignore */ path) as typeof import('../src/store/configGuideStore');
+    const { useConfigGuideStore } = await import(/* @vite-ignore */ path) as typeof import('../client/src/store/configGuideStore');
     useConfigGuideStore.setState({ isOpen: true });
   });
   await expect(page.locator('[aria-labelledby="config-guide-title"]')).toBeVisible();

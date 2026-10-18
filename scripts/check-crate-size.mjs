@@ -18,18 +18,28 @@
  * the rule lives in `scripts/gates.mjs`, check-all / Forgejo / local runs share one
  * command.
  *
- * Usage: pnpm check:rust-size
+ * Repository-root convention (`scripts/repo-root.mjs`): the gate scans the Rust
+ * workspace of the repository it runs in. Inside the umbrella that workspace is the
+ * `server/` submodule, whose `core/`, `physical/`, and `data/` directories are
+ * submodules of their own; a copy placed in `server/scripts/` scans `crates/` and the
+ * nested directories with no arguments, and `--root=<path>` selects another checkout.
+ *
+ * Usage: pnpm check:rust-size [--root=<path>]
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-import { repoRoot, CWD } from './gates.mjs';
+import { displayPath, repositoryRoot, rustSourceRoots, rustWorkspaceRoot } from './repo-root.mjs';
 
-/** Production source scan roots (relative to src-tauri). */
-const SCAN_ROOTS = ['crates', 'src'];
 /** Per-file line limit. */
 const LIMIT = 500;
 const SKIP_DIRS = new Set(['target', 'node_modules']);
+
+const repoRoot = repositoryRoot();
+/** The Rust workspace: `<repo>/server` inside the umbrella, `<repo>` in a copy. */
+const workspaceRoot = rustWorkspaceRoot(repoRoot);
+/** Production source scan roots, relative to the Rust workspace root. */
+const SCAN_ROOTS = rustSourceRoots(workspaceRoot);
 
 /** Test/benchmark exemptions: directory-name or file-name markers. */
 function isExempt(relPath) {
@@ -57,15 +67,14 @@ function walk(dir, out = []) {
   return out;
 }
 
-const tauriRoot = join(repoRoot, CWD['src-tauri']);
 const offenders = [];
 let scanned = 0;
 
 for (const root of SCAN_ROOTS) {
-  for (const file of walk(join(tauriRoot, root))) {
-    // Decide exemptions from the path relative to src-tauri, matching the original find expression
-    const relToTauri = relative(tauriRoot, file).split(/[\\/]/).join('/');
-    if (isExempt(relToTauri)) continue;
+  for (const file of walk(join(workspaceRoot, root))) {
+    // Decide exemptions from the path relative to the workspace root, matching the original find expression
+    const relToWorkspace = relative(workspaceRoot, file).split(/[\\/]/).join('/');
+    if (isExempt(relToWorkspace)) continue;
     // Exactly matches `wc -l`: count newline characters only. Do not add +1 for a missing
     // trailing newline — the original rule was a one-line `wc -l` and does not add it either.
     // Adding +1 would let a file with 500 newlines and no trailing newline pass under
@@ -74,14 +83,14 @@ for (const root of SCAN_ROOTS) {
     let lines = 0;
     for (const char of content) if (char === '\n') lines += 1;
     scanned += 1;
-    if (lines > LIMIT) offenders.push({ path: relToTauri, lines });
+    if (lines > LIMIT) offenders.push({ path: relToWorkspace, lines });
   }
 }
 
 if (offenders.length > 0) {
   console.error(`✗ Rust production file exceeds the ${LIMIT}-line limit (tests and benchmarks exempt):\n`);
   for (const offender of offenders.sort((a, b) => b.lines - a.lines)) {
-    console.error(`  ${offender.lines} lines  src-tauri/${offender.path}`);
+    console.error(`  ${offender.lines} lines  ${join(displayPath(repoRoot, workspaceRoot), offender.path)}`);
   }
   console.error('\nSplit the implementation into modules without changing the stable crate public API (see AGENTS.md).');
   process.exit(1);
@@ -91,7 +100,7 @@ if (scanned === 0) {
   // Scanning no files means a wrong path or a missing directory, not "everything is
   // compliant". Fail loudly rather than print a 0 that looks like a pass.
   console.error('✗ Scanned 0 Rust source files — wrong path or missing directory, cannot evaluate the 500-line rule.');
-  console.error(`  Expected scan roots: ${SCAN_ROOTS.join(', ')} (relative to ${tauriRoot})`);
+  console.error(`  Expected scan roots: ${SCAN_ROOTS.join(', ')} (relative to ${workspaceRoot})`);
   process.exit(1);
 }
 

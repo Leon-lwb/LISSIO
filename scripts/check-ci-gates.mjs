@@ -48,6 +48,7 @@ import {
   BLOCK_START,
   DOC_PATHS,
   DOC_STYLES,
+  EXTERNAL_RUST_WORKSPACES,
   GATES,
   NON_GATE_SCRIPTS,
   documentedRunnerLabel,
@@ -209,7 +210,7 @@ for (const gate of GATES) {
 // — verified: deleting the `cargo-test` gate and running `--fix` reported fully
 // green before these anchors existed.
 //
-// The anchor is the repository's own structure. If `src-tauri/Cargo.toml` is
+// The anchor is the repository's own structure. If `server/Cargo.toml` is
 // present then this is a Rust workspace, and a Rust workspace must have
 // formatting, lint, and test gates. That is a statement about required
 // capabilities, not a second copy of the gate list, so it does not reintroduce
@@ -217,7 +218,7 @@ for (const gate of GATES) {
 const CAPABILITY_ANCHORS = [
   {
     // A Rust workspace has these files at its root.
-    present: ['src-tauri/Cargo.toml'],
+    present: ['server/Cargo.toml'],
     require: [
       { match: (gate) => gate.cmd[0] === 'cargo' && gate.cmd[1] === 'fmt', what: 'a `cargo fmt --check` gate', tier: 'pr' },
       { match: (gate) => gate.cmd[0] === 'cargo' && gate.cmd[1] === 'clippy', what: 'a `cargo clippy` gate', tier: 'pr' },
@@ -226,7 +227,7 @@ const CAPABILITY_ANCHORS = [
   },
   {
     // A deny configuration exists to be enforced, not to sit in the tree.
-    present: ['src-tauri/deny.toml'],
+    present: ['server/deny.toml'],
     require: [
       { match: (gate) => gate.cmd[0] === 'cargo' && gate.cmd[1] === 'deny', what: 'a `cargo deny check` gate', tier: null },
     ],
@@ -240,7 +241,7 @@ const CAPABILITY_ANCHORS = [
   },
   {
     // A production bundler config must be exercised, not merely type-checked.
-    present: ['vite.config.ts'],
+    present: ['client/vite.config.ts'],
     require: [
       { match: (gate) => gate.cmd.join(' ') === 'pnpm build:web', what: 'a production web build gate', tier: null },
     ],
@@ -254,14 +255,14 @@ const CAPABILITY_ANCHORS = [
   },
   {
     // TypeScript sources require a type check.
-    present: ['tsconfig.json'],
+    present: ['client/tsconfig.json'],
     require: [
       { match: (gate) => gate.cmd.join(' ') === 'pnpm typecheck', what: 'a TypeScript type-check gate', tier: 'pr' },
     ],
   },
   {
     // A frontend unit-test setup requires a unit-test gate.
-    present: ['vitest.config.ts'],
+    present: ['client/vitest.config.ts'],
     require: [{ match: (gate) => gate.cmd.join(' ') === 'pnpm test', what: 'a frontend unit-test gate', tier: 'pr' }],
   },
 ];
@@ -281,6 +282,28 @@ for (const anchor of CAPABILITY_ANCHORS) {
         `gates.mjs: ${need.what} exists but is not tier "${need.tier}", so it would not run on pull requests`,
       );
     }
+  }
+}
+
+// Cargo workspaces the registry's cargo gates deliberately do not run in.
+//
+// The cargo gates run from `server/`, which cannot see `server/core` or
+// `server/data` (they declare `[workspace]` roots of their own and are excluded
+// from its member list). That is deliberate — each of those repositories runs its
+// own CI — but it stops being deliberate the moment one of them becomes a member
+// of the server workspace, because then the umbrella's `cargo fmt`/`clippy`/`test`
+// gates would skip crates that no other gate covers either. The registry states
+// the exclusion; this verifies the statement still describes the tree.
+for (const workspace of EXTERNAL_RUST_WORKSPACES) {
+  const manifest = join(repoRoot, workspace, 'Cargo.toml');
+  // Not checked out: nothing to disagree with yet.
+  if (!existsSync(manifest)) continue;
+  if (!/^\s*\[workspace\]\s*$/m.test(read(manifest))) {
+    fail(
+      `gates.mjs: EXTERNAL_RUST_WORKSPACES lists "${workspace}", but its Cargo.toml no longer declares a ` +
+        '[workspace] root — the umbrella\'s cargo gates run in `server/` only, so its crates would be ' +
+        'checked by nothing. Add them to the server workspace and to the registry, or keep the workspace split',
+    );
   }
 }
 
@@ -903,8 +926,8 @@ if (!fullTierRan) {
 // check fails when the manifest host and the publish host disagree, and rejects
 // GitHub's `releases/latest/download/...` pseudo-path, which Codeberg does not
 // implement (measured: that path 404s even for an asset that exists).
-const updateRs = join(repoRoot, 'src-tauri/crates/desktop/update_flow/src/update.rs');
-const tauriConf = join(repoRoot, 'src-tauri/tauri.conf.json');
+const updateRs = join(repoRoot, 'client/src-tauri/crates/update_flow/src/update.rs');
+const tauriConf = join(repoRoot, 'client/src-tauri/tauri.conf.json');
 if (existsSync(updateRs)) {
   const text = read(updateRs);
   const urls = [...text.matchAll(/"(https:\/\/[^"]*\.json)"/g)].map((m) => m[1]);
@@ -933,7 +956,7 @@ if (existsSync(updateRs)) {
       const endpointHost = new URL(endpoints[0]).host;
       if (!urls.some((url) => new URL(url).host === endpointHost)) {
         fail(
-          `src-tauri/tauri.conf.json: updater endpoint host "${endpointHost}" does not match any ` +
+          `client/src-tauri/tauri.conf.json: updater endpoint host "${endpointHost}" does not match any ` +
             'manifest host in update_flow/src/update.rs — the config and the code disagree',
         );
       }

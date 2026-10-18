@@ -24,7 +24,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const manifestPath = join(repoRoot, 'src-tauri', 'Cargo.toml');
+const manifestPath = join(repoRoot, 'server', 'Cargo.toml');
 const REGISTRY_API = 'https://crates.io/api/v1';
 // crates.io requires a reachable project homepage in the UA; the repository has moved to Codeberg.
 const USER_AGENT = 'lissio-publish-script (https://codeberg.org/Horldsence/Lissio)';
@@ -79,13 +79,42 @@ const metadata = cargoJson(['--no-deps']);
 const members = new Set(metadata.workspace_members);
 const packages = metadata.packages.filter((pkg) => members.has(pkg.id));
 const memberByName = new Map(packages.map((pkg) => [pkg.name, pkg]));
-const workspaceVersion = metadata.packages.find((pkg) => pkg.name === 'lissio')?.version;
+
+/**
+ * The release version of this workspace.
+ *
+ * `server/Cargo.toml` is a virtual workspace manifest — there is no root package
+ * to read a version from — so it comes from `[workspace.package]`, which every
+ * member inherits. A resolved member version is the fallback, so a future root
+ * package keeps working.
+ *
+ * Scope: this publishes the `server/` workspace. `server/core` and `server/data`
+ * are separate Cargo workspaces (excluded from this member list) and publish
+ * from their own repositories, in the same way their CI runs their own tests.
+ */
+function workspaceVersionOf(manifestText, workspacePackages) {
+  let section = '';
+  for (const line of manifestText.split('\n')) {
+    const header = line.match(/^\s*\[([^\]]+)\]/);
+    if (header) section = header[1].trim();
+    if (section === 'workspace.package') {
+      const found = line.match(/^version\s*=\s*"([^"]+)"/);
+      if (found) return found[1];
+    }
+  }
+  return workspacePackages.find((pkg) => pkg.name === 'lissio')?.version
+    ?? workspacePackages[0]?.version
+    ?? null;
+}
+
+const manifestText = readFileSync(manifestPath, 'utf8');
+const workspaceVersion = workspaceVersionOf(manifestText, packages);
 if (!workspaceVersion) fail('cannot resolve the workspace version from cargo metadata');
 
 // Static safeguard: internal [workspace.dependencies] entries must carry an explicit version (on
 // crates.io path dependencies are stripped, and without a version downstream publishing cannot resolve them).
-for (const line of readFileSync(manifestPath, 'utf8').split('\n')) {
-  if (/path\s*=\s*"crates\//.test(line) && !/version\s*=\s*"/.test(line) && /^\s*[^#[]/.test(line)) {
+for (const line of manifestText.split('\n')) {
+  if (/path\s*=\s*"[^"]*crates\//.test(line) && !/version\s*=\s*"/.test(line) && /^\s*[^#[]/.test(line)) {
     fail(`[workspace.dependencies] internal entry is missing version: ${line.trim()}`);
   }
 }

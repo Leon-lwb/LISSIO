@@ -1,7 +1,7 @@
 //! Shared end-to-end configuration seed.
 //!
 //! The functional and performance suites share one backend config directory
-//! (`src-tauri/target/e2e-config`, named by the webServer entries in
+//! (`client/src-tauri/target/e2e-config`, named by the webServer entries in
 //! `playwright.config.ts`). A fresh checkout has no `settings.json` there, and a
 //! missing document is exactly what the first-launch page reads as "never set
 //! up" — so without this seed every spec would meet that modal first (and the

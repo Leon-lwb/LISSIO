@@ -56,6 +56,10 @@
       "thiserror",
       "ts-rs"
     ],
+    "lissio-dataflow": [
+      "serde",
+      "thiserror"
+    ],
     "lissio-device-tree": [
       "async-trait",
       "log",

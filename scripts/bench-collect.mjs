@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptDir, '..');
-const defaultCriterion = join(repoRoot, 'src-tauri', 'target', 'criterion');
+const defaultCriterion = join(repoRoot, 'server', 'target', 'criterion');
 const defaultOut = join(repoRoot, 'docs', 'experiments', 'results');
 
 function parseArgs(argv) {

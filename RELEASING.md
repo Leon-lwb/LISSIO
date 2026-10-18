@@ -24,7 +24,7 @@ the matching `CHANGELOG.md` entry. Nothing in the release path asks a maintainer
 to decide between patch, minor, and major by hand.
 
 `package.json` carries the full version, including any pre-release suffix.
-`src-tauri/tauri.conf.json` and the Cargo manifests carry only the base version,
+`client/src-tauri/tauri.conf.json` and the server Cargo manifests carry only the base version,
 because the MSI bundler rejects pre-release identifiers.
 `scripts/set-version.mjs` is the only writer of those files.
 
@@ -107,7 +107,7 @@ third-party license files.
 
 `pnpm build:all` runs `scripts/finalize-bundles.mjs` after the server and desktop
 builds. Native Windows installers stay in
-`src-tauri/target/release/bundle/nsis/` and `bundle/msi/`. The final step raises
+`client/src-tauri/target/release/bundle/nsis/` and `bundle/msi/`. The final step raises
 only labels below Medium (`S-1-16-8192`), reads native numeric SIDs with
 `scripts/windows-integrity.ps1`, and checks that SHA256 is unchanged. Existing
 Medium or higher labels are preserved. There is no artifact copy, build receipt,

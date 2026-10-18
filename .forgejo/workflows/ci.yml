@@ -20,6 +20,16 @@
 # enforces the inverse property instead, which is checkable exactly: a workflow
 # must not name a gate, and the tier command must match byte for byte.
 #
+# Repository composition: `server/`, `client/` and the nested `server/core`,
+# `server/physical`, and `server/data` are submodules, so every job must check
+# them out recursively or the Rust and frontend gates would inspect empty
+# directories. Both mechanisms are used: the checkout action's `submodules` input
+# where the runner supports it, and an explicit `git submodule update --init
+# --recursive` that works regardless (and is a no-op once the submodules are
+# present). Each side also installs its own dependencies: the umbrella has no
+# workspace members, so `pnpm install` here must be paired with
+# `pnpm --dir client install`.
+#
 # Forgejo-specific notes:
 #   - `permissions:` is ignored at workflow and job level.
 #   - Job-level `continue-on-error` is ignored; the step-level form works.
@@ -52,6 +62,11 @@ jobs:
     steps:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check out the submodules
+        run: git submodule update --init --recursive
 
       - name: Toolchain versions
         run: |
@@ -70,13 +85,19 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
-          key: cargo-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+            server/target
+            client/src-tauri/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('server/Cargo.lock', 'client/src-tauri/Cargo.lock') }}
           restore-keys: |
             cargo-${{ runner.os }}-
 
+      # The umbrella and the client each own their dependencies: the umbrella
+      # package has no workspace members and the frontend scripts delegate with
+      # `pnpm --dir client`.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir client install --frozen-lockfile
 
       # The complete PR gate surface, in one command. `--quick` selects the `pr`
       # tier and `--no-fix` makes it read-only, so a CI run can never rewrite the
@@ -95,6 +116,11 @@ jobs:
     steps:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check out the submodules
+        run: git submodule update --init --recursive
 
       - name: Cache cargo registry and build output
         continue-on-error: true
@@ -103,13 +129,16 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/target
-          key: cargo-full-${{ runner.os }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+            server/target
+            client/src-tauri/target
+          key: cargo-full-${{ runner.os }}-${{ hashFiles('server/Cargo.lock', 'client/src-tauri/Cargo.lock') }}
           restore-keys: |
             cargo-${{ runner.os }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir client install --frozen-lockfile
 
       # The `full` tier needs a browser for the render-budget and smoke gates, and
       # a writable advisory database for `cargo deny`. Both are environment

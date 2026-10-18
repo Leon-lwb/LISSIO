@@ -3,24 +3,26 @@
  * set-version.mjs — update the Rust / frontend version numbers in one step
  *
  * Updated locations:
- *   1. package.json                  → "version" (full semver)
- *   2. src-tauri/tauri.conf.json     → "version" (MSI does not accept prerelease, so write the stripped base version)
- *   3. src-tauri/Cargo.toml          → the version in [package] and [workspace.package] (as in 2, write the base version)
+ *   1. package.json                     → "version" (full semver)
+ *   2. client/package.json              → "version" (full semver, same as 1)
+ *   3. client/src-tauri/tauri.conf.json → "version" (MSI does not accept prerelease, so write the stripped base version)
+ *   4. one root manifest per Cargo workspace — server/Cargo.toml (virtual: [workspace.package]),
+ *      server/core/Cargo.toml, server/data/Cargo.toml, client/src-tauri/Cargo.toml — the version in
+ *      [package] and [workspace.package] (as in 3, write the base version)
  *      (all crates inherit via version.workspace = true and follow automatically;
  *       [workspace.dependencies] internal entries are rewritten in sync, since crates.io publishing requires an explicit version)
- *   4. src-tauri/Cargo.lock          → refresh the recorded workspace member versions via cargo metadata
+ *   5. each workspace's Cargo.lock     → refresh the recorded workspace member versions via cargo metadata
  *
  * Usage:
  *   pnpm set-version 0.2.0            apply the change
  *   pnpm set-version 0.2.0 --dry-run  only print the changes, write no files
  */
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const workspaceRoot = join(repoRoot, "src-tauri");
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -46,6 +48,10 @@ const bundleVersion = version.split("-")[0];
 
 function updateJson(relPath, target) {
   const abs = join(repoRoot, relPath);
+  if (!existsSync(abs)) {
+    console.error(`error: ${relPath} is missing; the release version cannot be propagated to it`);
+    process.exit(1);
+  }
   const text = readFileSync(abs, "utf8");
   const match = text.match(/^(\s*)"version":\s*"([^"]+)"/m);
   if (!match) {
@@ -60,9 +66,12 @@ function updateJson(relPath, target) {
   }
 }
 
-function updateCargoToml(target) {
-  const relPath = "src-tauri/Cargo.toml";
+function updateCargoToml(relPath, target) {
   const abs = join(repoRoot, relPath);
+  if (!existsSync(abs)) {
+    console.error(`error: ${relPath} is missing; run \`git submodule update --init --recursive\` first`);
+    process.exit(1);
+  }
   const lines = readFileSync(abs, "utf8").split("\n");
   let section = "";
   let old = null;
@@ -84,7 +93,7 @@ function updateCargoToml(target) {
     // for crates.io publishing); keep them locked to the workspace version.
     if (
       section === "workspace.dependencies" &&
-      /path\s*=\s*"crates\//.test(line) &&
+      /path\s*=\s*"[^"]*crates\//.test(line) &&
       /version\s*=\s*"/.test(line)
     ) {
       const current = line.match(/version\s*=\s*"([^"]+)"/)[1];
@@ -100,9 +109,18 @@ function updateCargoToml(target) {
   if (!dryRun) writeFileSync(abs, out.join("\n"));
 }
 
+/** One root manifest per Cargo workspace; each keeps its own lockfile in step. */
+const RUST_MANIFESTS = [
+  "server/Cargo.toml",
+  "server/core/Cargo.toml",
+  "server/data/Cargo.toml",
+  "client/src-tauri/Cargo.toml",
+];
+
 updateJson("package.json", version);
-updateJson("src-tauri/tauri.conf.json", bundleVersion);
-updateCargoToml(bundleVersion);
+updateJson("client/package.json", version);
+updateJson("client/src-tauri/tauri.conf.json", bundleVersion);
+for (const manifest of RUST_MANIFESTS) updateCargoToml(manifest, bundleVersion);
 
 if (changes.length === 0) {
   console.log(`All files are already at v${version} (bundle: ${bundleVersion}); nothing to change.`);
@@ -118,14 +136,16 @@ if (dryRun) {
   process.exit(0);
 }
 
-// Refresh the workspace member versions recorded in Cargo.lock, so --locked builds do not fail
-try {
-  execFileSync("cargo", ["metadata", "--format-version", "1", "--manifest-path", join(workspaceRoot, "Cargo.toml")], {
-    stdio: ["ignore", "ignore", "inherit"],
-  });
-  console.log("src-tauri/Cargo.lock: workspace member versions refreshed");
-} catch {
-  console.warn("warning: cargo metadata failed; Cargo.lock was not refreshed — run cargo check manually once.");
+// Refresh the workspace member versions recorded in each Cargo.lock, so --locked builds do not fail
+for (const manifest of RUST_MANIFESTS) {
+  try {
+    execFileSync("cargo", ["metadata", "--format-version", "1", "--manifest-path", join(repoRoot, manifest)], {
+      stdio: ["ignore", "ignore", "inherit"],
+    });
+    console.log(`${manifest.replace(/Cargo\.toml$/, "Cargo.lock")}: workspace member versions refreshed`);
+  } catch {
+    console.warn(`warning: cargo metadata failed for ${manifest}; its Cargo.lock was not refreshed.`);
+  }
 }
 
 console.log(`\nSwitched to v${version}. Review the git diff and commit it yourself.`);

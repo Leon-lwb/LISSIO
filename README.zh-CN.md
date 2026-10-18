@@ -21,7 +21,7 @@ translation-of: README.md
 
 <p align="center">
   <a href="https://codeberg.org/Horldsence/Lissio">
-    <img src="src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
+    <img src="client/src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
   <h3 align="center">Lissio</h3>
@@ -246,39 +246,42 @@ Rust 工作区按职责领域分组，并受声明的依赖分层约束。组合
 ## 项目结构
 
 ```text
-lissio/
-├── docs/architecture/             # 架构契约与设计参考
-├── scripts/                       # 架构、契约、构建与发布工具
-├── src/                           # React/TypeScript 前端
-│   ├── components/                # 控件、显示、布局、节点、面板、AI 界面
-│   ├── lib/
-│   │   ├── acquisition/           # 设备树与能力投影
-│   │   ├── ai/                    # 对话 / 工具的前端集成
-│   │   ├── models/                # 模型目录创建 / 描述消费方
-│   │   ├── platform/              # 桌面 / Web 平台服务垫片
-│   │   ├── rpc/                   # 传输契约与重连 / 重水合
-│   │   └── ...                    # 缓冲区、图、快速开始、协议工具
-│   ├── store/                     # Zustand store 与状态切片
-│   ├── types/
-│   │   └── generated/             # 由 ts-rs 导出的 Rust 侧线缆契约
-│   ├── i18n/locales/              # 英文与中文用户文案
-│   ├── App.tsx
-│   └── main.tsx
-├── src-tauri/
-│   ├── crates/<domain>/<crate>    # Rust 工作区成员
-│   ├── src/
-│   │   ├── shell.rs               # 仅桌面端的窗口 / 启动画面 / 设置外壳命令
-│   │   ├── sidecar.rs             # 受监管的 lissio-server 生命周期与诊断
-│   │   ├── lib.rs                 # Tauri 组合根
-│   │   └── main.rs
-│   ├── Cargo.toml                 # 工作区与依赖权威
-│   └── tauri.conf.json
+lissio/                            # 伞仓库：仅承载跨仓库基础设施
+├── .changes/                      # 由 pnpm release:prepare 消费的发布变更文件
+├── .forgejo/workflows/            # CI 与发布工作流（递归检出子模块）
+├── docs/                          # 架构、治理、性能与评审记录
+├── e2e/                           # 驱动 Web 产物与真实服务端的 Playwright 套件
 ├── packaging/                     # 服务启动与容器打包
-├── public/                        # 静态应用资源
+├── scripts/                       # 架构、契约、构建与发布工具
+├── client/                        # 前端仓库（子模块）
+│   ├── src/                       # React/TypeScript 前端
+│   │   ├── components/            # 控件、显示、布局、节点、面板、AI 界面
+│   │   ├── lib/                   # 采集、AI、模型、平台、rpc 与工具
+│   │   ├── store/                 # Zustand store 与状态切片
+│   │   ├── types/generated/       # 由 ts-rs 导出的 Rust 侧线缆契约
+│   │   ├── i18n/locales/          # 英文与中文用户文案
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── public/                    # 静态应用资源
+│   ├── src-tauri/                 # Tauri 2 桌面外壳
+│   │   ├── src/                   # shell.rs、sidecar.rs、lib.rs、main.rs
+│   │   ├── crates/                # 仅外壳使用的 crate（菜单外壳、更新流程）
+│   │   └── tauri.conf.json
+│   ├── vite.config.ts
+│   └── package.json               # 前端依赖与脚本
+├── server/                        # Rust 仓库（子模块）：Cargo 工作区根
+│   ├── crates/<domain>/<crate>    # 由 server 仓库自有的 crate
+│   ├── core/                      # core 子模块：shared、vehicle、protocol crate
+│   ├── physical/                  # physical 子模块：传输与协议适配器
+│   ├── data/                      # data 子模块：graph、signal 与 data crate
+│   ├── tests/                     # 集成测试
+│   ├── Cargo.toml                 # 工作区与依赖权威
+│   └── deny.toml
 ├── images/                        # README 资源
-├── package.json
+├── package.json                   # 伞仓库编排清单
 ├── pnpm-workspace.yaml
-└── vite.config.ts
+├── playwright.config.ts
+└── Dockerfile
 ```
 
 ## 环境要求
@@ -310,7 +313,7 @@ Lissio 以三个相互独立的产物交付：Backend/CLI 归档、静态 Web �
 
 ```sh
 pnpm dev:desktop    # 准备并启动 sidecar、Vite 与原生外壳
-pnpm build:desktop  # 打包安装包 → src-tauri/target/release/bundle/
+pnpm build:desktop  # 打包安装包 → client/src-tauri/target/release/bundle/
 ```
 
 桌面端的业务调用一律使用 HTTP/WebSocket。Tauri IPC 仅限窗口、菜单、更新、文件对话框与 sidecar 监管。当 sidecar 缺失、未授权、版本不兼容或已经崩溃时，会在应用 store 挂载之前显示连接诊断页。
@@ -335,7 +338,7 @@ pnpm dev:server --static-dir dist           # HTTP API + Web 应用同进程运�
 | `--cors-origin`（可重复） | `LISSIO_CORS_ORIGINS` | 关闭（同源） |
 | `--mcp-port` / `--no-mcp` | `LISSIO_MCP_PORT` | `8765` / 启用 MCP |
 
-暴露到 loopback 之外需要 `--bind 0.0.0.0`，并使用足够强的 `LISSIO_TOKEN`。`pnpm server` 等价于 `cd src-tauri && cargo run -p lissio-backend-server`；CLI 形式 `cargo run -p lissio-backend-cli -- serve` 复用同一代码路径。健康检查：`curl http://127.0.0.1:8790/api/v1/health`。
+暴露到 loopback 之外需要 `--bind 0.0.0.0`，并使用足够强的 `LISSIO_TOKEN`。`pnpm server` 等价于 `cargo run --manifest-path server/Cargo.toml -p lissio-backend-server`；CLI 形式 `cargo run -p lissio-backend-cli -- serve` 复用同一代码路径。健康检查：`curl http://127.0.0.1:8790/api/v1/health`。
 
 AI、会话、外部 MCP、入站 MCP 与前端工具命令在桌面端与 Web 端具有相同的功能面。已保存的提供商密钥是只写的：界面只会收到 `configured`、`source` 与 `writable`。部署回退变量使用 `LISSIO_AI_API_KEY_<ADAPTER>`（例如 `LISSIO_AI_API_KEY_OPENAI`）。Debug 构建在每次请求时直接从仓库根目录的 `.env` 读取这些密钥，不访问系统钥匙串。把 `.env.example` 复制为 `.env` 并在本地编辑；该文件已被 gitignore。Release 构建继续使用系统钥匙串，并以环境变量作为回退。
 
@@ -366,7 +369,7 @@ pnpm dev:web   # 终端 2：vite dev server，监听 :1420，/api 代理到后�
 pnpm build:all
 ```
 
-该命令先运行 `build:server`（server + CLI），再运行 `build:desktop`（其 Tauri 钩子只构建一次 Web 资源），最后检查原生 Windows 安装包完整性。任一步失败都会终止构建。本地桌面构建通过 `src-tauri/tauri.local.conf.json` 关闭 updater 产物，因此不需要 `TAURI_SIGNING_PRIVATE_KEY`；Release 打包通过默认 Tauri 配置保留 updater 签名。
+该命令先运行 `build:server`（server + CLI），再运行 `build:desktop`（其 Tauri 钩子只构建一次 Web 资源），最后检查原生 Windows 安装包完整性。任一步失败都会终止构建。本地桌面构建通过 `client/src-tauri/tauri.local.conf.json` 关闭 updater 产物，因此不需要 `TAURI_SIGNING_PRIVATE_KEY`；Release 打包通过默认 Tauri 配置保留 updater 签名。
 
 单独构建命令：
 
@@ -377,7 +380,7 @@ pnpm build:cli
 pnpm build:desktop
 ```
 
-Web 资源输出到 `dist/`，server 与 CLI 二进制输出到 `src-tauri/target/release/`，桌面安装包输出到 `src-tauri/target/release/bundle/`。
+Web 资源输出到 `client/dist/`，server 与 CLI 二进制输出到 `server/target/release/`，桌面安装包输出到 `client/src-tauri/target/release/bundle/`。
 
 在 Windows 上，`build:all` 最后会执行 `scripts/finalize-bundles.mjs`：检查现有 `bundle/nsis/` 与 `bundle/msi/` 目录中当前版本的安装包，把 Low 完整性标签提升为 Medium，并校验 SHA256 未发生变化。即使 Temp 目录正常，Low 完整性的 EXE 也可能让 NSIS 报 "Error writing temporary file"。安装包路径固定在工作树内；没有单独的导出命令或目标目录设置。若完整性检查失败，请在沙箱之外的普通 Windows 终端中运行 `pnpm build:all`。macOS 与 Linux 会跳过这个 Windows 专属步骤，保留 Tauri 常规的打包输出。
 

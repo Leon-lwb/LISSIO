@@ -1,8 +1,28 @@
+/**
+ * architecture.mjs — crate / domain / layer / responsibility / dependency inventory.
+ *
+ * Why it exists: `docs/architecture/crates.md` tells a reader which crate owns a
+ * type and which layers a change may reach. This prints the same inventory from
+ * `cargo metadata`, so the documented table can be compared against the real
+ * workspace instead of being trusted.
+ *
+ * It is informational: there is no exit-code path, and `check:architecture`
+ * (`scripts/check-crate-architecture.mjs`) is the gate that enforces the rules.
+ *
+ * Repository-root convention (`scripts/repo-root.mjs`): the Rust workspace of the
+ * repository the script runs in — `server/` inside the umbrella, the repository
+ * itself inside a copy — and `--root=<path>` selects another checkout.
+ *
+ * Usage:
+ *   pnpm architecture [--format=table|json|dot] [--root=<path>]
+ */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-const root = path.resolve(import.meta.dirname, '..');
-const manifest = path.join(root, 'src-tauri', 'Cargo.toml');
+import { repositoryRoot, rustWorkspaceRoot } from './repo-root.mjs';
+
+const root = repositoryRoot();
+const manifest = path.join(rustWorkspaceRoot(root), 'Cargo.toml');
 const metadata = JSON.parse(execFileSync('cargo', [
   'metadata', '--format-version', '1', '--no-deps', '--manifest-path', manifest,
 ], { encoding: 'utf8' }));

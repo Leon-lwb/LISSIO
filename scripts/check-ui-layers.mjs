@@ -25,12 +25,19 @@
 // Exemptions: see the EXEMPTIONS table below. Exemptions are public and state their reason one
 // by one; adding one admits a deliberate exception; anything unregistered is an error.
 // **The fix for a violation is to change the code, not to add an exemption.**
+//
+// Repository-root convention (`scripts/repo-root.mjs`): the gate reads the frontend repository —
+// `client/` inside the umbrella, the repository itself in a copy — and `--root=<path>` selects
+// another checkout. Every reported and matched path stays `src/…`, relative to that frontend.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(import.meta.dirname, '..');
+import { frontendRoot, repositoryRoot } from './repo-root.mjs';
+
+/** The frontend repository: `<repo>/client` inside the umbrella, `<repo>` in a copy. */
+const root = frontendRoot(repositoryRoot());
 const SRC = path.join(root, 'src');
 /** The only generated directory: TS contract output, not application source. */
 const GENERATED_TYPES = path.join(SRC, 'types', 'generated');

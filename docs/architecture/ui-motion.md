@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-13
+last-reviewed: 2026-10-18
 applies-to: Motion modules, families, CSS primitives, and invariant rules
 -->
 
@@ -69,8 +69,8 @@ Entry may overshoot. Exit is always critically damped.
     and switches without a spatial relationship complete immediately.
 
 Authoritative switching sources are
-[`AnimatedSwitch.tsx`](../../src/components/ui/AnimatedSwitch.tsx),
-[`useContentSwitch.ts`](../../src/lib/motion/useContentSwitch.ts), and
-[`tabTravel.ts`](../../src/components/ui/tabTravel.ts). Linux acceptance and
+[`AnimatedSwitch.tsx`](../../client/src/components/ui/AnimatedSwitch.tsx),
+[`useContentSwitch.ts`](../../client/src/lib/motion/useContentSwitch.ts), and
+[`tabTravel.ts`](../../client/src/components/ui/tabTravel.ts). Linux acceptance and
 the separate CSS-theme loading lifetime are documented in
 [Linux desktop rendering](linux-rendering.md).

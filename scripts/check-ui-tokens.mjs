@@ -33,7 +33,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = path.resolve(import.meta.dirname, '..');
+import { frontendRoot, repositoryRoot } from './repo-root.mjs';
+
+/** The frontend repository: `<repo>/client` inside the umbrella, `<repo>` in a copy. */
+const root = frontendRoot(repositoryRoot());
 const errors = [];
 
 /// Tailwind default palette hues (a bare hue goes through an @theme token and is allowed; a shade is forbidden)

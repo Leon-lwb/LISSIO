@@ -44,9 +44,18 @@ jobs:
     steps:
       - name: Checkout
         uses: https://code.forgejo.org/actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # `server/`, `client/`, and the nested `server/core`, `server/physical`, and
+      # `server/data` are submodules; the complete gate surface reads all of them.
+      - name: Check out the submodules
+        run: git submodule update --init --recursive
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir client install --frozen-lockfile
 
       - name: Install Playwright browser
         run: pnpm exec playwright install --with-deps chromium

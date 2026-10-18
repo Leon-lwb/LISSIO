@@ -39,9 +39,9 @@ stays in sync with the registry, CI, and the other documents.
 
 **Architecture and contracts**
 
-- [ ] `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules
-- [ ] `pnpm check:deps` — centralized third-party dependency versions inherited from the root workspace
-- [ ] `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
+- [ ] `pnpm check:architecture` — layout, `[package.metadata.lissio]` metadata, domain DAG, layer, adapter, and testkit rules, read from every Cargo workspace of the `server/` repository (`server/`, `server/core/`, and `server/data/`)
+- [ ] `pnpm check:deps` — centralized third-party dependency versions inherited from each Cargo workspace root manifest across `server/`, `server/core/`, and `server/data/`
+- [ ] `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `client/src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - [ ] `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - [ ] `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
 - [ ] `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
@@ -59,15 +59,15 @@ stays in sync with the registry, CI, and the other documents.
 
 **Rust**
 
-- [ ] `pnpm check:rust-size` — production Rust files stay within 500 lines; test files and benches are exempt
-- [ ] `(cd src-tauri && cargo fmt --check)` — formatting has no diff
-- [ ] `(cd src-tauri && cargo clippy --workspace --all-targets)` — workspace lints deny all/pedantic/nursery/cargo
-- [ ] `(cd src-tauri && cargo test --workspace)` — every workspace test target, including test-target compilation
+- [ ] `pnpm check:rust-size` — production Rust files in every `server/` crate root stay within 500 lines; test files and benches are exempt
+- [ ] `(cd server && cargo fmt --check)` — formatting of the `server/` workspace has no diff
+- [ ] `(cd server && cargo clippy --workspace --all-targets)` — the `server/` workspace lints deny all/pedantic/nursery/cargo
+- [ ] `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core` and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
 
 **Release**
 
 - [ ] `pnpm check:changes` — every change file declares a known package, a valid bump, and a declared tag, so covector cannot drop a release note silently; see `.changes/README.md`
-- [ ] `pnpm check:release-sync` — `package.json`, `tauri.conf.json`, `Cargo.toml`, and `Cargo.lock` agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
+- [ ] `pnpm check:release-sync` — the umbrella and client `package.json`, `client/src-tauri/tauri.conf.json`, every Cargo workspace root manifest (`server/`, `server/core/`, `server/data/`, `client/src-tauri/`), and the lockfiles they resolve agree on one version, and `CHANGELOG.md` carries that version; see `RELEASING.md`
 
 **Frontend (slow: complete flow only)**
 
@@ -77,7 +77,7 @@ stays in sync with the registry, CI, and the other documents.
 
 **Rust (slow: complete flow only)**
 
-- [ ] `(cd src-tauri && cargo deny check)` — advisories, licenses, bans, and sources; requires cargo-deny 0.20.2
+- [ ] `(cd server && cargo deny check)` — advisories, licenses, bans, and sources for the `server/` workspace; requires cargo-deny 0.20.2
 
 <!-- lissio-gates:end -->
 
