@@ -1,8 +1,0 @@
-/* ============ 指针拖拽期间全局禁止文字选择 ============ */
-/* dockDrag 激活时给 body 加该 class — 拖拽经过 select-text 区域 (如 RawData 数值视图)
-   或输入框时不会误选文字/误聚焦 */
-body.dragging-dock,
-body.dragging-dock * {
-  user-select: none !important;
-  -webkit-user-select: none !important;
-}

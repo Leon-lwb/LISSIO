@@ -1,0 +1,6 @@
+[submodule "server"]
+	path = server
+	url = ../Lissio-Server.git
+[submodule "client"]
+	path = client
+	url = ../Lissio-Client.git

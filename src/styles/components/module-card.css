@@ -1,7 +1,0 @@
-/* ============ 大模块圆角卡片 ============ */
-/* 只定义视觉效果, 尺寸由 Tailwind utility 控制 (unlayered 类优先级高于 utility, 不能在这里写尺寸) */
-.module-card {
-  border-radius: var(--radius-default);
-  border: 1px solid var(--color-border);
-  overflow: hidden;
-}
