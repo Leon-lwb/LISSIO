@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-20 | Device and protocol engine abstraction survey and target contracts | passed with conditions | [records/2026-10-20-device-protocol-abstraction.md](records/2026-10-20-device-protocol-abstraction.md) |
 | 2026-10-15 | Build-all bundle finalization | passed with conditions | [records/2026-10-15-build-all-bundle-finalization.md](records/2026-10-15-build-all-bundle-finalization.md) |
 | 2026-10-15 | Windows installer integrity and delivery | passed with conditions | [records/2026-10-15-windows-installer-integrity.md](records/2026-10-15-windows-installer-integrity.md) |
 | 2026-10-15 | Windows transparency and background composition | passed with conditions | [records/2026-10-15-windows-transparency-and-backgrounds.md](records/2026-10-15-windows-transparency-and-backgrounds.md) |
