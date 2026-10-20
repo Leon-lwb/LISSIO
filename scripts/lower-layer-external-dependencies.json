@@ -170,6 +170,7 @@
       "tokio"
     ],
     "lissio-schema": [
+      "ciborium",
       "serde",
       "serde_json"
     ],
