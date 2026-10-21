@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-21 | Catalog v3 implementation: descriptor extension, structured validation, bounded protocol preview, and discovery recommendation | passed with conditions | [records/2026-10-21-catalog-v3.md](records/2026-10-21-catalog-v3.md) |
 | 2026-10-21 | Block-handler implementation: one parser, encoder, port rule, and validator per decoder block kind | passed with conditions | [records/2026-10-21-block-codec.md](records/2026-10-21-block-codec.md) |
 | 2026-10-20 | Protocol registry implementation: `{ protocol, params }`, `ProtocolRegistry`, and the single engine dispatch | passed with conditions | [records/2026-10-20-protocol-registry.md](records/2026-10-20-protocol-registry.md) |
 | 2026-10-20 | Prepared-node driver contract implementation and remaining source-port decision | passed with conditions | [records/2026-10-20-prepared-node-driver-contract.md](records/2026-10-20-prepared-node-driver-contract.md) |

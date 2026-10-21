@@ -42,7 +42,8 @@
     ],
     "lissio-can": [
       "serde",
-      "serde_json"
+      "serde_json",
+      "ts-rs"
     ],
     "lissio-control-api": [
       "parking_lot",
@@ -153,7 +154,8 @@
       "ts-rs"
     ],
     "lissio-protocol": [
-      "serde"
+      "serde",
+      "ts-rs"
     ],
     "lissio-raw-data": [
       "base64",
