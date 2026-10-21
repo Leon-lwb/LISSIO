@@ -28,6 +28,9 @@
       "serde",
       "serde_json"
     ],
+    "lissio-block-codec": [
+      "ciborium"
+    ],
     "lissio-buffer-graph": [
       "serde"
     ],
@@ -101,9 +104,6 @@
       "serde",
       "ts-rs"
     ],
-    "lissio-frame-decoder": [
-      "serde"
-    ],
     "lissio-graph": [
       "petgraph"
     ],
@@ -170,7 +170,6 @@
       "tokio"
     ],
     "lissio-schema": [
-      "ciborium",
       "serde",
       "serde_json"
     ],
