@@ -8,8 +8,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Report a vulnerability or intellectual property issue
-    url: https://codeberg.org/Horldsence/Lissio/src/branch/main/SECURITY.md
+    url: https://codeberg.org/lissio-industries/Lissio/src/branch/main/SECURITY.md
     about: Do not disclose exploitable vulnerability details in a public issue; see SECURITY.md for channels and response times.
   - name: Contributing guide
-    url: https://codeberg.org/Horldsence/Lissio/src/branch/main/CONTRIBUTING.md
+    url: https://codeberg.org/lissio-industries/Lissio/src/branch/main/CONTRIBUTING.md
     about: Read the merge gates and license terms before opening a PR.

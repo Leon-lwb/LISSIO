@@ -9,8 +9,9 @@ applies-to: CI platform, runner setup, gate execution, and the release pipeline
 
 ## Where CI runs
 
-Lissio is hosted on **Codeberg** (`https://codeberg.org/Horldsence/Lissio`, remote
-`codeberg.org:Horldsence/Lissio.git`). CI runs on **Forgejo Actions** using a
+Lissio is hosted on **Codeberg** (`https://codeberg.org/lissio-industries/Lissio`, remote
+`codeberg.org:lissio-industries/Lissio.git`); the project site is
+[`https://lissio.pengheng.top`](https://lissio.pengheng.top). CI runs on **Forgejo Actions** using a
 **self-hosted runner**.
 
 The workflows live in `.forgejo/workflows/`:
@@ -484,8 +485,8 @@ every release so the client URL never changes:
 
 | Channel | Manifest | URL |
 | --- | --- | --- |
-| stable | `latest.json` | `https://codeberg.org/Horldsence/Lissio/releases/download/stable/latest.json` |
-| beta | `beta-latest.json` | `https://codeberg.org/Horldsence/Lissio/releases/download/beta/beta-latest.json` |
+| stable | `latest.json` | `https://codeberg.org/lissio-industries/Lissio/releases/download/stable/latest.json` |
+| beta | `beta-latest.json` | `https://codeberg.org/lissio-industries/Lissio/releases/download/beta/beta-latest.json` |
 
 Both are asserted in
 `client/src-tauri/crates/update_flow/src/update.rs`.

@@ -15,7 +15,8 @@ advice; contributors should seek independent advice when needed.
 
 ## 1. Definitions
 
-- **Project** means Lissio, hosted at `https://codeberg.org/Horldsence/Lissio`.
+- **Project** means Lissio, hosted at `https://codeberg.org/lissio-industries/Lissio`,
+  with the project site at `https://lissio.pengheng.top`.
 - **Contribution** means code, documentation, configuration, designs, tests, or
   other material submitted for inclusion in the Project.
 - **Maintainer** means a person listed in `MAINTAINERS.md` and authorized to
@@ -60,3 +61,9 @@ Submitting a pull request or otherwise intentionally submitting a Contribution
 for inclusion constitutes acceptance of this agreement. Changes to this
 agreement apply only to Contributions submitted after the revised version is
 published.
+
+## 7. Contact
+
+Questions about this agreement and the Project go to the project contact in
+`MAINTAINERS.md`, `pengheng.wang@foxmail.com`. Security reports follow the
+channel in `SECURITY.md`.

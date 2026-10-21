@@ -15,7 +15,7 @@
  * Exit code 1 means something is wrong; every item in the output states the specific reason and a reproduce URL.
  */
 
-const REPO = 'Horldsence/Lissio';
+const REPO = 'lissio-industries/Lissio';
 const API_ROOT = `https://codeberg.org/api/v1/repos/${REPO}`;
 const DOWNLOAD_ROOT = `https://codeberg.org/${REPO}/releases/download`;
 

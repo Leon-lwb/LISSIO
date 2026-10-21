@@ -27,7 +27,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = join(repoRoot, 'server', 'Cargo.toml');
 const REGISTRY_API = 'https://crates.io/api/v1';
 // crates.io requires a reachable project homepage in the UA; the repository has moved to Codeberg.
-const USER_AGENT = 'lissio-publish-script (https://codeberg.org/Horldsence/Lissio)';
+const USER_AGENT = 'lissio-publish-script (https://codeberg.org/lissio-industries/Lissio)';
 const INDEX_POLL_INTERVAL_MS = 4_000;
 const INDEX_POLL_TIMEOUT_MS = 180_000;
 const INTER_PUBLISH_PAUSE_MS = 2_000;

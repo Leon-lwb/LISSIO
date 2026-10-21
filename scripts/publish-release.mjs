@@ -22,9 +22,9 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const API_ROOT = 'https://codeberg.org/api/v1/repos/Horldsence/Lissio';
+const API_ROOT = 'https://codeberg.org/api/v1/repos/lissio-industries/Lissio';
 /** Asset download base URL. Codeberg does not implement GitHub's releases/latest/download pseudo-path. */
-const DOWNLOAD_ROOT = 'https://codeberg.org/Horldsence/Lissio/releases/download';
+const DOWNLOAD_ROOT = 'https://codeberg.org/lissio-industries/Lissio/releases/download';
 const repoRoot = join(import.meta.dirname, '..');
 
 const args = process.argv.slice(2);

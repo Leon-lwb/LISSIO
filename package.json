@@ -76,8 +76,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://codeberg.org/Horldsence/Lissio.git"
+    "url": "https://codeberg.org/lissio-industries/Lissio.git"
   },
-  "homepage": "https://codeberg.org/Horldsence/Lissio",
-  "bugs": "https://codeberg.org/Horldsence/Lissio/issues"
+  "homepage": "https://lissio.pengheng.top",
+  "bugs": "https://codeberg.org/lissio-industries/Lissio/issues"
 }

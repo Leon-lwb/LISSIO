@@ -229,7 +229,7 @@ if (!existsSync(noticePath)) {
     ['Apache-2.0 notice', /Apache License, Version 2\.0/i],
     ['historical-release scope', /historical|earlier binary releases/i],
     ['third-party attribution', /third-party/i],
-    ['canonical source URL', /https:\/\/codeberg\.org\/Horldsence\/Lissio/],
+    ['canonical source URL', /https:\/\/codeberg\.org\/lissio-industries\/Lissio/],
   ]) {
     if (!pattern.test(notice)) fail(`NOTICE is missing ${label}`);
   }
@@ -243,7 +243,10 @@ if (existsSync(codeowners) && !/@Horldsence/.test(readText(codeowners))) {
 const citation = join(repoRoot, 'CITATION.cff');
 if (existsSync(citation)) {
   const text = readText(citation);
-  for (const value of ['Lissio', 'Apache-2.0', 'Horldsence', 'https://codeberg.org/Horldsence/Lissio']) {
+  for (const value of [
+    'Lissio', 'Apache-2.0', 'Horldsence', 'https://codeberg.org/lissio-industries/Lissio',
+    'pengheng.wang@foxmail.com',
+  ]) {
     if (!text.includes(value)) fail(`CITATION.cff is missing ${value}`);
   }
 } else {

@@ -20,7 +20,7 @@ translation-of: README.md
 <br />
 
 <p align="center">
-  <a href="https://codeberg.org/Horldsence/Lissio">
+  <a href="https://codeberg.org/lissio-industries/Lissio">
     <img src="client/src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -28,12 +28,14 @@ translation-of: README.md
   <p align="center">
     集波形显示、节点编辑器、多协议解析、CAN 诊断与逻辑分析于一体的现代串口调试工具。
     <br />
-    <a href="https://codeberg.org/Horldsence/Lissio"><strong>浏览仓库 »</strong></a>
+    <a href="https://lissio.pengheng.top"><strong>项目主页 »</strong></a>
+    <br />
+    <a href="https://codeberg.org/lissio-industries/Lissio"><strong>浏览仓库 »</strong></a>
     <br />
     <br />
-    <a href="https://codeberg.org/Horldsence/Lissio/issues">报告缺陷</a>
+    <a href="https://codeberg.org/lissio-industries/Lissio/issues">报告缺陷</a>
     ·
-    <a href="https://codeberg.org/Horldsence/Lissio/issues">请求新功能</a>
+    <a href="https://codeberg.org/lissio-industries/Lissio/issues">请求新功能</a>
   </p>
 </p>
 
@@ -297,7 +299,7 @@ lissio/                            # 伞仓库：仅承载跨仓库基础设施
 1. 克隆仓库
 
 ```sh
-git clone https://codeberg.org/Horldsence/Lissio.git
+git clone https://codeberg.org/lissio-industries/Lissio.git
 cd lissio
 ```
 
@@ -347,7 +349,7 @@ AI、会话、外部 MCP、入站 MCP 与前端工具命令在桌面端与 Web �
 ```sh
 docker run --rm -p 8790:8790 -p 8765:8765 \
   -e LISSIO_TOKEN='replace-with-a-strong-token' \
-  -v lissio-data:/var/lib/lissio ghcr.io/horldsence/lissio:latest
+  -v lissio-data:/var/lib/lissio ghcr.io/lissio-industries/lissio:latest
 ```
 
 镜像在没有显式令牌时拒绝启动。需要硬件访问时，用容器运行时的设备选项映射串口 / CAN 设备。
@@ -429,13 +431,13 @@ pnpm gates --list       # 打印门禁清单
 
 ## 版本管理
 
-本项目使用 Git 管理。可用的发布版本见 [Releases](https://codeberg.org/Horldsence/Lissio/releases) 页面。
+本项目使用 Git 管理。可用的发布版本见 [Releases](https://codeberg.org/lissio-industries/Lissio/releases) 页面。
 
 ## 许可证
 
 Lissio 采用 **Apache License, Version 2.0** 许可；见 [LICENSE](./LICENSE)。Apache-2.0 允许商业使用、修改与闭源衍生，但须遵守其声明与署名条件。Copyright © 2026 Horldsence and Lissio contributors。贡献按 [CLA.md](./CLA.md) 提交。历史 GPL-only 版本仍受随该版本提供的许可证约束。署名与第三方义务维护在 [NOTICE](./NOTICE) 与 [docs/governance/third-party-licenses.md](docs/governance/third-party-licenses.md) 中。
 
-欢迎贡献 —— 见 [CONTRIBUTING.md](./CONTRIBUTING.md)、[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) 与 [SECURITY.md](./SECURITY.md)。
+欢迎贡献 —— 见 [CONTRIBUTING.md](./CONTRIBUTING.md)、[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) 与 [SECURITY.md](./SECURITY.md)。许可与治理问题请联系 [pengheng.wang@foxmail.com](mailto:pengheng.wang@foxmail.com)；维护者与响应时限见 [MAINTAINERS.md](./MAINTAINERS.md)。
 
 ## 致谢
 

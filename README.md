@@ -21,7 +21,7 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
 <br />
 
 <p align="center">
-  <a href="https://codeberg.org/Horldsence/Lissio">
+  <a href="https://codeberg.org/lissio-industries/Lissio">
     <img src="client/src-tauri/icons/icon.png" alt="Logo" width="80" height="80">
   </a>
 
@@ -29,12 +29,14 @@ A next-generation serial assistant fully rebuilt with Rust + Tauri — built for
   <p align="center">
     A modern serial debugging tool with waveform display, node editor, multi-protocol parsing, CAN diagnostics, and logic analysis.
     <br />
-    <a href="https://codeberg.org/Horldsence/Lissio"><strong>Explore the repo »</strong></a>
+    <a href="https://lissio.pengheng.top"><strong>Project website »</strong></a>
+    <br />
+    <a href="https://codeberg.org/lissio-industries/Lissio"><strong>Explore the repo »</strong></a>
     <br />
     <br />
-    <a href="https://codeberg.org/Horldsence/Lissio/issues">Report Bug</a>
+    <a href="https://codeberg.org/lissio-industries/Lissio/issues">Report Bug</a>
     ·
-    <a href="https://codeberg.org/Horldsence/Lissio/issues">Request Feature</a>
+    <a href="https://codeberg.org/lissio-industries/Lissio/issues">Request Feature</a>
   </p>
 </p>
 
@@ -303,7 +305,7 @@ lissio/                            # umbrella: cross-repository infrastructure o
 1. Clone the repository
 
 ```sh
-git clone https://codeberg.org/Horldsence/Lissio.git
+git clone https://codeberg.org/lissio-industries/Lissio.git
 cd lissio
 ```
 
@@ -375,7 +377,7 @@ gitignored. Release builds continue to use the system keychain with the environm
 ```sh
 docker run --rm -p 8790:8790 -p 8765:8765 \
   -e LISSIO_TOKEN='replace-with-a-strong-token' \
-  -v lissio-data:/var/lib/lissio ghcr.io/horldsence/lissio:latest
+  -v lissio-data:/var/lib/lissio ghcr.io/lissio-industries/lissio:latest
 ```
 
 The image refuses to start without an explicit token. Map serial/CAN devices with the
@@ -475,7 +477,7 @@ Read [CONTRIBUTING.md](./CONTRIBUTING.md) first: it lists the CLA terms, the IP 
 
 ## Versioning
 
-This project is managed with Git. Available releases can be found on the [Releases](https://codeberg.org/Horldsence/Lissio/releases) page.
+This project is managed with Git. Available releases can be found on the [Releases](https://codeberg.org/lissio-industries/Lissio/releases) page.
 
 ## License
 
@@ -490,6 +492,9 @@ are maintained in [NOTICE](./NOTICE) and
 
 Contributions are welcome — see [CONTRIBUTING.md](./CONTRIBUTING.md),
 [CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md) and [SECURITY.md](./SECURITY.md).
+Licensing and governance questions go to
+[pengheng.wang@foxmail.com](mailto:pengheng.wang@foxmail.com);
+[MAINTAINERS.md](./MAINTAINERS.md) lists the maintainers and response targets.
 
 ## Acknowledgements
 
