@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-08
+last-reviewed: 2026-10-21
 applies-to: Repository development instructions
 -->
 ## Read before editing
@@ -126,8 +126,8 @@ Change the registry, then run `pnpm check:ci-gates --fix`.
 
 - `pnpm check:rust-size` — production Rust files in every `server/` crate root stay within 500 lines; test files and benches are exempt
 - `(cd server && cargo fmt --check)` — formatting of the `server/` workspace has no diff
-- `(cd server && cargo clippy --workspace --all-targets)` — the `server/` workspace lints deny all/pedantic/nursery/cargo
-- `(cd server && cargo test --workspace)` — every test target of the `server/` workspace, including test-target compilation; `server/core`, `server/physical`, and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
+- `(cd server && cargo clippy --workspace --all-targets --locked)` — the `server/` workspace lints deny all/pedantic/nursery/cargo, and `--locked` fails on a `Cargo.lock` the manifest outgrew so a stale lockfile cannot pass here and break a `--locked` release build
+- `(cd server && cargo test --workspace --locked)` — every test target of the `server/` workspace, including test-target compilation; `--locked` refuses to resolve a `Cargo.lock` the manifests outgrew; `server/core`, `server/physical`, and `server/data` are separate Cargo workspaces whose own repository CI runs their tests
 
 **Release**
 
@@ -142,7 +142,7 @@ Change the registry, then run `pnpm check:ci-gates --fix`.
 
 **Rust (slow: complete flow only)**
 
-- `(cd server && cargo deny check)` — advisories, licenses, bans, and sources for the `server/` workspace; requires cargo-deny 0.20.2
+- `(cd server && cargo deny --locked check)` — advisories, licenses, bans, and sources for the `server/` workspace; requires cargo-deny 0.20.2, and `--locked` stops the audit from resolving a `Cargo.lock` the manifests outgrew
 
 <!-- lissio-gates:end -->
 

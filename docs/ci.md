@@ -283,7 +283,7 @@ step runs:
 | `server/physical/` | `.forgejo/workflows/ci.yml` | `bash scripts/ci.sh` |
 
 The script is that repository's complete check set — formatting, clippy, tests,
-`cargo deny check`, and its own documentation gate — and the workflow names no
+`cargo deny --locked check`, and its own documentation gate — and the workflow names no
 gate, for the same reason the umbrella's does not: a listed gate can be defanged
 while its command stays in the file. Three properties differ from the umbrella's
 jobs:
@@ -364,7 +364,7 @@ job-level one — so an unavailable cache service costs time rather than failing
 the build.
 
 The `full` tier includes browser-based gates, which are the ones most likely to
-fail for environmental reasons rather than real defects. `cargo deny check` also
+fail for environmental reasons rather than real defects. `cargo deny --locked check` also
 needs a writable `~/.cargo/advisory-dbs`; a read-only cache makes it fail while
 acquiring its advisory-database lock, which is an environment problem, not a
 gate failure.

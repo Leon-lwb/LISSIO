@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-18
+last-reviewed: 2026-10-21
 applies-to: Dependency policy, current snapshot, special obligations, and review workflow
 -->
 
@@ -16,10 +16,11 @@ machine allow-list is `server/deny.toml`; this file explains and audits it.
 cargo metadata --format-version 1 --manifest-path server/Cargo.toml
 pnpm licenses list --json --prod
 pnpm licenses list --json
-cargo deny check
+cargo deny --locked check
 ```
 
-`cargo deny check` covers Rust advisories, licenses, bans, and sources. The
+`cargo deny --locked check` covers Rust advisories, licenses, bans, and sources for
+the lockfile as committed. The
 frontend inventory is generated with pnpm and reviewed when dependencies change.
 
 ## Rust snapshot
@@ -51,9 +52,17 @@ Special selections:
 `server/Cargo.lock` resolves `rustls` to 0.23.46, the patch release fixing
 `RUSTSEC-2026-0346` through `RUSTSEC-2026-0349`. Its package metadata and
 `LICENSE-APACHE`, `LICENSE-ISC`, and `LICENSE-MIT` files retain the same terms
-as 0.23.45. The existing dependency allow-list and advisory exceptions remain
-unchanged. See the [dependency review](../reviews/records/2026-10-15-rustls-security-update.md)
-for the upstream evidence and audit result.
+as 0.23.45. The same graph resolves `rustls-webpki` 0.103.16, `webpki-roots`
+1.0.10, and `webpki-root-certs` 1.0.10, the releases that reject certificate
+paths through the distrusted emSign intermediates
+(`RUSTSEC-2026-0381`, `RUSTSEC-2026-0382`, `RUSTSEC-2026-0383`). Each keeps the
+license expression of the version it replaces: `ISC` for `rustls-webpki`, and
+`CDLA-Permissive-2.0` for the two root-certificate crates, which the existing
+allow-list already carries. The dependency allow-list and advisory exceptions
+remain unchanged. See the
+[dependency review](../reviews/records/2026-10-21-dependency-audit.md) for the
+audit result and the [earlier rustls review](../reviews/records/2026-10-15-rustls-security-update.md)
+for the upstream evidence behind 0.23.46.
 
 The project does not allow single-license GPL, AGPL, SSPL, BUSL, Elastic, or
 commercial-only dependencies in linked production code. Dual-license packages
@@ -115,7 +124,7 @@ existing backend HTTP client. No new third-party dependency is required.
 3. Confirm the SPDX selection is allowed and record OR-branch choices.
 4. Classify permissive, file-level copyleft, weak copyleft, custom terms, and
    missing metadata.
-5. Run `cargo deny check`, `pnpm check:deps`, and `pnpm check:docs`.
+5. Run `cargo deny --locked check`, `pnpm check:deps`, and `pnpm check:docs`.
 6. Update this inventory and the review record.
 
 Do not weaken `server/deny.toml` merely to pass a gate. New identifiers
