@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-20
+last-reviewed: 2026-10-21
 applies-to: Historical records under docs/reviews/records
 -->
 
@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-20 | Protocol registry implementation: `{ protocol, params }`, `ProtocolRegistry`, and the single engine dispatch | passed with conditions | [records/2026-10-20-protocol-registry.md](records/2026-10-20-protocol-registry.md) |
 | 2026-10-20 | Prepared-node driver contract implementation and remaining source-port decision | passed with conditions | [records/2026-10-20-prepared-node-driver-contract.md](records/2026-10-20-prepared-node-driver-contract.md) |
 | 2026-10-20 | Device and protocol engine abstraction survey and target contracts | passed with conditions | [records/2026-10-20-device-protocol-abstraction.md](records/2026-10-20-device-protocol-abstraction.md) |
 | 2026-10-15 | Build-all bundle finalization | passed with conditions | [records/2026-10-15-build-all-bundle-finalization.md](records/2026-10-15-build-all-bundle-finalization.md) |
