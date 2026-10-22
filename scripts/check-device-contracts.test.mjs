@@ -1,5 +1,13 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -66,6 +74,15 @@ describe('hashFile', () => {
     fixtures.push(root);
 
     expect(() => hashFile(root, 'absent.rs')).toThrow(/absent\.rs/);
+  });
+
+  it('hashes LF and CRLF copies of the same lines identically', () => {
+    const root = mkdtempSync(join(tmpdir(), 'device-contracts-hash-'));
+    fixtures.push(root);
+    writeFileSync(join(root, 'lf.rs'), 'fn a() {}\nfn b() {}\n');
+    writeFileSync(join(root, 'crlf.rs'), 'fn a() {}\r\nfn b() {}\r\n');
+
+    expect(hashFile(root, 'crlf.rs')).toBe(hashFile(root, 'lf.rs'));
   });
 });
 
@@ -204,6 +221,22 @@ describe('checkManifest', () => {
     expect(problems.some((problem) => problem.includes('version'))).toBe(true);
     expect(problems.some((problem) => problem.includes('tag'))).toBe(true);
   });
+
+  it('reports a frozen path replaced by a directory instead of throwing', () => {
+    const root = fixtureRoot();
+    const manifest = buildManifest(root);
+    const target = CONTRACT_FILES[6].path;
+    rmSync(join(root, target));
+    mkdirSync(join(root, target));
+
+    let problems;
+    expect(() => {
+      problems = checkManifest(root, manifest);
+    }).not.toThrow();
+    expect(
+      problems.some((problem) => problem.includes(target) && problem.includes('cannot read')),
+    ).toBe(true);
+  });
 });
 
 describe('CLI guards', () => {
@@ -238,6 +271,55 @@ describe('CLI guards', () => {
     expect(result.status).toBe(1);
     expect(outputOf(result)).toContain('usage:');
   });
+
+  it('refuses --message given twice', () => {
+    const root = fixtureRoot();
+    const result = runCli(
+      '--update',
+      '--message',
+      'contract: one',
+      '--message=contract: two',
+      `--root=${root}`,
+    );
+
+    expect(result.status).toBe(1);
+    expect(outputOf(result)).toContain('--message may be given only once');
+    expect(existsSync(join(root, MANIFEST_PATH))).toBe(false);
+  });
+
+  it('refuses a contract subject with leading whitespace', () => {
+    const root = fixtureRoot();
+    const result = runCli('--update', '--message', ' contract: x', `--root=${root}`);
+
+    expect(result.status).toBe(1);
+    expect(outputOf(result)).toContain('contract:');
+    expect(existsSync(join(root, MANIFEST_PATH))).toBe(false);
+  });
+
+  it('fails --update without writing when a frozen file is missing', () => {
+    const root = fixtureRoot();
+    const missing = CONTRACT_FILES[7].path;
+    rmSync(join(root, missing));
+
+    const result = runCli('--update', '--message', 'contract: x', `--root=${root}`);
+
+    expect(result.status).toBe(1);
+    expect(outputOf(result)).toContain('device contract update failed');
+    expect(outputOf(result)).toContain(missing);
+    expect(existsSync(join(root, MANIFEST_PATH))).toBe(false);
+  });
+
+  it.skipIf(process.platform === 'win32')('still runs when invoked through a symlink', () => {
+    const root = mkdtempSync(join(tmpdir(), 'device-contracts-link-'));
+    fixtures.push(root);
+    const link = join(root, 'check-device-contracts.mjs');
+    symlinkSync(scriptPath, link);
+
+    const result = spawnSync(process.execPath, [link, '--bogus'], { encoding: 'utf8' });
+
+    expect(result.status).toBe(1);
+    expect(outputOf(result)).toContain('usage:');
+  });
 });
 
 describe('CLI check and update', () => {
@@ -246,14 +328,22 @@ describe('CLI check and update', () => {
 
     const update = runCli('--update', '--message', 'contract: freeze fixture', `--root=${root}`);
     expect(update.status).toBe(0);
-    expect(update.stdout).toContain('device contracts updated (21 files)');
+    expect(update.stdout).toContain(`device contracts updated (${CONTRACT_FILES.length} files)`);
     expect(existsSync(join(root, MANIFEST_PATH))).toBe(true);
 
     const check = runCli('--check', `--root=${root}`);
     expect(check.status).toBe(0);
     expect(check.stdout).toContain(
-      `check:device-contracts passed (21 frozen files, tag ${CONTRACT_TAG})`,
+      `check:device-contracts passed (${CONTRACT_FILES.length} frozen files, tag ${CONTRACT_TAG})`,
     );
+  });
+
+  it('accepts the equals form of --message', () => {
+    const root = fixtureRoot();
+
+    const update = runCli('--update', '--message=contract: freeze fixture', `--root=${root}`);
+    expect(update.status).toBe(0);
+    expect(existsSync(join(root, MANIFEST_PATH))).toBe(true);
   });
 
   it('fails --check and names the file after a post-update edit', () => {

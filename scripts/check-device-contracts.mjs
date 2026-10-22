@@ -15,6 +15,13 @@
 // The script never stages, commits, or tags. It reads the frozen files and, on
 // an explicit update, writes the manifest.
 //
+// Line endings are not part of the contract: Git for Windows rewrites the
+// checkout to CRLF under its default core.autocrlf=true, and hashing the bytes
+// exactly as they sit on disk would fail a clean Windows checkout for a reason
+// that has nothing to do with the frozen types. Hashes are computed over
+// LF-normalized UTF-8 text, which is a no-op on a Linux/macOS checkout, as
+// check-contracts.mjs does for the generated contracts.
+//
 // Usage:
 //   node scripts/check-device-contracts.mjs [--check] [--root=<path>]
 //   node scripts/check-device-contracts.mjs --update --message "contract: <what changed>" [--root=<path>]
@@ -26,9 +33,9 @@
 // whose contract says cross-repository gates use explicit paths.
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 export const CONTRACT_TAG = 'device-contracts-v1';
 export const MANIFEST_VERSION = 1;
@@ -86,13 +93,22 @@ function inScope(path) {
   return SCOPE_ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
 }
 
-/** SHA-256 hex of one frozen file. A missing file is drift, not a crash. */
+/** Line endings are never part of the contract: a CRLF checkout is equal. */
+function normalizeEol(text) {
+  return text.replace(/\r\n/g, '\n');
+}
+
+/**
+ * SHA-256 hex of one frozen file, over its LF-normalized UTF-8 text. A missing
+ * file is drift, not a crash; a directory or unreadable file surfaces as the
+ * read error, which the caller turns into a problem line.
+ */
 export function hashFile(root, relativePath) {
   const absolute = join(root, relativePath);
   if (!existsSync(absolute)) {
     throw new Error(`device contract file is missing: ${relativePath} (looked under ${root})`);
   }
-  return createHash('sha256').update(readFileSync(absolute)).digest('hex');
+  return createHash('sha256').update(normalizeEol(readFileSync(absolute, 'utf8'))).digest('hex');
 }
 
 /** The manifest `--update` writes: fresh hashes, freeze-list order, no merge. */
@@ -185,7 +201,15 @@ export function checkManifest(root, manifest, files = CONTRACT_FILES) {
       continue;
     }
     if (!entry.shaValid) continue;
-    const actual = hashFile(root, path);
+    let actual;
+    try {
+      actual = hashFile(root, path);
+    } catch (error) {
+      // A frozen path replaced by a directory or an unreadable file is drift the
+      // reader must see, not a stack trace: report it like every other problem.
+      problems.push(`${path}: cannot read (${error.code ?? error.message})`);
+      continue;
+    }
     if (entry.row.sha256 !== actual) {
       problems.push(
         `${path}: sha256 drift (recorded ${entry.row.sha256}, actual ${actual})`,
@@ -216,6 +240,15 @@ function main(argv) {
   let message;
   let root = resolve(import.meta.dirname, '..');
 
+  const setMessage = (value) => {
+    if (message !== undefined) {
+      console.error('--message may be given only once');
+      console.error(USAGE);
+      process.exit(1);
+    }
+    message = value;
+  };
+
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--check') {
@@ -229,10 +262,10 @@ function main(argv) {
         console.error(USAGE);
         process.exit(1);
       }
-      message = value;
+      setMessage(value);
       i += 1;
     } else if (arg.startsWith('--message=')) {
-      message = arg.slice('--message='.length);
+      setMessage(arg.slice('--message='.length));
     } else if (arg.startsWith('--root=')) {
       const value = arg.slice('--root='.length);
       if (value === '') {
@@ -266,7 +299,19 @@ function main(argv) {
       );
       process.exit(1);
     }
-    const manifest = buildManifest(root);
+    let manifest;
+    try {
+      manifest = buildManifest(root);
+    } catch (error) {
+      // A missing frozen file is drift, not a crash: report it and leave the
+      // committed manifest untouched rather than half-refreshing the freeze.
+      console.error(`device contract update failed: ${error.message}`);
+      console.error('Nothing was written. Restore the missing frozen file, then rerun the update:');
+      console.error(
+        '  node scripts/check-device-contracts.mjs --update --message "contract: <what changed>"',
+      );
+      process.exit(1);
+    }
     const target = join(root, MANIFEST_PATH);
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, `${JSON.stringify(manifest, null, 2)}\n`);
@@ -295,6 +340,22 @@ function main(argv) {
   );
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+/**
+ * True when this module is the process entry point. Both sides are resolved
+ * through the real filesystem, so invoking the script through a symlink still
+ * runs it: the unresolved `pathToFileURL(process.argv[1])` comparison was false
+ * there and the gate exited 0 without checking anything.
+ */
+function isEntryPoint(argv1, moduleUrl) {
+  if (argv1 === undefined || argv1 === '') return false;
+  try {
+    return realpathSync(fileURLToPath(moduleUrl)) === realpathSync(resolve(argv1));
+  } catch {
+    // argv[1] absent or not resolvable is not this module's entry point.
+    return false;
+  }
+}
+
+if (isEntryPoint(process.argv[1], import.meta.url)) {
   main(process.argv.slice(2));
 }
