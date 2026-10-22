@@ -44,6 +44,7 @@ stays in sync with the registry, CI, and the other documents.
 - [ ] `pnpm check:tauri-versions` — the Tauri npm packages and the `tauri`/`tauri-plugin-*` crates resolved in `client/src-tauri/Cargo.lock` share a major/minor, which `tauri dev` and `tauri build` require before they start
 - [ ] `pnpm check:web-contract` — command surface (`rpc-api` SUPPORTED table versus actual dispatch) stays consistent
 - [ ] `pnpm check:contracts` — generated TypeScript matches the Rust wire types byte for byte
+- [ ] `pnpm check:device-contracts` — the interface, wire, profile, and runtime contracts frozen as `device-contracts-v1` still match their recorded hashes; a legitimate change is an explicit `--update` carrying a `contract:` subject
 - [ ] `pnpm check:model-catalog` — catalog fixtures, contract version, and widget kind coverage
 - [ ] `pnpm test` — the gate scripts and packaging helpers the umbrella owns keep their own unit tests, so a gate regression is caught by the suite that covers it
 - [ ] `pnpm check:tokens` — color/opacity token unification plus the frosted-glass structural budget; see `client/docs/architecture/ui-color-tokens.md`

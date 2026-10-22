@@ -132,6 +132,16 @@ export const GATES = [
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
+    id: 'check-device-contracts',
+    label: 'Device contract freeze',
+    group: 'Architecture',
+    cwd: 'root',
+    cmd: ['pnpm', 'check:device-contracts'],
+    tier: 'pr',
+    why: 'the interface, wire, profile, and runtime contracts frozen as `device-contracts-v1` still match their recorded hashes; a legitimate change is an explicit `--update` carrying a `contract:` subject',
+    docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
+  },
+  {
     id: 'check-model-catalog',
     label: 'Model catalog',
     group: 'Architecture',

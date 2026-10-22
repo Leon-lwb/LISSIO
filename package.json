@@ -35,6 +35,7 @@
     "check:web-contract": "node scripts/check-web-contract.mjs",
     "generate:contracts": "node scripts/generate-contracts.mjs",
     "check:contracts": "node scripts/check-contracts.mjs",
+    "check:device-contracts": "node scripts/check-device-contracts.mjs",
     "check:model-catalog": "node scripts/check-model-catalog.mjs",
     "check:docs": "node scripts/check-docs.mjs",
     "check:tokens": "node scripts/check-ui-tokens.mjs",

@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "tag": "device-contracts-v1",
+  "files": [
+    {
+      "path": "server/core/crates/shared/data-model/src/ids.rs",
+      "sha256": "08a54d59080ee6b308bc6ed4323e105daee811d26f0eb9cd89673809786185c7",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/data-model/src/interface.rs",
+      "sha256": "14790ae84008238988000e4939e015786f7f05100a3e479e788b69bfaa82b238",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/data-model/src/structured.rs",
+      "sha256": "34c7efc005f01b08fa3002401fbb5d352fcaaf745dcb8a7829f8e7760816272e",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/lib.rs",
+      "sha256": "0803ec38fbf40ec8cc678179e196789350fa2fd2c378217b8398336b98912203",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/schema.rs",
+      "sha256": "d4e7face4d5938f254a543642914349eeb6abdbff59510e5d83a6fc56d084d8c",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/value.rs",
+      "sha256": "52154ce334466bd99e8ebbe7c7b4a168896e2a32ff32665791e711025978aebc",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/path.rs",
+      "sha256": "e0e8e0fc5219bdd519b49d0a6933c49a2a488593703d5bc6626e49ea0c9fe4af",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/codec.rs",
+      "sha256": "4ac803ead9bec312be4b046e375fde7110aeb905c389d9eb35566015b77115d1",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/registry.rs",
+      "sha256": "bba93e1aa83e303c8cc1f509d0a021ceb712dbebaff13262737258e80231d6a8",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/limits.rs",
+      "sha256": "4ab4859083fe97972df1ee456eb79ab6ea54791617a2496046f31a58fce43553",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/error.rs",
+      "sha256": "ea1f6e0714bfb95cd6446825b46936db8d3d8abd1c01e64ddd779d9011383ad4",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/config.rs",
+      "sha256": "146c84c5f1702704d913086b472e2df44ef3933e1e863e68d0d69ace605424d3",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/context.rs",
+      "sha256": "979793989c05dc883a98b201901e023c9ecd671a7cfe6a48d7fc6b91b03258f8",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/error.rs",
+      "sha256": "3b8dce977e149920d041c1f7e8a7ce6539bc5c86e94f53be13476a3d64eb2dc4",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/frame.rs",
+      "sha256": "8c7c03475855d8abba4e7a485d4c5a065307f9924714a7fcc03fd8d5e9201dac",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/output.rs",
+      "sha256": "351f1b76993b57513b8b213ba62ad8755680787e7ec43999004d84488e425e63",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/profile.rs",
+      "sha256": "8444df4ebdc8e5e0322e2fa78d964f51b1bb9aa6134e1d0b3ef784d3bbbfdd7c",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/registry.rs",
+      "sha256": "387f180cf43d949e40a274df4dab1cc8712a972d8445029cdeef8ba9c414dd08",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/protocol/protocol/src/traits.rs",
+      "sha256": "da3191f203db3f5c0916cf2f02a3630cfbc3e0aa04ac8d98e2f3811fc2398d4b",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/physical/crates/protocol/acquisition/src/interface.rs",
+      "sha256": "790ef2dfd26e484b6c91604f27df8732cdd9a49880ca1fdc3753e577d08fceb0",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/physical/crates/transport/device-tree/src/driver.rs",
+      "sha256": "7ef089e98cb258e0b171ac777472b06dcd46902d2b9dccb8c4f8b2619d235143",
+      "owner": "W0a"
+    }
+  ]
+}
