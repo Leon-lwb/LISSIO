@@ -155,6 +155,8 @@
     ],
     "lissio-protocol": [
       "serde",
+      "serde_json",
+      "thiserror",
       "ts-rs"
     ],
     "lissio-raw-data": [
@@ -221,6 +223,9 @@
       "sha2",
       "thiserror",
       "ts-rs"
+    ],
+    "lissio-wire-codec-cbor": [
+      "ciborium"
     ]
   }
 }
