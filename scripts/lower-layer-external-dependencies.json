@@ -214,6 +214,13 @@
     "lissio-waveform": [
       "parking_lot",
       "serde"
+    ],
+    "lissio-wire": [
+      "serde",
+      "serde_json",
+      "sha2",
+      "thiserror",
+      "ts-rs"
     ]
   }
 }
