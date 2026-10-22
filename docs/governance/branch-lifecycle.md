@@ -3,14 +3,15 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-21
-applies-to: Branch roles, integration, and deletion across the five Lissio repositories
+last-reviewed: 2026-10-22
+applies-to: Branch roles, integration, and deletion across the Lissio repositories
 -->
 
-Lissio is five repositories — the umbrella checkout, `client/`, `server/`, and the
-nested `server/core/`, `server/physical/`, and `server/data/` — and each one
-carries the same two long-lived lines. A change that crosses repositories is
-integrated in every repository it touches, not in one of them.
+Lissio is this umbrella checkout plus the five repositories it composes —
+`client/`, `server/`, and the nested `server/core/`, `server/physical/`, and
+`server/data/` — and each one carries the same two long-lived lines. A change
+that crosses repositories is integrated in every repository it touches, not in
+one of them.
 
 ## Branch roles
 

@@ -54,7 +54,7 @@ indexes its own tree:
 | [governance/third-party-licenses.md](governance/third-party-licenses.md) | Dependency and asset obligations |
 | [governance/documentation-standards.md](governance/documentation-standards.md) | Language, placement, metadata, and maintenance |
 | [governance/document-review.md](governance/document-review.md) | Review triggers, process, and records |
-| [governance/branch-lifecycle.md](governance/branch-lifecycle.md) | Branch roles, integration into `develop`, and deletion across the five repositories |
+| [governance/branch-lifecycle.md](governance/branch-lifecycle.md) | Branch roles, integration into `develop`, and deletion across every Lissio repository |
 
 ## Reviews
 

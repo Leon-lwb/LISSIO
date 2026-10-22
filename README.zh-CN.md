@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-16
+last-reviewed: 2026-10-22
 applies-to: Simplified Chinese translation of the product README; overview, setup, development, and distribution
 language: zh-CN
 authoritative: false
@@ -14,7 +14,7 @@ translation-of: README.md
 
 > 本文件是 [`README.md`](README.md) 的简体中文译本；英文版为权威来源（English is authoritative），中英文如有出入，以英文版为准。
 
-用 Rust + Tauri 全面重构的下一代串口助手 —— 面向嵌入式调试、波形可视化、基于节点的数据流编排、CAN / 汽车诊断与逻辑分析。
+Lissio 是面向嵌入式、车载与工业现场的数据采集与调试主机。它是同一套能力核心经由四个软件出口交付的形态 —— Tauri 桌面应用、Web 前端、MCP 服务、headless CLI —— 因此同样的采集、解码、节点图与录制行为，可以从原生窗口、浏览器、AI 客户端或脚本任意一种入口抵达。
 
 <!-- PROJECT LOGO -->
 <br />
@@ -26,7 +26,7 @@ translation-of: README.md
 
   <h3 align="center">Lissio</h3>
   <p align="center">
-    集波形显示、节点编辑器、多协议解析、CAN 诊断与逻辑分析于一体的现代串口调试工具。
+    面向嵌入式、车载与工业现场的数据采集与调试主机。
     <br />
     <a href="https://lissio.pengheng.top"><strong>项目主页 »</strong></a>
     <br />
@@ -59,43 +59,49 @@ translation-of: README.md
 
 ## 简介
 
-玲思助手（LISSIO）是面向嵌入式调试场景的桌面串口助手。前端基于 React 19 + TypeScript + Vite 构建，后端由 Rust + Tauri 2 驱动，提供高性能的传输层 I/O、协议解析、节点图 DAG 引擎、DSP（FIR/IIR 滤波器、FFT 频谱）以及汽车诊断协议（ISO-TP / UDS / OBD-II / J1939）。
+Lissio（玲思助手）的界面由 React 19 + TypeScript + Vite 构建；实际工作运行在 `lissio-server` 这个独立的 Rust 进程里，由它拥有传输层 I/O、协议解码、节点图数据流运行时、DSP（FIR/IIR 滤波器、FFT 频谱）、CAN 与汽车诊断以及录制。桌面壳是 Tauri 2，浏览器加载同一份构建产物，两者都通过 HTTP-RPC 加 WebSocket 流式事件调用这个服务，于是桌面与 Web 是同一个能力面的两个出口。
 
-应用支持 7 种传输方式、7 种协议引擎、基于 React Flow 的节点编辑器（用于数据流编排）、示波器风格波形显示、CAN 帧 / 负载分析、支持 UART/I2C/SPI 解码的逻辑分析仪，以及运行在沙箱 iframe 中的自定义 JS 控件系统。
+一次会话被组织成设备树：连接节点（串口、TCP 客户端/服务端、UDP、CAN 适配器、测试数据源，以及按 Cargo feature 开关的工业协议驱动）拥有字节流，协议节点负责解码，可点选的 typed 点位再馈入 React Flow 图，图的求值结果驱动示波器风格波形、仪表、原始数据、CAN 分析、逻辑解码与自定义控件。录制把会话写入 DuckDB 支撑的数据库，同样的能力也以 MCP 工具和 CLI 子命令暴露。
 
 界面采用 **停靠式窗口布局**：控制画布与数据视图以可拆分、可合并、可停靠的卡片呈现，支持多标签切换，布局自动持久化。
 
 ## 核心特性
 
-### 传输方式
+### 设备树与连接
 
-- **Serial**（USB-CDC），波特率 / 数据位 / 校验位 / 停止位 / 流控均可配置。
+- 连接、协议引擎与测试数据源组织成一棵**设备树**；每个节点独立启用、配置与连接，无需了解线上字节格式就能定位一个 typed 点位。
+- **Serial**（USB-CDC），波特率 / 数据位 / 校验位 / 停止位 / 流控均可配置，并从操作系统枚举中完成发现，带 USB VID/PID 与蓝牙 / PCI / 系统串口分类。
 - **TCP Client** / **TCP Server**。
 - **UDP**，本地与远端地址相互独立。
 - **Test Data** —— 内置信号发生器（Sine / Square / Triangle / Sawtooth / Random / DC / Chirp / Steps / Noise / MultiTone），适合离线原型验证。
-- **Slcan** —— 串口之上的 CAN。
-- **CandleLight** —— 原生 USB CAN 后端。
+- **Slcan** —— 串口之上的 CAN；**CandleLight** —— 原生 USB CAN 后端；**CAN channel** —— 节点驱动的直接 CAN 接口。
+- **工业协议驱动** —— Modbus TCP、Modbus RTU 与西门子 S7 由默认开启的 Cargo feature 提供。
+- ISO-TP、UDS、OBD-II、J1939 在设备树里组成节点驱动的诊断协议栈（`libautomotive`）。
 - 自动重连与连接状态通知。
 
-### 协议引擎
+### 协议解码
 
-- **JustFloat** 与 **FireWater** —— 兼容 VOFA+ 的协议格式，自动识别通道。
-- **RawData** —— 原始字节流查看。
+- 协议家族目录由后端拥有，并以描述符形式下发给客户端，携带参数、端口、能力、配置指引与示例；UI 直接渲染目录公布的每一项。JustFloat、FireWater、RawData、Slcan、CandleLight、LogicDecode 以及由帧 schema 定义的自定义协议，都是目录中的一项。
+- **JustFloat** 与 **FireWater** —— 兼容 VOFA+ 的格式，自动识别通道。
+- **RawData** —— 原始字节流查看；该节点通过 `str` 端口把字节以 UTF-8 文本暴露出来。
 - **Slcan** / **CandleLight** —— CAN 帧解析。
 - **LogicDecode** —— 从采样的数字电平解码 UART / I2C / SPI。
-- **Diagnostic** —— ISO-TP / UDS / OBD-II / J1939 汽车诊断协议栈（由 `libautomotive` 提供）。
+- **自定义 schema** —— 一份帧 schema 会编译出自己的解码引擎，并带有受限的实时**协议预览**，在提交图之前先用真实字节验证解码。
+- **结构化校验** —— 每一条配置问题都带着它所归属的路径返回，于是表单能直接标出出问题的那个字段。
 
 ### 节点编辑器与数据流
 
 - 基于 **React Flow** —— 从侧边栏把控件拖到画布上并连线，构建数据流。
-- 后端 **DAG 引擎**（`engine`）把图编译为拓扑序，逐帧计算所有节点输出，并具备环路检测。
-- 节点类型：`ChannelSource`、`Input`、`Math`、`Filter`、`SpectrumSink`、`FrameDecoder`、`Custom`（JS）、`Sink`。
+- 后端 `graph` crate 把画布沿 kind → HIR → plane → lower → eval 流水线编译，确定求值顺序，并逐帧产出所有节点输出，具备环路检测。
+- 节点类型：`Acquisition`、`PointSelector`、`Protocol`、`ProtocolSource`、`Input`、`Math`、`Str`、`Filter`、`Fft`、`Ifft`、`FrameDecoder`、`Trigger`、`TextInput`、`TextOut`、`TextDisplay`、`Sink`、`Custom`（JS）。
 - **数学节点**：Add / Sub / Mul / Div / Avg / Min / Max / Abs / Neg / Square / Sqrt / Sin / Cos / Tan / Log。
 - **滤波节点**：Lowpass / Highpass / Bandpass / Bandstop（FIR 系数或 IIR biquad），跨帧保持状态。
 - **字符串节点**：子串操作（Mid / Left / Replace …）以及转换操作 —— **Format**（`{0:.2}` 模板 → 文本）、**Parse**（从文本中提取第一个数字，支持十进制或 0x 十六进制）、**EncodeHex** —— 双向打通波形通道与文本协议。RawData 数据源通过 `str` 端口把自身字节以 UTF-8 文本暴露出来。
 - **TextOut 节点**：把图中生成的文本从任意传输方式回发出去（动态回发）。按取值变化 + 最小间隔限流；附带手动 "Send now" 按钮。
 - **协议转换链**：每个 Protocol 节点都能把自己解码出的帧重新编码为另一种协议，并沿 `out` 端口推送 —— 例如 JustFloat → FireWater 再送入另一条传输；RawData 则原样透传原始字节。
-- **SpectrumSink**：按数据块做 FFT，可选窗函数（Hann / Hamming / Blackman / Rect）与输出模式（Magnitude / Power / PSD / dB），由独立的 30 FPS ticker 驱动。
+- **Fft 节点**：按数据块做频谱分析，可选窗函数（Hann / Hamming / Blackman / Rect）与输出模式（Magnitude / Power / PSD / dB）。它在数值平面没有输出；由一个独立的 30 FPS ticker 计算数据块并发布快照，Spectrum 显示控件读取这些快照；**Ifft** 从频谱重建时域流。
+- **PointSelector / Acquisition**：从设备节点挑选 typed 点位并投影到数值端口，让图跟随某一个解码字段。
+- **Trigger / TextInput / TextDisplay**：边沿或命令触发的发送，以及把文本接入与接出图里的字符串平面。
 - **FrameDecoder**：按数据块解析字节流（Header / Length / Id / Field / Bitfield / Checksum / Tail），通过 `match_id` 进行多帧分发并校验校验和。
 - **自定义 JS 节点**：用户 JavaScript 在沙箱 iframe 中运行，输出回传至后端图。
 
@@ -118,11 +124,19 @@ translation-of: README.md
 - **逻辑时序图** + 解码事件列表（UART/I2C/SPI）。
 - **命令发送器**（带块编辑器）与 **帧解码器** 手动测试面板。
 - **原始数据视图** —— 独立控件，支持网格 / 行分组、HEX / ASCII 表示、按端口切换通道、时间戳 / 偏移显示与发送面板。
-- **自定义控件编辑器** —— CodeMirror 6 驱动的 JS 编辑器，带实时预览。
+- **自定义控件编辑器** —— CodeMirror 6 驱动的 JS 编辑器，带实时预览；自定义控件与自定义 JS 节点都运行在沙箱 iframe 中。
+- **性能监视** —— 运行中界面的实时帧开销：FPS、平均与 P95 帧耗时、长任务、JS 堆用量与监视器 RPC 延迟。
+
+### 录制与数据历史
+
+- **录制会话** —— DuckDB 支撑的数据库（`lissio-recording`，同时经 SeaORM 暴露实体）按通道绑定保存录制行，录制数据库面板负责会话与绑定的管理。
+- **查询与导出** —— 历史按行 id 与时间范围分页，只读 SQL 在录制表上执行，导出走的正是 Web、MCP、CLI 出口调用的同一个能力。
+- **随运行状态门控** —— 录制跟随工作区的 Run/Stop/Pause 状态；暂停时采集与缓存继续填充，只停止设备写入。
+- **默认关闭** —— 从未主动开启的工作区不会录制任何内容，该设置由所连接的后端读取。
 
 ### 窗口组织与布局
 
-- **活动栏** —— 左侧 VSCode 风格图标栏，一键切换侧边栏视图（数据接口 / 协议引擎 / 控件面板）。
+- **活动栏** —— 左侧 VSCode 风格图标栏。上方图标切换侧边栏视图（设备树 / 快速开始 / 面板 / 录制数据库），下方同一条栏用于直接跳到某个分类，并在侧边栏打开控件目录。
 - **可停靠侧边栏** —— 可停靠在窗口左右两侧；把标题栏拖到窗口边缘即可换边，并可随时显示 / 隐藏。
 - **停靠式中央区域** —— 控制画布与数据视图位于可拆分 / 可合并的卡片中：
   - 把标签拖到另一张卡片的标题栏 → 合并进该卡片的标签组；
@@ -139,7 +153,7 @@ translation-of: README.md
 - VSCode 风格布局：活动栏、侧边栏、可调整大小的面板、状态栏、多标签。
 - 原生菜单栏（macOS / Windows / Linux）与全局快捷键（`Ctrl+,` 打开设置；菜单项支持新建 / 关闭标签与切换侧边栏）。
 - **i18n** —— 通过 YAML 管理中文 / 英文界面文案。
-- **设置弹窗** —— 通用 / 外观 / 编辑器 / 数据 / 串口 / 通知，由所连接的后端持久化。
+- **设置弹窗** —— 通用 / 外观 / 编辑器 / 数据 / 串口 / 通知 / 性能 / AI，以可搜索的字段描述符声明，并由所连接的后端持久化。
 - **整应用配置导出 / 导入** —— 通过系统文件对话框把设置、协议、传输、控件、节点图、数据标签与视图偏好备份为单个 JSON 文件，便于迁移。
 - 自定义主题编辑器、引导向导、帮助中心与上下文提示。
 - 透明窗口与亚克力 / 毛玻璃效果（macOS）。
@@ -149,17 +163,25 @@ translation-of: README.md
 ### AI 助手
 
 - **流式 AI 对话** —— 可停靠的对话面板（默认位于右侧；拖拽标题栏可重新停靠到左侧 / 底部或浮动，布局持久化），支持 **Markdown 渲染**（表格、代码高亮、可复制的代码块 / 消息）与多会话管理（创建 / 重命名 / 删除，历史记录在 Rust 侧持久化并跨重启保留）。
-- **26+ LLM 提供商** —— OpenAI / Anthropic / Gemini / DeepSeek / Qwen / Kimi / GLM / Ollama / OpenRouter 等，默认推荐 [**OrcaRouter**](https://orcarouter.ai)（一个密钥打通所有厂商；[通过我们的推荐链接获取 API key](https://www.orcarouter.ai/ref/ref_1f7582998bdadbe7e0f3) 以支持本项目）。
+- **模型适配器** —— OpenAI（chat 与 Responses）、Anthropic、Gemini、DeepSeek、Moonshot、Z.ai、BigModel、Aliyun、OpenRouter、Groq、xAI、Ollama，以及任何 OpenAI 兼容端点，默认推荐 [**OrcaRouter**](https://orcarouter.ai)（一个密钥打通所有厂商；[通过我们的推荐链接获取 API key](https://www.orcarouter.ai/ref/ref_1f7582998bdadbe7e0f3) 以支持本项目）。已保存的密钥只写不可读：界面只知道它是否已配置、来自哪里、以及能否写入。
 - **工具调用（MCP 客户端）** —— 对话过程中模型可以调用外部 MCP 服务器（stdio / HTTP）的工具，并带有逐次调用追踪。
 - **MCP 服务器（入站）** —— 应用把自身能力（串口发送、波形读取、节点图编辑…）作为 MCP 工具暴露在 `http://127.0.0.1:{port}/mcp`，让 Claude Desktop 等 MCP 客户端可以直接驱动 Lissio。
+
+### 一套核心，四个出口
+
+- **能力核心** —— `control-api` 把设备列表、字节 / 文本 / CAN 发送、字节注入、输入值、图提交与连线编辑、波形 / 缓冲区读取、端点生命周期、运行控制、录制查询与导出实现为作用于某个状态切片的函数。每一项都带着 schemars 推导的 JSON schema 和内嵌的技能文档；MCP 路由、内置 AI 分发与技能发现都读这同一份注册表。
+- **HTTP-RPC + WebSocket** —— `rpc-api` 把命令名与 JSON 参数映射到能力调用，并按连接流式回传事件。桌面与 Web 共用命令名、参数和错误；`pnpm check:web-contract` 与 `pnpm check:contracts` 保证分发表和生成的 TypeScript 不出偏差。
+- **MCP 服务器** —— 同一份注册表以 streamable HTTP 上的 MCP 工具提供（默认 `127.0.0.1:8765/mcp`），Claude Desktop 或其他 MCP 客户端可以直接驱动一次真实会话。
+- **CLI** —— `backend-cli` 把这些命令暴露成 argv 子命令（`devices`、`ports`、`send`、`inject`、`input`、`graph`、`data`、`snapshot`、`frame`、`endpoint`、`run`、`record`、`serve`），事件走 JSON lines，这正是 headless 运行可被脚本化的原因。
+- **桌面壳** —— Tauri 负责窗口、菜单、更新器、启动屏、文件对话框与被监管的 `lissio-server` sidecar 生命周期。桌面应用的业务调用与浏览器走同一条 HTTP/WebSocket 路径。
 
 ## 使用指南
 
 ### 快速开始
 
-1. **配置传输方式** —— 点击左侧活动栏的数据接口图标，在侧边栏中选择传输方式（Serial / TCP / UDP / Test Data / Slcan / CandleLight），填写参数后点击 **Connect**。
-2. **选择协议** —— 点击协议引擎图标，选择与设备匹配的协议（JustFloat / FireWater / RawData / Slcan / CandleLight / LogicDecode）。
-3. **搭建数据流** —— 点击控件图标打开控件面板，把控件拖到画布上，并连到通道源或上游控件。
+1. **添加连接** —— 打开活动栏的设备树，添加一个设备（串口 / TCP / UDP / Slcan / CandleLight，或手动配置的连接），填写参数后连接。发现的端口可按名称、端口号与 USB VID/PID 搜索。
+2. **解码数据流** —— 在该节点下添加协议引擎，选择与线格式匹配的协议家族（JustFloat / FireWater / RawData / Slcan / CandleLight / LogicDecode，或自定义帧 schema）。受限的实时预览会先用真实字节解码，让你先确认分帧再提交图。
+3. **搭建数据流** —— 从活动栏打开控件目录，把显示控件拖到画布上，并连到协议输出、选中的设备点位或上游控件。
 4. **查看数据** —— Waveform 等显示控件会自动创建对应的数据标签；也可以点击数据卡片标题栏的 "＋" 手动添加 CAN Frames、Logic Analyzer 等标签。
 
 ### 窗口组织
@@ -219,29 +241,37 @@ translation-of: README.md
 
 ### 后端
 
-- [Rust](https://www.rust-lang.org/) + [Tauri 2](https://tauri.app/)
-- [Tokio](https://tokio.rs/) —— 异步运行时
-- [Serde](https://serde.rs/) —— 序列化
-- [parking_lot](https://github.com/Amanieu/parking_lot) —— 同步原语
-- [window-vibrancy](https://github.com/tauri-apps/window-vibrancy) —— 亚克力 / Mica 效果
+- [Rust](https://www.rust-lang.org/) —— `lissio-server`，所有出口共同调用的进程
+- [Tokio](https://tokio.rs/) —— 异步运行时；[axum](https://github.com/tokio-rs/axum) —— HTTP-RPC 与 WebSocket 传输
+- [Serde](https://serde.rs/) + [schemars](https://crates.io/crates/schemars) —— 能力 DTO，以及 MCP 路由与内置 AI 共同推导的 JSON schema
+- [ts-rs](https://crates.io/crates/ts-rs) —— 生成 `client/src/types/generated` 的 Rust 侧线缆类型
+- [rmcp](https://crates.io/crates/rmcp) —— 入站 MCP streamable-HTTP 服务器；`mcp-client` crate 负责向外连接其他 MCP 服务器
+- [clap](https://github.com/clap-rs/clap) —— `backend-cli` 子命令
+- [DuckDB](https://crates.io/crates/duckdb) + [SeaORM](https://github.com/SeaQL/sea-orm) —— `lissio-recording` 背后的录制存储
 - [libautomotive](https://crates.io/crates/libautomotive) —— UDS / OBD-II / J1939 诊断
+- [parking_lot](https://github.com/Amanieu/parking_lot) —— 同步原语
+
+### 桌面外壳
+
+- [Tauri 2](https://tauri.app/) —— 窗口、菜单、更新器、启动屏、文件对话框与 sidecar 监管
+- [window-vibrancy](https://github.com/tauri-apps/window-vibrancy) —— 亚克力 / Mica 效果
 - Tauri 插件：`tauri-plugin-log`、`tauri-plugin-notification`、`tauri-plugin-opener`
 
 ### 后端工作区架构
 
-Rust 工作区按职责领域分组，并受声明的依赖分层约束。组合根是 Tauri 外壳（`lissio`）、`backend-server` 与 `backend-cli`；产品能力通过 `control-api` 共享，命令分发通过 `rpc-api`，装配通过 `backend-host`。
+Rust 侧是四个 Cargo 工作区：`server/` 以及嵌套在它下面的 `core/`、`physical/`、`data/` 工作区，每个都有自己的 lockfile 与自己发布的 crate。每个成员都在 `[package.metadata.lissio]` 里声明自己的领域、依赖分层与职责，`pnpm check:architecture` 会读取全部四份清单来强制领域 DAG 与分层规则。组合根是 `backend-server`、`backend-cli` 与 Tauri 外壳（`lissio`）；产品能力通过 `control-api` 共享，命令分发通过 `rpc-api`，装配通过 `backend-host`，每个组合根都复用它。
 
-| 领域 | 结构性职责 |
-| --- | --- |
-| `shared` | 稳定契约：错误、流信封、数据 / 配置模型、订阅 |
-| `signal` | 波形缓冲区、原始数据、滤波器、频谱、测量、GPU 包络适配器 |
-| `vehicle` | CAN 与诊断协议类型 |
-| `protocol` | 协议 / schema 引擎、帧解码、逻辑解码、点位、采集契约 |
-| `graph` | 节点定义与 HIR → plane → lower → eval 编译器 / 运行时管线 |
-| `transport` | 设备树契约与串口 / 网络 / CAN / 工业协议适配器 |
-| `data` | 数据总线与录制存储 |
-| `ai` | LLM 客户端、对话 / 会话状态、MCP 客户端 |
-| `desktop` | 管线 / 应用状态、能力核心、RPC 分发、后端 host / server / CLI、AI host、平台外壳 |
+| 领域 | 所属工作区 | 结构性职责 |
+| --- | --- | --- |
+| `shared` | `core` | 稳定契约：错误、流信封、数据 / 配置模型、订阅 |
+| `vehicle` | `core` | CAN 与诊断协议类型 |
+| `protocol` | `core`、`physical` | `core` 里的协议注册表与 schema、帧解码、逻辑解码、点位；`physical` 里的采集与仿真引擎 |
+| `transport` | `physical` | 设备树装配，以及串口 / 网络 / CAN / Modbus / S7 适配器 |
+| `signal` | `data` | 波形缓冲区、原始数据、滤波器、频谱、测量、GPU 包络适配器 |
+| `graph` | `data` | 节点定义与 kind → HIR → plane → lower → eval 编译器 / 运行时管线 |
+| `data` | `data` | 数据总线、`dataflow` 门面与录制存储 |
+| `ai` | `server` | LLM 客户端、对话 / 会话状态、MCP 客户端 |
+| `desktop` | `server` | 管线 / 应用状态、能力核心、RPC 分发、后端 host / server / CLI、AI host、平台外壳 |
 
 完整的 crate 清单、依赖分层、领域 DAG 与架构检查见 [`server/docs/architecture/crates.md`](server/docs/architecture/crates.md)。
 
@@ -261,7 +291,7 @@ lissio/                            # 伞仓库：仅承载跨仓库基础设施
 │   │   ├── lib/                   # 采集、AI、模型、平台、rpc 与工具
 │   │   ├── store/                 # Zustand store 与状态切片
 │   │   ├── types/generated/       # 由 ts-rs 导出的 Rust 侧线缆契约
-│   │   ├── i18n/locales/          # 英文与中文用户文案
+│   │   ├── i18n/resources/        # en/ 与 zh/ 的 YAML 用户文案，按界面切分文件
 │   │   ├── App.tsx
 │   │   └── main.tsx
 │   ├── public/                    # 静态应用资源
@@ -273,8 +303,8 @@ lissio/                            # 伞仓库：仅承载跨仓库基础设施
 │   └── package.json               # 前端依赖与脚本
 ├── server/                        # Rust 仓库（子模块）：Cargo 工作区根
 │   ├── crates/<domain>/<crate>    # 由 server 仓库自有的 crate
-│   ├── core/                      # core 子模块：shared、vehicle、protocol crate
-│   ├── physical/                  # physical 子模块：传输与协议适配器
+│   ├── core/                      # core 子模块：shared、vehicle 与 protocol 契约
+│   ├── physical/                  # physical 子模块：传输适配器、采集与仿真
 │   ├── data/                      # data 子模块：graph、signal 与 data crate
 │   ├── tests/                     # 集成测试
 │   ├── Cargo.toml                 # 工作区与依赖权威
@@ -296,11 +326,16 @@ lissio/                            # 伞仓库：仅承载跨仓库基础设施
 
 ## 安装与运行
 
-1. 克隆仓库
+1. 克隆仓库并检出子模块
+
+`client/` 与 `server/` 是分开的仓库，`server/` 之下又嵌套了 `core/`、`physical/` 与 `data/`，因此一份可用的检出需要包含全部层级。
 
 ```sh
-git clone https://codeberg.org/lissio-industries/Lissio.git
-cd lissio
+git clone --recurse-submodules https://codeberg.org/lissio-industries/Lissio.git
+cd Lissio
+
+# 或者，在一个普通克隆里
+git submodule update --init --recursive
 ```
 
 2. 安装前端依赖
@@ -309,7 +344,7 @@ cd lissio
 pnpm install
 ```
 
-Lissio 以三个相互独立的产物交付：Backend/CLI 归档、静态 Web 归档，以及桌面安装包 —— 后者的 Tauri 外壳监管一个随包发布、版本一致的 `lissio-server` sidecar。
+Lissio 以三个产物支撑四个出口：装着 `lissio-server` 与 `backend-cli` 两个二进制的 Backend/CLI 归档、静态 Web 归档，以及桌面安装包 —— 后者的 Tauri 外壳监管一个随包发布、版本一致的 `lissio-server` sidecar。MCP 出口运行在 `lissio-server` 内部。
 
 ### 桌面端（Tauri）
 

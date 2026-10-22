@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-21
+last-reviewed: 2026-10-22
 applies-to: Historical records under docs/reviews/records
 -->
 
@@ -36,6 +36,7 @@ verdict: passed | passed-with-conditions | failed
 
 | Date | Scope | Verdict | Record |
 | --- | --- | --- | --- |
+| 2026-10-22 | Product wording across READMEs, umbrella docs, shipped client copy, capability help, and the AI prompt, re-read against the current architecture | passed with conditions | [records/2026-10-22-wording-architecture-parity.md](records/2026-10-22-wording-architecture-parity.md) |
 | 2026-10-21 | Dependency audit: RustSec emSign-roots remediation, the stale data-suite lockfile, and `--locked` gate assertions | passed with conditions | [records/2026-10-21-dependency-audit.md](records/2026-10-21-dependency-audit.md) |
 | 2026-10-21 | Workstream branch integration: `develop` fast-forwards, feature-branch deletion, and remote anchors kept | passed | [records/2026-10-21-branch-integration.md](records/2026-10-21-branch-integration.md) |
 | 2026-10-21 | Client de-hardcoding and guidance: descriptor-driven forms, ports and roles, protocol preview, and translated guidance | passed with conditions | [records/2026-10-21-client-dehardcoding.md](records/2026-10-21-client-dehardcoding.md) |

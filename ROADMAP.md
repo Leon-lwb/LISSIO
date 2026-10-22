@@ -3,7 +3,7 @@
 <!-- lissio-doc
 status: maintained
 owner: Lissio maintainers
-last-reviewed: 2026-10-07
+last-reviewed: 2026-10-22
 applies-to: Delivered scope, release hygiene, and explicit project non-goals
 -->
 
@@ -15,8 +15,8 @@ tests, and release artifacts.
 
 Lissio currently provides:
 
-- serial, TCP, UDP, test-signal, Slcan, CandleLight, and typed industrial
-  acquisition paths;
+- serial, TCP, UDP, test-data, Slcan, CandleLight, CAN, ISO-TP, diagnostic, and
+  Modbus/S7 industrial acquisition paths;
 - waveform, RawData, CAN, logic, command-frame, diagnostic, and recording
   workflows;
 - a node graph with typed compilation and evaluation, DSP nodes, filters, FFT,
@@ -27,8 +27,8 @@ Lissio currently provides:
   documentation, performance, and license gates.
 
 Validated boundaries, including real PLC and multi-vendor hardware coverage,
-are documented in `server/docs/architecture/industrial-protocol-integration.md` and
-review records.
+are documented in `server/physical/docs/architecture/industrial-protocol-integration.md`
+and review records.
 
 ## Release and compliance work
 
