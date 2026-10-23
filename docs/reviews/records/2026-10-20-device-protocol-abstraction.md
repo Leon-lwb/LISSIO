@@ -7,6 +7,11 @@ reviewer: implementation agent; maintainer sign-off pending
 verdict: passed-with-conditions
 -->
 
+> Superseded by
+> [`2026-10-24-wire-kernel-device-profiles.md`](2026-10-24-wire-kernel-device-profiles.md)
+> for the target device and protocol contracts. D1-D8 remain the record of this
+> review; D9-D15 extend them.
+
 ## Scope
 
 Reviewed the abstractions that connect a physical device to a parsed data stream,
