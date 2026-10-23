@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "tag": "device-contracts-v1",
+  "tag": "device-contracts-v2",
   "files": [
     {
       "path": "server/core/crates/shared/data-model/src/ids.rs",
@@ -19,12 +19,22 @@
     },
     {
       "path": "server/core/crates/shared/wire/src/lib.rs",
-      "sha256": "0803ec38fbf40ec8cc678179e196789350fa2fd2c378217b8398336b98912203",
+      "sha256": "ad52e00f1f574a27901705af123095f50321a6e15a8235c5650e0713bd92b96d",
       "owner": "W0a"
     },
     {
       "path": "server/core/crates/shared/wire/src/schema.rs",
-      "sha256": "d4e7face4d5938f254a543642914349eeb6abdbff59510e5d83a6fc56d084d8c",
+      "sha256": "fc486332bb34241b74c2d6c1b32be77bdeae8b7eeebafc4186f3f8ecefa0e7e5",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/document.rs",
+      "sha256": "b1d3f7352ba34953558c58cc084d8b7be0c67b4e82b32e4a078efad4225871f8",
+      "owner": "W0a"
+    },
+    {
+      "path": "server/core/crates/shared/wire/src/source.rs",
+      "sha256": "c61b480549e9d881e19b56a1c854dc2adeec6cb090a69be5e9f79cca1a1fc49a",
       "owner": "W0a"
     },
     {
@@ -39,7 +49,7 @@
     },
     {
       "path": "server/core/crates/shared/wire/src/codec.rs",
-      "sha256": "4ac803ead9bec312be4b046e375fde7110aeb905c389d9eb35566015b77115d1",
+      "sha256": "7c53d31c2865bc7e7756558876a19907aefb37bc3d344db0ae4d0c838ef4d744",
       "owner": "W0a"
     },
     {
@@ -89,7 +99,7 @@
     },
     {
       "path": "server/core/crates/protocol/protocol/src/registry.rs",
-      "sha256": "387f180cf43d949e40a274df4dab1cc8712a972d8445029cdeef8ba9c414dd08",
+      "sha256": "eaf7e5d1782e1983116fd6d28599cddc279cd001b3d51dfbce2b7e44aa6ce1ec",
       "owner": "W0a"
     },
     {

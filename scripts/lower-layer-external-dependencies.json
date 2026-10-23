@@ -177,6 +177,12 @@
       "serde",
       "serde_json"
     ],
+    "lissio-schema-store": [
+      "parking_lot",
+      "serde",
+      "serde_json",
+      "thiserror"
+    ],
     "lissio-schema-types": [
       "serde",
       "serde_json",

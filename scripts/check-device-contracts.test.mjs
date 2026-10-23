@@ -87,7 +87,7 @@ describe('hashFile', () => {
 });
 
 describe('buildManifest', () => {
-  it('covers every frozen path with the v1 tag and version', () => {
+  it('covers every frozen path with the current tag and manifest version', () => {
     const manifest = buildManifest(fixtureRoot());
 
     expect(manifest.version).toBe(MANIFEST_VERSION);
@@ -214,8 +214,8 @@ describe('checkManifest', () => {
   it('reports a manifest version and tag from another contract version', () => {
     const root = fixtureRoot();
     const manifest = buildManifest(root);
-    manifest.version = 2;
-    manifest.tag = 'device-contracts-v2';
+    manifest.version = MANIFEST_VERSION + 1;
+    manifest.tag = `${CONTRACT_TAG}-unexpected`;
 
     const problems = checkManifest(root, manifest);
     expect(problems.some((problem) => problem.includes('version'))).toBe(true);

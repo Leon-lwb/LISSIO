@@ -37,7 +37,7 @@ import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const CONTRACT_TAG = 'device-contracts-v1';
+export const CONTRACT_TAG = 'device-contracts-v2';
 export const MANIFEST_VERSION = 1;
 export const MANIFEST_PATH = 'docs/architecture/device-contracts.lock.json';
 
@@ -55,13 +55,15 @@ export const SCOPE_ROOTS = [
   'client/src/types/generated',
 ];
 
-/** The v1 freeze list, in manifest order. Owners change only by contract update. */
+/** The current freeze list, in manifest order. Owners change only by contract update. */
 export const CONTRACT_FILES = [
   { path: 'server/core/crates/shared/data-model/src/ids.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/data-model/src/interface.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/data-model/src/structured.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/wire/src/lib.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/wire/src/schema.rs', owner: 'W0a' },
+  { path: 'server/core/crates/shared/wire/src/document.rs', owner: 'W0a' },
+  { path: 'server/core/crates/shared/wire/src/source.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/wire/src/value.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/wire/src/path.rs', owner: 'W0a' },
   { path: 'server/core/crates/shared/wire/src/codec.rs', owner: 'W0a' },
@@ -125,7 +127,7 @@ export function buildManifest(root, files = CONTRACT_FILES) {
 }
 
 /**
- * Every problem with `manifest` as a v1 freeze record, in report order.
+ * Every problem with `manifest` as a freeze record, in report order.
  *
  * `string[]`, each entry `<path>: <reason>`, so the CLI can print one
  * `  - <problem>` line per finding. Never throws for a well-formed argument;

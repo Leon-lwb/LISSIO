@@ -138,7 +138,7 @@ export const GATES = [
     cwd: 'root',
     cmd: ['pnpm', 'check:device-contracts'],
     tier: 'pr',
-    why: 'the interface, wire, profile, and runtime contracts frozen as `device-contracts-v1` still match their recorded hashes; a legitimate change is an explicit `--update` carrying a `contract:` subject',
+    why: 'the interface, wire, profile, and runtime contracts frozen as `device-contracts-v2` still match their recorded hashes; a legitimate change is an explicit `--update` carrying a `contract:` subject',
     docs: ['AGENTS.md', 'CONTRIBUTING.md', 'PULL_REQUEST_TEMPLATE.md'],
   },
   {
